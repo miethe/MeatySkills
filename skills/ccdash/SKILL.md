@@ -35,6 +35,27 @@ ccdash target show          # confirm active target + auth mode
 If `ccdash` is not on PATH or `target show` errors: follow `recipes/target-onboarding.md`.
 If a subsequent command returns a connection or 401/403 error: follow `recipes/unreachable-server.md` before surfacing the raw error.
 
+## Known Gotchas
+
+- **`feature list` default limit is 200** (raised from 50 in phase 5). Results may still be truncated — check for `"truncated": true` and `"total"` in JSON; surface both values to the user. Use `--q KEYWORD` to narrow before paginating.
+- **Two `linked_sessions` surfaces exist.** `feature show` returns `linked_sessions` (may lag behind the sync engine). `feature sessions FEATURE_ID` is canonical and always fresh. The DTO carries a `sessions_note` hint field when lag is detected. For fresh data, always prefer `feature sessions`.
+- **Keyword search (`--q`) is substring-only.** Case-insensitive match against feature name/title only — brittle for multi-word queries. Fall back to `feature show` for detail or use `--status` / `--category` filters to narrow first.
+- **CLI timeout is 30 s by default.** Override per-invocation with `--timeout N` (seconds) or globally via `CCDASH_TIMEOUT=N`. `ccdash doctor` reports the active value and its source. See `docs/guides/cli-timeout-debugging.md` for slow-query diagnosis.
+- **Query cache: 4 agent-query endpoints are cached with a 60 s TTL** (`CCDASH_QUERY_CACHE_TTL_SECONDS`; background refresh interval `CCDASH_QUERY_CACHE_REFRESH_INTERVAL_SECONDS`). Append `--no-cache` when immediate consistency is required (e.g. right after a sync or data import).
+
+## Known Expensive Endpoints
+
+The following commands run synchronous cross-domain aggregations on the server and routinely exceed the default 30 s timeout on non-trivial datasets. Use `--timeout N` or `CCDASH_TIMEOUT=N` to raise the ceiling before invoking them:
+
+- `ccdash status project`
+- `ccdash report aar --feature <id>`
+- `ccdash report feature <id>`
+- `ccdash workflow failures`
+
+Before invoking them, warn the user that they may time out and offer the decomposed fallback in `recipes/blog-retrospective-research.md` (for retrospectives) or the `feature list` + client-side filter pattern (for status / workflow roll-ups). If they *do* time out, doctor will still report `PASS` — that is a false negative, not a green light. Route through the "Endpoint timeout branch" in `recipes/unreachable-server.md`.
+
+The cheap, reliable-today set: `ccdash target *`, `ccdash doctor`, `ccdash feature list|show|sessions|documents`, `ccdash session list|show|search|drilldown|family`.
+
 ## Routing
 
 The authoritative intent -> command map lives in `scripts/router-table.json`. Load it for disambiguation; the summary below is a lossy render kept for quick scanning.
@@ -60,8 +81,10 @@ Multi-step investigations use deterministic recipes in `recipes/`:
 - `recipes/feature-retrospective.md` — `feature show` -> `feature sessions` -> `report aar`.
 - `recipes/workflow-failure-rootcause.md` — `workflow failures` -> pick workflow -> `session drilldown --concern`.
 - `recipes/session-cluster-investigation.md` — `session show` -> `session family` -> drilldown each sibling.
-- `recipes/unreachable-server.md` — transport/auth failure interpretation via `ccdash doctor`.
+- `recipes/unreachable-server.md` — transport/auth failure + endpoint-timeout interpretation via `ccdash doctor`.
 - `recipes/target-onboarding.md` — fresh operator: install -> `target add` -> `target login` -> `doctor`.
+- `recipes/blog-retrospective-research.md` — retrospective / blog research from cheap endpoints when `report aar` is unavailable or too slow.
+- `recipes/task-attribution.md` — determine which agent worked on what: `feature show` → `linked_tasks[].owner` → correlate with `feature sessions`.
 
 Prefer a recipe whenever the user's intent requires more than a single subcommand call. Single-command intents route directly via the table above.
 

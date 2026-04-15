@@ -4,7 +4,7 @@ Trigger: "AAR for FEAT-X", "retrospective on FEAT-X", "why did FEAT-X take so lo
 
 ## Steps
 
-1. **Preflight.** Verify `feature_id` looks well-formed. If the user gave a title instead, run `ccdash feature list --json` and pick the match (ask if ambiguous).
+1. **Preflight.** Verify `feature_id` looks well-formed. If the user gave a title instead, run `ccdash feature list --q "KEYWORD" --json` and pick the match (ask if ambiguous). Check `truncated` and `total` in the response; if `truncated: true`, narrow with a more specific `--q` or add `--status`.
 
 2. **Pull feature detail (JSON) to anchor the story.**
 
@@ -14,13 +14,13 @@ Trigger: "AAR for FEAT-X", "retrospective on FEAT-X", "why did FEAT-X take so lo
 
    Echo: `feature_id`, `status`, `session_ids`, `workflow_ids`, `document_ids`, `risk_signals`, `created_at`, `updated_at`.
 
-3. **Pull the session set.**
+3. **Pull the session set (canonical surface).**
 
    ```bash
    ccdash feature sessions FEATURE_ID --json
    ```
 
-   Sort by `cost` (or `duration_seconds`) descending. Note the top 3 sessions for later citation. Echo the highest-cost `session_id` and its `model`, `cost`, `started_at`.
+   This endpoint is canonical and always fresh — prefer it over `feature show`'s `linked_sessions` field, which may lag the sync engine. Sort by `cost` (or `duration_seconds`) descending. Note the top 3 sessions for later citation. Echo the highest-cost `session_id` and its `model`, `cost`, `started_at`.
 
 4. **Generate the AAR (markdown).**
 

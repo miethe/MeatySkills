@@ -12,6 +12,8 @@ Global options:
 
 - `--target TEXT` — pick a named target from `~/.config/ccdash/config.toml`. Overrides the active target for this invocation.
 - `--output [human|json|markdown]` — default output format for subcommands that honor it. Individual subcommands also expose `--json` and `--md` shortcuts.
+- `--timeout N` — override the default 30 s request timeout (seconds) for this invocation. Also settable via `CCDASH_TIMEOUT=N`. `ccdash doctor` reports the active value and its source.
+- `--no-cache` — bypass the server-side query cache (60 s TTL by default). Use when fresh data is required immediately after a sync or data import.
 - `--version` — print the CLI version and exit.
 - `--install-completion` / `--show-completion` — shell completion helpers.
 
@@ -36,7 +38,7 @@ ccdash
 ├── workflow
 │   └── failures               # Show workflows with the highest observed failure burden.
 ├── feature                    # Feature investigations.
-│   ├── list                   #   List features with optional --status / --category / --limit / --offset.
+│   ├── list                   #   List features. Flags: --status, --category, --q, --limit (default 200), --offset, --no-cache.
 │   ├── show FEATURE_ID        #   Full forensic detail for a feature.
 │   ├── sessions FEATURE_ID    #   List sessions linked to a feature.
 │   └── documents FEATURE_ID   #   List documents linked to a feature.
@@ -58,7 +60,7 @@ Every leaf subcommand that emits structured data honors `--output`, `--json`, an
 Resolution precedence (first non-empty wins):
 
 1. **CLI flag**: `--target <name>` for the current invocation.
-2. **Environment**: `CCDASH_TARGET` selects the named target; `CCDASH_TOKEN` supplies a bearer token directly (bypasses the keyring); `CCDASH_BASE_URL` overrides target URL without touching config.
+2. **Environment**: `CCDASH_TARGET` selects the named target; `CCDASH_TOKEN` supplies a bearer token directly (bypasses the keyring); `CCDASH_BASE_URL` overrides target URL without touching config; `CCDASH_TIMEOUT` sets the request timeout in seconds; `CCDASH_QUERY_CACHE_TTL_SECONDS` sets the query cache TTL (default 60); `CCDASH_QUERY_CACHE_REFRESH_INTERVAL_SECONDS` sets the background cache-refresh interval.
 3. **Active target**: `active = "<name>"` entry in `~/.config/ccdash/config.toml`.
 4. **Implicit local**: `http://localhost:8000` with no bearer token (for dev loopback).
 
