@@ -1,0 +1,84 @@
+{{!--
+  Generalized README template for projects using the managing-readmes skill.
+
+  Required build-time variables (injected by the build script):
+    - projectName   {string}  e.g. "SkillMeat"
+    - tagline       {string}  e.g. "Personal collection manager for Claude Code artifacts"
+    - logoPath      {string}  relative path or URL to the project logo image (omit key to skip logo)
+    - description   {string}  one-paragraph prose description shown below the hero
+    - version       {string}  current semver string resolved from version.json
+    - generated     {string}  ISO 8601 build timestamp
+
+  Data objects (passed through from data/*.json):
+    - screenshots   {array}   from screenshots.json
+    - features      {array}   category objects from features.json
+    - featureStats  {object}  stats object from features.json
+    - artifactTypes {array}   artifactTypes array from features.json (optional)
+
+  Partial registry expected:
+    - hero-section      → templates/hero-section.hbs
+    - feature-grid      → templates/feature-grid.hbs
+    - screenshot-table  → templates/screenshot-table.hbs
+    - command-list      → templates/command-list.hbs
+
+  All other section partials (value-prop, quickstart, documentation,
+  contributing, footer) are project-specific and should live in the
+  project's own .github/readme/partials/ directory.
+
+  Section visibility: wrap each {{> partial}} call in {{#if <flag>}} when
+  the build script provides boolean flags (showScreenshots, showCli, etc.)
+  to allow projects to opt out of sections they do not need.
+--}}
+<!-- AUTO-GENERATED: Do not edit directly. See .github/readme/ -->
+<!-- GENERATED: {{generated}} -->
+<!-- VERSION: {{version}} -->
+
+<!-- BEGIN:hero -->
+{{> hero-section projectName=projectName tagline=tagline logoPath=logoPath badgeUrls=badgeUrls description=description version=version }}
+<!-- END:hero -->
+
+{{#if showValueProp}}
+<!-- BEGIN:value-prop -->
+{{> value-prop }}
+<!-- END:value-prop -->
+{{/if}}
+
+{{#if showScreenshots}}
+<!-- BEGIN:screenshots -->
+{{> screenshot-table screenshots=screenshots screenshotCategory=screenshotCategory }}
+<!-- END:screenshots -->
+{{/if}}
+
+{{#if showQuickstart}}
+<!-- BEGIN:quickstart -->
+{{> quickstart }}
+<!-- END:quickstart -->
+{{/if}}
+
+{{#if showFeatures}}
+<!-- BEGIN:features -->
+{{> feature-grid categories=features stats=featureStats artifactTypes=artifactTypes }}
+<!-- END:features -->
+{{/if}}
+
+{{#if showCli}}
+<!-- BEGIN:cli-reference -->
+{{> command-list categories=features stats=featureStats cliName=cliName }}
+<!-- END:cli-reference -->
+{{/if}}
+
+{{#if showDocumentation}}
+<!-- BEGIN:documentation -->
+{{> documentation }}
+<!-- END:documentation -->
+{{/if}}
+
+{{#if showContributing}}
+<!-- BEGIN:contributing -->
+{{> contributing }}
+<!-- END:contributing -->
+{{/if}}
+
+<!-- BEGIN:footer -->
+{{> footer version=version generated=generated projectName=projectName }}
+<!-- END:footer -->

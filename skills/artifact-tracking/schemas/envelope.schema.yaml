@@ -1,0 +1,281 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "CCDash Frontmatter Envelope Schema"
+type: object
+description: "Shared optional frontmatter fields used across planning and tracking document schemas."
+
+properties:
+  schema_version:
+    type: integer
+    minimum: 1
+    description: "Frontmatter schema version"
+
+  doc_type:
+    type: string
+    description: "Canonical document type identifier"
+
+  id:
+    type: string
+    minLength: 3
+    maxLength: 128
+    description: "Optional stable document identifier"
+
+  title:
+    type: string
+    minLength: 3
+    maxLength: 256
+    description: "Document title"
+
+  status:
+    type: string
+    enum:
+      - draft
+      - pending
+      - planning
+      - in_progress
+      - in-progress
+      - review
+      - completed
+      - complete
+      - approved
+      - deferred
+      - blocked
+      - archived
+      - superseded
+      - inferred_complete
+      - not_started
+      - ready
+      - accepted
+      - research
+      - research-complete
+      - future
+      - active
+      - abandoned
+      - partial
+      - done
+    description: "Unified status enum across CCDash document types"
+
+  feature_slug:
+    type: string
+    minLength: 2
+    maxLength: 128
+    pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+    description: "Feature identifier in kebab-case"
+
+  feature_version:
+    type: string
+    maxLength: 32
+    description: "Feature version identifier"
+
+  prd_ref:
+    oneOf:
+      - type: "null"
+      - type: string
+        minLength: 3
+        maxLength: 256
+    default: null
+    description: "Reference to parent PRD document"
+
+  plan_ref:
+    oneOf:
+      - type: "null"
+      - type: string
+        minLength: 3
+        maxLength: 256
+    default: null
+    description: "Reference to parent implementation plan"
+
+  spike_ref:
+    type: ["string", "null"]
+    minLength: 3
+    maxLength: 256
+    description: "Reference to SPIKE research document that informed this feature"
+    default: null
+
+  adr_refs:
+    type: array
+    items:
+      type: string
+      minLength: 3
+      maxLength: 256
+    default: []
+    description: "References to Architecture Decision Records related to this feature"
+
+  charter_ref:
+    type: ["string", "null"]
+    minLength: 3
+    maxLength: 256
+    description: "Reference to SPIKE charter document"
+    default: null
+
+  changelog_ref:
+    type: ["string", "null"]
+    minLength: 3
+    maxLength: 256
+    description: "Reference to CHANGELOG entry for this feature"
+    default: null
+
+  test_plan_ref:
+    type: ["string", "null"]
+    minLength: 3
+    maxLength: 256
+    description: "Reference to formal test plan document"
+    default: null
+
+  related_documents:
+    type: array
+    items:
+      type: string
+      minLength: 3
+      maxLength: 256
+    default: []
+    description: "Links to related project documents"
+
+  references:
+    type: object
+    description: "Categorized references to documentation, context files, and specs relevant to this feature. Used by execution workflows to inject context paths into subagent prompts."
+    default: {}
+    properties:
+      user_docs:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+        default: []
+        description: "User-facing documentation relevant to this feature (under docs/user/)"
+      context:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+        default: []
+        description: "Agent context files relevant to this feature (under .claude/context/key-context/)"
+      specs:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+        default: []
+        description: "Specification files relevant to this feature (under .claude/specs/)"
+      related_prds:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+        default: []
+        description: "Related PRD or progress directories for cross-referencing"
+    additionalProperties: false
+
+  request_log_ids:
+    type: array
+    items:
+      type: string
+      minLength: 3
+      maxLength: 64
+    default: []
+    description: "Related request-log item identifiers"
+
+  owner:
+    oneOf:
+      - type: "null"
+      - type: string
+        minLength: 2
+        maxLength: 128
+    default: null
+    description: "Primary document owner"
+
+  owners:
+    type: array
+    items:
+      type: string
+      minLength: 2
+      maxLength: 128
+    default: []
+    description: "Owner list used by progress artifacts"
+
+  contributors:
+    type: array
+    items:
+      type: string
+      minLength: 2
+      maxLength: 128
+    default: []
+    description: "Secondary contributors"
+
+  commit_refs:
+    type: array
+    items:
+      type: string
+      minLength: 7
+      maxLength: 64
+    default: []
+    description: "Git commit references"
+
+  pr_refs:
+    type: array
+    items:
+      type: string
+      minLength: 3
+      maxLength: 64
+    default: []
+    description: "Pull request references"
+
+  priority:
+    type: string
+    description: "Relative execution priority"
+
+  risk_level:
+    type: string
+    description: "Risk level for implementation or rollout"
+
+  created:
+    type: string
+    format: date
+    description: "Creation date in YYYY-MM-DD"
+
+  updated:
+    type: string
+    format: date
+    description: "Last updated date in YYYY-MM-DD"
+
+  milestone:
+    oneOf:
+      - type: "null"
+      - type: string
+        minLength: 2
+        maxLength: 128
+    default: null
+    description: "Milestone or release marker"
+
+  tags:
+    type: array
+    items:
+      type: string
+      minLength: 2
+      maxLength: 64
+    default: []
+    description: "Tag metadata"
+
+  category:
+    oneOf:
+      - type: "null"
+      - type: string
+        minLength: 2
+        maxLength: 64
+    default: null
+    description: "Document category"
+
+  files_affected:
+    oneOf:
+      - type: array
+        items:
+          type: string
+          minLength: 1
+          maxLength: 256
+      - type: string
+      - type: integer
+    default: []
+    description: "Primary files impacted by this work"

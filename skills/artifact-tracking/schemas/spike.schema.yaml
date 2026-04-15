@@ -1,0 +1,35 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "SPIKE Frontmatter Schema"
+type: object
+description: "Schema for research SPIKE document frontmatter aligned to CCDash fields."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [spike]
+
+      research_questions:
+        type: array
+        items:
+          type: string
+        default: []
+
+      complexity:
+        type: string
+        enum: [small, medium, large, xl]
+
+      estimated_research_time:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 2
+        default: null

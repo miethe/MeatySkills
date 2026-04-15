@@ -1,0 +1,124 @@
+# Intent Set Schema — project-scaffolder v1
+#
+# This schema defines the structure of the Intent Set YAML produced by the
+# project-analyzer subagent and consumed by the artifact-curator subagent.
+#
+# File naming convention: scaffold-intents.yaml
+# Persisted alongside Bundle manifest in: ~/.skillmeat/collection/bundles/<bundle_id>/
+#
+# Python implementation: skillmeat/core/scaffolder/intent_schema.py
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# TOP-LEVEL FIELDS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# scaffold_run_id: string
+#   Unique identifier for this scaffold run.
+#   Format: "scaf_YYYYMMDD_<8-char lowercase hex hash>"
+#   Example: "scaf_20260407_a1b2c3d4"
+scaffold_run_id: string
+
+# generated_at: string (ISO 8601 timestamp)
+#   When this Intent Set was produced by the analyzer.
+#   Example: "2026-04-07T14:32:00Z"
+generated_at: string
+
+# scope_variant: enum
+#   Determines the curation strategy applied by artifact-curator.
+#   Values:
+#     whole-project        — full artifact scan; no exclusion of existing artifacts
+#     feature              — reads deployed .claude/ inventory; excludes already-present artifacts
+#     artifact-type-scoped — restricts curator search to specified artifact types only
+scope_variant: enum  # whole-project | feature | artifact-type-scoped
+
+# source_summary: string
+#   One-line human-readable summary of the input context.
+#   Produced by the analyzer; used in Bundle description and logs.
+#   Example: "FastAPI + React + PostgreSQL task manager PRD"
+#   Max length: 200 characters
+source_summary: string
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTENTS LIST
+# ─────────────────────────────────────────────────────────────────────────────
+
+# intents: list[Intent]
+#   Ordered list of detected requirements. Ordering: high-priority first,
+#   then medium, then low; ties broken alphabetically by capability.
+intents:
+  - # id: string
+    #   Sequential identifier within this Intent Set.
+    #   Format: "int_NNN" (zero-padded 3-digit integer)
+    #   Example: "int_001", "int_012"
+    id: string
+
+    # capability: enum
+    #   The primary capability or requirement detected from context.
+    #   Maps to artifact search query generation.
+    #   Full enum defined in skillmeat/core/scaffolder/intent_schema.py::CAPABILITY_ENUM
+    #   Valid values:
+    #     python-backend        react-frontend        relational-database
+    #     vector-search         ci-cd                 auth
+    #     caching               logging               testing
+    #     containerization      graphql               background-jobs
+    #     typescript-backend    angular-frontend      vue-frontend
+    #     document-store        message-queue         api-gateway
+    #     monitoring            secret-management     infrastructure-as-code
+    capability: enum
+
+    # stack: string | null
+    #   Optional specific technology within the capability.
+    #   Used to narrow artifact search queries.
+    #   Examples: "fastapi", "nextjs", "postgresql", "github-actions", "redis"
+    #   Set to null when no specific technology is identified.
+    stack: string | null
+
+    # confidence: float (0.0 – 1.0)
+    #   How confident the analyzer is that this requirement exists in the context.
+    #   Scoring guidelines:
+    #     0.85–1.00 — Explicit, prominent mention (e.g., named in tech stack section)
+    #     0.70–0.85 — Mentioned multiple times across the document
+    #     0.50–0.70 — Single non-prominent mention
+    #     0.30–0.50 — Inferred from domain patterns or indirect signals
+    #     0.00–0.30 — Speculative / weak signal (consider omitting)
+    confidence: float
+
+    # source: string
+    #   Human-readable reference to the evidence for this intent.
+    #   Examples:
+    #     "PRD §2 — Tech Stack"
+    #     "PRD §3 — Data Model, mentions PostgreSQL schema"
+    #     "inferred from repo structure (Dockerfile with postgres image)"
+    #     "free-text description: 'with Redis caching'"
+    source: string
+
+    # priority: enum
+    #   Importance of this capability for the project.
+    #   Affects aggregate_confidence weighting and interview question priority.
+    #   Values:
+    #     high   — Core requirement; project likely fails without it (weight: 1.0)
+    #     medium — Important but not blocking; can be added later (weight: 0.6)
+    #     low    — Nice-to-have; future enhancement (weight: 0.3)
+    priority: enum  # high | medium | low
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AGGREGATE FIELDS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# aggregate_confidence: float (0.0 – 1.0)
+#   Weighted mean of intent confidences, weighted by priority.
+#   Formula:
+#     weights = {high: 1.0, medium: 0.6, low: 0.3}
+#     aggregate = sum(confidence[i] * weight[priority[i]]) / sum(weight[priority[i]])
+#   Computed by: skillmeat.core.scaffolder.intent_schema.compute_aggregate_confidence()
+#   Interview triggered when aggregate_confidence < 0.65
+aggregate_confidence: float
+
+# interview_triggered: boolean
+#   Whether the interview flow was triggered for this scaffold run.
+#   Set to true if:
+#     aggregate_confidence < 0.65
+#     OR count(intents where confidence < 0.5 AND priority == high) >= 2
+#   Updated after interview completes (if triggered).
+interview_triggered: boolean

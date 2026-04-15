@@ -1,0 +1,68 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Report Frontmatter Schema"
+type: object
+description: "Schema for report-style documents consumed by CCDash."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [report]
+
+      report_period:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+        default: null
+
+      outcome:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+        default: null
+
+      metrics:
+        type: array
+        items:
+          type: string
+        default: []
+
+      findings:
+        type: array
+        items:
+          type: string
+        default: []
+
+      action_items:
+        type: array
+        items:
+          type: string
+        default: []
+
+      report_category:
+        type: string
+        enum: [finding, investigation, audit, refactor, post-mortem, performance-analysis, architecture-analysis, other]
+        description: "Report subtype for subdir routing"
+
+      promoted_to:
+        type: array
+        items:
+          type: string
+        default: []
+        description: "Downstream docs this report informed (e.g., PRD path, design_spec path)"
+
+      source:
+        type: string
+        enum: [agent, human, automated]
+        default: human
+        description: "Origin of the report — used by execute-phase pipeline"

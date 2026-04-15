@@ -1,0 +1,73 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Implementation Plan Frontmatter Schema"
+type: object
+description: "Schema for implementation plan frontmatter aligned to CCDash envelope fields."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [implementation_plan]
+
+      prd_ref:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+
+      scope:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 5
+        default: null
+
+      architecture_summary:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 10
+        default: null
+
+      phases:
+        oneOf:
+          - type: array
+            items:
+              type: string
+          - type: string
+          - type: integer
+        default: []
+
+      effort_estimate:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 2
+        default: null
+
+      test_strategy:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 5
+        default: null
+
+      plan_structure:
+        type: string
+        enum: ["unified", "independent"]
+        default: "unified"
+        description: "unified: single implementation plan file, phases are sections. independent: separate plan file per phase."
+
+      progress_init:
+        type: string
+        enum: ["auto", "pre-created"]
+        default: "auto"
+        description: "auto: execute-phase creates progress files on demand. pre-created: progress files already exist."

@@ -1,0 +1,30 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Quick Feature Frontmatter Schema"
+type: object
+description: "Schema for quick feature planning artifacts created by dev-execution quick mode."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [quick_feature]
+
+      estimated_scope:
+        type: string
+        enum: [small, medium, large]
+
+      request_log_id:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+            maxLength: 128
+        default: null

@@ -1,0 +1,72 @@
+{{!--
+  Command List Partial
+  Displays CLI commands grouped by feature category.
+
+  Expected context:
+    - categories  {array}   Category objects from features.json. Each feature within
+                            may carry a `cliCommand` string.
+    - stats       {object}  Stats object: totalCommands, commandGroups
+    - cliName     {string}  The CLI binary name (e.g. "skillmeat", "mytool").
+                            Used in the Core Commands code block and help hint.
+                            Defaults to the first word of any cliCommand found, or
+                            "cli" if none is present.
+
+  Handlebars helpers required by the build script:
+    - hasCliCommands(features)  → returns true when at least one feature has cliCommand
+    - cliCommands(features)     → returns a comma-separated string of unique cliCommand values
+
+  The "Core Commands" block below is intentionally left as a static template
+  with placeholder comments. Replace the bash block with your project's actual
+  core commands, or generate it dynamically via a custom helper/partial.
+--}}
+## CLI Reference
+
+{{#if stats}}
+{{#if stats.totalCommands}}{{cliName}} provides **{{stats.totalCommands}}+ commands**{{#if stats.commandGroups}} across **{{stats.commandGroups}} command groups**{{/if}}.{{/if}}
+{{/if}}
+
+### Quick Reference
+
+| Category | Commands |
+|----------|----------|
+{{#each categories}}
+{{#if (hasCliCommands features)}}
+| **{{name}}** | {{cliCommands features}} |
+{{/if}}
+{{/each}}
+
+### Core Commands
+
+```bash
+{{!-- Replace this block with your project's actual core commands. --}}
+# Add core commands here
+{{cliName}} --help
+```
+
+### Command Groups
+
+{{#each categories}}
+{{#if (hasCliCommands features)}}
+<details>
+<summary><strong>{{name}}</strong>{{#if tagline}} — {{tagline}}{{/if}}</summary>
+
+| Command | Description |
+|---------|-------------|
+{{#each features}}
+{{#if cliCommand}}
+| `{{cliCommand}}` | {{shortDescription}} |
+{{/if}}
+{{/each}}
+
+</details>
+{{/if}}
+{{/each}}
+
+---
+
+For complete command documentation, run:
+
+```bash
+{{cliName}} --help
+{{cliName}} <command> --help
+```

@@ -1,0 +1,53 @@
+{{!--
+  Feature Grid Partial
+  Displays feature categories with their features in a clean table grid.
+
+  Expected context:
+    - categories      {array}   Category objects from features.json. Each has:
+                                  id, name, tagline?, features[]
+    - stats           {object}  Stats object from features.json:
+                                  totalCommands, apiEndpoints, webPages, commandGroups, modals
+    - artifactTypes   {array}   Optional. ArtifactType objects from features.json.
+                                When present, an "Artifact Types" table is appended.
+
+  Handlebars helpers required by the build script:
+    (none beyond built-in each/if)
+
+  Project-specific display text (the "{{stats.X}}+ CLI commands" line) can be
+  overridden by the build script by passing a preformatted `statsLine` string
+  instead of the individual stat fields.
+--}}
+## Features
+
+{{#if statsLine}}
+> {{statsLine}}
+{{else}}
+{{#if stats}}
+> {{#if stats.totalCommands}}**{{stats.totalCommands}}+ CLI commands**{{/if}}{{#if stats.apiEndpoints}} | **{{stats.apiEndpoints}}+ API endpoints**{{/if}}{{#if stats.webPages}} | **{{stats.webPages}} web pages**{{/if}}
+{{/if}}
+{{/if}}
+
+{{#each categories}}
+### {{name}}
+
+{{#if tagline}}_{{tagline}}_{{/if}}
+
+| Feature | Description |
+|---------|-------------|
+{{#each features}}
+| {{#if highlight}}**{{name}}**{{else}}{{name}}{{/if}} | {{shortDescription}}{{#if cliCommand}} (`{{cliCommand}}`){{/if}} |
+{{/each}}
+
+{{/each}}
+
+---
+
+{{#if artifactTypes}}
+### Artifact Types
+
+| Type | Description |
+|------|-------------|
+{{#each artifactTypes}}
+| **{{name}}** | {{description}} |
+{{/each}}
+{{/if}}

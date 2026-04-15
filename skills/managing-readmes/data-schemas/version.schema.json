@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Version Data",
+  "description": "Schema for the version.json data file that supplies current version, release history, and upcoming version information to README templates.",
+  "type": "object",
+  "required": ["current"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference URI."
+    },
+    "current": {
+      "type": "string",
+      "description": "The current stable release version (semver).",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "releaseDate": {
+      "type": "string",
+      "description": "ISO 8601 release date for the current version (YYYY-MM-DD).",
+      "format": "date"
+    },
+    "previousVersions": {
+      "type": "array",
+      "description": "Ordered list of prior releases, newest first.",
+      "items": {
+        "$ref": "#/definitions/PreviousVersion"
+      }
+    },
+    "upcoming": {
+      "$ref": "#/definitions/UpcomingVersion"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "PreviousVersion": {
+      "type": "object",
+      "title": "Previous Version",
+      "description": "A historical release entry.",
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Release version string (semver).",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "releaseDate": {
+          "type": "string",
+          "description": "ISO 8601 release date (YYYY-MM-DD).",
+          "format": "date"
+        },
+        "date": {
+          "type": "string",
+          "description": "Alias for releaseDate — accepted for backwards compatibility (YYYY-MM-DD).",
+          "format": "date"
+        },
+        "highlights": {
+          "type": "array",
+          "description": "Short bullet-point descriptions of notable changes in this release.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "UpcomingVersion": {
+      "type": "object",
+      "title": "Upcoming Version",
+      "description": "Information about the next planned release.",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Planned version string (semver).",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "planned": {
+          "type": "string",
+          "description": "Approximate planned release date or timeframe (YYYY-MM-DD or free-text like 'Q3 2026')."
+        },
+        "plannedFeatures": {
+          "type": "array",
+          "description": "Short descriptions of features planned for this release.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

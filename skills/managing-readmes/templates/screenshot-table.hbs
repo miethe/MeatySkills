@@ -1,0 +1,62 @@
+{{!--
+  Screenshot Table Partial
+  Displays screenshots in a two-column HTML table for the README.
+
+  Expected context:
+    - screenshots        {array}   Screenshot objects from screenshots.json.
+                                   Each has: id, file, alt, category, notes?, status
+    - screenshotCategory {string}  Filter value for the `category` field.
+                                   Defaults to "readme" when omitted.
+                                   Pass an empty string "" to include all screenshots.
+
+  Handlebars helpers required by the build script:
+    - eq(a, b)           → strict equality test (returns boolean)
+    - isOdd(n)           → returns true when n is odd (used to close/open <tr> pairs)
+
+  Only screenshots whose `status` is "captured" are rendered; pending and
+  outdated entries are silently skipped so placeholders do not appear in the
+  published README.
+
+  To render a simple flat list instead of the table (better for some mobile
+  renderers), replace the HTML table block below with the commented-out
+  Markdown list alternative at the bottom of this file.
+--}}
+## Screenshots
+
+<table>
+<tr>
+{{#each screenshots}}
+{{#if (eq category (or ../screenshotCategory "readme"))}}
+{{#if (eq status "captured")}}
+<td align="center" width="50%">
+<img src="{{file}}" alt="{{alt}}" width="100%">
+<br>
+<em>{{#if notes}}{{notes}}{{else}}{{alt}}{{/if}}</em>
+</td>
+{{#if (isOdd @index)}}
+</tr>
+<tr>
+{{/if}}
+{{/if}}
+{{/if}}
+{{/each}}
+</tr>
+</table>
+
+{{!--
+  Alternative: flat Markdown image list (better mobile rendering, no HTML).
+  Uncomment and delete the HTML table block above to use this instead.
+
+{{#each screenshots}}
+{{#if (eq category (or ../screenshotCategory "readme"))}}
+{{#if (eq status "captured")}}
+### {{alt}}
+
+![{{alt}}]({{file}})
+
+{{#if notes}}_{{notes}}_{{/if}}
+
+{{/if}}
+{{/if}}
+{{/each}}
+--}}

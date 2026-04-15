@@ -1,0 +1,67 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "PRD Frontmatter Schema"
+type: object
+description: "Schema for PRD frontmatter aligned to CCDash envelope fields."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [prd]
+
+      problem_statement:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 10
+        default: null
+
+      personas:
+        type: array
+        items:
+          type: string
+        default: []
+
+      goals:
+        type: array
+        items:
+          type: string
+        default: []
+
+      non_goals:
+        type: array
+        items:
+          type: string
+        default: []
+
+      requirements:
+        type: array
+        items:
+          type: string
+        default: []
+
+      success_metrics:
+        type: array
+        items:
+          type: string
+        default: []
+
+      dependencies:
+        type: array
+        items:
+          type: string
+        default: []
+
+      risks:
+        type: array
+        items:
+          type: string
+        default: []

@@ -1,0 +1,11 @@
+{
+  "_comment": "Project-specific state reference for NotebookLM sync skill. Updated by installer when deploying to new projects.",
+  "config_path": "scripts/notebooklm_sync/config.py",
+  "state_dir": "~/.notebooklm",
+  "mapping_file": "~/.notebooklm/{PROJECT_SLUG}-sources.json",
+  "project_slug": "{PROJECT_SLUG}",
+  "notebook_title": "{NOTEBOOK_TITLE}",
+  "hook_path": ".claude/hooks/notebooklm-sync-hook.sh",
+  "sync_log": "~/.notebooklm/sync.log",
+  "installer_note": "When installing to a new project, the installer updates project_slug, notebook_title, and mapping_file to reflect the target project."
+}

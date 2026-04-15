@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Features Data",
+  "description": "Schema for the features.json data file that drives README feature grids and CLI reference tables.",
+  "type": "object",
+  "required": ["categories"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference URI."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the project this data applies to (semver string).",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "lastUpdated": {
+      "type": "string",
+      "description": "ISO 8601 date when this file was last updated (YYYY-MM-DD).",
+      "format": "date"
+    },
+    "categories": {
+      "type": "array",
+      "description": "Top-level groupings of related features.",
+      "items": {
+        "$ref": "#/definitions/Category"
+      }
+    },
+    "artifactTypes": {
+      "type": "array",
+      "description": "Enumeration of artifact types the project manages.",
+      "items": {
+        "$ref": "#/definitions/ArtifactType"
+      }
+    },
+    "stats": {
+      "$ref": "#/definitions/Stats"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "Category": {
+      "type": "object",
+      "title": "Feature Category",
+      "description": "A named group of related features shown as a section in the README.",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique machine-readable identifier (kebab-case).",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable category name shown as a heading."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier (e.g. Lucide icon name) used by the web UI."
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Short italic subtitle shown beneath the category heading."
+        },
+        "features": {
+          "type": "array",
+          "description": "List of features belonging to this category.",
+          "items": {
+            "$ref": "#/definitions/Feature"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Feature": {
+      "type": "object",
+      "title": "Feature",
+      "description": "An individual feature entry displayed in the feature grid and/or CLI reference.",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique machine-readable identifier (kebab-case).",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable feature name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Full description of the feature (one to two sentences)."
+        },
+        "shortDescription": {
+          "type": "string",
+          "description": "Compact description used in table cells (a few words)."
+        },
+        "since": {
+          "type": "string",
+          "description": "The project version in which this feature was first introduced (semver).",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "cliCommand": {
+          "type": "string",
+          "description": "Canonical CLI invocation example (e.g. 'skillmeat deploy')."
+        },
+        "webPage": {
+          "type": "string",
+          "description": "Relative web UI route that exposes this feature (e.g. '/collection')."
+        },
+        "screenshot": {
+          "type": "string",
+          "description": "Filename of the associated screenshot (matched against screenshots.json)."
+        },
+        "highlight": {
+          "type": "boolean",
+          "description": "When true the feature name is rendered in bold in the feature grid."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ArtifactType": {
+      "type": "object",
+      "title": "Artifact Type",
+      "description": "A type of artifact the project can manage.",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique machine-readable identifier (kebab-case).",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable artifact type name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description of the artifact type."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier used by the web UI."
+        },
+        "color": {
+          "type": "string",
+          "description": "Theme color token or CSS color name used for badges."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Stats": {
+      "type": "object",
+      "title": "Project Stats",
+      "description": "Aggregate numeric statistics shown in the feature section header.",
+      "properties": {
+        "totalCommands": {
+          "type": "integer",
+          "description": "Total number of CLI commands.",
+          "minimum": 0
+        },
+        "commandGroups": {
+          "type": "integer",
+          "description": "Number of top-level command groups.",
+          "minimum": 0
+        },
+        "webPages": {
+          "type": "integer",
+          "description": "Number of distinct web UI pages.",
+          "minimum": 0
+        },
+        "apiEndpoints": {
+          "type": "integer",
+          "description": "Total number of REST API endpoints.",
+          "minimum": 0
+        },
+        "modals": {
+          "type": "integer",
+          "description": "Number of distinct modal dialogs in the web UI.",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

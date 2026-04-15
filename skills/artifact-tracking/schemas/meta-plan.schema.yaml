@@ -1,0 +1,44 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Meta Plan Frontmatter Schema"
+type: object
+description: "Schema for workflow/process/tooling plans (not product features)."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [meta_plan]
+
+      scope:
+        type: string
+        enum: [process, tooling, workflow, infrastructure, documentation, other]
+        description: "Category of meta-work this plan addresses"
+
+      affects_skills:
+        type: array
+        items:
+          type: string
+        default: []
+        description: "Skill names affected/updated by this plan"
+
+      affects_commands:
+        type: array
+        items:
+          type: string
+        default: []
+
+      outcome:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 10
+        default: null
+        description: "Expected outcome or success criteria"

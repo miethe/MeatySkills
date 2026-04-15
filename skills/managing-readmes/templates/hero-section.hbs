@@ -1,0 +1,46 @@
+{{!--
+  Hero Section Partial
+  Renders the top-of-README hero block: optional logo, project name, tagline,
+  badges, and a short description paragraph.
+
+  Expected context:
+    - projectName  {string}        Project name (required). Rendered as an H1 heading.
+    - tagline      {string}        Short one-line subtitle shown beneath the heading.
+    - logoPath     {string}        Relative path or URL to a logo image. When omitted
+                                   the logo <p> block is skipped.
+    - badgeUrls    {array|object}  Badge definitions. Each entry should have:
+                                     imageUrl  {string}  Shield/badge image src
+                                     linkUrl   {string}  Hyperlink target (optional)
+                                     alt       {string}  Alt text for the badge image
+                                   When omitted, no badges are rendered.
+    - description  {string}        One-paragraph prose description of the project.
+    - version      {string}        Current semver string (used if badgeUrls is empty
+                                   and the build script wants to auto-generate a
+                                   version badge — handled externally).
+
+  Design notes:
+    - The logo block uses a centered HTML <p> tag for GitHub Markdown compat.
+    - Badges are rendered inline in a single paragraph for compact display.
+    - The description line is rendered as a plain Markdown paragraph.
+    - All blocks are individually conditional so projects with no logo or no
+      badges render cleanly without extra blank lines.
+--}}
+{{#if logoPath}}
+<p align="center">
+  <img src="{{logoPath}}" alt="{{projectName}} logo" width="120">
+</p>
+{{/if}}
+
+# {{projectName}}
+
+{{#if tagline}}
+{{tagline}}
+{{/if}}
+
+{{#if badgeUrls}}
+{{#each badgeUrls}}{{#if linkUrl}}[![{{alt}}]({{imageUrl}})]({{linkUrl}}) {{else}}![{{alt}}]({{imageUrl}}) {{/if}}{{/each}}
+{{/if}}
+
+{{#if description}}
+{{description}}
+{{/if}}

@@ -1,0 +1,192 @@
+{
+  "$schema_version": 1,
+  "description": "Single source of truth for natural-language intent -> ccdash CLI mapping. SKILL.md renders a summary table from this file by convention. Update this file (and CHANGELOG.md) whenever CLI surface changes.",
+  "intents": [
+    {
+      "id": "project-status",
+      "intent_pattern": "project status | how is the project | what's the state of this project | overall health | project summary",
+      "command": "ccdash status project",
+      "default_output": "json",
+      "provenance_fields": ["project_id", "generated_at", "feature_ids", "active_session_ids"],
+      "recipe": "recipes/project-triage.md",
+      "transport": "cli"
+    },
+    {
+      "id": "doctor",
+      "intent_pattern": "diagnose | doctor | connectivity check | why can't I reach | server unreachable | auth broken",
+      "command": "ccdash doctor",
+      "default_output": "human",
+      "provenance_fields": ["target", "url", "reachable", "authenticated"],
+      "recipe": "recipes/unreachable-server.md",
+      "transport": "cli"
+    },
+    {
+      "id": "install-setup",
+      "intent_pattern": "install ccdash | set up ccdash | pipx install | first-time setup | onboard operator",
+      "command": "ccdash --version",
+      "default_output": "human",
+      "provenance_fields": [],
+      "recipe": "recipes/target-onboarding.md",
+      "transport": "cli"
+    },
+    {
+      "id": "target-list",
+      "intent_pattern": "list targets | which ccdash servers | available environments",
+      "command": "ccdash target list",
+      "default_output": "human",
+      "provenance_fields": ["name", "url", "active"],
+      "transport": "cli"
+    },
+    {
+      "id": "target-add",
+      "intent_pattern": "add a target | register ccdash server | configure staging/production",
+      "command": "ccdash target add <name> <url>",
+      "default_output": "human",
+      "provenance_fields": ["name", "url"],
+      "recipe": "recipes/target-onboarding.md",
+      "transport": "cli"
+    },
+    {
+      "id": "target-use",
+      "intent_pattern": "switch target | use staging | activate target",
+      "command": "ccdash target use <name>",
+      "default_output": "human",
+      "provenance_fields": ["active_target"],
+      "transport": "cli"
+    },
+    {
+      "id": "target-show",
+      "intent_pattern": "which target is active | resolved config | current ccdash server",
+      "command": "ccdash target show",
+      "default_output": "human",
+      "provenance_fields": ["name", "url", "project", "token_ref"],
+      "transport": "cli"
+    },
+    {
+      "id": "target-login",
+      "intent_pattern": "login to target | store token | authenticate ccdash",
+      "command": "ccdash target login <name>",
+      "default_output": "human",
+      "provenance_fields": ["name", "token_ref"],
+      "transport": "cli"
+    },
+    {
+      "id": "target-logout",
+      "intent_pattern": "logout | clear token | remove credentials",
+      "command": "ccdash target logout <name>",
+      "default_output": "human",
+      "provenance_fields": ["name"],
+      "transport": "cli"
+    },
+    {
+      "id": "target-check",
+      "intent_pattern": "probe target | is staging reachable | check connectivity for target",
+      "command": "ccdash target check <name>",
+      "default_output": "human",
+      "provenance_fields": ["name", "url", "reachable", "authenticated"],
+      "transport": "cli"
+    },
+    {
+      "id": "workflow-failures",
+      "intent_pattern": "which workflows are failing | failure burden | flaky workflows | test failures",
+      "command": "ccdash workflow failures",
+      "default_output": "json",
+      "provenance_fields": ["workflow_id", "failure_count", "last_failure_at", "feature_ids"],
+      "recipe": "recipes/workflow-failure-rootcause.md",
+      "transport": "cli"
+    },
+    {
+      "id": "feature-list",
+      "intent_pattern": "list features | active features | features in progress | features by status/category",
+      "command": "ccdash feature list",
+      "default_output": "json",
+      "provenance_fields": ["feature_id", "status", "category", "updated_at"],
+      "transport": "cli"
+    },
+    {
+      "id": "feature-show",
+      "intent_pattern": "feature details | why did FEAT-X take so long | forensic look at feature",
+      "command": "ccdash feature show <feature_id>",
+      "default_output": "json",
+      "provenance_fields": ["feature_id", "status", "session_ids", "document_ids", "workflow_ids"],
+      "recipe": "recipes/feature-retrospective.md",
+      "transport": "cli"
+    },
+    {
+      "id": "feature-sessions",
+      "intent_pattern": "sessions for feature | agent sessions tied to FEAT-X",
+      "command": "ccdash feature sessions <feature_id>",
+      "default_output": "json",
+      "provenance_fields": ["session_id", "started_at", "ended_at", "cost", "feature_id"],
+      "transport": "cli"
+    },
+    {
+      "id": "feature-documents",
+      "intent_pattern": "documents for feature | PRD/plan/progress linked to FEAT-X",
+      "command": "ccdash feature documents <feature_id>",
+      "default_output": "json",
+      "provenance_fields": ["document_id", "doc_type", "path", "feature_id"],
+      "transport": "cli"
+    },
+    {
+      "id": "session-list",
+      "intent_pattern": "list sessions | recent sessions | sessions for feature X | sessions under root Y",
+      "command": "ccdash session list",
+      "default_output": "json",
+      "provenance_fields": ["session_id", "root_session_id", "feature_id", "started_at"],
+      "transport": "cli"
+    },
+    {
+      "id": "session-show",
+      "intent_pattern": "session detail | what happened in session | session intelligence",
+      "command": "ccdash session show <session_id>",
+      "default_output": "json",
+      "provenance_fields": ["session_id", "root_session_id", "feature_id", "tool_calls", "cost", "started_at"],
+      "recipe": "recipes/session-cluster-investigation.md",
+      "transport": "cli"
+    },
+    {
+      "id": "session-search",
+      "intent_pattern": "search session transcripts | find where agent said X | grep sessions",
+      "command": "ccdash session search <query>",
+      "default_output": "json",
+      "provenance_fields": ["session_id", "match_line", "feature_id", "timestamp"],
+      "transport": "cli"
+    },
+    {
+      "id": "session-drilldown",
+      "intent_pattern": "drilldown sentiment | churn in session | scope drift on session",
+      "command": "ccdash session drilldown <session_id> --concern <sentiment|churn|scope_drift>",
+      "default_output": "json",
+      "provenance_fields": ["session_id", "concern", "findings", "evidence_line_refs"],
+      "recipe": "recipes/workflow-failure-rootcause.md",
+      "transport": "cli"
+    },
+    {
+      "id": "session-family",
+      "intent_pattern": "sibling sessions | sessions sharing the same root | session cluster",
+      "command": "ccdash session family <session_id>",
+      "default_output": "json",
+      "provenance_fields": ["root_session_id", "session_ids", "feature_id"],
+      "recipe": "recipes/session-cluster-investigation.md",
+      "transport": "cli"
+    },
+    {
+      "id": "report-aar",
+      "intent_pattern": "after-action report | AAR | retrospective for feature | post-mortem",
+      "command": "ccdash report aar --feature <feature_id>",
+      "default_output": "markdown",
+      "provenance_fields": ["feature_id", "generated_at", "session_ids"],
+      "recipe": "recipes/feature-retrospective.md",
+      "transport": "cli"
+    },
+    {
+      "id": "report-feature",
+      "intent_pattern": "narrative feature report | render feature summary",
+      "command": "ccdash report feature <feature_id>",
+      "default_output": "markdown",
+      "provenance_fields": ["feature_id", "generated_at", "session_ids", "document_ids"],
+      "transport": "cli"
+    }
+  ]
+}

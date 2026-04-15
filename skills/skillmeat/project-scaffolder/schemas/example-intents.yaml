@@ -1,0 +1,120 @@
+# Example Intent Set — 12 intents covering mixed capabilities
+#
+# This fixture demonstrates a realistic scaffold run for a full-stack SaaS application
+# with Python backend, React frontend, PostgreSQL, Redis, Celery, and supporting infra.
+# Source: Hypothetical "Task Management SaaS" PRD with CI/CD, auth, observability, and search.
+#
+# Used in: tests/unit/test_project_scaffolder_analyzer.py (fixture PRD)
+
+scaffold_run_id: "scaf_20260407_e3f9a1b7"
+generated_at: "2026-04-07T14:32:00Z"
+scope_variant: "whole-project"
+source_summary: "Full-stack task management SaaS: FastAPI + Next.js + PostgreSQL + Pinecone + Redis + Celery"
+
+intents:
+  # ── HIGH PRIORITY ──────────────────────────────────────────────────────────
+
+  - id: "int_001"
+    capability: "python-backend"
+    stack: "fastapi"
+    confidence: 0.94
+    source: "PRD §2 — Tech Stack: 'REST API built with FastAPI'"
+    priority: high
+
+  - id: "int_002"
+    capability: "react-frontend"
+    stack: "nextjs"
+    confidence: 0.91
+    source: "PRD §2 — Tech Stack: 'Next.js 15 App Router frontend'"
+    priority: high
+
+  - id: "int_003"
+    capability: "relational-database"
+    stack: "postgresql"
+    confidence: 0.89
+    source: "PRD §3 — Data Model: 'PostgreSQL with Alembic migrations'"
+    priority: high
+
+  - id: "int_006"
+    capability: "auth"
+    stack: "oauth2"
+    confidence: 0.86
+    source: "PRD §4 — Security: 'OAuth2 + JWT with Clerk provider'"
+    priority: high
+
+  # ── MEDIUM PRIORITY ────────────────────────────────────────────────────────
+
+  - id: "int_004"
+    capability: "vector-search"
+    stack: "pinecone"
+    confidence: 0.72
+    source: "PRD §5 — Search: 'semantic task similarity via Pinecone'"
+    priority: medium
+
+  - id: "int_005"
+    capability: "ci-cd"
+    stack: "github-actions"
+    confidence: 0.68
+    source: "inferred from .github/workflows/ directory structure in repo"
+    priority: medium
+
+  - id: "int_007"
+    capability: "caching"
+    stack: "redis"
+    confidence: 0.75
+    source: "PRD §6 — Performance: 'Redis for session cache and rate limiting'"
+    priority: medium
+
+  - id: "int_008"
+    capability: "logging"
+    stack: "otel"
+    confidence: 0.61
+    source: "PRD §7 — Observability: 'OpenTelemetry spans and structured logging'"
+    priority: medium
+
+  - id: "int_011"
+    capability: "graphql"
+    stack: "apollo"
+    confidence: 0.38
+    source: "PRD §8 — API: 'consider GraphQL for complex nested queries (future)'"
+    priority: medium
+
+  # ── LOW PRIORITY ───────────────────────────────────────────────────────────
+
+  - id: "int_009"
+    capability: "testing"
+    stack: "pytest"
+    confidence: 0.83
+    source: "PRD §9 — Quality: '>80% coverage with pytest'; also inferred from pyproject.toml"
+    priority: low
+
+  - id: "int_010"
+    capability: "containerization"
+    stack: "docker"
+    confidence: 0.79
+    source: "Dockerfile and docker-compose.yml detected in repo root"
+    priority: low
+
+  - id: "int_012"
+    capability: "background-jobs"
+    stack: "celery"
+    confidence: 0.55
+    source: "PRD §5 — Async Workers: 'task queue for email and report generation'"
+    priority: low
+
+# aggregate_confidence calculation:
+#   High (weight=1.0): int_001(0.94) + int_002(0.91) + int_003(0.89) + int_006(0.86) = 3.60, weight_sum=4.0
+#   Medium (weight=0.6): int_004(0.72) + int_005(0.68) + int_007(0.75) + int_008(0.61) + int_011(0.38) = 3.14, weight_sum=3.0
+#   Low (weight=0.3): int_009(0.83) + int_010(0.79) + int_012(0.55) = 2.17, weight_sum=0.9
+#   numerator = 3.60 + 0.6*3.14 + 0.3*2.17 = 3.60 + 1.884 + 0.651 = 6.135
+#   denominator = 4.0 + 3.0 + 0.9 = 7.9   → but formula weights per-intent:
+#   Simplified: weighted_sum = 1.0*(0.94+0.91+0.89+0.86) + 0.6*(0.72+0.68+0.75+0.61+0.38) + 0.3*(0.83+0.79+0.55)
+#             = 1.0*3.60 + 0.6*3.14 + 0.3*2.17 = 3.60 + 1.884 + 0.651 = 6.135
+#   weight_total = 1.0*4 + 0.6*5 + 0.3*3 = 4.0 + 3.0 + 0.9 = 7.9
+#   aggregate_confidence = 6.135 / 7.9 ≈ 0.777
+aggregate_confidence: 0.777
+
+# interview_triggered: false
+#   aggregate_confidence (0.777) >= 0.65  ✓
+#   high-priority intents with confidence < 0.5: 0  (all high intents are 0.86–0.94)  ✓
+interview_triggered: false

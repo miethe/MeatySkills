@@ -1,0 +1,40 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Phase Plan Frontmatter Schema"
+type: object
+description: "Schema for implementation phase breakdown document frontmatter."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+      doc_type:
+        type: string
+        enum: [phase_plan]
+
+      phase:
+        type: integer
+        minimum: 1
+        maximum: 99
+
+      phase_title:
+        type: string
+        minLength: 3
+        maxLength: 256
+
+      entry_criteria:
+        type: array
+        items:
+          type: string
+        default: []
+
+      exit_criteria:
+        type: array
+        items:
+          type: string
+        default: []
