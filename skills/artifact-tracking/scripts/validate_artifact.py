@@ -42,6 +42,9 @@ SCHEMA_FILENAME_MAP = {
     # skill_spec uses the shared envelope schema; skill-specific fields are
     # documented in field-reference.md § "Skill Spec (doc_type: skill_spec)".
     "skill-spec": "envelope.schema.yaml",
+    # human_brief uses the shared envelope schema; brief-specific fields are
+    # documented in field-reference.md § "Human Brief (doc_type: human_brief)".
+    "human-brief": "envelope.schema.yaml",
 }
 
 ARTIFACT_TYPE_ALIASES = {
@@ -68,6 +71,8 @@ ARTIFACT_TYPE_ALIASES = {
     "report": "report",
     "skill-spec": "skill-spec",
     "skill_spec": "skill-spec",
+    "human-brief": "human-brief",
+    "human_brief": "human-brief",
 }
 
 DOC_TYPE_TO_ARTIFACT = {
@@ -84,6 +89,7 @@ DOC_TYPE_TO_ARTIFACT = {
     "design_spec": "design-spec",
     "meta_plan": "meta-plan",
     "skill_spec": "skill-spec",
+    "human_brief": "human-brief",
 }
 
 LEGACY_TYPE_TO_ARTIFACT = {
@@ -92,6 +98,30 @@ LEGACY_TYPE_TO_ARTIFACT = {
     "bug-fixes": "bug-fix",
     "observations": "observation",
     "quick-feature-plan": "quick-feature",
+}
+
+# Path prefix → artifact type for path-based auto-detection.
+# Matched against the resolved file path as a string (forward-slash normalized).
+PATH_PREFIX_TO_ARTIFACT = {
+    "docs/project_plans/human-briefs/": "human-brief",
+}
+
+# Required frontmatter fields per artifact type (beyond BASE_STRICT_FIELDS).
+REQUIRED_FIELDS_BY_TYPE: Dict[str, list] = {
+    "human-brief": [
+        "schema_version",
+        "doc_type",
+        "title",
+        "status",
+        "created",
+        "feature_slug",
+        "audience",
+    ],
+}
+
+# Allowed status values per artifact type.  When empty the global set applies.
+ALLOWED_STATUSES_BY_TYPE: Dict[str, list] = {
+    "human-brief": ["draft", "in-progress", "completed"],
 }
 
 BASE_STRICT_FIELDS = [
@@ -192,8 +222,11 @@ def parse_frontmatter(frontmatter_str: str) -> Dict[str, Any]:
     return normalize_yaml_scalars(metadata)
 
 
-def detect_artifact_type(metadata: Dict[str, Any]) -> Optional[str]:
-    """Detect artifact type from doc_type first, then legacy type field."""
+def detect_artifact_type(
+    metadata: Dict[str, Any],
+    filepath: Optional[Union[str, Path]] = None,
+) -> Optional[str]:
+    """Detect artifact type from doc_type first, then legacy type field, then path."""
     doc_type = metadata.get("doc_type")
     if isinstance(doc_type, str):
         artifact_type = DOC_TYPE_TO_ARTIFACT.get(doc_type)
@@ -205,6 +238,13 @@ def detect_artifact_type(metadata: Dict[str, Any]) -> Optional[str]:
         artifact_type = LEGACY_TYPE_TO_ARTIFACT.get(legacy_type)
         if artifact_type:
             return artifact_type
+
+    # Path-based fallback: match canonical directory prefixes.
+    if filepath is not None and not isinstance(filepath, StringIO):
+        path_str = str(Path(filepath)).replace("\\", "/")
+        for prefix, artifact_type in PATH_PREFIX_TO_ARTIFACT.items():
+            if prefix in path_str:
+                return artifact_type
 
     return None
 
@@ -302,6 +342,72 @@ def validate_typed_ref_field_errors(metadata: Dict[str, Any]) -> list[str]:
                     )
 
     return errors
+
+
+def validate_human_brief_errors(
+    metadata: Dict[str, Any],
+    filepath: Optional[Union[str, Path]] = None,
+) -> Tuple[list[str], list[str]]:
+    """Return (errors, warnings) for human_brief-specific validation rules.
+
+    Checks:
+    - All required fields are present and non-empty.
+    - audience contains 'humans'.
+    - status is one of the allowed values (draft, in-progress, completed).
+    - prd_ref or plan_ref is non-null (soft warning for meta-work briefs).
+    - prd_ref / plan_ref / intent_ref / epic_ref paths exist when populated.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # Required fields
+    required = REQUIRED_FIELDS_BY_TYPE.get("human-brief", [])
+    for field in required:
+        value = metadata.get(field)
+        if field not in metadata or value in (None, "", []):
+            errors.append(f"  [human_brief] Missing required field: {field}")
+
+    # audience must include 'humans'
+    audience = metadata.get("audience")
+    if audience is not None:
+        if not isinstance(audience, list) or "humans" not in audience:
+            errors.append(
+                "  [human_brief.audience] Must be a list containing 'humans'"
+            )
+
+    # status must be one of the allowed values
+    status = metadata.get("status")
+    allowed_statuses = ALLOWED_STATUSES_BY_TYPE.get("human-brief", [])
+    if status is not None and status not in allowed_statuses:
+        errors.append(
+            f"  [human_brief.status] Invalid status {status!r}; "
+            f"allowed: {allowed_statuses}"
+        )
+
+    # prd_ref / plan_ref — at least one should be set (soft warning for meta-work)
+    prd_ref = metadata.get("prd_ref")
+    plan_ref = metadata.get("plan_ref")
+    if not prd_ref and not plan_ref:
+        warnings.append(
+            "  [human_brief] Neither prd_ref nor plan_ref is set. "
+            "This is acceptable for meta-work briefs; otherwise link the PRD or plan."
+        )
+
+    # Linkage path existence checks for populated ref fields
+    ref_fields = ("prd_ref", "plan_ref", "intent_ref", "epic_ref")
+    for field in ref_fields:
+        value = metadata.get(field)
+        if not value:
+            continue
+        ref_path = Path(value)
+        if not ref_path.is_absolute():
+            ref_path = Path.cwd() / value
+        if not ref_path.exists():
+            warnings.append(
+                f"  [human_brief.{field}] Referenced path does not exist: {value}"
+            )
+
+    return errors, warnings
 
 
 def validate_execution_metadata_errors(
@@ -408,7 +514,7 @@ def validate_artifact_file(
                 return False
             artifact_type = canonical_type
         else:
-            artifact_type = detect_artifact_type(metadata)
+            artifact_type = detect_artifact_type(metadata, filepath=filepath_display)
             if artifact_type is None:
                 print(
                     f"Error: Could not auto-detect artifact type from doc_type/type in {filepath_display}",
@@ -432,6 +538,19 @@ def validate_artifact_file(
         if extra_errors:
             errors.extend(extra_errors)
             is_valid = False
+
+        # human_brief-specific validation always runs (not strict-only).
+        if artifact_type == "human-brief":
+            brief_errors, brief_warnings = validate_human_brief_errors(
+                metadata, filepath=filepath_display
+            )
+            if brief_errors:
+                errors.extend(brief_errors)
+                is_valid = False
+            if brief_warnings:
+                # Warnings printed to stderr but do not affect validity.
+                for w in brief_warnings:
+                    print(f"Warning:{w}", file=sys.stderr)
 
         if verbose or not is_valid:
             print(

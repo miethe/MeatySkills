@@ -237,7 +237,7 @@ Task("artifact-tracker", "Add to sync-redesign context.md:
 ## Decision: Repository Pattern
 **Date**: 2025-01-06
 **Decision**: Use repository pattern with RowGuard for RLS
-**Rationale**: Consistent with MeatyPrompts architecture
+**Rationale**: Consistent with SkillMeat architecture
 **Files**: skillmeat/api/repositories/*.py")
 ```
 

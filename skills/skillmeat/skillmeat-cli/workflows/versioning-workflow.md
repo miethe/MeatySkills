@@ -4,8 +4,8 @@ workflow_id: versioning-workflow
 workflow_name: Artifact Versioning and History
 canonical_docs:
   - docs/user/guides/cli/commands.md § "Versioning"
-version: 1.0
-updated: 2026-04-14
+version: 1.1
+updated: 2026-04-27
 ---
 
 # Artifact Versioning and History Workflow
@@ -216,9 +216,9 @@ skillmeat bom restore abc123def456
 
 ---
 
-## Workflow 4: Create Version Snapshots
+## Workflow 4: Create and List Version Snapshots
 
-Create named snapshots of your collection at known-good points:
+As of SkillMeat v0.35.0, `snapshot` is a first-class command group with explicit subcommands. For authoritative syntax, see `docs/user/guides/cli/commands.md § "Versioning"`.
 
 ### Step 1: Create Snapshot
 
@@ -242,11 +242,16 @@ skillmeat bundle create snapshot-$(date +%Y%m%d) \
 
 ### Step 2: List Snapshots
 
+As of v0.35.0, use `snapshot list` directly rather than filtering bundle output:
+
 ```bash
-# List all snapshots
+# List all snapshot groups (v0.35.0+)
+skillmeat snapshot list
+
+# Legacy fallback (pre-v0.35.0)
 skillmeat list --type bundle | grep snapshot
 
-# Or view specific snapshot
+# View specific snapshot details
 skillmeat show snapshot-20250114
 ```
 

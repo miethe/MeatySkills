@@ -2,6 +2,12 @@
 
 One-line-per-change log. Append a dated entry whenever the skill routing surface or reference files change to track CLI.
 
+## 2026-04-26
+
+- **Skill v2.0**: Major update aligning with app state as of 2026-04-26. Added version tagging (`version`, `app_version`, `updated`) to frontmatter. New sections: Standalone CLI vs In-Repo CLI distinction, Query Caching (TTL, `--no-cache`, `bypass_cache`, env vars), CLI Timeout (`--timeout`, `CCDASH_TIMEOUT`). Updated Confidence Anchor with `feature list` command and global flags. Added Feature Listing row to routing table. Removed stale "Phase 6" language throughout. Updated "Do Not Say" with timeout/caching corrections and standalone-CLI-only commands. Added 4 new Key References (cli-timeout, cache-tuning, standalone-cli, containerized-deployment guides). Added containerized deployment note to Runtime Contract.
+- **router-table.json v2**: Schema bumped to v2. Added `skill_version`/`app_version`/`updated` metadata. All intents now use `transport` arrays. Added `mcp_tool` field to 4 MCP-enabled intents. Added `flags` arrays to all intents. Added pagination notes to `feature-list`.
+- **New: skill-authoring-guide.md** at `_meta/skill-authoring-guide.md` — codifies frontmatter schema, version tagging convention, directory structure, canonical SKILL.md section order, authoring principles, update workflow, and anti-patterns for future skill maintenance.
+
 ## 2026-04-14
 
 - Initial skill layout (Phases 1-3 complete): SKILL.md, router-table.json, references for all CLI groups (status, doctor, target, workflow, feature, session, report, cli-overview, install-setup, output-modes, provenance, eval-scenarios), recipes (unreachable-server, target-onboarding, project-triage, feature-retrospective, workflow-failure-rootcause, session-cluster-investigation), and preflight.sh. Tracks CLI surface as of 2026-04-13 (ccdash-cli with target/doctor/status/workflow/feature/session/report command groups). PRD: .claude/skill-specs/ccdash-skill/prd.md.

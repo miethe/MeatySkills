@@ -2,10 +2,11 @@
 schema_version: 2
 doc_type: skill_spec
 skill_name: skillmeat-cli
-skill_version: 1.1.0
+skill_version: 1.2.0
+aligned_app_version: 0.35.0
 status: stable
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-04-27
 owner: nick
 source_docs:
   - docs/user/guides/cli/commands.md
@@ -17,7 +18,7 @@ related_skills:
 affects_commands: []
 ---
 
-<!-- Convention reference: .claude/specs/skill-spec-convention.md -->
+<!-- Convention reference: .claude/specs/artifact-structures/skill-spec-convention.md -->
 
 # skillmeat-cli — Skill Specification
 
@@ -57,15 +58,18 @@ Intents map to workflow files in `workflows/` and to the canonical user docs age
 | Intent | Workflow / Section | Canonical Doc |
 |--------|--------------------|---------------|
 | Find, search, or recommend an artifact | `workflows/discovery-workflow.md` | `docs/user/guides/cli/commands.md § "Core Commands"` |
+| Discover artifacts relevant to an intent using AI-powered search | `workflows/discovery-workflow.md` | `docs/user/guides/cli/commands.md § "Discovery"` |
 | Deploy or add an artifact to a project | `workflows/deployment-workflow.md` | `docs/user/guides/cli/commands.md § "Deployment"` |
 | List, inspect, sync, or remove artifacts | `workflows/management-workflow.md` | `docs/user/guides/cli/commands.md § "Core Commands"` |
 | Create, sign, publish, import, or export a bundle | `workflows/bundle-workflow.md` | `docs/user/guides/cli/commands.md § "Bundle"` — pending rename to `bundle-and-scaffold-workflow.md` in 3C.2 |
-| Render scaffold files or manage templates | `workflows/bundle-workflow.md` | `docs/user/guides/cli/commands.md § "Scaffold"` and `§ "Template"` |
-| Sign, verify, or restore artifacts via BOM; manage Ed25519 keys; install/uninstall pre-commit hooks | new — pending 3C.2: `workflows/supply-chain-workflow.md` | `docs/user/guides/cli/commands.md § "SkillBOM"` |
-| View artifact activity history, rollback to a version, or restore a snapshot | new — pending 3C.2: `workflows/versioning-workflow.md` | `docs/user/guides/cli/commands.md § "Versioning"` |
-| Authenticate via device-code OAuth, store a PAT, or revoke credentials | new — pending 3C.2: `workflows/auth-workflow.md` | `docs/user/guides/cli/commands.md § "Authentication"` |
-| Create, list, or show attestation records | new — pending 3C.2: `workflows/supply-chain-workflow.md` | `docs/user/guides/cli/commands.md § "Attestation"` |
-| Migrate a local collection to enterprise edition | new — pending 3C.2: `workflows/enterprise-workflow.md` | `docs/user/guides/cli/commands.md § "Core Commands"` |
+| Render scaffold files or manage templates; scaffold from remote repos or generate PRs | `workflows/scaffold-workflow.md` | `docs/user/guides/cli/commands.md § "Scaffold"` and `§ "Template"` |
+| Sign, verify, or restore artifacts via BOM; manage Ed25519 keys; install/uninstall pre-commit hooks | `workflows/supply-chain-workflow.md` | `docs/user/guides/cli/commands.md § "SkillBOM"` |
+| View artifact activity history, rollback to a version, or restore a snapshot | `workflows/versioning-workflow.md` | `docs/user/guides/cli/commands.md § "Versioning"` |
+| Authenticate via device-code OAuth, store a PAT, or revoke credentials | `workflows/auth-workflow.md` | `docs/user/guides/cli/commands.md § "Authentication"` |
+| Create, list, or show attestation records | `workflows/supply-chain-workflow.md` | `docs/user/guides/cli/commands.md § "Attestation"` |
+| Migrate a local collection to enterprise edition (`enterprise import --from-collection`) | `workflows/enterprise-workflow.md` | `docs/user/guides/cli/commands.md § "Core Commands"` |
+| Manage blob storage tiers (`dvcs tiering status`) | — | `docs/user/guides/cli/commands.md § "DVCS"` — new in v0.35.0, no agent workflow yet |
+| List snapshot groups or manage snapshot lifecycle (`snapshot list`) | `workflows/versioning-workflow.md` | `docs/user/guides/cli/commands.md § "Versioning"` |
 | Capture, search, or consume memory items; preview or load context packs | `workflows/memory-context-workflow.md` | `CLAUDE.md § "Memory System"` and `skillmeat/api/CLAUDE.md` |
 | Recover from errors: network failures, rate limits, validation errors | `workflows/error-handling.md` | `docs/user/guides/cli/reference.md § "Exit Codes"` |
 | CLI command syntax quick lookup | `references/command-quick-reference.md` | `docs/user/guides/cli/reference.md` |
@@ -90,10 +94,10 @@ Intents map to workflow files in `workflows/` and to the canonical user docs age
    _Source_: `.claude/rules/memory.md` invariant 2
 
 6. **No duplication of SKILL.md routing content**: This SPEC.md documents the capability contract; `SKILL.md` documents invocation-time routing. Content must not be copied between them. Cross-reference by section name only.
-   _Source_: `.claude/specs/skill-spec-convention.md § "2.3 Anti-patterns"`
+   _Source_: `.claude/specs/artifact-structures/skill-spec-convention.md § "2.3 Anti-patterns"`
 
 7. **SPEC.md must be updated in the same commit as source docs**: When `docs/user/guides/cli/commands.md` or `docs/user/guides/cli/reference.md` change (new commands, renamed flags), the Capability Coverage table in this SPEC.md must be updated in the same commit.
-   _Source_: `.claude/specs/skill-spec-convention.md § "3.3 Staleness Protocol"`
+   _Source_: `.claude/specs/artifact-structures/skill-spec-convention.md § "3.3 Staleness Protocol"`
 
 ---
 
@@ -144,10 +148,10 @@ Ideas from the 7 archived speculative workflows are preserved here. Each entry i
   _Rationale_: Aspirational orchestration patterns; premature to document until confidence + gap-detection workflows are stable.
 
 - **[BL-8] Discovery CLI surface**: Natural-language artifact discovery via a dedicated CLI command rather than guided agent search patterns.
-  _Status_: candidate
-  _Source workflow_: `workflows/discovery-workflow.md` (598 lines, retained as future design doc)
-  _CLI prerequisite_: `skillmeat search <query>` already exists; `skillmeat discover` or `skillmeat recommend` for intent-based matching.
-  _Rationale_: Current discovery-workflow.md is aspirational; `skillmeat search` covers basic cases. Evaluate after BL-3 (confidence scoring) is available.
+  _Status_: shipped (v0.35.0)
+  _Source workflow_: `workflows/discovery-workflow.md` — updated to reflect shipped `skillmeat discover` command.
+  _CLI prerequisite_: Met. `skillmeat discover` ships in v0.35.0 with AI-powered search across collection, marketplace, and curated web sources.
+  _Rationale_: `skillmeat discover` provides intent-based matching via `/api/v1/discover`. Workflow updated; aspirational content removed.
 
 - **[BL-9] Memory CLI reliability**: Resolve `skillmeat memory item create` returning 422 so API fallback is not required in normal workflows.
   _Status_: planned
@@ -156,6 +160,15 @@ Ideas from the 7 archived speculative workflows are preserved here. Each entry i
 ---
 
 ## 5. Changelog
+
+### v1.2.0 — 2026-04-27
+
+- Added `aligned_app_version: 0.35.0` frontmatter field for explicit CLI surface tracking
+- Updated capability coverage: scaffold `--from-repo` / `--output-pr` (remote git and PR generation), `dvcs tiering status` (new command group — no workflow yet), `enterprise import --from-collection` (active, no longer pending), `snapshot list` (snapshot now a command group)
+- Updated from SkillMeat v0.30.3 CLI surface (9 command groups, 26 subcommands) to v0.35.0 (10 command groups, 30+ subcommands)
+- Removed "pending 3C.2" markers from supply-chain, versioning, auth, and enterprise workflows — all now active
+- Corrected scaffold row: points to `workflows/scaffold-workflow.md` (not `bundle-workflow.md`)
+- Added `skillmeat discover` coverage: new capability row for AI-powered intent-based discovery; BL-8 status updated from `candidate` to `shipped`; `discovery-workflow.md` updated to reflect shipped CLI surface
 
 ### v1.0.0 — 2026-04-14
 

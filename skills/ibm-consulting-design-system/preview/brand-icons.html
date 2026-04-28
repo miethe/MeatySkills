@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Icons</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .ico-row { display:grid; grid-template-columns: repeat(7, 1fr); gap:0; background:#f4f4f4; padding:14px 0; align-items:center; }
+  .ico { display:flex; flex-direction:column; gap:6px; align-items:center; color:#161616; }
+  .ico img, .ico svg { width:28px; height:28px; }
+  .ico .mono { font-size:10px; }
+  .tier-label { font-size:11px; font-weight:600; color:#161616; letter-spacing:0.02em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .tier-label::before { content:""; width:3px; height:12px; background:#0f62fe; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- TIER 1: deck-extracted Carbon icons (primary) -->
+  <div class="tier-label">1 · Carbon Icons — primary</div>
+  <div class="ico-row">
+    <div class="ico"><img src="../assets/icons/microscope.png"><div class="mono">microscope</div></div>
+    <div class="ico"><img src="../assets/icons/shield-hand.png"><div class="mono">shield</div></div>
+    <div class="ico"><img src="../assets/icons/target.png"><div class="mono">target</div></div>
+    <div class="ico"><img src="../assets/icons/tools.png"><div class="mono">tools</div></div>
+    <div class="ico"><img src="../assets/icons/dollar-chat.png"><div class="mono">cost</div></div>
+    <div class="ico"><img src="../assets/icons/clock.png"><div class="mono">time</div></div>
+    <div class="ico"><img src="../assets/icons/rocket.png"><div class="mono">launch</div></div>
+  </div>
+
+  <!-- TIER 2: Lucide — fallback pack -->
+  <div class="tier-label">2 · Lucide — fallback when Carbon is missing the glyph</div>
+  <div class="ico-row" style="background:#fff;border:1px solid #e0e0e0">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div class="mono">sun</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg><div class="mono">menu</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><div class="mono">check-circle</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="mono">message</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><div class="mono">grid</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><div class="mono">layers</div></div>
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><div class="mono">settings</div></div>
+  </div>
+
+  <!-- TIER 3: Custom + Image gen -->
+  <div class="tier-label">3 · Custom SVG / image gen — when neither pack has it</div>
+  <div class="ico-row" style="background:transparent;padding:10px 0">
+    <div class="ico" style="grid-column: span 3;align-items:flex-start;padding:0 12px">
+      <div class="mono" style="font-weight:600;color:#161616">Custom SVG</div>
+      <div class="lbl" style="text-align:left">Hand-built on 32px grid, 2px stroke, single <code>currentColor</code>. Only when a specific concept (e.g. BoxBoat boat-mark) isn't in either pack.</div>
+    </div>
+    <div class="ico" style="grid-column: span 4;align-items:flex-start;padding:0 12px">
+      <div class="mono" style="font-weight:600;color:#161616">Image generation</div>
+      <div class="lbl" style="text-align:left">For full illustrations or hero spots — the 3D matte-white sculptural renders that anchor IBM Consulting hero slides. Never for UI icons.</div>
+    </div>
+  </div>
+
+  <div class="lbl">Priority: <strong>Carbon first</strong> (2,400+ glyphs, the canonical system). Fall back to <strong>Lucide</strong> for everyday UI glyphs Carbon lacks. Hand-build SVGs for brand-specific marks. Use image gen only for full illustrations — never as a substitute for a real icon.</div>
+</div>
+</body></html>

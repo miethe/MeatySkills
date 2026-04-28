@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IBM Consulting — UI Kit</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="kit.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+const OFFERINGS = [
+  {
+    id: "automation",
+    eyebrow: "Hybrid cloud",
+    title: "Automation Transformation",
+    body: "'Everything-as-Code' across the hybrid cloud estate with Red Hat Ansible and HashiCorp Terraform.",
+    objectives: [
+      "Eliminate manual, error-prone infrastructure management",
+      "Implement 'Everything-as-Code' operating model",
+      "Embed policy-as-code for audit-ready compliance",
+      "Reduce operational toil by ~50%",
+    ],
+    tech: ["Red Hat Ansible Automation Platform", "HashiCorp Terraform / OpenTofu", "OPA · Gatekeeper · Sentinel", "ArgoCD · Flux (GitOps)"],
+    tools: ["BoxBoat IaC Module Library", "Compliance-as-Code Accelerator Packs", "Maturity Assessment Framework"],
+    levers: ["10× faster infrastructure provisioning", "50% less downtime via automated remediation", "Eliminate configuration drift enterprise-wide"],
+    pills: ["Red Hat", "HashiCorp", "GitOps"],
+    phases: [
+      {label: "01 · Assessment", body: "Automation maturity scan, DORA baseline, top-toil identification.", dur: "2–4 weeks · ~$100K"},
+      {label: "02 · Pilot",      body: "Stand up AAP + Terraform Enterprise. Codify 3–5 processes. GitOps + policy gates.", dur: "6–8 weeks · $500K+"},
+      {label: "03 · Scale",      body: "Enterprise catalog; self-service portal; Automation CoE; Event-Driven Ansible.", dur: "3–6 months+ · $5M+"},
+    ],
+  },
+  {
+    id: "cnf",
+    eyebrow: "Platform",
+    title: "Cloud-Native Foundations",
+    body: "A Day-0 hybrid Kubernetes landing zone — the standardized platform prerequisite for Agentic AI.",
+    objectives: [
+      "Deliver a production-grade hybrid Kubernetes 'landing zone' from Day-0",
+      "Standardize security, governance, observability",
+      "Establish a unified Multi-Cloud Control Plane",
+      "Enable golden paths for developer self-service",
+    ],
+    tech: ["Red Hat OpenShift / EKS / AKS", "Red Hat ACM", "ArgoCD / GitOps", "Red Hat ACS (StackRox)", "Backstage / RHDH"],
+    tools: ["BoxBoat Landing Zone Blueprints", "Stamp-as-Code Cluster Templates", "Platform Maturity Scorecard"],
+    levers: ["20–30% lower infrastructure costs via consolidation", "Faster app onboarding via golden paths", "Eliminate 'Shadow IT' and cluster sprawl"],
+    pills: ["OpenShift", "ACM", "Backstage"],
+    phases: [
+      {label: "01 · Assessment", body: "Inventory Kubernetes clusters, cloud accounts; Day-2 readiness scan.", dur: "2–4 weeks · $100–200K"},
+      {label: "02 · Pilot",      body: "Opinionated landing zone, GitOps, observability, 2–3 pilot apps via golden paths.", dur: "8–12 weeks · $500K+"},
+      {label: "03 · Scale",      body: "Multi-Cloud Control Plane; Internal Developer Portal; platform operating model.", dur: "3–9 months+ · $2.5M+"},
+    ],
+  },
+  {
+    id: "sdlc",
+    eyebrow: "DevEx",
+    title: "Modern & Agentic SDLC",
+    body: "AI-ready, governed software factory. 2.5× faster delivery with 40% fewer release failures.",
+    objectives: [
+      "Transform the SDLC into an AI-ready, governed software factory",
+      "Achieve 2.5× faster delivery with 40% fewer release failures",
+      "Embed shift-left security (SLSA / SBOM / SSDF)",
+      "Deploy AI copilots and agentic assistants with enterprise governance",
+    ],
+    tech: ["GitHub Enterprise / GitLab", "Tekton · Argo Workflows", "Backstage · Port · RHDH", "GitHub Copilot · watsonx · Claude"],
+    tools: ["BoxBoat Golden Pipeline Templates", "Harness Engineering Control Plane", "Private AI Skill Marketplace (SAM)"],
+    levers: ["~25% increase in developer productivity", "20–30% faster time-to-market", "From 'Shadow AI Crisis' to governed autonomy"],
+    pills: ["GitHub", "Copilot", "SLSA / SBOM"],
+    phases: [
+      {label: "01 · Assessment", body: "DORA baseline, CI/CD maturity, Shadow AI governance gap analysis.", dur: "2–4 weeks · $50–150K"},
+      {label: "02 · Pilot",      body: "Golden CI/CD; Internal Developer Portal; governed Copilot; SLSA attestation.", dur: "8–12 weeks · $500K+"},
+      {label: "03 · Scale",      body: "CCDash Agentic Control Plane; autonomous AI agents; DevEx CoE.", dur: "3–9 months+ · $2M+"},
+    ],
+  },
+  {
+    id: "vmware",
+    eyebrow: "Migration",
+    title: "VMware Estate Transformation",
+    body: "Escape Broadcom licensing. 30–50% TCO reduction by migrating to Red Hat OpenShift Virtualization.",
+    objectives: [
+      "Escape spiraling Broadcom/VMware licensing with 30–50% TCO reduction",
+      "Migrate VM workloads to Red Hat OpenShift Virtualization at scale",
+      "Eliminate proprietary vendor lock-in",
+      "Create a unified platform for VMs and future container workloads",
+    ],
+    tech: ["Red Hat OpenShift Virtualization (RHOV)", "Migration Toolkit for Virtualization (MTV)", "Red Hat Ansible · ACM · GitOps"],
+    tools: ["BoxBoat RHOV Landing Zone Blueprints", "Agentic Migration Factory (MTV + Ansible)", "MAP assessment platform"],
+    levers: ["30–50% TCO reduction on virtualization", "Near-immediate ROI on pilot scope", "Unified platform for VMs and containers"],
+    pills: ["RHOV", "Red Hat", "Migration"],
+    phases: [
+      {label: "01 · Assessment", body: "Workload inventory, TCO model (VMware vs. RHOV), 3-year ROI projection.", dur: "2–4 weeks · $100–200K"},
+      {label: "02 · Pilot",      body: "Production RHOV landing zone; migrate 50–100 low-criticality VMs via MTV factory.", dur: "8–12 weeks · $1M+"},
+      {label: "03 · Scale",      body: "Wave-based migration; progressively modernize workloads from VMs to containers.", dur: "3–12 months+ · $10M+"},
+    ],
+  },
+];
+
+function Home({ go }) {
+  return (
+    <>
+      <HeroBlock
+        eyebrow="IBM Consulting · 2026"
+        title={<>Let's create<br/>what's next.</>}
+        sub="Hybrid cloud, automation, and agentic AI — delivered at enterprise scale with IBM Consulting and BoxBoat."
+        ctaLabel="See our offerings"
+        onCta={() => document.getElementById("offerings")?.scrollIntoView({behavior:'smooth'})}
+      />
+
+      <section className="section" id="offerings">
+        <div className="eyebrow">What we build</div>
+        <h2 className="headline">Four offerings engineered for the hybrid-cloud enterprise.</h2>
+        <p className="kicker">Each is a 3-phase engagement — assessment, pilot, and scale — backed by a library of accelerators and certified engineers.</p>
+        <div className="tiles" style={{marginTop:48}}>
+          {OFFERINGS.map((o) => (
+            <OfferingCard key={o.id} eyebrow={o.eyebrow} title={o.title} body={o.body}
+              onClick={() => go(o.id)} />
+          ))}
+        </div>
+      </section>
+
+      <section className="section" style={{background:"#f4f4f4", maxWidth:"none", padding:"96px 5vw"}}>
+        <div style={{maxWidth:1584, margin:"0 auto"}}>
+          <div className="eyebrow">The measurable outcome</div>
+          <h2 className="headline">What Fortune 500 clients see in their first 12 months.</h2>
+          <div className="stats" style={{marginTop:48}}>
+            <StatBlock num="2.5×"  label="Faster software delivery" sub="Measured by deployment frequency and lead time across pilots." />
+            <StatBlock num="40%"   label="Fewer release failures"   sub="Shift-left security, SLSA attestation, governed copilot adoption." />
+            <StatBlock num="30–50%" label="TCO reduction on VMs"     sub="Migrating VMware estates to Red Hat OpenShift Virtualization." />
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="eyebrow">Think</div>
+        <h2 className="headline">Perspectives from the practice.</h2>
+        <div style={{marginTop:32, maxWidth:880}}>
+          <TileLink eyebrow="Point of view · 18 min read">
+            From the Shadow AI Crisis to governed autonomy: designing the agentic software factory.
+          </TileLink>
+          <TileLink eyebrow="Case study · Healthcare">
+            How a US health system cut virtualization OpEx by millions/year with Red Hat OpenShift Virtualization.
+          </TileLink>
+          <TileLink eyebrow="Webinar · 45 min">
+            Day-0 Kubernetes landing zones — the platform prerequisite for Agentic AI.
+          </TileLink>
+          <TileLink eyebrow="Report">
+            2026 IBM Consulting Hybrid Cloud Benchmark: DORA, SPACE, and the economics of Everything-as-Code.
+          </TileLink>
+        </div>
+      </section>
+
+      <FooterBar />
+    </>
+  );
+}
+
+function Detail({ offering, go }) {
+  const o = offering;
+  return (
+    <>
+      <div className="breadcrumb">
+        <a href="#" onClick={(e)=>{e.preventDefault(); go("home");}}>Consulting</a>
+        <span className="sep">/</span>
+        <span>Hybrid cloud</span>
+        <span className="sep">/</span>
+        <span style={{color:"#161616"}}>{o.title}</span>
+      </div>
+
+      <section className="section" style={{paddingTop:24}}>
+        <div className="two-col">
+          <div>
+            <div className="eyebrow">{o.eyebrow} offering</div>
+            <h1 className="headline" style={{fontSize:56, maxWidth:"none"}}>{o.title}</h1>
+            <div className="tagrow">
+              {o.pills.map((p,i) => <span className="pill" key={i}>{p}</span>)}
+            </div>
+            <p className="kicker" style={{marginBottom:32, maxWidth:"none"}}>{o.body}</p>
+            <Button size="lg" onClick={()=>go("contact")}>Talk to our team</Button>
+            <Button kind="ghost" onClick={()=>go("home")}>Back to offerings</Button>
+          </div>
+
+          <div className="quad">
+            <div>
+              <h5><img src="../../assets/icons/target.png" alt=""/>Objectives</h5>
+              <ul>{o.objectives.map((x,i)=><li key={i}>{x}</li>)}</ul>
+            </div>
+            <div>
+              <h5><img src="../../assets/icons/tools.png" alt=""/>Technology in scope</h5>
+              <ul>{o.tech.map((x,i)=><li key={i}>{x}</li>)}</ul>
+            </div>
+            <div>
+              <h5><img src="../../assets/icons/microscope.png" alt=""/>Tools &amp; accelerators</h5>
+              <ul>{o.tools.map((x,i)=><li key={i}>{x}</li>)}</ul>
+            </div>
+            <div style={{background:"#161616",color:"#fff",borderColor:"#161616"}}>
+              <h5 style={{color:"#fff"}}><img src="../../assets/icons/rocket.png" alt="" style={{filter:"invert(1)"}}/>Key value levers</h5>
+              <ul style={{color:"#e0e0e0"}}>{o.levers.map((x,i)=><li key={i}>{x}</li>)}</ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section" style={{paddingTop:32}}>
+        <div className="eyebrow">Example offer structure</div>
+        <h2 className="headline" style={{fontSize:32}}>Three phases — assessment, pilot, scale.</h2>
+        <div className="phases">
+          {o.phases.map((p,i) => (
+            <div key={i} className={`p${i+1}`}>
+              <h6>{p.label}</h6>
+              <div style={{lineHeight:1.5,opacity:0.95}}>{p.body}</div>
+              <div className="dur">{p.dur}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <FooterBar />
+    </>
+  );
+}
+
+function Contact({ go }) {
+  return (
+    <>
+      <div className="breadcrumb">
+        <a href="#" onClick={(e)=>{e.preventDefault(); go("home");}}>Consulting</a>
+        <span className="sep">/</span>
+        <span style={{color:"#161616"}}>Contact</span>
+      </div>
+      <section className="section" style={{maxWidth:720, padding:"48px 5vw 120px"}}>
+        <div className="eyebrow">Start your engagement</div>
+        <h1 className="headline">Let's talk about what's next.</h1>
+        <p className="kicker">Tell us about your estate. A BoxBoat engineer will reach out within two business days.</p>
+
+        <form onSubmit={(e)=>{e.preventDefault(); alert("Thanks — an IBM Consulting representative will be in touch.");}}
+              style={{display:"flex",flexDirection:"column",gap:16,marginTop:32}}>
+          <Field label="Full name" placeholder="Alex Chen" />
+          <Field label="Work email" placeholder="alex@company.com" />
+          <Field label="Company" placeholder="Fortune 500 Co" />
+          <Field label="Estate size (VMs / clusters)" placeholder="e.g. 2,400 VMs across 3 vCenters" />
+          <Field label="What are you trying to achieve?" placeholder="Short description…" textarea />
+          <div style={{marginTop:16}}>
+            <Button size="lg">Submit</Button>
+            <Button kind="ghost" onClick={()=>go("home")}>Cancel</Button>
+          </div>
+        </form>
+      </section>
+      <FooterBar />
+    </>
+  );
+}
+
+function Field({ label, placeholder, textarea }) {
+  return (
+    <label style={{display:"flex",flexDirection:"column",gap:6,fontFamily:"IBM Plex Sans"}}>
+      <span style={{fontSize:12,color:"#525252"}}>{label}</span>
+      {textarea
+        ? <textarea rows={4} placeholder={placeholder} style={{fontFamily:"inherit",fontSize:14,color:"#161616",background:"#f4f4f4",border:"none",borderBottom:"1px solid #8d8d8d",padding:"11px 16px",resize:"vertical"}}/>
+        : <input placeholder={placeholder} style={{fontFamily:"inherit",fontSize:14,color:"#161616",background:"#f4f4f4",border:"none",borderBottom:"1px solid #8d8d8d",padding:"11px 16px"}}/>}
+    </label>
+  );
+}
+
+function App() {
+  const [route, setRoute] = useState("home");
+  const offering = OFFERINGS.find(o => o.id === route);
+  return (
+    <>
+      <MastheadNav active="Consulting" onNavigate={setRoute} />
+      {route === "home"    && <Home go={setRoute} />}
+      {offering            && <Detail offering={offering} go={setRoute} />}
+      {route === "contact" && <Contact go={setRoute} />}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

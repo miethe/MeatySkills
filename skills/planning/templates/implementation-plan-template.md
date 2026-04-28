@@ -24,6 +24,7 @@ deferred_items_spec_refs: [] # Design specs authored for deferred/research items
 findings_doc_ref: null       # Path to .claude/findings/[feature-slug]-findings.md — created lazily on first in-flight finding
 charter_ref: null        # Set if charter-driven SPIKE
 changelog_ref: null      # Set during doc finalization
+changelog_required: true # true if feature has user-facing changes requiring a CHANGELOG entry; false to skip DOC-001
 test_plan_ref: null      # Set if formal test plan created
 plan_structure: unified  # unified|independent — unified for single plan, independent for multi-week features
 progress_init: auto      # auto|pre-created — auto if planning generates progress files, pre-created if done during planning
@@ -44,6 +45,7 @@ files_affected: [] # Key files expected to change
 **Plan ID**: `IMPL-{YYYY-MM-DD}-{FEATURE-NAME}`
 **Date**: YYYY-MM-DD
 **Author**: [Implementation Planner Agent]
+**Human Brief**: [path to human brief, or "N/A — not created (feature too small)"]
 **Related Documents**:
 - **PRD**: `/docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
 - **ADRs**: [Links to relevant Architecture Decision Records]
@@ -77,6 +79,30 @@ Following MeatyPrompts layered architecture:
 ### Critical Path
 
 [Identify the critical path that determines overall timeline]
+
+### Phase Summary
+
+At-a-glance view of every phase with point estimates, target subagents, and model/platform designations. Keep this table in sync with the detailed phase breakdowns below — it is the canonical orchestration index for executors.
+
+| Phase | Title | Estimate | Target Subagent(s) | Model(s) | Notes |
+|-------|-------|----------|--------------------|----------|-------|
+| 1 | Database Foundation | X pts | data-layer-expert | sonnet | — |
+| 2 | Repository Layer | X pts | python-backend-engineer, data-layer-expert | sonnet | — |
+| 3 | Service Layer | X pts | python-backend-engineer, backend-architect | sonnet | — |
+| 4 | API Layer | X pts | python-backend-engineer, backend-architect | sonnet | — |
+| 5 | UI Layer | X pts | ui-engineer-enhanced, frontend-developer, ui-designer | sonnet (+ gemini-3.1-pro for design) | External model for UI-001 wireframing |
+| 6 | Testing Layer | X pts | testing specialists, all developers | sonnet | — |
+| 7 | Documentation Finalization | X pts | changelog-generator, documentation-writer, ai-artifacts-engineer | haiku (sonnet for skill SPECs) | — |
+| 8 | Deployment Layer | X pts | DevOps, lead-pm | sonnet | — |
+| **Total** | — | **X pts** | — | — | — |
+
+**Model column conventions:**
+- Claude-only phases: list the single Claude model (e.g., `sonnet`, `haiku`).
+- Mixed phases: list the primary Claude model plus any external model in parens (e.g., `sonnet (+ gemini-3.1-pro for UI-001)`).
+- External-heavy phases: list external model first with Claude as fallback.
+- Reference `.claude/skills/planning/references/multi-model-guidance.md` for routing logic.
+
+> Estimation rationale lives in the Human Brief (see §Estimation Sanity Check). Plan retains per-phase task estimates only.
 
 ## Deferred Items & In-Flight Findings Policy
 
@@ -263,6 +289,7 @@ Evaluate and update all documentation affected by this feature. All doc tasks de
 | README.md | Features, CLI commands, screenshots, or version changed | `documentation-writer` agent |
 | User/dev docs | New features or changed behavior that users need to know about | `documentation-writer` agent |
 | Context files | Changes affect agent behavior, architectural patterns, or dev workflow | `documentation-writer` agent |
+| Project-level custom skills | Changes affect domain of a custom skill (CLI commands, capabilities, workflows) | `ai-artifacts-engineer` (SPEC/SKILL) + `documentation-writer` (workflows) |
 
 #### Context File Update Rules
 
@@ -274,22 +301,24 @@ Evaluate and update all documentation affected by this feature. All doc tasks de
 
 | Task ID | Task Name | Description | Acceptance Criteria | Estimate | Subagent(s) | Model | Effort | Dependencies |
 |---------|-----------|-------------|-------------------|----------|-------------|-------|--------|--------------|
-| DOC-001 | Update CHANGELOG | Add entry for user-facing changes following Keep A Changelog format | Entry exists with correct categorization | 0.5 pts | changelog-generator | haiku | adaptive | All impl phases |
+| DOC-001 | Update CHANGELOG | Add entry for user-facing changes under `[Unreleased]` following Keep A Changelog format. Categorization rules and skip patterns are in `.claude/specs/changelog-spec.md`. Skip this task (set `changelog_required: false` in plan frontmatter) only when the feature has zero user-facing changes. Agent must verify that `[Unreleased]` contains an entry matching this feature before the release gate. | Entry exists under `[Unreleased]` with correct categorization; `changelog_ref` frontmatter set to `CHANGELOG.md` | 0.5 pts | changelog-generator | haiku | adaptive | All impl phases |
 | DOC-002 | Update README | Rebuild README if features/CLI/screenshots/version changed | README reflects current state | 0.5 pts | documentation-writer | haiku | adaptive | All impl phases |
 | DOC-003 | Update user/dev docs | Update relevant docs under `docs/` for changed behavior | Docs accurate and concise | 0.5-1 pts | documentation-writer | haiku | adaptive | All impl phases |
 | DOC-004 | Update context files | Update CLAUDE.md, key-context, rules for agent-relevant changes | Additions follow progressive disclosure | 0.5-1 pts | documentation-writer | haiku | adaptive | All impl phases |
 | DOC-005 | Update plan frontmatter | Set status=completed, populate commit_refs, files_affected, updated | Frontmatter complete per lifecycle spec | 0.5 pts | documentation-writer | haiku | adaptive | DOC-001 through DOC-004 |
 | DOC-006 | Author design specs for deferred items | For each item in the "Deferred Items" triage table, author a design_spec at `docs/project_plans/design-specs/[item-slug].md` with `maturity: shaping` (or `idea` if research/SPIKE needed), set `prd_ref` to the parent PRD, and append the resulting path to this plan's `deferred_items_spec_refs`. Skip with "N/A — no deferred items" if the triage table is empty. | All deferred items have corresponding design_specs OR documented as N/A | 0.5-2 pts | documentation-writer | sonnet | medium | All impl phases |
 | DOC-007 | Finalize findings doc & promote load-bearing findings | If `findings_doc_ref` is populated: ensure all phase findings captured, advance status from `draft` → `accepted`, populate `promoted_to` with this plan's path. For any load-bearing findings, ensure a design_spec was authored (coordinate with DOC-006). Skip with "N/A — no findings captured" if `findings_doc_ref` is null. | Findings doc finalized OR marked N/A | 0.5-1 pts | documentation-writer | haiku | low | DOC-006 |
+| DOC-008 | Update affected project-level skills | For each custom skill whose domain is touched by this plan (check `.claude/specs/skills-index.md`): update SPEC.md Capability Coverage matrix, bump SPEC.md Changelog + `updated` date, refresh affected workflow files, update skills-index.md version if bumped. Skip with "N/A — no project-level skill domains affected" if none apply. | All affected custom skills have current SPEC.md + workflows, OR documented as N/A | 0.5-2 pts | ai-artifacts-engineer, documentation-writer | sonnet | medium | All impl phases |
 
 **Phase 7 Quality Gates:**
-- [ ] CHANGELOG entry (if applicable) added
+- [ ] CHANGELOG `[Unreleased]` section contains an entry matching this feature (required if `changelog_required: true`; verify via `.claude/specs/changelog-spec.md` before release gate)
 - [ ] README updated (if applicable)
 - [ ] User/dev docs updated (if applicable)
 - [ ] Context files updated (if applicable)
 - [ ] Plan frontmatter complete
 - [ ] Design specs authored for all deferred items (or N/A with rationale)
 - [ ] Findings doc finalized if any findings captured during execution
+- [ ] Project-level custom skills updated (or N/A with rationale)
 - [ ] `deferred_items_spec_refs` and `findings_doc_ref` frontmatter populated
 
 ---

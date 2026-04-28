@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "demo:doctor": "node demo/tools/demo-foundry.mjs doctor",
+    "demo:capture": "playwright test demo/demos/**/*.spec.ts",
+    "demo:review": "node demo/tools/demo-foundry.mjs review",
+    "demo:render": "remotion render"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "remotion": "latest",
+    "@remotion/cli": "latest",
+    "typescript": "latest"
+  }
+}

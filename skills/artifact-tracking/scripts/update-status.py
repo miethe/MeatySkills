@@ -8,6 +8,8 @@ loading the full markdown body, preserving all formatting and content.
 Usage:
     python update-status.py --file .claude/progress/prd/phase-1-progress.md --task TASK-1.3 --status complete
     python update-status.py --file .claude/progress/prd/phase-1-progress.md --task TASK-1.3 --status blocked --note "Waiting on API"
+    python update-status.py -f FILE -t TASK-1 -s completed --started 2026-04-22T10:00Z --completed 2026-04-22T17:00Z --evidence "commit:abc123" --verified-by P16-003
+    python update-status.py -f FILE -t TASK-1 -s completed --force
 """
 
 import argparse
@@ -140,26 +142,62 @@ def recalculate_metrics(frontmatter: Dict[str, Any]) -> Dict[str, Any]:
     return frontmatter
 
 
+def parse_evidence_item(raw: str) -> Dict[str, str]:
+    """
+    Parse an evidence string into a structured dict.
+
+    Accepts:
+      - "key:value"  → {key: value}
+      - plain text   → {"note": text}
+
+    Examples:
+      "commit:abc123"      → {"commit": "abc123"}
+      "screenshot:path"    → {"screenshot": "path"}
+      "test:path/to.test"  → {"test": "path/to.test"}
+      "plain description"  → {"note": "plain description"}
+    """
+    if ':' in raw:
+        key, _, value = raw.partition(':')
+        key = key.strip()
+        value = value.strip()
+        if key and value:
+            return {key: value}
+    return {"note": raw.strip()}
+
+
 def update_task_status(
     filepath: Path,
     task_id: str,
     status: str,
-    note: Optional[str] = None
+    note: Optional[str] = None,
+    started: Optional[str] = None,
+    completed_ts: Optional[str] = None,
+    evidence: Optional[List[str]] = None,
+    verified_by: Optional[List[str]] = None,
+    force: bool = False,
 ) -> Tuple[int, int]:
     """
     Update status of a single task in progress file.
 
+    When status is 'completed', both --started and --completed timestamps must
+    be supplied (or at least --evidence), unless --force is given.
+
     Args:
         filepath: Path to progress file
         task_id: Task identifier (e.g., "TASK-1.3")
-        status: New status value (pending, in_progress, completed, blocked, at_risk)
+        status: New status value
         note: Optional note to add to task
+        started: ISO-8601 timestamp for task start
+        completed_ts: ISO-8601 timestamp for task completion
+        evidence: List of evidence strings (key:value or plain)
+        verified_by: List of verifier IDs
+        force: Skip completion timestamp requirement (logs WARNING)
 
     Returns:
         Tuple of (old_progress, new_progress) percentages
 
     Raises:
-        ValueError: If task not found or invalid status
+        ValueError: If task not found, invalid status, or completion gate fails
         FileNotFoundError: If file doesn't exist
     """
     # Validate status
@@ -167,6 +205,24 @@ def update_task_status(
                       'skipped', 'deferred', 'deviated', 'partial', 'superseded']
     if status not in valid_statuses:
         raise ValueError(f"Invalid status '{status}'. Must be one of: {', '.join(valid_statuses)}")
+
+    # Completion gate: require timestamps (or evidence) unless --force
+    if status == 'completed':
+        has_timestamps = started is not None and completed_ts is not None
+        has_evidence = evidence and len(evidence) > 0
+        if not has_timestamps and not has_evidence:
+            if force:
+                print(
+                    f"WARNING: Marking {task_id} completed without started/completed timestamps "
+                    f"or evidence. Use --started and --completed for proper tracking.",
+                    file=sys.stderr,
+                )
+            else:
+                raise ValueError(
+                    f"Cannot mark task '{task_id}' completed without timing signals. "
+                    f"Provide --started and --completed timestamps, or --evidence, "
+                    f"or use --force to override (logs a warning)."
+                )
 
     # Check file exists
     if not filepath.exists():
@@ -189,6 +245,25 @@ def update_task_status(
             task['status'] = status
             if note:
                 task['note'] = note
+            if started is not None:
+                task['started'] = started
+            if completed_ts is not None:
+                task['completed'] = completed_ts
+            if evidence:
+                existing_evidence = task.get('evidence', [])
+                if not isinstance(existing_evidence, list):
+                    existing_evidence = []
+                for raw in evidence:
+                    existing_evidence.append(parse_evidence_item(raw))
+                task['evidence'] = existing_evidence
+            if verified_by:
+                existing_vb = task.get('verified_by', [])
+                if not isinstance(existing_vb, list):
+                    existing_vb = []
+                for vb in verified_by:
+                    if vb not in existing_vb:
+                        existing_vb.append(vb)
+                task['verified_by'] = existing_vb
             task_found = True
             break
 
@@ -212,63 +287,96 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Mark task as complete
-  python update-status.py --file .claude/progress/prd/phase-1-progress.md --task TASK-1.3 --status completed
+  # Mark task as complete with timing
+  python update-status.py -f .claude/progress/prd/phase-1-progress.md -t TASK-1.3 -s completed \\
+      --started 2026-04-22T10:00Z --completed 2026-04-22T17:00Z
+
+  # Mark complete with evidence
+  python update-status.py -f FILE -t TASK-1 -s completed \\
+      --evidence "commit:abc123" --evidence "test:path/to.test.tsx" \\
+      --verified-by P16-003 --verified-by P16-012-smoke
+
+  # Force complete without timestamps (logs WARNING)
+  python update-status.py -f FILE -t TASK-1 -s completed --force
 
   # Mark task as blocked with note
-  python update-status.py --file .claude/progress/prd/phase-1-progress.md --task TASK-1.3 --status blocked --note "Waiting on API"
+  python update-status.py -f FILE -t TASK-1.3 -s blocked --note "Waiting on API"
 
   # Start working on task
-  python update-status.py --file .claude/progress/prd/phase-1-progress.md --task TASK-1.3 --status in_progress
+  python update-status.py -f FILE -t TASK-1.3 -s in_progress --started 2026-04-22T09:00Z
 
-Valid statuses: pending, in_progress, completed, blocked, at_risk
+Valid statuses: pending, in_progress, completed, blocked, at_risk, skipped, deferred, deviated, partial, superseded
         """
     )
 
+    parser.add_argument('--file', '-f', type=Path, required=True, help='Path to progress file')
+    parser.add_argument('--task', '-t', required=True, help='Task ID to update (e.g., TASK-1.3)')
     parser.add_argument(
-        '--file',
-        '-f',
-        type=Path,
-        required=True,
-        help='Path to progress file'
+        '--status', '-s', required=True,
+        choices=['pending', 'in_progress', 'completed', 'blocked', 'at_risk',
+                 'skipped', 'deferred', 'deviated', 'partial', 'superseded'],
+        help='New status for the task',
     )
-
+    parser.add_argument('--note', '-n', help='Optional note to add to the task')
     parser.add_argument(
-        '--task',
-        '-t',
-        required=True,
-        help='Task ID to update (e.g., TASK-1.3)'
+        '--started',
+        help='ISO-8601 timestamp when task was started (e.g. 2026-04-22T10:00Z). '
+             'Required with --completed when marking completed.',
     )
-
     parser.add_argument(
-        '--status',
-        '-s',
-        required=True,
-        choices=['pending', 'in_progress', 'completed', 'blocked', 'at_risk'],
-        help='New status for the task'
+        '--completed',
+        dest='completed_ts',
+        help='ISO-8601 timestamp when task was completed. '
+             'Required with --started when marking completed.',
     )
-
     parser.add_argument(
-        '--note',
-        '-n',
-        help='Optional note to add to the task'
+        '--evidence',
+        action='append',
+        default=[],
+        metavar='KEY:VALUE',
+        help='Evidence item (repeatable). Format: "commit:abc123", "screenshot:path", '
+             '"test:path/to.test.tsx", or plain text. Appends to task evidence list.',
+    )
+    parser.add_argument(
+        '--verified-by',
+        action='append',
+        default=[],
+        dest='verified_by',
+        metavar='TASK_ID',
+        help='Verifier task ID (repeatable). Appends to task verified_by list.',
+    )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Allow marking completed without timestamps (logs WARNING to stderr).',
     )
 
     args = parser.parse_args()
 
     try:
-        # Update task status
         old_progress, new_progress = update_task_status(
             args.file,
             args.task,
             args.status,
-            args.note
+            note=args.note,
+            started=args.started,
+            completed_ts=args.completed_ts,
+            evidence=args.evidence or None,
+            verified_by=args.verified_by or None,
+            force=args.force,
         )
 
-        # Print success message
         print(f"✓ Updated {args.task} to '{args.status}'")
         if args.note:
             print(f"  Note: {args.note}")
+        if args.started:
+            print(f"  Started: {args.started}")
+        if args.completed_ts:
+            print(f"  Completed: {args.completed_ts}")
+        if args.evidence:
+            print(f"  Evidence: {len(args.evidence)} item(s) added")
+        if args.verified_by:
+            print(f"  Verified-by: {', '.join(args.verified_by)}")
         print(f"  Progress: {old_progress}% → {new_progress}%")
         sys.exit(0)
 

@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Notifications</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .notif {
+    display:flex; gap:12px; padding:16px;
+    font-family:'IBM Plex Sans',sans-serif;font-size:14px;
+    border-left:3px solid;
+  }
+  .notif--info { background:#edf5ff; border-color:#0043ce; }
+  .notif--success { background:#defbe6; border-color:#198038; }
+  .notif--warn { background:#fcf4d6; border-color:#f1c21b; }
+  .notif--err { background:#fff1f1; border-color:#da1e28; }
+  .notif strong { font-weight:600; }
+  .notif .close { margin-left:auto; color:#525252; font-size:12px; cursor:pointer; }
+  .notif .dot { width:20px;height:20px;flex-shrink:0; border-radius:50%; color:#fff; font-size:13px; display:flex;align-items:center;justify-content:center; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="col" style="gap:10px">
+    <div class="notif notif--info"><div class="dot" style="background:#0043ce">i</div><div><strong>Informational</strong> — Assessment scheduled for Nov 18. Access to cloud accounts required.</div><div class="close">✕</div></div>
+    <div class="notif notif--success"><div class="dot" style="background:#198038">✓</div><div><strong>Success</strong> — Landing zone deployed. 3 pilot workloads onboarded via golden paths.</div><div class="close">✕</div></div>
+    <div class="notif notif--warn"><div class="dot" style="background:#f1c21b;color:#161616">!</div><div><strong>Warning</strong> — SBOM attestation missing for 4 pipelines. Governance gate blocked.</div><div class="close">✕</div></div>
+    <div class="notif notif--err"><div class="dot" style="background:#da1e28">✕</div><div><strong>Error</strong> — Policy-as-code violation: 7 resources fail CIS benchmark. Review required.</div><div class="close">✕</div></div>
+  </div>
+  <div class="lbl">Inline notifications. 3px left-rule is Carbon's signature — never a full border, never a rounded container.</div>
+</div>
+</body></html>

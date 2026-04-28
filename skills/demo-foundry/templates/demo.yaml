@@ -1,0 +1,100 @@
+id: example-demo
+version: 0.1.0
+title: "Example Application Demo"
+audience: "technical executive"
+status: draft
+
+app:
+  base_url: "http://localhost:3000"
+  start_command: "npm run dev"
+  healthcheck_url: "http://localhost:3000"
+  viewport:
+    width: 1440
+    height: 1000
+  timezone: "America/New_York"
+
+seed:
+  required: true
+  command: "npm run demo:seed"
+  profile: "default-demo"
+  notes: "Use deterministic fake data only."
+
+duration_targets:
+  short_seconds: 60
+  standard_seconds: 180
+  deep_seconds: 420
+
+story:
+  thesis: "This demo proves the core product value through a repeatable workflow."
+  problem: "What pain or gap the audience currently has."
+  promise: "What changes after adopting the product or feature."
+  aha_moments:
+    - id: aha-1
+      text: "The system turns raw user intent into structured execution context."
+    - id: aha-2
+      text: "The workflow is observable, repeatable, and agent-ready."
+
+personas:
+  - id: operator
+    name: "Operations Lead"
+    role: "Primary demo user"
+
+flows:
+  - id: opening-dashboard
+    title: "Open the dashboard"
+    route: "/"
+    capture:
+      screenshot: true
+      video: true
+      trace: true
+    steps:
+      - id: navigate-home
+        action: navigate
+        target: "/"
+        narration: "Start with the main dashboard so the viewer sees the whole system."
+      - id: inspect-status
+        action: observe
+        target: "dashboard status cards"
+        narration: "The dashboard summarizes the active workflows and next actions."
+
+outputs:
+  screenshots: true
+  raw_video: true
+  polished_video: false
+  talking_points: true
+  voiceover_script: true
+  captions: false
+  thumbnail: true
+
+claims:
+  - id: claim-1
+    text: "The application can summarize active workflows from the dashboard."
+    verification: "Visible on opening dashboard screenshot."
+    status: needs-verification
+
+review:
+  required_gates:
+    - capture-success
+    - no-secrets
+    - freshness
+    - claim-accuracy
+    - audience-fit
+  reviewers:
+    - demo-reviewer
+
+context_updates:
+  propose_only: true
+  files:
+    - CLAUDE.md
+    - AGENTS.md
+    - docs/demo-workflow.md
+
+workflow_updates:
+  propose_only: true
+  files:
+    - package.json
+    - .github/workflows/demo-foundry.yml
+
+risks:
+  - "Selectors may need stable data-testid attributes."
+  - "Synthetic voiceover may need manual review."

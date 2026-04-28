@@ -37,10 +37,22 @@ Bob Shell requires **Node.js 22+** (uses `--disable-sigusr1` flag unsupported in
 bob -p "..."
 
 # Via mise (when default Node is < 22)
-mise x node@22 -- bash -c 'bob -p "..."'
+mise exec node@22 -- bob -p "..."
 ```
 
-Detection sequence: run `bob --version` first. If it fails with `bad option: --disable-sigusr1`, retry with the `mise x node@22 --` wrapper.
+Detection sequence: run `bob --version` first. If it fails with `bad option: --disable-sigusr1`, retry with the `mise exec node@22 --` wrapper.
+
+## Single-Shot Only (from Claude Code)
+
+Bob supports two session modes: interactive REPL (`bob`) and single-shot (`bob -p "..."`). **From Claude Code, only single-shot is viable.** The interactive REPL requires stdin input that Claude Code's Bash tool cannot provide mid-session.
+
+Each `bob -p` invocation is stateless — no memory of prior calls, no way to "continue."
+
+Implications:
+- **Single-prompt scope**: Pack all context (file paths, criteria, constraints) into one `bob -p` call. Do not plan multi-turn workflows.
+- **Large reviews**: Split into independent self-contained prompts (e.g., one per component) rather than sequential dependent prompts.
+- **No follow-ups**: If Bob's output is incomplete, re-invoke with a refined prompt that includes the missing context — don't try to "continue."
+- **Interactive Bob is human-only**: If the user wants a multi-turn Bob session, suggest they run `! mise exec node@22 -- bob` directly in the terminal.
 
 ## Required Workflow
 

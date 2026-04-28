@@ -19,6 +19,10 @@ adr_refs: []             # Add as decisions are made
 charter_ref: null        # Set if charter-driven SPIKE
 changelog_ref: null      # Set during doc finalization
 test_plan_ref: null      # Set if formal test plan created
+integration_owner: null  # NEW (§4.2) — required when phase has ≥2 owner specialties with overlapping files_affected; set to the agent/role responsible for cross-owner seam verification (R-P3)
+ui_touched: false        # NEW (§4.2) — set true when any *.tsx file appears in files_affected; auto-derived by generator; triggers R-P4 smoke gate
+target_surfaces: []      # NEW (§4.2) — union of all task target_surfaces for this phase; path strings relative to repo root (see references/ac-schema.md §aq1)
+seam_tasks: []           # NEW (§4.2) — task IDs that span owner boundaries; gated on all upstream tasks being completed (R-P3)
 owner: null # Single accountable owner (name or agent)
 contributors: [] # Supporting contributors
 priority: medium # low|medium|high|critical
@@ -91,6 +95,10 @@ This phase implements the [layer name] following MeatyPrompts architecture:
 **Model**: sonnet (or specify external model if applicable)
 **Effort**: adaptive (or: standard, medium, high per `.claude/config/multi-model.toml`)
 **Dependencies**: [None or other task IDs]
+**started**: null         # NEW (§4.2) — ISO-8601 timestamp; must be non-null when status != pending
+**completed**: null       # NEW (§4.2) — ISO-8601 timestamp; must be non-null when status == completed
+**verified_by**: []       # NEW (§4.2) — verification-phase task IDs that signed off this task
+**evidence**: []          # NEW (§4.2) — file refs, commit SHAs, screenshot paths; e.g. {commit: abc123}, {screenshot: .claude/evidence/phase-N/foo.png}, {test: path/to/test.tsx}
 
 **Description**:
 [Detailed description of what needs to be done]
@@ -118,6 +126,10 @@ This phase implements the [layer name] following MeatyPrompts architecture:
 **Model**: sonnet (or haiku for documentation)
 **Effort**: adaptive
 **Dependencies**: [ID-001]
+**started**: null
+**completed**: null
+**verified_by**: []
+**evidence**: []
 
 **Description**:
 [Detailed description]
@@ -145,6 +157,8 @@ This phase is complete when:
 - [ ] **Documentation**: [Documentation complete]
 - [ ] **Code Quality**: [Linting and quality checks pass]
 - [ ] **Architecture**: [Follows MeatyPrompts patterns]
+- [ ] **Seam verification** (if `integration_owner` set): seam task(s) listed in `seam_tasks` are completed and `verified_by` references are populated (R-P3)
+- [ ] **Runtime smoke** (if `ui_touched: true`): screenshot evidence in `.claude/evidence/phase-[N]/` OR `runtime_smoke: skipped` field with reason recorded — a clean unit-test pass is not a substitute (R-P4)
 
 ---
 

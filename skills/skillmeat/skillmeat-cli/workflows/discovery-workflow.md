@@ -4,15 +4,15 @@ workflow_id: discovery
 canonical_docs:
   - docs/user/guides/cli/commands.md
   - docs/user/guides/cli/reference.md
-version: 1.1
-updated: 2026-04-14
+version: 1.2
+updated: 2026-04-27
 ---
 
 # Discovery Workflow
 
-**Canonical docs for command syntax**: `docs/user/guides/cli/commands.md § "Core Commands"`, `§ "Phase 2: Search Commands"`, `§ "Scoring and Matching"`.
+**Canonical docs for command syntax**: `docs/user/guides/cli/commands.md § "Discovery"`, `§ "Core Commands"`, `§ "Search"`.
 
-This workflow covers agent-specific patterns for discovery only. Do not duplicate flag syntax here — consult the canonical docs for all `--option` details.
+This workflow covers agent-specific patterns for artifact discovery only. Do not duplicate flag syntax here — consult the canonical docs for all `--option` details.
 
 ---
 
@@ -23,9 +23,9 @@ This workflow covers agent-specific patterns for discovery only. Do not duplicat
 | `skillmeat list` | List artifacts in collection, optionally filtered by type |
 | `skillmeat show NAME` | Show details for a named artifact |
 | `skillmeat search QUERY` | Keyword search across collection and marketplace |
-| `skillmeat match QUERY` | Confidence-scored search (when match API available) |
+| `skillmeat discover [INPUT_TEXT]` | AI-powered intent-based discovery across collection, marketplace, and curated web sources |
 
-> `skillmeat match` is present in the CLI surface but confidence scores are API-internal. Do not guide users toward confidence thresholds as an agent-facing workflow — see SPEC.md BL-3 / BL-8.
+> `skillmeat discover` calls `/api/v1/discover`. For full flag reference see `commands.md § "Discovery"`.
 
 ---
 
@@ -36,50 +36,87 @@ This workflow covers agent-specific patterns for discovery only. Do not duplicat
 | "What do I have?", "list my artifacts" | `skillmeat list` | Add `--type skill\|command\|agent` to narrow |
 | "Tell me about X" | `skillmeat show <name>` | Add `--type` if name is ambiguous |
 | "Find tools for Y", "search for Z" | `skillmeat search "<query>"` | Keyword match |
+| "Find something that helps me do Y" | `skillmeat discover "<intent>"` | AI-powered; broader than keyword search |
+| "Show me agents for code review" | `skillmeat discover "<intent>" --types agent` | Type-filtered AI discovery |
+| "What would help with this project?" | `skillmeat discover --file <context-file>` | File-based intent; good for PRD or task descriptions |
 | "Any duplicates?" | `skillmeat find-duplicates` | See `commands.md § "find-duplicates"` |
 
 ---
 
 ## Agent Patterns
 
-### Pattern 1: List → Inspect loop
+### Pattern 1: Keyword search → inspect loop
 
-When user wants to browse:
+When the user knows what they want by name or keyword:
 
 ```bash
-# Step 1: get overview
-skillmeat list --type skill
+# Step 1: find candidates
+skillmeat search "pdf processing"
 
-# Step 2: drill into interesting artifact
+# Step 2: inspect top result
 skillmeat show <name>
 ```
 
 Present top 3–5 entries; offer to show more or inspect one by name.
 
-### Pattern 2: Search → Confirm → Add
+### Pattern 2: AI discover → confirm → add
+
+Use `skillmeat discover` when the user describes an intent rather than a keyword.
+This reaches across collection, marketplace, and web sources.
 
 ```bash
-# Find candidates
-skillmeat search "pdf processing"
+# Discover by natural-language intent
+skillmeat discover "help me review Python code for security issues"
 
-# User picks one; confirm before adding
+# Optionally narrow by type
+skillmeat discover "code review" --types agent,skill
+
+# User picks a result; confirm before adding
 skillmeat show <chosen-name>
-# → present details, ask "Add this to your collection?"
+# → present details, ask "Add this to your collection? (yes/no)"
 skillmeat add skill <source-spec>
 ```
 
-Never add without explicit user confirmation.
+Never add or install without explicit user confirmation unless `--yes` was explicitly requested by the user and the source is a verified collection entry.
 
-### Pattern 3: Disambiguate by type
+### Pattern 3: File-based intent discovery
 
-When `show <name>` returns ambiguity (multiple types match):
+When the user has a PRD, task description, or context file:
+
+```bash
+skillmeat discover --file path/to/prd.md --types skill,command
+```
+
+Useful when the intent is long or structured. Present results the same way as text-based discovery.
+
+### Pattern 4: Bundle fragment output
+
+When the user wants to capture results as a manifest fragment:
+
+```bash
+skillmeat discover "CI/CD automation" --bundle
+```
+
+The `--bundle` flag emits a `manifest.toml` fragment to stdout after results. Relay this fragment to the user verbatim; do not modify it. If the user wants to install, proceed to Pattern 5.
+
+### Pattern 5: Interactive install flow
+
+```bash
+skillmeat discover "testing utilities" --install
+```
+
+`--install` opens an interactive prompt for each result. If the user is in a non-interactive context (CI, background agent), add `--yes` only for verified collection sources. Unverified sources always prompt regardless of `--yes`.
+
+### Pattern 6: Disambiguate by type
+
+When `show <name>` or discover results span multiple types:
 
 ```bash
 skillmeat show review --type command
 skillmeat show review --type skill
 ```
 
-Ask user which type they meant before proceeding.
+Ask the user which type they meant before proceeding.
 
 ---
 
@@ -115,16 +152,32 @@ skillmeat show canvas
 
 Relay description, version, deployment locations. Offer to deploy if not yet deployed.
 
+### Example 4: "Find agents that could help me with this PRD"
+
+```bash
+skillmeat discover --file docs/project_plans/feature-x-prd.md --types agent
+```
+
+Present results. If the user picks one, hand off to `deployment-workflow.md`.
+
+### Example 5: "Discover CI tools and give me the manifest fragment"
+
+```bash
+skillmeat discover "CI/CD automation tools" --types command,workflow --bundle
+```
+
+Relay the manifest fragment verbatim. Ask if the user wants to add any entries to their `manifest.toml`.
+
 ---
 
 ## Empty Results Handling
 
-If `skillmeat search` returns nothing:
-1. Try broader terms (e.g., "document" instead of "PDF extraction").
-2. Suggest `skillmeat list` to browse all.
-3. Offer to help the user add a custom skill via `add skill ./local-path`.
+If `skillmeat discover` or `skillmeat search` returns nothing:
 
-Do not suggest `skillmeat match` with confidence thresholds as a fallback — that is an internal API concern, not an agent workflow.
+1. Try broader terms (e.g., "document processing" instead of "PDF extraction with OCR").
+2. Remove `--types` filter and try again unrestricted.
+3. Suggest `skillmeat list` to browse all locally available artifacts.
+4. Offer to help the user add a custom artifact via `add skill ./local-path`.
 
 ---
 
@@ -132,5 +185,6 @@ Do not suggest `skillmeat match` with confidence thresholds as a fallback — th
 
 - No confidence scoring guidance — see SPEC.md BL-3.
 - No context-boosting — see SPEC.md BL-4.
-- No `skillmeat recommend` or `skillmeat discover` — those commands do not exist.
+- `--max-results` cap is 100; do not suggest values above that.
 - After discovery, hand off to `deployment-workflow.md` for any add/deploy steps.
+- `skillmeat match` is present in the CLI but confidence scores are API-internal; do not guide users toward confidence thresholds as an agent workflow — see SPEC.md BL-3.

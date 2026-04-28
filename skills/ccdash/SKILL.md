@@ -1,11 +1,21 @@
 ---
 name: ccdash
-description: Drive the standalone CCDash CLI from natural language to answer questions about project status, feature forensics, agent sessions, workflow failures, and after-action reports. Use when the operator or another agent asks about CCDash project health, agent-session analytics ("why did FEAT-X take so long", "what sessions ran for this feature", "which workflows are failing"), wants an AAR / narrative feature report, or needs help installing / authenticating the `ccdash` CLI against a target server. Routes intent to `ccdash` subcommands with the right `--output` mode, echoes provenance IDs for chaining, and degrades gracefully through `ccdash doctor` on transport/auth failures. Do not use for unrelated coding tasks, writing UI components, or anything outside CCDash project/session intelligence.
+description: Answer CCDash project-intelligence questions using the shipped MCP tools when available and the in-repo `ccdash` CLI otherwise. Use when the operator or another agent asks about project status, feature forensics, workflow failure patterns, after-action reports, runtime validation posture, CLI timeout or caching behavior, or how to troubleshoot the shipped CCDash API/worker/MCP surfaces. Keep routing aligned with the current shipped runtime contract and repo docs.
+version: 2.0
+app_version: "2026-04-26"
+updated: 2026-04-26
 ---
 
 # ccdash Skill
 
-A thin natural-language router over the standalone `ccdash` CLI. The CLI is authoritative; this skill decides which subcommand to run, which `--output` mode to pick, and how to chain calls using provenance IDs.
+Route CCDash questions to the shipped agent-facing surfaces that exist in this repo today:
+
+- MCP stdio server via [`.mcp.json`](/Users/miethe/dev/homelab/development/CCDash/.mcp.json)
+- In-repo `ccdash` CLI (`status`, `feature`, `workflow`, `report`)
+- Standalone CLI (`ccdash-cli` package, HTTP transport to remote server)
+- Runtime-validation docs for API health and worker probes
+
+The business logic is transport-neutral. CLI and MCP are adapters over `backend/application/services/agent_queries/`.
 
 ## When To Use
 
@@ -13,114 +23,168 @@ Trigger on intents such as:
 
 - "What's the state of this project?" / "project status" / "project summary"
 - "Why did FEAT-X take so long?" / "retrospective on FEAT-X" / "AAR for FEAT-X"
-- "Which workflows are failing?" / "failure burden" / "flaky workflows"
-- "Show sessions for FEAT-X" / "search session transcripts for Y" / "drilldown sentiment on session Z"
-- "Install ccdash" / "set up ccdash against staging" / "log in to the staging target"
-- Connectivity / auth error messages mentioning `ccdash`, `CCDASH_TARGET`, or an HTTP failure against a CCDash server.
+- "Which workflows are failing?" / "failure burden" / "workflow diagnostics"
+- "Show me the feature forensics for FEAT-X" / "list features matching X"
+- "Is the hosted runtime healthy?" / "how do I validate API vs worker?" / "which probe should I hit?"
+- "Is the MCP server shipped here?" / "should I use MCP or CLI for this?"
+- "Why is my CLI timing out?" / "results look stale"
 
 ## When NOT To Use
 
-- General coding tasks unrelated to CCDash observability (building UI, editing backend code, unrelated debugging).
-- Questions about other CLIs or platforms even if phrased as "project status" (e.g. Linear, GitHub, Vercel).
-- Authoring new CCDash reports, workflows, or analytics queries — this skill only invokes existing commands.
-- MCP tool invocation — deferred until the CCDash MCP surface ships; see the parent enablement plan (Phase 4 of this skill).
+- General coding tasks unrelated to CCDash observability or runtime posture.
+- Session-level drilldowns or transcript search through the in-repo CLI. That surface is standalone-CLI only (`ccdash session search`).
+- Inventing runtime behaviors that contradict the split API/worker contract.
 
-## Preflight (run once per session on uncertainty)
+## Confidence Anchor
+
+Repo-verified current surfaces:
+
+**In-repo CLI groups** (`backend/.venv/bin/ccdash`):
+- `ccdash status project`
+- `ccdash feature report <feature_id>`
+- `ccdash feature list [--q TEXT] [--status STATUS]`
+- `ccdash workflow failures`
+- `ccdash report aar --feature <feature_id>`
+
+Global flags (all commands): `--timeout N`, `--no-cache`, `--json`, `--md`
+
+**MCP tools**: `ccdash_project_status`, `ccdash_feature_forensics`, `ccdash_workflow_failure_patterns`, `ccdash_generate_aar`
+
+**Runtime entrypoints**: hosted API via `backend.runtime.bootstrap_api:app`; worker via `python -m backend.worker`
+
+## Routing Posture
+
+Use the following transport order:
+
+1. **Prefer MCP for in-workspace agent reasoning** when the repo `.mcp.json` is present and the question maps cleanly to one of the four shipped tools. This avoids shelling out and matches the current Claude Code posture.
+2. **Use the in-repo CLI as the fallback adapter** when MCP is unavailable, when you need explicit output modes, or when validating parity against the command surface.
+3. **Use the standalone CLI** when the user is operating against a remote CCDash server rather than local data. See [Standalone CLI vs In-Repo CLI](#standalone-cli-vs-in-repo-cli) below.
+4. **Use runtime docs and HTTP probes for deployment/runtime troubleshooting.** Do not invent CLI transport-management commands that are not shipped.
+
+Current shipped posture: MCP is discoverable, but not the only path. CLI remains valid. Runtime validation is a separate concern handled through the API/worker contract.
+
+## Standalone CLI vs In-Repo CLI
+
+| Dimension | In-Repo CLI | Standalone CLI |
+|---|---|---|
+| Install | `backend/.venv/bin/ccdash` | `pipx install ccdash-cli` → `ccdash` |
+| Transport | Local data / lightweight bootstrap | HTTP to remote CCDash server (`/api/v1/`) |
+| Auth | None | Bearer token via OS keyring or `CCDASH_TOKEN` |
+| Config | None | `~/.config/ccdash/config.toml` (named targets) |
+| Command groups | `status`, `feature`, `workflow`, `report` | All in-repo groups + `session`, `target`, `doctor`, `diagnostics`, `version` |
+| Use when | Querying local project data | Operating against hosted/remote server |
+
+**Do not** suggest `target`, `doctor`, `target login`, or `session` commands to a user running only the in-repo CLI.
+
+## Query Caching
+
+All four query services (project-status, feature-forensics, workflow-diagnostics, aar-report) use an in-process TTL cache:
+
+| Config | Default | Effect |
+|---|---|---|
+| `CCDASH_QUERY_CACHE_TTL_SECONDS` | 60 | Cache lifetime; set to 0 to disable |
+| `CCDASH_QUERY_CACHE_REFRESH_INTERVAL_SECONDS` | 300 | Background warming interval; 0 disables |
+| `--no-cache` CLI flag | off | Force cache miss for one invocation |
+| `bypass_cache=true` query param | off | Force cache miss via HTTP |
+
+**Guidance**: Use `--no-cache` when debugging stale data. Do not disable the cache in production — background warming reduces cold-path latency. OpenTelemetry counters are emitted per cache event.
+
+## CLI Timeout
+
+The standalone CLI exposes a global timeout on every command:
+
+| Config | Default | Notes |
+|---|---|---|
+| `--timeout N` flag | 30s | Precedence: flag > env > default |
+| `CCDASH_TIMEOUT` env var | 30s | Applied when flag is absent |
+
+Commands that can be slow on large projects: `status project`, `report aar`, `workflow failures`. Consider `--timeout 60` or higher when these time out. See `/Users/miethe/dev/homelab/development/CCDash/docs/guides/cli-timeout-debugging.md` for diagnosis patterns.
+
+## Routing Table
+
+| Intent | Preferred MCP Tool | CLI Fallback | Notes |
+|---|---|---|---|
+| Project status | `ccdash_project_status` | `ccdash status project` | Use MCP first for agent reasoning; CLI `--json`/`--md` modes useful |
+| Feature forensics | `ccdash_feature_forensics` | `ccdash feature report FEATURE_ID` | Top-level `name`, `status`, `telemetry_available`, `sessions_note` fields available |
+| Feature listing | `ccdash_feature_forensics` (list mode) | `ccdash feature list [--q TEXT]` | Paginated; max 200 results; `truncated`/`total` in response |
+| Workflow failures | `ccdash_workflow_failure_patterns` | `ccdash workflow failures` | Same query service behind both surfaces |
+| AAR / retrospective | `ccdash_generate_aar` | `ccdash report aar --feature FEATURE_ID` | Render markdown/human output as requested |
+| Runtime validation | none | none | Route to `/api/health`, worker probes, and runbook docs |
+| MCP setup/troubleshooting | shipped stdio server | CLI parity checks only | Follow `docs/guides/mcp-setup-guide.md` and `docs/guides/mcp-troubleshooting.md` |
+
+## Runtime Contract
+
+Hosted validation assumes a split runtime:
+
+- API runtime serves HTTP and canonical reads.
+- Worker runtime owns sync, refresh, and scheduled jobs.
+- `local` is a convenience runtime and is not the hosted validation posture.
+- `test` is for lightweight CLI/MCP bootstrap and automated coverage.
+
+Canonical hosted entrypoints:
 
 ```bash
-ccdash --version            # verify install; if missing -> recipes/target-onboarding.md
-ccdash target show          # confirm active target + auth mode
+backend/.venv/bin/python -m uvicorn backend.runtime.bootstrap_api:app --host 0.0.0.0 --port 8000
+backend/.venv/bin/python -m backend.worker
 ```
 
-If `ccdash` is not on PATH or `target show` errors: follow `recipes/target-onboarding.md`.
-If a subsequent command returns a connection or 401/403 error: follow `recipes/unreachable-server.md` before surfacing the raw error.
+Local helpers like `npm run dev:backend` and `npm run start:worker` are wrappers around the same contract; the bootstrap modules are the canonical reference.
 
-## Known Gotchas
+**Containerized deployment**: Docker/Podman compose profiles (`local`, `enterprise`, `postgres`) are supported. Rootless Podman is supported. Single-command deployment via `docker compose` or `podman-compose`. Reference: `/Users/miethe/dev/homelab/development/CCDash/docs/guides/containerized-deployment-quickstart.md`.
 
-- **`feature list` default limit is 200** (raised from 50 in phase 5). Results may still be truncated — check for `"truncated": true` and `"total"` in JSON; surface both values to the user. Use `--q KEYWORD` to narrow before paginating.
-- **Two `linked_sessions` surfaces exist.** `feature show` returns `linked_sessions` (may lag behind the sync engine). `feature sessions FEATURE_ID` is canonical and always fresh. The DTO carries a `sessions_note` hint field when lag is detected. For fresh data, always prefer `feature sessions`.
-- **Keyword search (`--q`) is substring-only.** Case-insensitive match against feature name/title only — brittle for multi-word queries. Fall back to `feature show` for detail or use `--status` / `--category` filters to narrow first.
-- **CLI timeout is 30 s by default.** Override per-invocation with `--timeout N` (seconds) or globally via `CCDASH_TIMEOUT=N`. `ccdash doctor` reports the active value and its source. See `docs/guides/cli-timeout-debugging.md` for slow-query diagnosis.
-- **Query cache: 4 agent-query endpoints are cached with a 60 s TTL** (`CCDASH_QUERY_CACHE_TTL_SECONDS`; background refresh interval `CCDASH_QUERY_CACHE_REFRESH_INTERVAL_SECONDS`). Append `--no-cache` when immediate consistency is required (e.g. right after a sync or data import).
+## Probe Semantics
 
-## Known Expensive Endpoints
+- `GET /api/health` — primary API/runtime contract check.
+- Worker probe: `CCDASH_WORKER_PROBE_HOST:CCDASH_WORKER_PROBE_PORT` (default `127.0.0.1:9465`).
+  - `/livez` — basic process liveness
+  - `/readyz` — readiness after worker binding contract is satisfied
+  - `/detailz` — backlog/freshness detail and worker posture
 
-The following commands run synchronous cross-domain aggregations on the server and routinely exceed the default 30 s timeout on non-trivial datasets. Use `--timeout N` or `CCDASH_TIMEOUT=N` to raise the ceiling before invoking them:
+A healthy API does not prove worker ownership is functioning; a ready worker does not replace the API health contract.
 
-- `ccdash status project`
-- `ccdash report aar --feature <id>`
-- `ccdash report feature <id>`
-- `ccdash workflow failures`
+## Lightweight Bootstrap Invariant
 
-Before invoking them, warn the user that they may time out and offer the decomposed fallback in `recipes/blog-retrospective-research.md` (for retrospectives) or the `feature list` + client-side filter pattern (for status / workflow roll-ups). If they *do* time out, doctor will still report `PASS` — that is a false negative, not a green light. Route through the "Endpoint timeout branch" in `recipes/unreachable-server.md`.
+CLI and MCP use lightweight `test`-profile bootstrap paths. They do not stand up the full hosted runtime and do not own background jobs.
 
-The cheap, reliable-today set: `ccdash target *`, `ccdash doctor`, `ccdash feature list|show|sessions|documents`, `ccdash session list|show|search|drilldown|family`.
+- CLI bootstrap: `backend/cli/runtime.py`
+- MCP bootstrap: `backend/mcp/bootstrap.py`
+- MCP transport: stdio via [`.mcp.json`](/Users/miethe/dev/homelab/development/CCDash/.mcp.json)
 
-## Routing
+Do not claim that CLI or MCP validates the hosted deployment by themselves.
 
-The authoritative intent -> command map lives in `scripts/router-table.json`. Load it for disambiguation; the summary below is a lossy render kept for quick scanning.
+## Output Guidance
 
-| Intent | Command | Default `--output` | Reference |
-|---|---|---|---|
-| Project status | `ccdash status project` | `json` (agent) / `human` (operator) | `references/command-status.md` |
-| Doctor / diagnose | `ccdash doctor` | `human` | `references/command-doctor.md` |
-| Install / onboard | `pipx install ccdash-cli`, then `target add` | `human` | `references/install-setup.md` |
-| Target management | `ccdash target {list,add,use,show,remove,login,logout,set-token,check}` | `human` | `references/command-target.md` |
-| Workflow failures | `ccdash workflow failures` | `json` | `references/command-workflow.md` |
-| Feature list / show / sessions / documents | `ccdash feature {list,show,sessions,documents}` | `json` | `references/command-feature.md` |
-| Session list / show / search / drilldown / family | `ccdash session {list,show,search,drilldown,family}` | `json` | `references/command-session.md` |
-| AAR / narrative report | `ccdash report {aar,feature}` | `markdown` | `references/command-report.md` |
-
-Output-mode decision rules live in `references/output-modes.md`. Provenance fields to echo back into agent context live in `references/provenance.md`.
+- For agent reasoning: prefer structured MCP responses or CLI `--json`.
+- For user-facing narrative deliverables: use CLI `--md` where available, especially `report aar`.
+- For runtime validation: summarize relevant health/probe fields rather than dumping the entire payload unless the user asks for raw output.
 
 ## Multi-Step Flows (Recipes)
 
-Multi-step investigations use deterministic recipes in `recipes/`:
+- `recipes/feature-retrospective.md` — feature forensics + AAR with MCP-first/CLI-fallback posture.
+- `recipes/task-attribution.md` — infer work ownership from feature forensics and evidence rather than stale task/session commands.
+- `recipes/unreachable-server.md` — troubleshoot the API/worker/MCP runtime contract and probe semantics.
 
-- `recipes/project-triage.md` — `status project` -> risky feature -> `feature show` -> `feature sessions`.
-- `recipes/feature-retrospective.md` — `feature show` -> `feature sessions` -> `report aar`.
-- `recipes/workflow-failure-rootcause.md` — `workflow failures` -> pick workflow -> `session drilldown --concern`.
-- `recipes/session-cluster-investigation.md` — `session show` -> `session family` -> drilldown each sibling.
-- `recipes/unreachable-server.md` — transport/auth failure + endpoint-timeout interpretation via `ccdash doctor`.
-- `recipes/target-onboarding.md` — fresh operator: install -> `target add` -> `target login` -> `doctor`.
-- `recipes/blog-retrospective-research.md` — retrospective / blog research from cheap endpoints when `report aar` is unavailable or too slow.
-- `recipes/task-attribution.md` — determine which agent worked on what: `feature show` → `linked_tasks[].owner` → correlate with `feature sessions`.
+Prefer a recipe whenever the user's question spans transport choice plus interpretation.
 
-Prefer a recipe whenever the user's intent requires more than a single subcommand call. Single-command intents route directly via the table above.
+## Do Not Say
 
-## Output Mode Quick Rule
+- "MCP is deferred until a later phase."
+- "Use `ccdash doctor` / `ccdash target show` / `ccdash target login`." (standalone CLI only — not available in the in-repo CLI)
+- "Hosted validation should run against `backend.main:app` or `npm run dev`."
+- "CLI or MCP starts the full runtime or proves worker ownership on its own."
+- "The CLI has no timeout configuration." (it does: `--timeout` flag and `CCDASH_TIMEOUT` env var)
+- "Query results are always fresh." (they are cached; use `--no-cache` to bypass)
 
-- Commands consumed **by the agent for reasoning**: `--output json` (or the `--json` shortcut).
-- Commands rendered **verbatim to the user as narrative**: `--output markdown` (or `--md`). Defaults for `report aar` and `report feature`.
-- Commands an **operator runs in a terminal** (target management, doctor): default `human`.
+## Key References
 
-Full rules: `references/output-modes.md`.
-
-## Provenance (always echo)
-
-For every command result used in reasoning, surface the stable IDs and timestamps listed in `references/provenance.md` into the agent's working context so follow-up calls can chain without re-fetching.
-
-## Graceful Degradation
-
-Any transport/auth error (connection refused, DNS, TLS, 401/403, 5xx) MUST route through `ccdash doctor` before being surfaced as a raw error. See `recipes/unreachable-server.md`.
-
-## Extending The Skill
-
-When a new `ccdash` subcommand ships, do not edit this file. Follow the update protocol in the implementation plan (Update Protocol section):
-
-1. Add/extend `references/command-<group>.md`.
-2. Append a row to `scripts/router-table.json`.
-3. Update `CHANGELOG.md`.
-
-Edit `SKILL.md` only if trigger scope or when-not-to-use guidance changes.
-
-## Key Files
-
-- `scripts/router-table.json` — canonical intent -> command map (load on ambiguity).
-- `scripts/preflight.sh` — optional install/connectivity probe.
-- `references/cli-overview.md` — full command tree snapshot + global flags + target/auth resolution.
-- `references/install-setup.md` — pipx / pip / repo-local install + verification.
-- `references/output-modes.md` — human vs json vs markdown decision rules.
-- `references/provenance.md` — IDs, timestamps, freshness fields to echo into agent context.
-- `references/eval-scenarios.md` — 20-scenario routing eval fixture (Phase 2).
-- `CHANGELOG.md` — dated log of skill changes tied to CLI surface.
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/enterprise-session-intelligence-runbook.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/setup-user-guide.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-setup-guide.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-troubleshooting.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/cli-timeout-debugging.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/query-cache-tuning-guide.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/standalone-cli-guide.md`
+- `/Users/miethe/dev/homelab/development/CCDash/docs/guides/containerized-deployment-quickstart.md`
+- `/Users/miethe/dev/homelab/development/CCDash/backend/cli/main.py`
+- `/Users/miethe/dev/homelab/development/CCDash/backend/mcp/server.py`
+- `/Users/miethe/dev/homelab/development/CCDash/packages/ccdash_cli/`

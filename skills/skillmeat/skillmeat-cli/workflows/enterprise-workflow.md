@@ -7,8 +7,8 @@ canonical_docs:
   - docs/user/guides/edition-feature-matrix.md
 related_context:
   - .claude/context/key-context/enterprise-seeding-patterns.md
-version: 1.0
-updated: 2026-04-14
+version: 1.1
+updated: 2026-04-27
 ---
 
 # Enterprise Edition Workflow
@@ -73,10 +73,33 @@ skillmeat bom sign backup-pre-migration-*.skillmeat-pack
 
 ### Step 3: Run Migration
 
+For authoritative flag syntax, see `docs/user/guides/cli/commands.md § "Core Commands"`.
+
 ```bash
-# Migrate local collection to enterprise
+# Basic migration — imports all artifacts
 skillmeat enterprise import --from-collection
+
+# Filter by artifact type (e.g., skills only)
+skillmeat enterprise import --from-collection --filter-type skill
+
+# Filter by tag
+skillmeat enterprise import --from-collection --filter-tag "production"
+
+# Preview without writing (dry run)
+skillmeat enterprise import --from-collection --dry-run
+
+# Set storage tier for imported artifacts
+skillmeat enterprise import --from-collection --tier hot
+
+# Control conflict resolution: skip (default), overwrite, or create_version
+skillmeat enterprise import --from-collection --conflict overwrite
+skillmeat enterprise import --from-collection --conflict create_version
 ```
+
+**Conflict strategy guidance**:
+- `skip` (default) — safe for initial imports; existing enterprise artifacts are not overwritten.
+- `overwrite` — use when re-importing after local edits; replaces existing enterprise records.
+- `create_version` — preserves history; recommended when the enterprise collection already has diverged.
 
 **Interactive Prompts**:
 ```
@@ -244,18 +267,6 @@ Timestamp                User              Team        Action     Result
 2025-01-14 16:00:00      bob@acme.com      Frontend    read       ✓ Success
 2025-01-14 15:45:00      carol@acme.com    Backend     update     ✓ Success
 2025-01-13 10:30:00      alice@acme.com    Backend     deploy     ✓ Success
-```
-
----
-
-## Workflow 4: Backup and Restore
-
-```bash
-# Create backup
-skillmeat enterprise backup --output backup-$(date +%Y%m%d).tar.gz
-
-# Restore from backup
-skillmeat enterprise restore --input backup-20250114.tar.gz
 ```
 
 ---

@@ -6,7 +6,7 @@ Complete reference for MeatyPrompts tracking artifact schemas. All schemas are J
 
 | File | Type | Purpose | Size | Lines |
 |------|------|---------|------|-------|
-| **envelope.schema.yaml** _(skill_spec)_ | Skill Spec | Base envelope validation for `doc_type: skill_spec` (SPEC.md files). Authoritative field spec: `.claude/specs/skill-spec-convention.md` | — | — |
+| **envelope.schema.yaml** _(skill_spec)_ | Skill Spec | Base envelope validation for `doc_type: skill_spec` (SPEC.md files). Authoritative field spec: `.claude/specs/artifact-structures/skill-spec-convention.md` | — | — |
 | **progress.schema.yaml** | Progress Tracking | Validates phase progress frontmatter | 4.9KB | 206 |
 | **context.schema.yaml** | Context Notes | Validates implementation context frontmatter | 8.3KB | 333 |
 | **bug-fix.schema.yaml** | Bug Fix Tracking | Validates monthly bug fix tracking frontmatter | 5.6KB | 240 |

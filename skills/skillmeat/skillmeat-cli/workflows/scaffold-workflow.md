@@ -5,8 +5,8 @@ workflow_name: Scaffold and Template Rendering
 canonical_docs:
   - docs/user/guides/cli/commands.md § "Scaffold"
   - docs/user/guides/cli/commands.md § "Template"
-version: 1.0
-updated: 2026-04-14
+version: 1.1
+updated: 2026-04-27
 ---
 
 # Scaffold and Template Rendering Workflow
@@ -182,6 +182,67 @@ skillmeat template create my-custom \
 skillmeat template configure python-backend \
   --default PROJECT_NAME="default-project"
 ```
+
+---
+
+## Workflow 4: Scaffold from Remote Git Repository (v0.35.0+)
+
+`--from-repo REPO_URL` clones a remote repository as the context source for scaffold assembly. The clone is shallow (HTTPS). For authoritative flag syntax, see `docs/user/guides/cli/commands.md § "Scaffold"`.
+
+**Agent pattern — use when the user provides a GitHub/HTTPS repo URL as context**:
+
+1. Confirm the user wants LLM-assisted analysis (default on) or pass `--no-llm-analyzer` for deterministic output.
+2. Choose scope: `--scope whole-project` (default) or `--scope feature` for a targeted subset.
+3. Run with `--dry-run` first to review the planned output.
+4. Execute without `--dry-run` once the user confirms.
+
+```bash
+# Preview scaffold from remote repo
+skillmeat scaffold \
+  --from-repo https://github.com/owner/repo \
+  --scope whole-project \
+  --dry-run
+
+# Execute (interactive confirmation)
+skillmeat scaffold \
+  --from-repo https://github.com/owner/repo \
+  --scope whole-project
+
+# Non-interactive (CI usage)
+skillmeat scaffold \
+  --from-repo https://github.com/owner/repo \
+  --auto-confirm
+```
+
+Note: `--from-repo` makes `--bundle` optional. If neither is supplied, scaffold uses the remote repo content directly as context.
+
+---
+
+## Workflow 5: Generate a PR After Scaffold Assembly (v0.35.0+)
+
+`--output-pr REPO_OWNER/REPO_NAME` opens a GitHub PR on the target repository after scaffold files are written. For authoritative flag syntax, see `docs/user/guides/cli/commands.md § "Scaffold"`.
+
+**Agent pattern — use when the user wants scaffold results proposed as a pull request**:
+
+1. Ensure the user has a GitHub token configured (`skillmeat config set github-token <token>`).
+2. Combine with `--from-repo` or `--bundle` as the content source.
+3. Include `--auto-confirm` for CI pipelines; omit for interactive review.
+
+```bash
+# Scaffold from bundle and open a PR on the target repo
+skillmeat scaffold \
+  --bundle my-bundle \
+  --project . \
+  --output-pr owner/target-repo
+
+# Scaffold from remote repo context and propose changes as PR
+skillmeat scaffold \
+  --from-repo https://github.com/owner/source-repo \
+  --output-pr owner/target-repo \
+  --auto-confirm
+```
+
+**When `--output-pr` is used**: SkillMeat creates a branch, writes scaffold files, and opens a draft PR. Report the PR URL to the user.
 
 ---
 

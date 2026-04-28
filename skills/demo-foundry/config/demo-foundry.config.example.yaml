@@ -1,0 +1,51 @@
+version: 0.1.0
+project:
+  name: ""
+  type: "auto-detect"
+  default_base_url: "http://localhost:3000"
+  package_manager: "auto-detect"
+
+paths:
+  demo_root: "demo"
+  demos: "demo/demos"
+  fixtures: "demo/fixtures"
+  policy: "demo/policy"
+  context_updates: "demo/context-updates"
+  workflow_updates: "demo/workflow-updates"
+  tools: "demo/tools"
+
+capture:
+  provider: "playwright"
+  default_viewport:
+    width: 1440
+    height: 1000
+  timezone: "America/New_York"
+  trace_on_failure: true
+  video: "retain-on-failure"
+  screenshots: true
+
+render:
+  provider: "remotion"
+  enabled_by_default: false
+  fps: 30
+  width: 1920
+  height: 1080
+
+narration:
+  talking_points_required: true
+  voiceover_script_required: false
+  tts_enabled_by_default: false
+  provider: "manual-or-configured"
+
+context_updates:
+  propose_only: true
+  require_explicit_apply: true
+
+workflow_updates:
+  propose_only: true
+  require_explicit_apply: true
+
+security:
+  fake_data_required: true
+  no_secrets_scan: true
+  require_manual_review_before_publish: true

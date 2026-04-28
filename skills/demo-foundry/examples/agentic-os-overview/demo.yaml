@@ -1,0 +1,57 @@
+id: agentic-os-overview
+version: 0.1.0
+title: "Agentic Operating System Overview"
+audience: "technical executive"
+status: example
+
+app:
+  base_url: "http://localhost:3000"
+  viewport:
+    width: 1440
+    height: 1000
+  timezone: "America/New_York"
+
+story:
+  thesis: "The app turns intent into visible, executable, reviewable agentic workflow state."
+  problem: "Teams lose context when goals, tasks, agents, and execution traces live in separate tools."
+  promise: "A unified workflow surface keeps intent, task trees, execution state, and agent outputs connected."
+  aha_moments:
+    - id: aha-intent-tree
+      text: "The task tree shows how high-level intent decomposes into executable work."
+    - id: aha-agent-roster
+      text: "Agent assignments are visible at the task level instead of hidden in chat transcripts."
+    - id: aha-proof
+      text: "Execution artifacts become evidence for what worked and what changed."
+
+flows:
+  - id: overview
+    title: "Open overview dashboard"
+    route: "/"
+    steps:
+      - id: open-dashboard
+        action: navigate
+        target: "/"
+        narration: "Start from the operating overview."
+      - id: highlight-intent-tree
+        action: observe
+        target: "intent tree panel"
+        narration: "The left side keeps the high-level goal connected to active execution paths."
+      - id: highlight-agent-state
+        action: observe
+        target: "agent roster"
+        narration: "Agent status is visible beside the work it is responsible for."
+
+outputs:
+  screenshots: true
+  raw_video: true
+  polished_video: true
+  talking_points: true
+  voiceover_script: true
+  captions: true
+
+review:
+  required_gates:
+    - capture-success
+    - no-secrets
+    - claim-accuracy
+    - audience-fit

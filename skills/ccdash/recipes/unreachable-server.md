@@ -1,92 +1,141 @@
-# Recipe: Unreachable Server / Auth Failure / Endpoint Timeout
+# Recipe: Unreachable Runtime / Probe Failure / MCP Discovery Failure
 
-Trigger: any `ccdash` command returns a transport error (DNS, connection refused, TLS, timeout) or a `401` / `403` / `5xx`. **Never** surface the raw error to the user before running this recipe.
+Trigger: a CCDash request fails because the hosted API is unreachable, the worker probe is failing, or the shipped MCP server is not discovered.
 
-## Triage: transport failure vs. endpoint timeout
+This recipe replaces stale `ccdash doctor` / target-management guidance. The current repo posture is:
 
-Before running doctor, classify the failure. The two modes look alike (both raise `ConnectionError` in the CLI — see `packages/ccdash_cli/src/ccdash_cli/runtime/client.py`) but have completely different fixes:
+- hosted runtime validation goes through API health and worker probes
+- MCP is a shipped stdio adapter
+- CLI and MCP are lightweight query adapters, not runtime supervisors
 
-- **Transport failure** — DNS / connection refused / TLS / 5xx from *any* command, including lightweight ones (`ccdash target show`, `ccdash feature list --limit 1`). Server is unreachable or auth is broken. Run the main flow below.
-- **Endpoint timeout** — lightweight commands succeed, but a known-expensive endpoint (see `SKILL.md` "Known Expensive Endpoints") hit the 30 s client default and aborted. Server is healthy; this specific command is too slow. Doctor will report `PASS` — that is a **false negative**, not a green light. Skip to "Endpoint timeout branch" below.
+## Classify The Failure First
 
-Quick probe:
+Pick the branch that matches the actual symptom:
 
-```bash
-ccdash feature list --limit 1 --json   # cheap; succeeds if server is up
-```
+- **API/runtime failure**: HTTP requests to CCDash fail or the hosted runtime seems unhealthy.
+- **Worker readiness failure**: API responds, but jobs/sync/freshness posture looks wrong or worker probes fail.
+- **MCP discovery/startup failure**: Claude Code does not discover `ccdash`, or `python -m backend.mcp.server` fails to start.
+- **Query-surface failure only**: CLI or MCP returns an error payload, but the runtime contract itself may still be healthy.
 
-If that succeeds while the original command timed out, you're in the endpoint-timeout branch.
+Do not collapse these into one generic "server down" diagnosis.
 
-## Steps
+## Branch A: Hosted API Runtime Validation
 
-1. **Capture the failing command + short error.** Keep the original invocation; the user may want to retry after fixing the target.
-
-2. **Run doctor against the resolved target.**
-
-   ```bash
-   ccdash doctor
-   ```
-
-   If the user scoped their request to a named target (e.g. "is staging reachable"), run `ccdash doctor --target <name>` instead. Also acceptable: `ccdash target check <name>` for a lighter reachability probe.
-
-3. **Branch on doctor output** (see `references/command-doctor.md` cheat sheet):
-
-   - **DNS / connection refused** → confirm target URL with `ccdash target show`; if URL is wrong, `ccdash target add <name> <correct-url>`; if the server is simply not running, tell the user and (for local dev) suggest `npm run dev:backend`.
-   - **TLS error** → confirm https vs http; for local dev, prefer `http://`; for prod, the operator's CA bundle is broken — stop and escalate, do not disable verification.
-   - **401 with token** → `ccdash target logout <name>` then `ccdash target login <name>`. If that still 401s, the token is rejected — escalate.
-   - **401 without token** → `ccdash target login <name>` (or set `CCDASH_TOKEN`).
-   - **403** → token lacks scope; escalate to the operator who provisions tokens on the server.
-   - **5xx** → server-side; share doctor's probe output with the user and suggest checking server logs. Retry once after 30 seconds if it might have been transient.
-
-4. **Retry the original command.** Do not paraphrase the earlier failure — re-run verbatim so the user sees the fix land.
-
-5. **If the retry also fails**, surface the doctor output (not the raw HTTP error) plus the one-line original error. Offer the specific next step from the cheat sheet.
-
-## Endpoint timeout branch
-
-Use when the triage probe confirmed the server is healthy but a known-expensive command aborted at the timeout ceiling. The CLI default is 30 s; **override with `--timeout N` (seconds) or `CCDASH_TIMEOUT=N`** before retrying. `ccdash doctor` reports the active value and its source. For deep diagnosis see `docs/guides/cli-timeout-debugging.md`.
-
-1. **Confirm it's a known-expensive endpoint.** The current list (see `SKILL.md`):
-   - `ccdash status project`
-   - `ccdash report aar --feature <id>`
-   - `ccdash report feature <id>`
-   - `ccdash workflow failures`
-
-   These run synchronous cross-domain aggregations on the server (sessions + documents + tasks + workflow effectiveness). They are deterministic — no LLM call — so failures are almost always DB load, not model latency.
-
-2. **Retry with an elevated timeout first.**
+1. **Check the canonical API health contract first.**
 
    ```bash
-   ccdash --timeout 90 report aar --feature FEATURE_ID --md
-   # or
-   CCDASH_TIMEOUT=90 ccdash report aar --feature FEATURE_ID --md
+   curl -sS http://127.0.0.1:8000/api/health
    ```
 
-   If the command succeeds, done. If it still times out at a generous ceiling (>120 s), treat it as a server-side load problem and proceed to step 3.
+2. **Inspect the minimum Phase 6 fields.**
 
-3. **Tell the user plainly if retry also fails.** "Server is up; `<command>` is a known-slow aggregation and exceeded the timeout even after raising it to Ns. This indicates server-side DB load, not a CLI configuration issue." Do not repeat doctor's green checkmark as if it solves the problem.
+   Confirm at least:
 
-4. **Offer a decomposed fallback** instead of retrying the same command. Pick the one that matches intent:
-   - `report aar` intent → follow `recipes/blog-retrospective-research.md` (`feature show` + `feature sessions` gives ~80% of the AAR content from cheap endpoints).
-   - `status project` intent → `ccdash feature list --json` + client-side filter by `status` / `updated_at`.
-   - `workflow failures` intent → `ccdash feature list --json`, identify features with non-empty `failure_patterns` or elevated `rework_signals`, then `ccdash feature show <id>` on the top offenders.
+   - `profile`
+   - `storageComposition`
+   - `storageBackend`
+   - `storageCanonicalStore`
+   - `migrationGovernanceStatus`
+   - `canonicalSessionStore`
+   - `sessionIntelligenceProfile`
+   - `storageProfileValidationMatrix`
+   - `watchEnabled`
+   - `syncEnabled`
+   - `syncProvisioned`
+   - `jobsEnabled`
 
-5. **Escalate the server-side fix when it recurs.** Expensive endpoints should either be cached, paginated, or moved to a background job the CLI can poll. File under CCDash backend work, not skill work.
+3. **Interpret the result against the intended posture.**
 
-## Provenance To Echo
+   - Hosted API validation should report `profile=api`.
+   - If the deployment is supposed to be enterprise-backed, the storage/session-intelligence fields must reflect the documented enterprise posture.
+   - If the API health payload contradicts the intended deployment mode, stop and fix the deployment contract before debugging CLI or MCP symptoms.
 
-- `target.name`, `target.url`, `authenticated` (from doctor).
-- The original command string (so the user can retry or edit).
+## Branch B: Worker Probe Validation
+
+Use this when API health is up but background-job ownership or freshness looks wrong.
+
+1. **Check worker probes directly.**
+
+   ```bash
+   curl -sS http://127.0.0.1:9465/livez
+   curl -sS http://127.0.0.1:9465/readyz
+   curl -sS http://127.0.0.1:9465/detailz
+   ```
+
+2. **Interpret the probe semantics correctly.**
+
+   - `/livez` answers whether the worker process is alive.
+   - `/readyz` answers whether the worker binding/readiness contract is satisfied.
+   - `/detailz` is the diagnostic view for worker posture, backlog, and freshness clues.
+
+3. **Remember the split-runtime rule.**
+
+   A healthy `/api/health` response does not prove the worker is ready, and worker readiness does not replace the API health contract.
+
+## Branch C: MCP Discovery Or Startup Failure
+
+1. **Confirm the shipped MCP config exists.**
+
+   Check [`.mcp.json`](/Users/miethe/dev/homelab/development/CCDash/.mcp.json).
+
+2. **Confirm the config posture is the shipped one.**
+
+   It should point Claude Code at:
+
+   - `type: "stdio"`
+   - `command: "python"`
+   - `args: ["-m", "backend.mcp.server"]`
+
+3. **Validate the server starts.**
+
+   ```bash
+   backend/.venv/bin/python -m backend.mcp.server
+   ```
+
+4. **If discovery still fails, use the repo troubleshooting flow.**
+
+   Route to:
+
+   - [docs/guides/mcp-setup-guide.md](/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-setup-guide.md)
+   - [docs/guides/mcp-troubleshooting.md](/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-troubleshooting.md)
+
+## Branch D: Query-Surface Error With Healthy Runtime
+
+Use this when `/api/health` and the worker probes look correct, but a CLI or MCP query still returns an error payload.
+
+1. **Treat it as a data/project-resolution problem first, not a deployment failure.**
+2. **Retry the equivalent surface once for parity.**
+
+   Examples:
+
+   ```bash
+   ccdash status project
+   ccdash feature report FEATURE_ID --json
+   ccdash workflow failures --json
+   ccdash report aar --feature FEATURE_ID --md
+   ```
+
+3. **If MCP fails but CLI succeeds, the runtime is usually healthy and the issue is MCP discovery/configuration or tool invocation shape.**
+4. **If both fail while health/probes are good, the likely problem is unresolved project scope, missing feature data, or an evidence/query issue.**
 
 ## Do Not
 
-- Disable TLS verification, clear keyring entries, or modify config.toml without explicit user consent.
-- Infer "the server is down" from a single failure without running doctor.
-- Loop doctor more than twice; if two runs don't yield a fix, stop and escalate with what doctor reported.
+- Do not tell the user to run `ccdash doctor`, `ccdash target show`, or other non-shipped transport commands.
+- Do not validate hosted enterprise posture with `backend.main:app` or `npm run dev`.
+- Do not claim that CLI or MCP bootstraps prove background jobs are running.
+- Do not treat `/livez`, `/readyz`, `/detailz`, and `/api/health` as interchangeable.
+
+## Provenance To Echo
+
+- API host/port used
+- worker probe host/port used
+- relevant health/probe fields inspected
+- whether the failure was runtime, worker, MCP discovery, or query-surface specific
 
 ## Cross-Links
 
-- `references/command-doctor.md`
-- `references/command-target.md`
-- `recipes/target-onboarding.md` (for fresh installs that have never had a target configured)
-- `recipes/blog-retrospective-research.md` (fallback when `report aar` times out)
+- [SKILL.md](/Users/miethe/dev/homelab/development/CCDash/.claude/skills/ccdash/SKILL.md)
+- [docs/guides/enterprise-session-intelligence-runbook.md](/Users/miethe/dev/homelab/development/CCDash/docs/guides/enterprise-session-intelligence-runbook.md)
+- [docs/setup-user-guide.md](/Users/miethe/dev/homelab/development/CCDash/docs/setup-user-guide.md)
+- [docs/guides/mcp-setup-guide.md](/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-setup-guide.md)
+- [docs/guides/mcp-troubleshooting.md](/Users/miethe/dev/homelab/development/CCDash/docs/guides/mcp-troubleshooting.md)

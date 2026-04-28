@@ -6,8 +6,8 @@ description: |
   operations, memory and context workflows, supply-chain security, versioning,
   authentication, attestation, and enterprise migration.
   Progressive disclosure: load only the workflow doc needed for the current intent.
-version: 1.1
-updated: 2026-04-14
+version: 1.2
+updated: 2026-04-27
 spec: ./SPEC.md
 ---
 
@@ -25,10 +25,11 @@ docs at `docs/user/guides/cli/commands.md` and `docs/user/guides/cli/reference.m
 | User Intent | Workflow Doc | Canonical CLI Doc |
 |---|---|---|
 | Find, search, or recommend artifacts | `./workflows/discovery-workflow.md` | `commands.md § "Core Commands"`, `§ "Search"` |
+| Discover artifacts by intent or context using AI search | `./workflows/discovery-workflow.md` | `commands.md § "Discovery"` |
 | Deploy, add, or install an artifact to a project | `./workflows/deployment-workflow.md` | `commands.md § "Deployment"`, `§ "Adding Artifacts"` |
 | List, inspect, sync, update, or remove artifacts | `./workflows/management-workflow.md` | `commands.md § "Core Commands"`, `§ "Updates & Status"` |
 | Create, publish, import, or export a bundle | `./workflows/bundle-workflow.md` | `commands.md § "Bundle Management"` |
-| Render scaffold files or manage templates | `./workflows/scaffold-workflow.md` | `commands.md § "Scaffold"`, `§ "Template"` |
+| Render scaffold files, manage templates, scaffold from remote repos, or generate PRs | `./workflows/scaffold-workflow.md` | `commands.md § "Scaffold"`, `§ "Template"` |
 | Memory items, context modules, or context packs | `./workflows/memory-context-workflow.md` | `CLAUDE.md § "Memory System"` |
 | BOM signing, verification, key management, attestation, pre-commit hooks | `./workflows/supply-chain-workflow.md` | `commands.md § "Bundle Signing"`, `§ "SkillBOM"` |
 | Artifact version history, rollback, or snapshots | `./workflows/versioning-workflow.md` | `commands.md § "Versioning"` |

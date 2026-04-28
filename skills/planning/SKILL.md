@@ -49,6 +49,15 @@ The Planning Skill generates and optimizes Product Requirements Documents (PRDs)
 
 **Anti-patterns with measured cost**: See `docs/project_plans/CLAUDE.md` for the full anti-pattern table with token costs. Key rule: reading a SPIKE as Opus to inform a prd-writer prompt costs ~7K tokens; delegating OQ assessment to haiku costs ~1.2K (6x cheaper).
 
+### Agent Consumption Rule
+
+**Agents invoked for implementation, review, or execution MUST NOT load `docs/project_plans/human-briefs/` files unless the task prompt explicitly names the brief.**
+
+- The `audience: [humans]` frontmatter field is the machine-readable skip signal.
+- Briefs contain orchestrator-level rationale (estimation narrative, wave strategy, open-question inventory). This content is irrelevant to executing subagents and burns context budget without improving output quality.
+- **Exception**: An agent may be explicitly asked to populate an initial brief skeleton or append a note to the Running Log. In both cases, the task prompt must name the brief file explicitly.
+- Spec reference: `.claude/specs/artifact-structures/human-brief-spec.md` §5.
+
 ### When to Use This Skill
 
 - Creating PRDs for new features or enhancements
@@ -170,6 +179,7 @@ All planning documents follow a canonical location pattern by doc type, enabling
 | `spike` | Formal research investigation with charter | `docs/project_plans/SPIKEs/[name]-charter.md` or `docs/project_plans/SPIKEs/[name].md` | `design_spec`, `prd`, ADR |
 | `report` | Investigation, audit, finding, post-mortem | `docs/project_plans/reports/[category]/[name].md` or `.claude/findings/[name].md` | `design_spec`, `prd` |
 | `meta_plan` | Workflow, process, or tooling change (not product) | `.claude/plans/[name].md` | — |
+| `human_brief` | Human-orchestrator lens: estimation rationale, wave strategy, OQ ledger, success behaviors | `docs/project_plans/human-briefs/[feature-slug].md` | — (audience: humans; agents skip) |
 
 **Categories** (PRD and implementation_plan subdirs): `features`, `enhancements`, `refactors`, `harden-polish`, `infrastructure`
 
@@ -213,12 +223,14 @@ related_documents:
   - Required now: `schema_version`, `doc_type: prd`, `title`, `status`, `created`
   - Populate early: `feature_slug`, `priority`, `risk_level`, `owner`, `contributors`
   - Keep `prd_ref: null`; set `plan_ref` after implementation plan exists
+  - Optional: `changelog_required: true` — set when the feature introduces user-facing changes that must appear in CHANGELOG `[Unreleased]` before release. Omit (default: unset, treated as false) for purely internal or infrastructure-only changes. When set, Phase 7 Documentation Finalization **must** include a CHANGELOG entry. See `.claude/specs/changelog-spec.md` for categorization rules.
 
 - `implementation_plan`
   - Required now: `schema_version`, `doc_type: implementation_plan`, `title`, `status`, `created`, `prd_ref`
   - Populate early: `scope`, `effort_estimate`, `feature_slug`, `priority`, `risk_level`
   - Set `plan_ref: null` for root implementation plan
   - If plan includes deferred items or research-needed items: populate `deferred_items_spec_refs` as design specs are authored in the final phase; populate `findings_doc_ref` if a findings doc is created lazily during execution
+  - Optional: `changelog_required: true` — inherit from the parent PRD or set independently when the implementation scope confirms user-facing changes. When set, Phase 7 Documentation Finalization **must** include a CHANGELOG `[Unreleased]` entry. Default: unset (false). See `.claude/specs/changelog-spec.md`.
 
 - `phase_plan`
   - Required now: `schema_version`, `doc_type: phase_plan`, `title`, `status`, `created`, `phase`, `phase_title`
@@ -229,6 +241,14 @@ related_documents:
   - Required now: `schema_version`, `doc_type: spike`, `title`, `status`, `created`
   - Populate early: `feature_slug`, `research_questions`, `complexity`, `estimated_research_time`
   - Set `prd_ref`/`plan_ref` when spike is linked to planned work
+
+- `human_brief`
+  - Required always: `schema_name: ccdash_document`, `schema_version: 2`, `doc_type: human_brief`, `title`, `status`, `created`, `audience: [humans]`, `feature_slug`, `category: human-briefs`
+  - Required when linked docs exist: `prd_ref`, `plan_ref`
+  - Populate early: `owner`, `priority`, `confidence`, `feature_family`, `feature_version`
+  - Reserve but leave null: `intent_ref`, `epic_ref` (forward-compat for INTENT.md system)
+  - Do NOT set `blocked` or `superseded` status — use only `draft`, `in-progress`, `completed`
+  - Full schema: `.claude/specs/artifact-structures/human-brief-spec.md` §2
 
 ## Frontmatter Lifecycle
 
@@ -282,6 +302,8 @@ python .claude/skills/artifact-tracking/scripts/update-field.py \
 ## Lifecycle Guidance
 
 Planning artifacts follow a natural progression from ideation through implementation. Use this guide to determine when to create each document type.
+
+**Human Briefs** are opt-in living documents that accompany PRDs and plans for qualifying features (≥8 pts, ≥2 phases, or notable orchestration complexity — see Workflow 5 heuristic). They live at `docs/project_plans/human-briefs/[feature-slug].md` alongside their linked PRD and plan, evolve throughout the feature lifecycle, and are archived in place when the feature ships. Unlike plans, briefs are not versioned — no `-v1` suffix. See `.claude/specs/artifact-structures/human-brief-spec.md` §4 for the full heuristic.
 
 ### Rough Idea → `design_spec`
 
@@ -493,12 +515,28 @@ Sections:
    - Common phases: Database → Repository → Service → API → UI → Testing → Docs → Deployment
    - Consider parallel work opportunities
    - Identify critical path
+   - **Populate the Phase Summary table** in Implementation Strategy (after Critical Path) with every phase, point estimate, target subagents, and model designation. This table is mandatory — it is the canonical orchestration index executors use to plan delegation. Keep it synced with detailed phase breakdowns. Use Claude models by default (`sonnet` / `haiku`); note external models (e.g., `gemini-3.1-pro`, `nano-banana-pro`, `gpt-5.3-codex`) per `references/multi-model-guidance.md`.
 
 3. **Generate Task Breakdown**
    - Use template: `./templates/implementation-plan-template.md`
    - Create tasks for each phase
    - Format: Task tables with ID, Name, Description, Acceptance Criteria, Estimate
    - Include quality gates for each phase
+
+3.5 **Run Estimation Sanity Check (mandatory) — write output to Human Brief, not the plan**
+   - Use reference: `./references/estimation-heuristics.md`
+   - Determine if a Human Brief applies (see §4 creation heuristic in `.claude/specs/artifact-structures/human-brief-spec.md`).
+   - If brief applies: scaffold `docs/project_plans/human-briefs/[feature-slug].md` using `./templates/human-brief-template.md`, then populate **§2 Estimation Sanity Check** in the brief with the H1–H6 output.
+   - If brief does not apply (feature too small): populate the H1–H6 check in a comment or scratchpad for your own reference; do not add the full block to the plan.
+   - Apply heuristics H1–H6 **bottom-up**:
+     - H1: noun-counting (≥2 pts per new CRUD-with-RBAC table)
+     - H2: dual-implementation multiplier (~1.8× repo subtotal when local+enterprise)
+     - H3: algorithmic service flag (≥3 pts for any service whose description includes dependency / resolution / graph / conflict / cycle / solver / inference / ranking / scheduling / merge / diff / transform; SPIKE first if test scenarios cannot be enumerated)
+     - H4: bundle-vs-sum (per-area estimates summed = floor for plan total when ≥3 capability areas)
+     - H5: anchor reference (cite a comparable completed feature, justify any delta >30%)
+     - H6: hidden plumbing budget (~15–20% line item for DTOs / DI / OpenAPI / RLS / inventory updates / CHANGELOG)
+   - If bottom-up total disagrees with top-down intuition, **trust bottom-up** or write justification.
+   - Set `**Human Brief**` pointer line near the top of the plan (the template provides the field).
 
 4. **Assign Subagents**
    - Use reference: `./references/subagent-assignments.md`
@@ -540,17 +578,19 @@ Sections:
 
 7. **Documentation Evaluation**
    - Assess which docs require updates based on feature scope:
-     - **CHANGELOG**: Include if user-facing changes (new features, breaking changes, deprecations)
+     - **CHANGELOG**: Include if user-facing changes (new features, breaking changes, deprecations). When `changelog_required: true` is set in frontmatter, a CHANGELOG `[Unreleased]` entry is **mandatory** in the Documentation Finalization phase before release. Categorization rules: `.claude/specs/changelog-spec.md`.
      - **README**: Include if features, CLI commands, screenshots, or version change
      - **User/dev docs**: Include if behavior changes requiring user/developer knowledge
      - **Context files**: Include if changes affect agent behavior or architectural patterns
+     - **Project-level custom skills**: Include if changes affect domain of a custom skill (new CLI commands, capability changes, workflow shifts); check `.claude/specs/skills-index.md` for domain ownership
    - Create doc tasks for the Documentation Finalization phase:
      - CHANGELOG → `changelog-generator` agent with `changelog-generator` skill
      - README/docs → `documentation-writer` agent with `managing-readmes` skill
      - Context files → `documentation-writer` agent (progressive disclosure: CLAUDE.md pointers only, detail in key-context)
+     - Project-level skills → `ai-artifacts-engineer` (SPEC.md + SKILL.md) and `documentation-writer` (workflows)
    - Keep docs minimal/usage-focused, not verbose
    - Reference: `./references/doc-finalization-guidance.md` for detailed heuristics
-   - Add "Model: haiku; Effort: low" to doc tasks
+   - Add "Model: haiku; Effort: low" to doc tasks (or "Model: sonnet; Effort: medium" for skill SPEC updates)
 
 8. **Optimize for Token Efficiency**
    - If total plan >800 lines: break into phase-specific files
@@ -675,6 +715,47 @@ Utilize artifact-tracking skill to create progress tracking and context artifact
 
 You should NOT create these files from this skill, as there are specific optimizations and structures required by the artifact-tracking skill.
 
+### Workflow 5: Create Human Brief for Feature
+
+**Input**: PRD path + Implementation Plan path (both required when they exist)
+
+**Spec reference**: `.claude/specs/artifact-structures/human-brief-spec.md`
+
+**Process**:
+
+1. **Check creation heuristic (§4 of spec)** — create a brief when any of these are true:
+   - Feature is ≥8 story points estimated
+   - Implementation plan has ≥2 phases
+   - Estimation Sanity Check has non-trivial anchor comparison
+   - ≥2 deferred items with non-trivial rationale
+   - Feature spans ≥2 capability areas
+   - Notable orchestration complexity (wave coordination, cross-team dependencies)
+   Skip when: quick feature (<5 pts, single phase), trivial refactor, single-file fix.
+
+2. **Scaffold the brief** at `docs/project_plans/human-briefs/[feature-slug].md`
+   - Use template: `./templates/human-brief-template.md`
+   - No `-v1` suffix — briefs are living documents, not versioned deliverables
+   - Set `prd_ref`, `plan_ref`, `feature_slug`, `owner`, `status: draft`
+
+3. **Populate on creation**:
+   - **§1 Context Pointers**: one-line links to PRD, plan, design specs, SPIKEs
+   - **§2 Estimation Sanity Check**: migrate H1–H6 output from planning step 3.5
+   - **§4 Open Questions Ledger**: harvest `OQ-*` markers from PRD and plan
+   - **§8 Expected Success Behaviors**: extract human-verifiable outcomes from PRD acceptance criteria
+
+4. **Populate as information becomes available**:
+   - §3 Wave & Orchestration Notes — after phase structure is finalized
+   - §5 Deferred Items Rationale — after triage table in plan is populated
+   - §6 Risk Narrative — after risk section in plan is written
+   - §7 What to Watch For — before or during execution
+   - §9 Running Log — append-only during execution
+
+5. **Set brief as in-progress** when execution begins; **completed** when feature ships.
+
+**Output**: `docs/project_plans/human-briefs/[feature-slug].md`
+
+**Agents must not load this file during execution** (see Agent Consumption Rule below and spec §5).
+
 ## Templates Reference
 
 ### prd-template.md
@@ -798,6 +879,13 @@ All scripts are in `./scripts/` directory and use Node.js (NOT Python).
 
 ## References
 
+### estimation-heuristics.md
+
+**Location**: `./references/estimation-heuristics.md`
+**Purpose**: Bottom-up sizing rules to prevent under-estimation. Codifies six heuristics — noun-counting (H1), dual-implementation multiplier (H2), algorithmic service flag (H3), bundle-vs-sum check (H4), anchor reference comparison (H5), hidden plumbing budget (H6) — and the mandatory "Estimation Sanity Check" template every implementation plan must populate.
+**Used By**: Implementation plan authoring (mandatory sanity check), `plan-review` skill (post-mortem heuristic tuning).
+**When to load**: Always, when creating or reviewing an implementation plan estimate.
+
 ### subagent-assignments.md
 
 **Location**: `./references/subagent-assignments.md`
@@ -856,6 +944,31 @@ All scripts are in `./scripts/` directory and use Node.js (NOT Python).
 - For targeted queries: Load only relevant phase = 67%+ reduction
 
 **Used By**: Plan optimization workflow
+
+## Plan Generator Rules (Mandatory)
+
+Apply these rules whenever generating or reviewing an implementation plan or any phase that contains ACs. These rules are non-negotiable; they catch the class of integration/verification gaps documented in the motivating incident (`ccdash-planning-reskin-v2-interaction-performance-addendum`).
+
+- **R-P1** — *No AC may contain the words "across", "everywhere", "throughout", "all X", or "visible" without an explicit `target_surfaces:` list.* If the AC uses any of these terms without enumerating concrete component paths, the plan generator must expand the AC inline.
+- **R-P2** — *Every new backend field X introduced in a phase introduces an implicit AC "FE handles missing X".* If this AC is not already present, the generator writes it automatically. Resilience is a contract state, not a reviewer's courtesy.
+- **R-P3** — *Every phase with ≥2 owner specialties (e.g., FE + BE) and overlapping `files_affected` (intersection ≥1 file) must declare an `integration_owner` field and at least one seam task.* A seam task is a task whose sole purpose is to verify the cross-owner propagation contract.
+- **R-P4** — *UI-touching phases (any `*.tsx` file in `files_affected`) must include a "runtime smoke" task in the verification phase.* The smoke task must reference every `target_surfaces` entry from that phase.
+
+**AC schema for structured ACs** (use this format whenever an AC covers multi-surface propagation or has resilience requirements):
+
+```markdown
+#### AC [ID]: [Short description]
+- target_surfaces:
+    # Use path strings (see §8 Q1 note in references/ac-schema.md).
+    - components/Planning/PlanningSummaryPanel.tsx
+    - components/Planning/PlanningGraphPanel.tsx
+- propagation_contract: [how the value flows from producer to each surface]
+- resilience: [how each surface behaves when the field is absent/null]
+- visual_evidence_required: [screenshot spec, e.g. "desktop ≥1440px before/after" or false]
+- verified_by: [list of task IDs in the verification phase that sign off this AC]
+```
+
+For the full AC schema reference and examples, see `./references/ac-schema.md`.
 
 ## Best Practices
 
@@ -938,6 +1051,7 @@ status: draft|published
 related:
   - /docs/architecture/ADRs/relevant-adr.md
   - /docs/guides/relevant-guide.md
+# changelog_required: true   # Optional — uncomment for user-facing features requiring a CHANGELOG [Unreleased] entry
 ---
 ```
 
@@ -954,6 +1068,7 @@ category: "product-planning"
 status: draft|in-progress|published
 related:
   - /docs/project_plans/PRDs/category/feature-name-v1.md
+# changelog_required: true   # Optional — inherit from PRD or set here; enforces CHANGELOG entry in Phase 7
 ---
 ```
 

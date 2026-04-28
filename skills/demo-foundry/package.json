@@ -1,0 +1,16 @@
+{
+  "name": "demo-foundry-skill-pack",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "demo-foundry": "./bin/demo-foundry.mjs"
+  },
+  "scripts": {
+    "doctor": "node bin/demo-foundry.mjs doctor",
+    "help": "node bin/demo-foundry.mjs help"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

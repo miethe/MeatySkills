@@ -1,0 +1,17 @@
+# Demo Foundry ignore file
+
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+credentials.*
+node_modules/
+dist/
+build/
+coverage/
+.playwright/
+playwright-report/
+.DS_Store

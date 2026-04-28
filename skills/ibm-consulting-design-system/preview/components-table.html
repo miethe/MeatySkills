@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Data Table</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  table.carbon-table { width:100%; border-collapse:collapse; font-family:'IBM Plex Sans',sans-serif; font-size:14px; background:#fff; }
+  .carbon-table thead th {
+    background:#e0e0e0; color:#161616; text-align:left; font-weight:600;
+    padding:12px 16px; font-size:12px; letter-spacing:0;
+    border-bottom:1px solid #c6c6c6;
+  }
+  .carbon-table tbody td {
+    padding:14px 16px; border-bottom:1px solid #e0e0e0; color:#161616;
+  }
+  .carbon-table tbody tr:hover td { background:#f4f4f4; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:400; }
+  .badge--active { background:#defbe6; color:#044317; }
+  .badge--pilot { background:#d0e2ff; color:#002d9c; }
+</style>
+</head>
+<body>
+<div class="card card--flush" style="border:0">
+<table class="carbon-table">
+  <thead><tr><th>Offering</th><th>Phase</th><th>Duration</th><th style="text-align:right">Investment</th></tr></thead>
+  <tbody>
+    <tr><td>Automation Transformation</td><td><span class="badge badge--active">Scale</span></td><td>3–6 mo+</td><td style="text-align:right;font-variant-numeric:tabular-nums">$500K – $5M+</td></tr>
+    <tr><td>Cloud-Native Foundations</td><td><span class="badge badge--pilot">Pilot</span></td><td>8–12 wks</td><td style="text-align:right;font-variant-numeric:tabular-nums">$500K – $2.5M+</td></tr>
+    <tr><td>Modern &amp; Agentic SDLC</td><td><span class="badge badge--pilot">Pilot</span></td><td>8–12 wks</td><td style="text-align:right;font-variant-numeric:tabular-nums">$500K – $2M+</td></tr>
+    <tr><td>VMware Estate Transformation</td><td><span class="badge badge--active">Scale</span></td><td>3–12 mo+</td><td style="text-align:right;font-variant-numeric:tabular-nums">$1M – $10M+</td></tr>
+  </tbody>
+</table>
+</div>
+</body></html>

@@ -1,6 +1,9 @@
 {
-  "$schema_version": 1,
-  "description": "Single source of truth for natural-language intent -> ccdash CLI mapping. SKILL.md renders a summary table from this file by convention. Update this file (and CHANGELOG.md) whenever CLI surface changes.",
+  "$schema_version": 2,
+  "skill_version": "2.0",
+  "app_version": "2026-04-26",
+  "updated": "2026-04-26",
+  "description": "Intent→transport routing table for the ccdash skill. Covers both MCP tools and CLI commands. Update this file and CHANGELOG.md whenever the query surface changes.",
   "intents": [
     {
       "id": "project-status",
@@ -9,7 +12,9 @@
       "default_output": "json",
       "provenance_fields": ["project_id", "generated_at", "feature_ids", "active_session_ids"],
       "recipe": "recipes/project-triage.md",
-      "transport": "cli"
+      "transport": ["mcp", "cli"],
+      "mcp_tool": "ccdash_project_status",
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
     },
     {
       "id": "doctor",
@@ -18,7 +23,8 @@
       "default_output": "human",
       "provenance_fields": ["target", "url", "reachable", "authenticated"],
       "recipe": "recipes/unreachable-server.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "install-setup",
@@ -27,7 +33,8 @@
       "default_output": "human",
       "provenance_fields": [],
       "recipe": "recipes/target-onboarding.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-list",
@@ -35,7 +42,8 @@
       "command": "ccdash target list",
       "default_output": "human",
       "provenance_fields": ["name", "url", "active"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-add",
@@ -44,7 +52,8 @@
       "default_output": "human",
       "provenance_fields": ["name", "url"],
       "recipe": "recipes/target-onboarding.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-use",
@@ -52,7 +61,8 @@
       "command": "ccdash target use <name>",
       "default_output": "human",
       "provenance_fields": ["active_target"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-show",
@@ -60,7 +70,8 @@
       "command": "ccdash target show",
       "default_output": "human",
       "provenance_fields": ["name", "url", "project", "token_ref"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-login",
@@ -68,7 +79,8 @@
       "command": "ccdash target login <name>",
       "default_output": "human",
       "provenance_fields": ["name", "token_ref"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-logout",
@@ -76,7 +88,8 @@
       "command": "ccdash target logout <name>",
       "default_output": "human",
       "provenance_fields": ["name"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "target-check",
@@ -84,7 +97,8 @@
       "command": "ccdash target check <name>",
       "default_output": "human",
       "provenance_fields": ["name", "url", "reachable", "authenticated"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "workflow-failures",
@@ -93,7 +107,9 @@
       "default_output": "json",
       "provenance_fields": ["workflow_id", "failure_count", "last_failure_at", "feature_ids"],
       "recipe": "recipes/workflow-failure-rootcause.md",
-      "transport": "cli"
+      "transport": ["mcp", "cli"],
+      "mcp_tool": "ccdash_workflow_failure_patterns",
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
     },
     {
       "id": "feature-list",
@@ -101,7 +117,9 @@
       "command": "ccdash feature list",
       "default_output": "json",
       "provenance_fields": ["feature_id", "status", "category", "updated_at"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--q TEXT", "--status STATUS", "--no-cache"],
+      "notes": "Paginated; max 200 results. Response includes `truncated` and `total` fields. Use `--q TEXT` for keyword filtering."
     },
     {
       "id": "feature-show",
@@ -110,7 +128,9 @@
       "default_output": "json",
       "provenance_fields": ["feature_id", "status", "session_ids", "document_ids", "workflow_ids"],
       "recipe": "recipes/feature-retrospective.md",
-      "transport": "cli"
+      "transport": ["mcp", "cli"],
+      "mcp_tool": "ccdash_feature_forensics",
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
     },
     {
       "id": "feature-sessions",
@@ -118,7 +138,8 @@
       "command": "ccdash feature sessions <feature_id>",
       "default_output": "json",
       "provenance_fields": ["session_id", "started_at", "ended_at", "cost", "feature_id"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "feature-documents",
@@ -126,7 +147,8 @@
       "command": "ccdash feature documents <feature_id>",
       "default_output": "json",
       "provenance_fields": ["document_id", "doc_type", "path", "feature_id"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "session-list",
@@ -134,7 +156,8 @@
       "command": "ccdash session list",
       "default_output": "json",
       "provenance_fields": ["session_id", "root_session_id", "feature_id", "started_at"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "session-show",
@@ -143,7 +166,8 @@
       "default_output": "json",
       "provenance_fields": ["session_id", "root_session_id", "feature_id", "tool_calls", "cost", "started_at"],
       "recipe": "recipes/session-cluster-investigation.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "session-search",
@@ -151,7 +175,8 @@
       "command": "ccdash session search <query>",
       "default_output": "json",
       "provenance_fields": ["session_id", "match_line", "feature_id", "timestamp"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "session-drilldown",
@@ -160,7 +185,8 @@
       "default_output": "json",
       "provenance_fields": ["session_id", "concern", "findings", "evidence_line_refs"],
       "recipe": "recipes/workflow-failure-rootcause.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "session-family",
@@ -169,7 +195,8 @@
       "default_output": "json",
       "provenance_fields": ["root_session_id", "session_ids", "feature_id"],
       "recipe": "recipes/session-cluster-investigation.md",
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     },
     {
       "id": "report-aar",
@@ -178,7 +205,9 @@
       "default_output": "markdown",
       "provenance_fields": ["feature_id", "generated_at", "session_ids"],
       "recipe": "recipes/feature-retrospective.md",
-      "transport": "cli"
+      "transport": ["mcp", "cli"],
+      "mcp_tool": "ccdash_generate_aar",
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
     },
     {
       "id": "report-feature",
@@ -186,7 +215,8 @@
       "command": "ccdash report feature <feature_id>",
       "default_output": "markdown",
       "provenance_fields": ["feature_id", "generated_at", "session_ids", "document_ids"],
-      "transport": "cli"
+      "transport": ["cli"],
+      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
     }
   ]
 }

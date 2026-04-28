@@ -10,6 +10,8 @@ These scripts provide a complete toolkit for:
 2. **Validating** artifacts against JSON schemas
 3. **Querying** artifact metadata efficiently
 4. **Migrating** entire directories in bulk
+5. **Enforcing completion gates** — timing signals and evidence on every completed task
+6. **Checking AC coverage** — every AC maps to a verification task and vice-versa
 
 All scripts use modern Python 3.10+ features with comprehensive error handling, type hints, and progress reporting.
 
@@ -29,6 +31,69 @@ uv pip install -r requirements.txt
 - `python-dateutil>=2.8.0` - Date parsing utilities
 
 ## Scripts
+
+### 0. update-status.py (extended — completion gate)
+
+Update a single task's status with optional timing, evidence, and verifier fields.
+Rejects `-s completed` unless `--started` + `--completed` or `--evidence` is present.
+
+**New flags (§4.4):**
+
+| Flag | Purpose |
+|---|---|
+| `--started ISO-8601` | Timestamp written to `started:` on the task |
+| `--completed ISO-8601` | Timestamp written to `completed:` on the task |
+| `--evidence KEY:VALUE` | Repeatable; appended to `evidence:` list |
+| `--verified-by TASK_ID` | Repeatable; appended to `verified_by:` list (dedup) |
+| `--force` | Bypass completion gate; logs WARNING to stderr |
+
+```bash
+# Correct usage
+python update-status.py -f FILE -t T7-003 -s completed \
+    --started 2026-04-22T10:00Z --completed 2026-04-22T17:00Z \
+    --evidence "commit:abc123" --evidence "test:components/__tests__/foo.test.tsx" \
+    --verified-by P16-003
+
+# Force (emergency override)
+python update-status.py -f FILE -t T7-003 -s completed --force
+```
+
+### 0b. validate-phase-completion.py
+
+Block a phase from being marked `completed` if any completed task is missing
+`started`, `completed`, `verified_by`, or `evidence`.
+
+```bash
+python validate-phase-completion.py -f .claude/progress/prd/phase-7-progress.md
+python validate-phase-completion.py -f FILE --json
+```
+
+Exit codes: `0` gate passed, `1` violations found, `2` file/parse error.
+
+### 0c. ac-coverage-report.py
+
+Two-way AC ↔ verification task coverage matrix. Fails if any AC has zero
+`verified_by` references, or any cited verification task maps to zero ACs.
+
+Supports `--dry` mode for plan-approval time: fails if any AC with vague
+propagation language ("across", "everywhere", "throughout", "all", "visible")
+lacks an explicit `target_surfaces:` list.
+
+```bash
+# Full matrix (run at phase exit)
+python ac-coverage-report.py \
+    --plan docs/project_plans/implementation_plans/enhancements/my-plan.md \
+    --progress .claude/progress/my-prd/phase-13-progress.md \
+    --progress .claude/progress/my-prd/phase-16-progress.md
+
+# Plan approval gate
+python ac-coverage-report.py --plan PLAN --dry
+
+# JSON
+python ac-coverage-report.py --plan PLAN --progress P1 --json
+```
+
+---
 
 ### 1. convert_to_hybrid.py
 
@@ -621,6 +686,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: 2025-11-17
+**Last Updated**: 2026-04-22
 
 All scripts are production-ready and tested for Python 3.10+.

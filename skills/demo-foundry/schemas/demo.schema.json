@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Demo Foundry Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "audience",
+    "app",
+    "story",
+    "flows",
+    "outputs"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "audience": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "app": {
+      "type": "object"
+    },
+    "seed": {
+      "type": "object"
+    },
+    "duration_targets": {
+      "type": "object"
+    },
+    "story": {
+      "type": "object"
+    },
+    "flows": {
+      "type": "array"
+    },
+    "outputs": {
+      "type": "object"
+    },
+    "claims": {
+      "type": "array"
+    },
+    "review": {
+      "type": "object"
+    },
+    "context_updates": {
+      "type": "object"
+    },
+    "workflow_updates": {
+      "type": "object"
+    },
+    "risks": {
+      "type": "array"
+    }
+  }
+}

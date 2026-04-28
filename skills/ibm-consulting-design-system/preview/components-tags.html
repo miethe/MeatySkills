@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tags</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .tag {
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Sans',sans-serif;font-size:12px;
+    padding:4px 8px;border-radius:16px;background:#e0e0e0;color:#161616;
+  }
+  .tag--blue   { background:#d0e2ff; color:#002d9c; }
+  .tag--purple { background:#e8daff; color:#491d8b; }
+  .tag--teal   { background:#9ef0f0; color:#004144; }
+  .tag--mag    { background:#ffd6e8; color:#740937; }
+  .tag--red    { background:#ffd7d9; color:#750e13; }
+  .tag--green  { background:#a7f0ba; color:#044317; }
+  .tag--gray   { background:#e0e0e0; color:#161616; }
+  .tag--filter { background:#393939; color:#fff; border-radius:16px; padding:4px 4px 4px 8px }
+  .tag--filter span.x { width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row" style="gap:8px">
+    <span class="tag tag--blue">Red Hat OpenShift</span>
+    <span class="tag tag--purple">Agentic AI</span>
+    <span class="tag tag--teal">GitOps</span>
+    <span class="tag tag--mag">RHOV Migration</span>
+    <span class="tag tag--red">Critical</span>
+    <span class="tag tag--green">Active</span>
+    <span class="tag tag--gray">Assessment</span>
+  </div>
+  <div class="row" style="gap:8px">
+    <span class="tag tag--filter">Red Hat <span class="x">✕</span></span>
+    <span class="tag tag--filter">HashiCorp <span class="x">✕</span></span>
+    <span class="tag tag--filter">GitHub Enterprise <span class="x">✕</span></span>
+  </div>
+  <div class="lbl">Carbon tags are pill-shaped (one of the few rounded elements in IBM UI). Filter tags — dark, with dismiss affordance — are the interactive variant.</div>
+</div>
+</body></html>

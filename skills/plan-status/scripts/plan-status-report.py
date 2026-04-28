@@ -35,9 +35,11 @@ import yaml
 # Shared helpers (mirror manage-plan-status.py patterns — no import needed)
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+_SCRIPT_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 # .claude/skills/plan-status/scripts/plan-status-report.py
 # → parent×4 = repo root  (.claude/skills/plan-status/scripts → plan-status → skills → .claude → repo)
+# Overridden at runtime by main() — all consumers read this module attribute lazily
+REPO_ROOT = _SCRIPT_REPO_ROOT
 
 # Default scan sets (always included)
 DEFAULT_DIRS: Dict[str, List[str]] = {
@@ -1771,7 +1773,28 @@ Examples:
         help="Route 8: What's Next? (meta-plan wave triage + actionable priorities)",
     )
 
+    parser.add_argument(
+        "--repo",
+        type=Path,
+        metavar="PATH",
+        default=None,
+        help=(
+            "Repository root to scan (overrides auto-detection). "
+            "Defaults to CWD when it contains a .claude/ directory, "
+            "otherwise falls back to the path derived from the script location."
+        ),
+    )
+
     args = parser.parse_args()
+
+    # --- Resolve REPO_ROOT ---
+    # Priority: explicit --repo > CWD (when it has .claude/) > script-location fallback
+    global REPO_ROOT
+    if args.repo is not None:
+        REPO_ROOT = args.repo.resolve()
+    elif (Path.cwd() / ".claude").is_dir():
+        REPO_ROOT = Path.cwd()
+    # else: keep the module-level _SCRIPT_REPO_ROOT value already assigned
 
     # Resolve discovery flags
     inc_pre_plan = args.include_pre_plan or args.all_types

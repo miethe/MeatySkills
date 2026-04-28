@@ -1,0 +1,172 @@
+/* IBM Consulting web — marketing UI kit styles */
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; background: #ffffff; color: #161616; font-family: 'IBM Plex Sans', -apple-system, sans-serif; }
+body { -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+
+/* Masthead */
+.ibm-masthead {
+  position: sticky; top: 0; z-index: 50;
+  height: 48px;
+  background: #161616;
+  color: #f4f4f4;
+  display: flex;
+  align-items: stretch;
+  font-size: 14px;
+  font-weight: 400;
+}
+.ibm-masthead__brand {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 16px;
+  border-right: 1px solid #393939;
+  font-weight: 600;
+  height: 48px;
+}
+.ibm-masthead__brand img { height: 14px; filter: invert(1); }
+.ibm-masthead__brand .sep { color:#6f6f6f; font-weight:400 }
+.ibm-masthead__nav {
+  display: flex; height: 48px;
+}
+.ibm-masthead__nav a {
+  display: flex; align-items: center; padding: 0 16px;
+  color: #f4f4f4;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  transition: background 70ms, border-color 70ms;
+}
+.ibm-masthead__nav a:hover { background: #393939; }
+.ibm-masthead__nav a.active { border-bottom-color: #0f62fe; color:#fff; }
+.ibm-masthead__tools {
+  margin-left: auto;
+  display: flex;
+}
+.ibm-masthead__tools button {
+  width: 48px; height: 48px;
+  border: 0; background: transparent; color: #f4f4f4;
+  cursor: pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.ibm-masthead__tools button:hover { background: #393939; }
+.ibm-masthead__tools .cta {
+  width: auto; padding: 0 16px;
+  background:#0f62fe; font-weight:500;
+}
+.ibm-masthead__tools .cta:hover { background:#0043ce }
+
+/* Buttons */
+.ibm-btn {
+  font-family: inherit;
+  font-size: 14px; font-weight: 400; line-height: 18px;
+  padding: 11px 64px 11px 16px;
+  border: 1px solid transparent;
+  background: #0f62fe; color: #fff;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 12px;
+  transition: background 70ms;
+  border-radius: 0;
+  min-height: 40px;
+  text-align: left;
+  min-width: 180px;
+  position: relative;
+}
+.ibm-btn:hover { background: #0043ce; }
+.ibm-btn:active { background: #002d9c; }
+.ibm-btn svg { width: 16px; height: 16px; flex-shrink: 0; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
+.ibm-btn--secondary { background: #393939; }
+.ibm-btn--secondary:hover { background:#4c4c4c; }
+.ibm-btn--tertiary { background: transparent; color: #0f62fe; border-color: #0f62fe; }
+.ibm-btn--tertiary:hover { background:#0f62fe; color:#fff; }
+.ibm-btn--ghost { background: transparent; color: #0f62fe; padding-left: 0; padding-right: 40px; min-width: 0; }
+.ibm-btn--ghost:hover { background:transparent; color:#0043ce; text-decoration: underline; }
+.ibm-btn--lg { padding-top: 15px; padding-bottom: 15px; font-size: 16px; min-height: 48px; }
+
+/* Generic section */
+.section { padding: 96px 5vw; max-width: 1584px; margin: 0 auto; }
+.eyebrow { font-size: 14px; color: #0f62fe; font-weight: 400; margin-bottom: 16px; letter-spacing: 0; }
+.headline { font-size: 42px; line-height: 1.1; font-weight: 300; letter-spacing: -0.005em; margin: 0 0 24px; max-width: 720px; color:#161616; }
+.kicker { font-size: 18px; line-height: 1.45; color: #525252; max-width: 560px; font-weight:300; margin: 0 0 32px; }
+
+/* Hero */
+.hero { position: relative; background:#0f62fe; color:#fff; overflow:hidden; min-height: 560px; display:flex; align-items:center; }
+.hero__bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.7; }
+.hero__bg::after { content:""; position:absolute; inset:0; background: linear-gradient(100deg, #0f62fe 20%, rgba(15,98,254,0.2) 60%, rgba(15,98,254,0) 100%); }
+.hero__inner { position: relative; z-index:2; padding: 96px 5vw; max-width: 1584px; margin: 0 auto; width:100%; }
+.hero__eyebrow { display:flex; align-items:center; gap:12px; font-size:14px; margin-bottom:24px; }
+.hero__eyebrow .rule { width:24px;height:2px;background:#fff; }
+.hero__title { font-size: 72px; line-height: 1.02; font-weight:300; letter-spacing:-0.015em; margin:0 0 24px; max-width: 880px; }
+.hero__sub { font-size: 20px; line-height:1.4; font-weight:300; max-width: 620px; margin:0 0 40px; opacity:0.95; }
+
+/* Tile grid for offerings */
+.tiles { display:grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #e0e0e0; }
+.tile {
+  background:#fff;
+  padding: 32px 24px 96px;
+  position: relative;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  min-height: 280px;
+}
+.tile:hover { background:#0f62fe; color:#fff; }
+.tile:hover .tile__arrow { color:#fff; }
+.tile:hover .tile__eyebrow { color:rgba(255,255,255,0.85) }
+.tile__eyebrow { font-size: 11px; color:#6f6f6f; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+.tile__title { font-size:22px; line-height:1.2; font-weight:400; margin:0 0 12px; }
+.tile__body { font-size:14px; line-height:1.45; font-weight:300; opacity:0.9; }
+.tile__arrow { position:absolute; bottom:24px; right:24px; color:#0f62fe; transition: color 70ms;}
+
+/* Stats */
+.stats { display:grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
+.stat { border-top: 3px solid #0f62fe; padding-top: 24px; }
+.stat__num { font-size: 92px; font-weight: 300; letter-spacing:-0.02em; line-height:1; color:#161616; }
+.stat__label { font-size: 16px; font-weight:500; margin-top:20px; }
+.stat__sub { font-size: 13px; color:#525252; margin-top:4px; max-width: 280px; }
+
+/* TileLink */
+.tilelink { display:block; padding: 24px 24px; border-bottom: 1px solid #e0e0e0; font-size: 18px; font-weight:400; position:relative; cursor:pointer; transition: background 70ms, padding-left 120ms; }
+.tilelink:hover { background: #edf5ff; padding-left: 32px; }
+.tilelink::after { content: "→"; position: absolute; right: 24px; top:50%; transform:translateY(-50%); color:#0f62fe; }
+.tilelink__eyebrow { font-size: 12px; color:#525252; display:block; margin-bottom: 6px; }
+
+/* Footer */
+.ibm-footer { background:#161616; color:#f4f4f4; padding: 80px 5vw 40px; font-size:14px; }
+.ibm-footer__grid { max-width:1584px;margin:0 auto;display:grid;grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 64px; }
+.ibm-footer__col h4 { font-size: 14px; font-weight:600; margin:0 0 16px; color:#fff; }
+.ibm-footer__col ul { list-style:none; padding:0; margin:0; }
+.ibm-footer__col li { margin-bottom: 10px; }
+.ibm-footer__col a { color:#c6c6c6; font-size:13px; }
+.ibm-footer__col a:hover { color:#fff; text-decoration: underline; }
+.ibm-footer__brand img { height:20px; filter:invert(1); }
+.ibm-footer__bottom { max-width:1584px; margin: 0 auto; padding-top: 24px; border-top: 1px solid #393939; display:flex; justify-content:space-between; font-size: 12px; color: #8d8d8d; }
+
+/* Breadcrumb */
+.breadcrumb { padding: 16px 5vw; font-size: 13px; color:#525252; max-width: 1584px; margin: 0 auto; }
+.breadcrumb a { color:#0f62fe; }
+.breadcrumb .sep { margin: 0 8px; color:#8d8d8d; }
+
+/* Content pane */
+.two-col { display:grid; grid-template-columns: 1fr 2fr; gap: 48px; align-items: start; }
+
+/* Detail cards mirror battlecard quadrants */
+.quad { display:grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.quad > div { border: 1px solid #e0e0e0; padding: 24px; }
+.quad h5 { display:flex; align-items:center; gap:12px; margin:0 0 12px; font-size:14px; font-weight:600; }
+.quad h5 img { width:24px;height:24px; }
+.quad ul { margin:0; padding-left: 18px; font-size:14px; line-height:1.5; color:#393939; }
+.quad li { margin-bottom: 6px; }
+
+/* Pill tags on detail */
+.tagrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 16px; }
+.pill { font-size: 12px; padding: 4px 12px; border-radius: 16px; background:#d0e2ff; color:#002d9c; }
+
+/* Phases strip */
+.phases { display:flex; gap: 2px; margin-top: 32px; }
+.phases > div { flex:1; padding: 24px; color:#fff; font-size:14px; min-height: 160px; }
+.phases .p1 { background:#0f62fe; }
+.phases .p2 { background:#0043ce; }
+.phases .p3 { background:#002d9c; }
+.phases h6 { font-size:14px; font-weight:600; margin:0 0 8px; }
+.phases .dur { margin-top: 16px; font-weight:600; font-size:13px; }
+
+/* Focus */
+button:focus-visible, a:focus-visible { outline: 2px solid #0f62fe; outline-offset: -2px; }

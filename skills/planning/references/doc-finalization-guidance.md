@@ -12,6 +12,7 @@ Use this table to decide which documentation types should be created/updated:
 | README | Features, CLI commands, screenshots, or version changed | No user-visible changes |
 | User/dev docs | Behavior changes users need to know | Internal implementation details |
 | Context files (CLAUDE.md, key-context) | Agent behavior, architecture patterns, dev workflow changes | App code that doesn't change how agents work |
+| Project-level skills | Changes affect a domain owned by a custom skill (new CLI commands, capability changes, workflow shifts, new integrations) | Pure app-code changes with no agent-facing surface |
 
 **Key principle**: Documentation exists for humans and agents who use the system, not for code that implements it.
 
@@ -67,6 +68,31 @@ Update context strategically to avoid information bloat:
 - Add verbose explanations to CLAUDE.md (use key-context instead)
 - Update documentation without evaluating whether it's necessary (check heuristics table)
 
+## Project-Level Skill Updates
+
+Custom skills under `.claude/skills/` are project-specific capability packages (e.g., `skillmeat-cli`, `artifact-tracking`, `dev-execution`, `debug`, `meatycapture-capture`, `planning`). They are formally specified via SPEC.md (see `.claude/specs/artifact-structures/skill-spec-convention.md`) and indexed in `.claude/specs/skills-index.md`.
+
+**When to update**: Any time the plan changes CLI surface, agent-facing capabilities, workflow patterns, or integration points that a custom skill documents.
+
+**How to evaluate** (checklist during planning):
+1. Cross-reference affected areas against `.claude/specs/skills-index.md` — which skills claim this domain?
+2. For each matching skill, check its SPEC.md `Capability Coverage` matrix — is the new capability present? Is an existing row now stale?
+3. Check its workflow files for route accuracy (do example commands still match?).
+4. If yes to any of the above, add a dedicated task in Phase 7 (Documentation Finalization).
+
+**Delegation targets**:
+- `ai-artifacts-engineer` (sonnet) for SPEC.md + SKILL.md edits
+- `documentation-writer` (haiku) for workflow file updates
+
+**Required updates** (when a skill is affected):
+- SPEC.md `Capability Coverage` matrix — add/modify rows for new or changed capabilities
+- SPEC.md `Changelog` — append a version bump entry
+- SPEC.md frontmatter `updated` date
+- Relevant workflow file(s) — add new route entries, update stale examples
+- `.claude/specs/skills-index.md` — bump version if SPEC.md version changed
+
+**Skip when**: Changes are internal refactors with no agent-facing surface, or when the change already lives in a location the skill points to (e.g., user docs) and the skill's SPEC.md explicitly defers there.
+
 ## Examples: Good vs Bad
 
 ### Good CLAUDE.md Addition
@@ -111,6 +137,8 @@ Change made?
         ├─ User guide → Delegate to documentation-writer
         └─ No matches → Stop (no doc update needed)
      └─ No → Check if affects agents/workflow
+        ├─ Affects a project-level custom skill? (check skills-index.md)
+        │  └─ Yes → Delegate skill update (ai-artifacts-engineer for SPEC/SKILL; documentation-writer for workflows)
         └─ Yes → Update CLAUDE.md pointer (documentation-writer) or key-context
         └─ No → Skip documentation
 ```

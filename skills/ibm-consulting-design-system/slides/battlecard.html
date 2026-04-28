@@ -1,0 +1,104 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Battlecard — Automation Transformation</title>
+<link rel="stylesheet" href="_slide.css">
+<style>
+  .bc-title { font-size: 26px; font-weight: 300; color:#161616; line-height:1.1; letter-spacing:-0.005em; }
+  .bc-eyebrow { font-size:11px; color:#0f62fe; font-weight:500; letter-spacing:0.02em; text-transform:uppercase; margin-bottom:4px }
+  .bc-card { background:#fff; border:1px solid #e0e0e0; padding:14px 16px; }
+  .bc-card .h { font-size:12px; font-weight:600; color:#161616; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+  .bc-card .h img { width:20px; height:20px; }
+  .bc-card ul { margin:0; padding-left:14px; font-size:10.5px; line-height:1.45; color:#393939; font-family:'IBM Plex Sans Condensed',sans-serif; }
+  .bc-card li { margin-bottom:3px; }
+  .phase { background:#0f62fe; color:#fff; padding:10px 14px; font-size:11px; flex:1; position:relative; font-family:'IBM Plex Sans Condensed',sans-serif;}
+  .phase .ph-h { font-weight:600; font-size:12px; margin-bottom:4px; display:block; }
+  .phase.p2 { background:#0043ce }
+  .phase.p3 { background:#002d9c }
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- Top-left indicator bar in IBM blue -->
+  <div style="position:absolute;left:0;top:0;width:12px;height:100%;background:#0f62fe"></div>
+  <img src="../assets/logos/ibm-logo-blue-white-bg.png" class="slide-logo">
+
+  <div style="padding:28px 40px 40px 32px;height:100%;display:flex;flex-direction:column;gap:14px">
+    <!-- Header -->
+    <div>
+      <div class="bc-eyebrow">Offering · Battlecard</div>
+      <div class="bc-title">Automation Transformation</div>
+      <div style="font-size:12px;color:#525252;margin-top:4px;max-width:840px;font-family:'IBM Plex Sans Condensed',sans-serif">
+        Eliminate manual, error-prone infrastructure management. Embed 'Everything-as-Code' across the hybrid cloud estate.
+      </div>
+    </div>
+
+    <!-- 4 quadrant grid -->
+    <div style="display:grid;grid-template-columns: 1fr 1fr 1fr 1fr;gap:10px;flex:1;min-height:0">
+      <div class="bc-card">
+        <div class="h"><img src="../assets/icons/target.png">Objectives</div>
+        <ul>
+          <li>Eliminate manual config management</li>
+          <li>Implement 'Everything-as-Code' operating model</li>
+          <li>Embed policy-as-code for audit-ready compliance</li>
+          <li>Reduce operational toil by ~50%</li>
+          <li>Establish measurable DORA baselines</li>
+        </ul>
+      </div>
+      <div class="bc-card">
+        <div class="h"><img src="../assets/icons/tools.png">Technology in scope</div>
+        <ul>
+          <li>Red Hat Ansible Automation Platform</li>
+          <li>HashiCorp Terraform / OpenTofu</li>
+          <li>OPA / Gatekeeper / Sentinel / Kyverno</li>
+          <li>ArgoCD, Flux (GitOps)</li>
+          <li>Red Hat OpenShift · Event-Driven Ansible</li>
+        </ul>
+      </div>
+      <div class="bc-card">
+        <div class="h"><img src="../assets/icons/microscope.png">Tools &amp; accelerators</div>
+        <ul>
+          <li>BoxBoat IaC Module Library</li>
+          <li>Compliance-as-Code Accelerator Packs</li>
+          <li>BoxBoat Maturity Assessment Framework</li>
+          <li>IBM / Red Hat Playbook Library</li>
+        </ul>
+      </div>
+      <div class="bc-card" style="background:#161616;color:#fff;border-color:#161616">
+        <div class="h" style="color:#fff"><img src="../assets/icons/rocket.png" style="filter:invert(1)">Key value levers</div>
+        <ul style="color:#e0e0e0">
+          <li><strong style="color:#fff">10× faster</strong> infrastructure provisioning</li>
+          <li><strong style="color:#fff">50% less downtime</strong> via automated remediation</li>
+          <li>Eliminate configuration drift</li>
+          <li>Audit-ready compliance evidence</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase timeline -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:#161616;margin-bottom:6px">Example offer structure · 3 phases</div>
+      <div style="display:flex;gap:2px">
+        <div class="phase">
+          <span class="ph-h">01 · Assessment</span>
+          Automation maturity scan; DORA baseline; top-toil identification.
+          <div style="margin-top:4px;font-weight:600;">2–4 weeks · ~$100K</div>
+        </div>
+        <div class="phase p2">
+          <span class="ph-h">02 · Pilot</span>
+          Stand up AAP + Terraform Enterprise. Codify 3–5 processes. GitOps + policy gates.
+          <div style="margin-top:4px;font-weight:600;">6–8 weeks · $500K+</div>
+        </div>
+        <div class="phase p3">
+          <span class="ph-h">03 · Scale</span>
+          Enterprise catalog; self-service portal; Automation CoE; Event-Driven Ansible.
+          <div style="margin-top:4px;font-weight:600;">3–6 months+ · $5M+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span>IBM Consulting · BoxBoat</span>
+    <span>Indicative cost — Jumpstart Investment · adaptable based on scope &amp; region</span>
+  </div>
+</div>
+</body></html>

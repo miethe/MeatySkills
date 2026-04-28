@@ -1,92 +1,74 @@
 # Recipe: Task Attribution — Which Agent Worked on What
 
-Trigger: "who worked on FEAT-X", "which agent owned task Y", "break down work by agent role for FEAT-X", "attribute sessions to tasks".
+Trigger: "who worked on FEAT-X", "which agent owned this feature", "break down work by agent role", "attribute work on FEAT-X".
+
+## Constraint
+
+The shipped CCDash repo does not expose the older task/session attribution CLI flow described in stale skill docs. Use the feature-forensics surface that exists today, and make clear when attribution is inferred rather than explicit.
+
+Preferred transport:
+
+- MCP: `ccdash_feature_forensics`
+
+CLI fallback:
+
+```bash
+ccdash feature report FEATURE_ID --json
+```
 
 ## Steps
 
-1. **Resolve the feature ID.** If the user gave a title, narrow with keyword search first:
+1. **Resolve the feature ID.** If the user gives only a title, ask for the exact `feature_id` unless the surrounding CCDash context already disambiguates it.
 
-   ```bash
-   ccdash feature list --q "KEYWORD" --json
+2. **Pull feature forensics.** Use MCP first when available; otherwise use the CLI fallback above.
+
+3. **Look for explicit ownership signals in the returned evidence.**
+
+   Prioritize fields and evidence that directly identify:
+
+   - linked tasks or task owners
+   - evidence refs naming the contributing agent or role
+   - workflow/problem summaries tied to a specific execution path
+   - generated narrative that clearly attributes work
+
+4. **If explicit ownership is missing, state that attribution is inferred.**
+
+   Base the inference on the returned evidence only. Acceptable phrasing:
+
+   - "The current feature-forensics payload does not carry explicit task-owner fields, but the evidence suggests `<agent/role>` drove the main work."
+   - "Ownership is partially attributable from the feature evidence; some work remains unattributed in the current surface."
+
+5. **Produce a compact attribution summary.**
+
+   Recommended format:
+
+   ```text
+   explicit owner: <agent or role> -> <evidence-backed work>
+   inferred contributor: <agent or role> -> <why the evidence suggests this>
+   unattributed: <gaps or missing signals>
    ```
 
-   Check `truncated` and `total`. If `truncated: true`, add `--status` or a more specific `--q` to reduce the set. Pick the matching `feature_id`.
+6. **Offer a better-supported adjacent view when attribution is weak.**
 
-2. **Pull full feature detail.**
-
-   ```bash
-   ccdash feature show FEATURE_ID --json
-   ```
-
-   Echo: `feature_id`, `status`, `generated_at`.
-
-3. **Extract task ownership from `linked_tasks`.**
-
-   Inspect `linked_tasks[]` in the JSON. Each entry carries:
-
-   ```json
-   {
-     "task_id": "TASK-42",
-     "title": "Implement retry logic",
-     "owner": "agent:backend-specialist",
-     "status": "done"
-   }
-   ```
-
-   - `owner` is the agent-role attribution field. Group tasks by `owner` to produce a per-agent work breakdown.
-   - If `linked_tasks` is empty or `owner` is null for most entries, the project may not use task-level attribution — fall back to session-level inference in step 4.
-   - Note: `linked_tasks` comes from the same snapshot as `feature show`; it may lag the sync engine if data was recently imported.
-
-4. **Correlate with sessions for richer signal.**
-
-   ```bash
-   ccdash feature sessions FEATURE_ID --json
-   ```
-
-   This is the canonical, always-fresh sessions surface. Each session entry includes `session_id`, `model`, `cost`, `started_at`, `ended_at`, and summary fields. Cross-reference session timestamps against task `started_at` / `completed_at` (if present) to infer which agent session drove each task. When `owner` is present on tasks, use it directly — session correlation is supplementary.
-
-5. **Synthesize the attribution summary.**
-
-   Produce a table or bullet list: agent role → tasks owned → session IDs active during those tasks. Example format:
-
-   ```
-   agent:backend-specialist  → TASK-42 (done), TASK-45 (done)   → sess_abc, sess_def
-   agent:frontend-dev        → TASK-43 (in-progress)             → sess_ghi
-   (unattributed)            → TASK-44                           → —
-   ```
-
-   Surface unattributed tasks explicitly so the operator knows where ownership data is missing.
-
-## Command Sequence (minimal)
-
-```bash
-# 1. Find the feature
-ccdash feature list --q "authentication" --json
-
-# 2. Pull task ownership
-ccdash feature show FEAT-123 --json
-# → inspect linked_tasks[].owner
-
-# 3. Correlate with sessions
-ccdash feature sessions FEAT-123 --json
-# → cross-reference timestamps
-```
+   Usually:
+   - a feature retrospective (`report aar`)
+   - workflow failure patterns for the same project
 
 ## Provenance To Echo
 
-- `feature_id`, `generated_at` (from `feature show`).
-- All `task_id` values with their `owner` fields.
-- Top session IDs used in correlation.
+- `feature_id`
+- `project_id`
+- `generated_at`
+- `data_freshness`
+- `source_refs`
 
 ## Gotchas
 
-- `linked_tasks[].owner` may be null if the project's task tracker does not populate agent-role fields. In that case, session-level inference from step 4 is the best available signal.
-- `feature show`'s `linked_sessions` field may lag; always use `feature sessions` (step 4) for fresh session data.
-- Keyword search (`--q`) matches name/title only — brittle for multi-word queries. Use `--status` to pre-filter if the result set is large.
+- Do not reference `linked_tasks[].owner` as if it is a guaranteed field in the current shipped skill contract.
+- Do not reference stale CLI commands such as `feature sessions`, `session drilldown`, or target-management flows.
+- Keep the distinction between explicit attribution and inference visible to the user.
 
 ## Cross-Links
 
-- `references/command-feature.md` — `feature show` and `feature sessions` field details.
-- `references/provenance.md` — IDs to echo into agent context.
-- `recipes/feature-retrospective.md` — broader retrospective flow using the same base commands.
-- `recipes/session-cluster-investigation.md` — drill into specific sessions after attribution.
+- [SKILL.md](/Users/miethe/dev/homelab/development/CCDash/.claude/skills/ccdash/SKILL.md)
+- [recipes/feature-retrospective.md](/Users/miethe/dev/homelab/development/CCDash/.claude/skills/ccdash/recipes/feature-retrospective.md)

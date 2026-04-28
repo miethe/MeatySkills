@@ -1,0 +1,60 @@
+/* Shared card chrome for Design System tab previews.
+   Cards are ~700×(variable)px. Target 24px of inset padding,
+   match IBM Carbon: 1px gray-20 border, zero radius, no shadow. */
+@import url('../colors_and_type.css');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: #ffffff;
+  color: #161616;
+  font-family: 'IBM Plex Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  width: 700px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card--flush { padding: 0; }
+.card--dark { background: #161616; color: #f4f4f4; border-color: #161616; }
+.card--brand { background: #0f62fe; color: #ffffff; border-color: #0f62fe; }
+
+.row  { display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch; }
+.col  { display: flex; flex-direction: column; gap: 8px; }
+
+.mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #525252; letter-spacing: 0; }
+.lbl  { font-size: 12px; color: #525252; letter-spacing: 0; }
+.val  { font-size: 12px; color: #161616; }
+
+.grid { display: grid; gap: 12px; }
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+  height: 92px;
+  color: #161616;
+  border: 1px solid transparent;
+}
+.swatch--on-dark { color: #ffffff; }
+.swatch .name { font-size: 12px; font-weight: 500; }
+.swatch .hex { font-family: 'IBM Plex Mono', monospace; font-size: 11px; opacity: 0.8; }
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #525252;
+  font-family: 'IBM Plex Mono', monospace;
+}

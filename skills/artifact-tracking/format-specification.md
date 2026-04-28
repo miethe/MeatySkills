@@ -1,5 +1,5 @@
 ---
-title: "MeatyPrompts Tracking Artifacts Format Design"
+title: "SkillMeat Tracking Artifacts Format Design"
 description: "Optimized format specification for AI agent consumption of progress, context, bug tracking, and observation documents"
 audience: [ai-agents, developers]
 tags: [artifacts, format-design, token-optimization, ai-agent-consumption]
@@ -12,7 +12,7 @@ related:
   - /docs/architecture/ADRs
 ---
 
-# MeatyPrompts Tracking Artifacts Format Design
+# SkillMeat Tracking Artifacts Format Design
 
 ## Executive Summary
 

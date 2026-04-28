@@ -4,7 +4,7 @@ doc_type: changelog
 title: "skillmeat-cli Skill — Release History"
 status: stable
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-04-27
 owner: nick
 ---
 
@@ -12,6 +12,24 @@ owner: nick
 
 All notable changes to the skillmeat-cli skill are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+---
+
+## [1.2.0] — 2026-04-27
+
+### Added
+
+- **`aligned_app_version` frontmatter**: SPEC.md now tracks `aligned_app_version: 0.35.0` for explicit CLI surface versioning
+- **Scaffold remote-repo and PR patterns**: `scaffold-workflow.md` documents `--from-repo`, `--output-pr`, `--use-llm-analyzer`, `--scope`, and `--auto-confirm` flags introduced in v0.35.0
+- **Enterprise import flags**: `enterprise-workflow.md` now covers `--filter-type`, `--filter-tag`, `--dry-run`, `--tier`, and `--conflict` options for `enterprise import --from-collection`
+- **Snapshot command group**: `versioning-workflow.md` updated to reflect `snapshot` as a proper command group with `snapshot list` as an explicit subcommand
+- **`skillmeat discover` coverage**: `discovery-workflow.md` updated from aspirational design to active documentation for the shipped `skillmeat discover` command (v0.35.0); covers text-based intent, `--file`, `--types`, `--bundle`, `--install`, and `--yes` flows; SPEC.md BL-8 promoted to `shipped`
+
+### Changed
+
+- **SPEC.md capability coverage**: Updated from v0.30.3 (9 command groups, 26 subcommands) to v0.35.0 (10 command groups, 30+ subcommands); added `dvcs tiering status` row (new command group, no workflow yet); added `snapshot list` row; corrected scaffold row to point to `scaffold-workflow.md`
+- **SPEC.md pending markers removed**: supply-chain, versioning, auth, and enterprise workflows no longer marked "pending 3C.2" — all are active
+- **SKILL.md route table**: Scaffold row description expanded to include remote-repo and PR generation use cases
 
 ---
 

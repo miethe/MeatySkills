@@ -1,0 +1,19 @@
+quality_policy:
+  freshness:
+    max_age_days_for_published_screenshots: 30
+    require_commit_hash: true
+  safety:
+    block_on_possible_secret: true
+    require_fake_data: true
+  narration:
+    require_claim_verification: true
+    require_captions_for_public_video: true
+  visual:
+    min_resolution_width: 1280
+    min_resolution_height: 720
+    prefer_1080p: true
+  review:
+    require_review_report: true
+    allowed_verdicts_for_publish:
+      - pass
+      - pass-with-warnings

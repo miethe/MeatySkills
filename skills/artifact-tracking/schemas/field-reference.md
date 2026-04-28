@@ -7,13 +7,16 @@ This reference defines how to populate frontmatter fields across CCDash-aligned 
 | Field | Type | Values | Required | When to Fill | Example |
 |---|---|---|---|---|---|
 | `schema_version` | integer | `2` | All CCDash-aligned docs | Always for new docs | `2` |
-| `doc_type` | string | e.g. `prd`, `implementation_plan` | All CCDash-aligned docs | Always for new docs | `implementation_plan` |
+| `doc_type` | string | e.g. `prd`, `implementation_plan`, `human_brief` | All CCDash-aligned docs | Always for new docs | `implementation_plan` |
 | `title` | string | free text | Most doc types | Always | `Implementation Plan: Foo` |
 | `status` | string | `draft`, `planning`, `in-progress`, `review`, `completed`, etc. | Most doc types | Lifecycle state changes | `draft` |
 | `feature_slug` | string | kebab-case | Recommended all docs | Set from feature name once | `ccdash-frontmatter-alignment` |
 | `feature_version` | string | e.g. `v1`, `v2` | Optional | Set when feature uses versioned docs | `v1` |
 | `prd_ref` | string or `null` | file path | Required for implementation plans; optional elsewhere | Link to parent PRD | `docs/project_plans/PRDs/enhancements/foo-v1.md` |
 | `plan_ref` | string or `null` | file path | Required for phase plans; optional elsewhere | Link to parent implementation plan | `docs/project_plans/implementation_plans/enhancements/foo-v1.md` |
+| `human_brief_ref` | string or `null` | file path | Optional; valid on `prd` and `implementation_plan` doc_types | Link to associated human brief when one exists | `docs/project_plans/human-briefs/agent-artifact-discovery.md` |
+| `intent_ref` | string or `null` | file path | Optional; forward-compat seam — leave null until INTENT.md system is designed | Link to associated INTENT.md; valid on `human_brief` (other doc_types may adopt later) | `null` |
+| `epic_ref` | string or `null` | file path | Optional; forward-compat seam — leave null until Epic-level INTENT.md is designed | Link to associated epic artifact; valid on `human_brief` (other doc_types may adopt later) | `null` |
 | `related_documents` | string[] | file paths | Optional | Link sibling/context docs | `["docs/.../phase-1.md"]` |
 | `references` | object | `{user_docs, context, specs, related_prds}` | Optional | Categorized reference paths for execution workflow injection | `{context: [".claude/context/key-context/data-flow-patterns.md"]}` |
 | `references.user_docs` | string[] | file paths | Optional | User-facing docs relevant to feature | `["docs/user/guides/edition-feature-matrix.md"]` |
@@ -96,7 +99,7 @@ This reference defines how to populate frontmatter fields across CCDash-aligned 
 ## Skill Spec (`doc_type: skill_spec`)
 
 Frontmatter for SPEC.md files that formally specify a custom skill's purpose, capabilities, invariants, and roadmap.
-Authoritative spec: `.claude/specs/skill-spec-convention.md`
+Authoritative spec: `.claude/specs/artifact-structures/skill-spec-convention.md`
 
 ### Required Fields
 
@@ -129,6 +132,56 @@ Authoritative spec: `.claude/specs/skill-spec-convention.md`
 | `deprecated` | Skill is sunset; spec retained for reference | Archive after 90 days; remove from skills-index.md active roster |
 
 **Versioning**: Increment `skill_version` on any change to capability coverage, invariants, or routing. Minor edits (typos, formatting) do not require a version bump.
+
+## Human Brief (`doc_type: human_brief`)
+
+Living document for human orchestrators. One file per feature, stored at
+`docs/project_plans/human-briefs/[feature-slug].md`. Agents must not load these files
+unless the task prompt explicitly names the brief. Authoritative spec:
+`.claude/specs/artifact-structures/human-brief-spec.md`.
+
+### Required Fields
+
+| Field | Type | Values / Constraints | Example |
+|---|---|---|---|
+| `schema_name` | string | `ccdash_document` | `ccdash_document` |
+| `schema_version` | integer | `2` | `2` |
+| `doc_type` | string | `human_brief` | `human_brief` |
+| `root_kind` | string | `project_plans` | `project_plans` |
+| `title` | string | free text | `Agent Artifact Discovery — Human Brief` |
+| `status` | string | `draft`, `in-progress`, `completed` — reuses existing enum; `blocked`/`superseded`/`approved` not used for briefs | `draft` |
+| `category` | string | `human-briefs` | `human-briefs` |
+| `feature_slug` | string | kebab-case; matches linked PRD/plan exactly | `agent-artifact-discovery` |
+| `audience` | string[] | must include `humans` — machine-readable skip signal for agents | `[humans]` |
+| `created` | date | `YYYY-MM-DD` | `2026-04-23` |
+| `updated` | date | `YYYY-MM-DD` | `2026-04-23` |
+
+### Optional Fields
+
+| Field | Type | Purpose | Example |
+|---|---|---|---|
+| `doc_subtype` | string | `epic_brief`, `feature_brief`, or `meta_brief` | `feature_brief` |
+| `id` | string | Stable ID, e.g. `BRIEF-feature-slug` | `BRIEF-agent-artifact-discovery` |
+| `feature_family` | string | Versionless slug (omit `-v1` suffix) | `agent-artifact-discovery` |
+| `feature_version` | string | e.g. `v1` | `v1` |
+| `prd_ref` | string or `null` | Path to linked PRD; required when a PRD exists | `docs/project_plans/PRDs/agent-artifact-discovery-prd.md` |
+| `plan_ref` | string or `null` | Path to linked implementation plan; required when a plan exists | `docs/project_plans/implementation_plans/agent-artifact-discovery-plan.md` |
+| `intent_ref` | string or `null` | Forward-compat for INTENT.md system; leave null | `null` |
+| `epic_ref` | string or `null` | Forward-compat for Epic-level INTENT.md; leave null | `null` |
+| `related_documents` | string[] | Related briefs, SPIKEs, design specs | `[]` |
+| `owner` | string | Primary owner | `nick` |
+| `contributors` | string[] | Secondary contributors | `[]` |
+| `priority` | string | `low`, `medium`, `high`, `critical` | `medium` |
+| `confidence` | number | 0..1 — orchestrator's confidence in the plan | `0.75` |
+| `target_release` | string | e.g. `2026-Q3` | `2026-Q3` |
+| `tags` | string[] | Searchable labels; always include `human-brief` | `[human-brief]` |
+
+### Naming and Lifecycle
+
+- **Path**: `docs/project_plans/human-briefs/[feature-slug].md` — flat directory, no subdirs
+- **No `-v1` suffix** — briefs are living documents, not versioned deliverables
+- **One brief per feature** — do not create phase-level briefs
+- **Status flow**: `draft` → `in-progress` → `completed`
 
 ## Backward-Compatibility Fields
 
