@@ -1,10 +1,10 @@
-# MeatySkills
+# BoxBoat's Agentic Artifacts Library
 
-MeatySkills is a portable library of agent workflow assets: command prompts, reusable skills, markdown artifact formats, schemas, and helper scripts for planning, execution, debugging, recovery, and project intelligence.
+This is BoxBoat's portable library of agent workflow assets: command prompts, reusable skills, markdown artifact formats, schemas, and helper scripts for planning, execution, debugging, recovery, and project intelligence. This is to be considered the upstream source for all custom artifacts from BoxBoat, which are in-turn managed in the Team's SkillMeat Collection.
 
 The repository follows the Claude Code command and skill layout because that format is compact, readable, and easy to wire into agent tooling. The assets are not Claude-specific in principle. Most of the patterns here can be adapted to other agentic platforms that support prompt files, task routing, structured artifacts, and small automation scripts.
 
-Notably, these are fully custom agentic artifacts. This is NOT yet another "awesome repo" of collected artifacts. Also note, some of these are specific to my other agentic projects, ie [CCDash](https://github.com/miethe/ccdash) and [SkillMeat](https://skillmeat-docs.pages.dev/), and require those tools to be installed for functionality.
+Notably, these are fully custom agentic artifacts. This is NOT yet another "awesome repo" of collected artifacts. Also note, some of these are specific to our other agentic projects, ie [CCDash](https://github.com/miethe/ccdash) and [SkillMeat](https://skillmeat-docs.pages.dev/), and require those tools to be installed for functionality.
 
 ## What Is In This Repo
 
