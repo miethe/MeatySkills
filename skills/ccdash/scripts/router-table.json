@@ -1,30 +1,57 @@
 {
   "$schema_version": 2,
-  "skill_version": "2.0",
-  "app_version": "2026-04-26",
-  "updated": "2026-04-26",
-  "description": "Intent→transport routing table for the ccdash skill. Covers both MCP tools and CLI commands. Update this file and CHANGELOG.md whenever the query surface changes.",
+  "skill_version": "2.2",
+  "app_version": "2026-05-29",
+  "updated": "2026-05-29",
+  "description": "Intent\u2192transport routing table for the ccdash skill. Covers MCP tools, in-repo CLI commands, and standalone CLI commands. Update this file and CHANGELOG.md whenever the query surface changes. Every entry must carry a 'transport' array; valid values: 'mcp', 'in-repo-cli', 'standalone-cli'.",
   "intents": [
     {
       "id": "project-status",
       "intent_pattern": "project status | how is the project | what's the state of this project | overall health | project summary",
       "command": "ccdash status project",
       "default_output": "json",
-      "provenance_fields": ["project_id", "generated_at", "feature_ids", "active_session_ids"],
+      "provenance_fields": [
+        "project_id",
+        "generated_at",
+        "feature_ids",
+        "active_session_ids"
+      ],
       "recipe": "recipes/project-triage.md",
-      "transport": ["mcp", "cli"],
+      "transport": [
+        "mcp",
+        "in-repo-cli",
+        "standalone-cli"
+      ],
       "mcp_tool": "ccdash_project_status",
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ]
     },
     {
       "id": "doctor",
       "intent_pattern": "diagnose | doctor | connectivity check | why can't I reach | server unreachable | auth broken",
       "command": "ccdash doctor",
       "default_output": "human",
-      "provenance_fields": ["target", "url", "reachable", "authenticated"],
+      "provenance_fields": [
+        "target",
+        "url",
+        "reachable",
+        "authenticated"
+      ],
       "recipe": "recipes/unreachable-server.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "install-setup",
@@ -33,190 +60,593 @@
       "default_output": "human",
       "provenance_fields": [],
       "recipe": "recipes/target-onboarding.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-list",
       "intent_pattern": "list targets | which ccdash servers | available environments",
       "command": "ccdash target list",
       "default_output": "human",
-      "provenance_fields": ["name", "url", "active"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "name",
+        "url",
+        "active"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-add",
       "intent_pattern": "add a target | register ccdash server | configure staging/production",
       "command": "ccdash target add <name> <url>",
       "default_output": "human",
-      "provenance_fields": ["name", "url"],
+      "provenance_fields": [
+        "name",
+        "url"
+      ],
       "recipe": "recipes/target-onboarding.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-use",
       "intent_pattern": "switch target | use staging | activate target",
       "command": "ccdash target use <name>",
       "default_output": "human",
-      "provenance_fields": ["active_target"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "active_target"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-show",
       "intent_pattern": "which target is active | resolved config | current ccdash server",
       "command": "ccdash target show",
       "default_output": "human",
-      "provenance_fields": ["name", "url", "project", "token_ref"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "name",
+        "url",
+        "project",
+        "token_ref"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-login",
       "intent_pattern": "login to target | store token | authenticate ccdash",
       "command": "ccdash target login <name>",
       "default_output": "human",
-      "provenance_fields": ["name", "token_ref"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "name",
+        "token_ref"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-logout",
       "intent_pattern": "logout | clear token | remove credentials",
       "command": "ccdash target logout <name>",
       "default_output": "human",
-      "provenance_fields": ["name"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "name"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "target-check",
       "intent_pattern": "probe target | is staging reachable | check connectivity for target",
       "command": "ccdash target check <name>",
       "default_output": "human",
-      "provenance_fields": ["name", "url", "reachable", "authenticated"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "name",
+        "url",
+        "reachable",
+        "authenticated"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "workflow-failures",
       "intent_pattern": "which workflows are failing | failure burden | flaky workflows | test failures",
       "command": "ccdash workflow failures",
       "default_output": "json",
-      "provenance_fields": ["workflow_id", "failure_count", "last_failure_at", "feature_ids"],
+      "provenance_fields": [
+        "workflow_id",
+        "failure_count",
+        "last_failure_at",
+        "feature_ids"
+      ],
       "recipe": "recipes/workflow-failure-rootcause.md",
-      "transport": ["mcp", "cli"],
+      "transport": [
+        "mcp",
+        "in-repo-cli",
+        "standalone-cli"
+      ],
       "mcp_tool": "ccdash_workflow_failure_patterns",
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ]
     },
     {
       "id": "feature-list",
       "intent_pattern": "list features | active features | features in progress | features by status/category",
       "command": "ccdash feature list",
       "default_output": "json",
-      "provenance_fields": ["feature_id", "status", "category", "updated_at"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--q TEXT", "--status STATUS", "--no-cache"],
-      "notes": "Paginated; max 200 results. Response includes `truncated` and `total` fields. Use `--q TEXT` for keyword filtering."
+      "provenance_fields": [
+        "feature_id",
+        "status",
+        "category",
+        "updated_at"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--q TEXT",
+        "--status STATUS",
+        "--no-cache"
+      ],
+      "notes": "Standalone CLI only. In-repo CLI does not have 'feature list'; use ccdash_feature_forensics MCP tool for listing in-workspace contexts. Paginated; max 200 results. Response includes 'truncated' and 'total' fields."
     },
     {
       "id": "feature-show",
       "intent_pattern": "feature details | why did FEAT-X take so long | forensic look at feature",
       "command": "ccdash feature show <feature_id>",
       "default_output": "json",
-      "provenance_fields": ["feature_id", "status", "session_ids", "document_ids", "workflow_ids"],
+      "provenance_fields": [
+        "feature_id",
+        "status",
+        "session_ids",
+        "document_ids",
+        "workflow_ids"
+      ],
       "recipe": "recipes/feature-retrospective.md",
-      "transport": ["mcp", "cli"],
+      "transport": [
+        "mcp",
+        "standalone-cli"
+      ],
       "mcp_tool": "ccdash_feature_forensics",
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ],
+      "notes": "Standalone CLI only for CLI path. In-repo CLI uses 'ccdash feature report <id>' instead. MCP tool ccdash_feature_forensics available in-workspace."
+    },
+    {
+      "id": "feature-report",
+      "intent_pattern": "feature report in-repo | feature forensics from local CLI",
+      "command": "ccdash feature report <feature_id>",
+      "default_output": "json",
+      "provenance_fields": [
+        "feature_id",
+        "status",
+        "session_ids",
+        "document_ids"
+      ],
+      "recipe": "recipes/feature-retrospective.md",
+      "transport": [
+        "in-repo-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ],
+      "notes": "In-repo CLI only. The standalone CLI equivalent is 'ccdash feature show <id>'."
     },
     {
       "id": "feature-sessions",
       "intent_pattern": "sessions for feature | agent sessions tied to FEAT-X",
       "command": "ccdash feature sessions <feature_id>",
       "default_output": "json",
-      "provenance_fields": ["session_id", "started_at", "ended_at", "cost", "feature_id"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "session_id",
+        "started_at",
+        "ended_at",
+        "cost",
+        "feature_id"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "Standalone CLI only. Canonical fresh-sessions surface; prefer over 'feature show' linked_sessions field."
     },
     {
       "id": "feature-documents",
       "intent_pattern": "documents for feature | PRD/plan/progress linked to FEAT-X",
       "command": "ccdash feature documents <feature_id>",
       "default_output": "json",
-      "provenance_fields": ["document_id", "doc_type", "path", "feature_id"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "document_id",
+        "doc_type",
+        "path",
+        "feature_id"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "Standalone CLI only."
     },
     {
       "id": "session-list",
       "intent_pattern": "list sessions | recent sessions | sessions for feature X | sessions under root Y",
       "command": "ccdash session list",
       "default_output": "json",
-      "provenance_fields": ["session_id", "root_session_id", "feature_id", "started_at"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "session_id",
+        "root_session_id",
+        "feature_id",
+        "started_at"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "session-show",
       "intent_pattern": "session detail | what happened in session | session intelligence",
       "command": "ccdash session show <session_id>",
       "default_output": "json",
-      "provenance_fields": ["session_id", "root_session_id", "feature_id", "tool_calls", "cost", "started_at"],
+      "provenance_fields": [
+        "session_id",
+        "root_session_id",
+        "feature_id",
+        "tool_calls",
+        "cost",
+        "started_at"
+      ],
       "recipe": "recipes/session-cluster-investigation.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "session-search",
       "intent_pattern": "search session transcripts | find where agent said X | grep sessions",
       "command": "ccdash session search <query>",
       "default_output": "json",
-      "provenance_fields": ["session_id", "match_line", "feature_id", "timestamp"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "provenance_fields": [
+        "session_id",
+        "match_line",
+        "feature_id",
+        "timestamp"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "session-drilldown",
       "intent_pattern": "drilldown sentiment | churn in session | scope drift on session",
       "command": "ccdash session drilldown <session_id> --concern <sentiment|churn|scope_drift>",
       "default_output": "json",
-      "provenance_fields": ["session_id", "concern", "findings", "evidence_line_refs"],
+      "provenance_fields": [
+        "session_id",
+        "concern",
+        "findings",
+        "evidence_line_refs"
+      ],
       "recipe": "recipes/workflow-failure-rootcause.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "session-family",
       "intent_pattern": "sibling sessions | sessions sharing the same root | session cluster",
       "command": "ccdash session family <session_id>",
       "default_output": "json",
-      "provenance_fields": ["root_session_id", "session_ids", "feature_id"],
+      "provenance_fields": [
+        "root_session_id",
+        "session_ids",
+        "feature_id"
+      ],
       "recipe": "recipes/session-cluster-investigation.md",
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ]
     },
     {
       "id": "report-aar",
       "intent_pattern": "after-action report | AAR | retrospective for feature | post-mortem",
       "command": "ccdash report aar --feature <feature_id>",
       "default_output": "markdown",
-      "provenance_fields": ["feature_id", "generated_at", "session_ids"],
+      "provenance_fields": [
+        "feature_id",
+        "generated_at",
+        "session_ids"
+      ],
       "recipe": "recipes/feature-retrospective.md",
-      "transport": ["mcp", "cli"],
+      "transport": [
+        "mcp",
+        "in-repo-cli",
+        "standalone-cli"
+      ],
       "mcp_tool": "ccdash_generate_aar",
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}", "--no-cache"]
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ]
     },
     {
-      "id": "report-feature",
-      "intent_pattern": "narrative feature report | render feature summary",
-      "command": "ccdash report feature <feature_id>",
-      "default_output": "markdown",
-      "provenance_fields": ["feature_id", "generated_at", "session_ids", "document_ids"],
-      "transport": ["cli"],
-      "flags": ["--timeout N", "--json", "--md", "--output {human|json|markdown}"]
+      "id": "artifact-rankings",
+      "intent_pattern": "artifact rankings | top artifacts | artifact usage ranking | most-used skills",
+      "command": "ccdash artifact rankings",
+      "default_output": "json",
+      "provenance_fields": [
+        "project_id",
+        "generated_at",
+        "ranked_artifacts"
+      ],
+      "transport": [
+        "in-repo-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache"
+      ],
+      "notes": "In-repo CLI only. No MCP tool or standalone CLI equivalent yet."
+    },
+    {
+      "id": "artifact-recommendations",
+      "intent_pattern": "artifact recommendations | suggest skills | optimize artifact usage | artifact advisory",
+      "command": "ccdash artifact recommendations",
+      "default_output": "json",
+      "provenance_fields": [
+        "project_id",
+        "generated_at",
+        "recommendations"
+      ],
+      "transport": [
+        "mcp",
+        "in-repo-cli"
+      ],
+      "mcp_tool": "artifact_recommendations",
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}",
+        "--no-cache",
+        "--min-confidence FLOAT",
+        "--limit INT"
+      ],
+      "notes": "MCP tool name is 'artifact_recommendations' (no ccdash_ prefix). In-repo CLI only for CLI path."
+    },
+    {
+      "id": "live-active-count",
+      "intent_pattern": "live active agents | how many agents running | current session count | live metrics",
+      "command": "ccdash live active-count",
+      "default_output": "json",
+      "provenance_fields": [
+        "project_id",
+        "generated_at",
+        "active_count"
+      ],
+      "transport": [
+        "mcp",
+        "in-repo-cli"
+      ],
+      "mcp_tool": "ccdash_live_active_count",
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "In-repo CLI only for CLI path. No standalone CLI equivalent yet."
+    },
+    {
+      "id": "system-active-count",
+      "intent_pattern": "system-wide active count | all projects agent count | cross-project metrics",
+      "command": "ccdash system active-count",
+      "default_output": "json",
+      "provenance_fields": [
+        "generated_at",
+        "active_count",
+        "project_counts"
+      ],
+      "transport": [
+        "mcp",
+        "in-repo-cli"
+      ],
+      "mcp_tool": "ccdash_system_active_count",
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--md",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "In-repo CLI only for CLI path. Aggregates across all projects. No standalone CLI equivalent yet."
+    },
+    {
+      "id": "project-add",
+      "intent_pattern": "register project | add project | ccdash project add | onboard new repo | init project",
+      "command": "ccdash project add --name <name> --path <path>",
+      "default_output": "human",
+      "provenance_fields": [
+        "project_id",
+        "name",
+        "path"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--name TEXT",
+        "--path PATH",
+        "--description TEXT",
+        "--repo-url URL",
+        "--active",
+        "--force",
+        "--timeout N",
+        "--json",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "Standalone CLI only. Calls POST /api/projects. Alias: 'ccdash project init'. Client-side idempotency check via GET /api/projects; bypass with --force."
+    },
+    {
+      "id": "project-list",
+      "intent_pattern": "list projects | registered projects | all ccdash projects",
+      "command": "ccdash project list",
+      "default_output": "human",
+      "provenance_fields": [
+        "project_id",
+        "name",
+        "path",
+        "active"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "Standalone CLI only. Marks the active project. Degrades gracefully if active-project endpoint is unavailable."
+    },
+    {
+      "id": "project-use",
+      "intent_pattern": "switch project | activate project | use project | set active project",
+      "command": "ccdash project use <project_id>",
+      "default_output": "human",
+      "provenance_fields": [
+        "project_id",
+        "name"
+      ],
+      "transport": [
+        "standalone-cli"
+      ],
+      "flags": [
+        "--timeout N",
+        "--json",
+        "--output {human|json|markdown}"
+      ],
+      "notes": "Standalone CLI only. Calls POST /api/projects/active/{id}."
     }
   ]
 }

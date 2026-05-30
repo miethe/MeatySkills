@@ -1,9 +1,9 @@
 ---
 name: ccdash
-description: Answer CCDash project-intelligence questions using the shipped MCP tools when available and the in-repo `ccdash` CLI otherwise. Use when the operator or another agent asks about project status, feature forensics, workflow failure patterns, after-action reports, runtime validation posture, CLI timeout or caching behavior, or how to troubleshoot the shipped CCDash API/worker/MCP surfaces. Keep routing aligned with the current shipped runtime contract and repo docs.
-version: 2.0
-app_version: "2026-04-26"
-updated: 2026-04-26
+description: Answer CCDash project-intelligence questions using the shipped MCP tools when available and the in-repo `ccdash` CLI otherwise. Use when the operator or another agent asks about project status, feature forensics, workflow failure patterns, after-action reports, artifact intelligence, live agent counts, system metrics, runtime validation posture, CLI timeout or caching behavior, project registration, or how to troubleshoot the shipped CCDash API/worker/MCP surfaces. Keep routing aligned with the current shipped runtime contract and repo docs.
+version: 2.2
+app_version: "2026-05-29"
+updated: 2026-05-29
 ---
 
 # ccdash Skill
@@ -37,18 +37,25 @@ Trigger on intents such as:
 
 ## Confidence Anchor
 
-Repo-verified current surfaces:
+Repo-verified current surfaces (as of `app_version: 2026-05-29`):
 
-**In-repo CLI groups** (`backend/.venv/bin/ccdash`):
+**In-repo CLI groups** (`backend/.venv/bin/ccdash`; registered in `backend/cli/main.py`):
 - `ccdash status project`
 - `ccdash feature report <feature_id>`
-- `ccdash feature list [--q TEXT] [--status STATUS]`
 - `ccdash workflow failures`
 - `ccdash report aar --feature <feature_id>`
+- `ccdash artifact rankings` / `ccdash artifact recommendations`
+- `ccdash live active-count`
+- `ccdash system active-count`
 
-Global flags (all commands): `--timeout N`, `--no-cache`, `--json`, `--md`
+Global flags (all in-repo commands): `--timeout N`, `--no-cache`, `--json`, `--md`
 
-**MCP tools**: `ccdash_project_status`, `ccdash_feature_forensics`, `ccdash_workflow_failure_patterns`, `ccdash_generate_aar`
+**Standalone-CLI-only groups** (not available in the in-repo CLI): `session`, `target`, `doctor`, `project`
+
+**MCP tools** (7 registered in `backend/mcp/tools/__init__.py`):
+`ccdash_project_status`, `ccdash_feature_forensics`, `ccdash_workflow_failure_patterns`, `ccdash_generate_aar`, `artifact_recommendations`, `ccdash_live_active_count`, `ccdash_system_active_count`
+
+Note: `artifact_recommendations` has no `ccdash_` prefix — do not normalize this name.
 
 **Runtime entrypoints**: hosted API via `backend.runtime.bootstrap_api:app`; worker via `python -m backend.worker`
 
@@ -71,10 +78,10 @@ Current shipped posture: MCP is discoverable, but not the only path. CLI remains
 | Transport | Local data / lightweight bootstrap | HTTP to remote CCDash server (`/api/v1/`) |
 | Auth | None | Bearer token via OS keyring or `CCDASH_TOKEN` |
 | Config | None | `~/.config/ccdash/config.toml` (named targets) |
-| Command groups | `status`, `feature`, `workflow`, `report` | All in-repo groups + `session`, `target`, `doctor`, `diagnostics`, `version` |
+| Command groups | `status`, `feature`, `workflow`, `report`, `artifact`, `live`, `system` | `status`, `feature`, `workflow`, `report`, `project`, `session`, `target`, `doctor`, `version` |
 | Use when | Querying local project data | Operating against hosted/remote server |
 
-**Do not** suggest `target`, `doctor`, `target login`, or `session` commands to a user running only the in-repo CLI.
+**Do not** suggest `target`, `doctor`, `target login`, `session`, or `project` commands to a user running only the in-repo CLI. These exist only in the standalone CLI.
 
 ## Query Caching
 
@@ -102,13 +109,19 @@ Commands that can be slow on large projects: `status project`, `report aar`, `wo
 
 ## Routing Table
 
-| Intent | Preferred MCP Tool | CLI Fallback | Notes |
+| Intent | Preferred MCP Tool | In-Repo CLI Fallback | Notes |
 |---|---|---|---|
 | Project status | `ccdash_project_status` | `ccdash status project` | Use MCP first for agent reasoning; CLI `--json`/`--md` modes useful |
 | Feature forensics | `ccdash_feature_forensics` | `ccdash feature report FEATURE_ID` | Top-level `name`, `status`, `telemetry_available`, `sessions_note` fields available |
-| Feature listing | `ccdash_feature_forensics` (list mode) | `ccdash feature list [--q TEXT]` | Paginated; max 200 results; `truncated`/`total` in response |
+| Feature listing | `ccdash_feature_forensics` (list mode) | *(standalone only)* `ccdash feature list` | Paginated; max 200 results; `truncated`/`total` in response |
+| Feature sessions | none | *(standalone only)* `ccdash feature sessions FEATURE_ID` | Canonical fresh-sessions surface; prefer over `feature show`'s `linked_sessions` |
 | Workflow failures | `ccdash_workflow_failure_patterns` | `ccdash workflow failures` | Same query service behind both surfaces |
 | AAR / retrospective | `ccdash_generate_aar` | `ccdash report aar --feature FEATURE_ID` | Render markdown/human output as requested |
+| Artifact rankings | none | `ccdash artifact rankings` | In-repo only; no standalone-CLI equivalent yet |
+| Artifact recommendations | `artifact_recommendations` | `ccdash artifact recommendations` | In-repo and MCP; no standalone-CLI equivalent yet |
+| Live active count | `ccdash_live_active_count` | `ccdash live active-count` | In-repo and MCP; no standalone-CLI equivalent yet |
+| System active count | `ccdash_system_active_count` | `ccdash system active-count` | In-repo and MCP; no standalone-CLI equivalent yet |
+| Project registration | none | *(standalone only)* `ccdash project add \| list \| use` | Registers projects against a named target via `/api/projects` |
 | Runtime validation | none | none | Route to `/api/health`, worker probes, and runbook docs |
 | MCP setup/troubleshooting | shipped stdio server | CLI parity checks only | Follow `docs/guides/mcp-setup-guide.md` and `docs/guides/mcp-troubleshooting.md` |
 

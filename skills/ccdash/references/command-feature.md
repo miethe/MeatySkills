@@ -1,6 +1,8 @@
 # `ccdash feature` — Feature Investigations
 
-Four subcommands: `list`, `show`, `sessions`, `documents`. All honor `--output {human|json|markdown}` with `--json` / `--md` shortcuts.
+> **Transport note**: `list`, `show`, `sessions`, and `documents` are **standalone CLI only** (`pipx install ccdash-cli`). The in-repo CLI (`backend/.venv/bin/ccdash`) provides only `ccdash feature report <id>`. Do not suggest `feature list/show/sessions/documents` to users running only the in-repo CLI.
+
+The standalone CLI provides four subcommands: `list`, `show`, `sessions`, `documents`. All honor `--output {human|json|markdown}` with `--json` / `--md` shortcuts.
 
 ## `feature list`
 
