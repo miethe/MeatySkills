@@ -1,0 +1,1883 @@
+[
+  {
+    "id": "agentic-ai",
+    "name": "Agentic AI Lab Notes",
+    "theme": "AI coding agents, agentic OS, LLM tooling, AI research talks",
+    "description": "New videos about AI coding agents (Claude Code, Codex, Cursor, Hermes), agentic frameworks, AI research talks, and applied LLM tooling. Optimized for \"build with AI\" practitioners.",
+    "inclusion_rules": {
+      "channels": [
+        "David Ondrej",
+        "Jack Roberts",
+        "Chase AI",
+        "Paul J Lipsky",
+        "Two Minute Papers",
+        "Sequoia Capital",
+        "Y Combinator",
+        "Bloomberg Television",
+        "Bloomberg Live",
+        "Julian Goldie SEO",
+        "James Blue",
+        "Ai Verdict",
+        "Emergent Garden",
+        "David Di Franco",
+        "Christian Selig"
+      ],
+      "title_keywords_regex": [
+        "\\b(claude|codex|cursor|hermes|agentic|agent[\\s-]?os|llm|gpt|chatgpt|notebooklm|karpathy|hassabis|anthropic|openai|kimi|deepseek|gemini|copilot|vibe[\\s-]?coding|coding agent|ai (coder|civil war|hysteria)|macrohard|microsoft agent)\\b",
+        "\\bAI\\s+(news|coder|hysteria|civil|era)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\bcocomelon\\b|\\bms rachel\\b|\\bbluey\\b"
+      ]
+    },
+    "target_length": 30,
+    "subscribed_channels_in_scope": [
+      "Christian Selig",
+      "David Di Franco",
+      "David Ondrej",
+      "Emergent Garden",
+      "Jack Roberts",
+      "Two Minute Papers"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "MHiVBoWB3OE",
+        "url": "https://www.youtube.com/watch?v=MHiVBoWB3OE",
+        "title": "'The Oppenheimer' of the AI Era",
+        "channel": "Bloomberg Television",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "96jN2OCOfLs",
+        "url": "https://www.youtube.com/watch?v=96jN2OCOfLs",
+        "title": "Andrej Karpathy: From Vibe Coding to Agentic Engineering",
+        "channel": "Sequoia Capital",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "JNyuX1zoOgU",
+        "url": "https://www.youtube.com/watch?v=JNyuX1zoOgU",
+        "title": "Demis Hassabis: Agents, AGI & The Next Big Scientific Breakthrough",
+        "channel": "Y Combinator",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "BbIaYFHxW3Y",
+        "url": "https://www.youtube.com/watch?v=BbIaYFHxW3Y",
+        "title": "Hassabis on an AI Shift Bigger Than Industrial Age",
+        "channel": "Bloomberg Live",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "5ojwiE9N5dc",
+        "url": "https://www.youtube.com/watch?v=5ojwiE9N5dc",
+        "title": "Master These 7 Notebooklm Skills, You'll be Unstoppable",
+        "channel": "James Blue",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "Bgxsx8slDEA",
+        "url": "https://www.youtube.com/watch?v=Bgxsx8slDEA",
+        "title": "Stop Using Claude Code Without an Agentic OS",
+        "channel": "Chase AI",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "S5VcqCD9zI4",
+        "url": "https://www.youtube.com/watch?v=S5VcqCD9zI4",
+        "title": "AI News: AI Hysteria, Android AI is Insane, Codex Mobile + More",
+        "channel": "Paul J Lipsky",
+        "source": "history"
+      },
+      {
+        "videoId": "SlGRN8jh2RI",
+        "url": "https://www.youtube.com/watch?v=SlGRN8jh2RI",
+        "title": "Anthropic's Boris Cherny: Why Coding Is Solved, and What Comes Next",
+        "channel": "Sequoia Capital",
+        "source": "history"
+      },
+      {
+        "videoId": "hq6r5CE5B5s",
+        "url": "https://www.youtube.com/watch?v=hq6r5CE5B5s",
+        "title": "Codex vs Cowork for Regular People (Every Feature Compared)",
+        "channel": "Paul J Lipsky",
+        "source": "history"
+      },
+      {
+        "videoId": "GrCPcim9L70",
+        "url": "https://www.youtube.com/watch?v=GrCPcim9L70",
+        "title": "Elon Musk’s \"Macrohard\" Explained: The AI That Could Replace Entire Companies (2026)",
+        "channel": "Ai Verdict",
+        "source": "history"
+      },
+      {
+        "videoId": "9oOZ3PB6n4Y",
+        "url": "https://www.youtube.com/watch?v=9oOZ3PB6n4Y",
+        "title": "Hermes /goal is insane… just watch",
+        "channel": "David Ondrej",
+        "source": "history"
+      },
+      {
+        "videoId": "7xuWZ-3lyQE",
+        "url": "https://www.youtube.com/watch?v=7xuWZ-3lyQE",
+        "title": "Hermes Agent just got 10X Better (Agentic OS)",
+        "channel": "Jack Roberts",
+        "source": "history"
+      },
+      {
+        "videoId": "C07CHirM80g",
+        "url": "https://www.youtube.com/watch?v=C07CHirM80g",
+        "title": "New FREE Kimi K2.6 AI Coder is INSANE!",
+        "channel": "Julian Goldie SEO",
+        "source": "history"
+      },
+      {
+        "videoId": "0HqUYpGQIfs",
+        "url": "https://www.youtube.com/watch?v=0HqUYpGQIfs",
+        "title": "Emergent Complexity",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "DB-TD3s3MZ0",
+        "url": "https://www.youtube.com/watch?v=DB-TD3s3MZ0",
+        "title": "Evolution in Higher Dimensions",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "Anc2_mnb3V8",
+        "url": "https://www.youtube.com/watch?v=Anc2_mnb3V8",
+        "title": "Gradient Descent vs Evolution | How Neural Networks Learn",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "yWwYLbMvc3s",
+        "url": "https://www.youtube.com/watch?v=yWwYLbMvc3s",
+        "title": "How Microsoft Agent 365 works",
+        "channel": "Microsoft Mechanics",
+        "source": "history"
+      },
+      {
+        "videoId": "a5Ui9k6Tecg",
+        "url": "https://www.youtube.com/watch?v=a5Ui9k6Tecg",
+        "title": "Man Does the Unthinkable After Talking to ChatGPT",
+        "channel": "EWU Bodycam",
+        "source": "history"
+      },
+      {
+        "videoId": "gwfCWDO4LbM",
+        "url": "https://www.youtube.com/watch?v=gwfCWDO4LbM",
+        "title": "The First 48 Hours of an AI Civil War - A Realistic Scenario",
+        "channel": "Species | Documenting AGI",
+        "source": "history"
+      }
+    ],
+    "seed_count": 19
+  },
+  {
+    "id": "ukraine-frontline",
+    "name": "Frontline: Ukraine",
+    "theme": "Ukraine war coverage, trench/combat footage, geopolitical analysis",
+    "description": "Ukraine war footage and analysis: combat footage, assault breakdowns, counter-offensive coverage, and high-level geopolitical takes on the conflict.",
+    "inclusion_rules": {
+      "channels": [
+        "UaWarrior",
+        "Cappy Army",
+        "Preston Stewart",
+        "The Military Show",
+        "Max Afterburner",
+        "Predictive History",
+        "The Telegraph and Ukraine",
+        "The Infographics Show"
+      ],
+      "title_keywords_regex": [
+        "\\b(ukrain\\w+|russia\\w*|moscow|crimea|kremlin|trench|assault|counter[\\s-]?offensive|geo[\\s-]?strategy|iran)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\b(commercial|nostalgia|2000s)\\b"
+      ]
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "8XdL-7tAqnU",
+        "url": "https://www.youtube.com/watch?v=8XdL-7tAqnU",
+        "title": "Geo-Strategy Update: US-Iran War Incoming",
+        "channel": "Predictive History",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "vK9DDuZkNoY",
+        "url": "https://www.youtube.com/watch?v=vK9DDuZkNoY",
+        "title": "How The CIA Is Helping Ukraine Defeat Russia",
+        "channel": "The Infographics Show",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "l-LWZtJBCwY",
+        "url": "https://www.youtube.com/watch?v=l-LWZtJBCwY",
+        "title": "Is Ukraine winning the war? The three facets of the 2026 counter-offensive | Unpacked",
+        "channel": "The Telegraph and Ukraine: The Latest",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "CinFMub4LXw",
+        "url": "https://www.youtube.com/watch?v=CinFMub4LXw",
+        "title": "38 Minutes Of Hell - Ukrainian Scouts Storm Russian Trenches In Heavy Close Combat",
+        "channel": "UaWarrior",
+        "source": "history"
+      },
+      {
+        "videoId": "VnsGUJak0gY",
+        "url": "https://www.youtube.com/watch?v=VnsGUJak0gY",
+        "title": "How this Ukrainian City is Stopping the Entire Russian Army",
+        "channel": "Cappy Army",
+        "source": "history"
+      },
+      {
+        "videoId": "iV92cp7vLzs",
+        "url": "https://www.youtube.com/watch?v=iV92cp7vLzs",
+        "title": "Moscow Wasn't Ready for This Attack",
+        "channel": "Preston Stewart",
+        "source": "history"
+      },
+      {
+        "videoId": "4YAJlFiJD0A",
+        "url": "https://www.youtube.com/watch?v=4YAJlFiJD0A",
+        "title": "Reviewing the Worst Trench Combat Footage",
+        "channel": "Cappy Army",
+        "source": "history"
+      },
+      {
+        "videoId": "LqBNNGtV_Zo",
+        "url": "https://www.youtube.com/watch?v=LqBNNGtV_Zo",
+        "title": "They Said Ukraine Could NEVER Retake Crimea… Then THIS Happened",
+        "channel": "The Military Show",
+        "source": "history"
+      },
+      {
+        "videoId": "2a-j08S7wTk",
+        "url": "https://www.youtube.com/watch?v=2a-j08S7wTk",
+        "title": "U.S. Military’s Final Blow Strike Plan Against Iran Is Worse Than You Think",
+        "channel": "Max Afterburner",
+        "source": "history"
+      },
+      {
+        "videoId": "Vm_QssZNnZ4",
+        "url": "https://www.youtube.com/watch?v=Vm_QssZNnZ4",
+        "title": "Ukraine Goes ALL IN... TWO Massive ASSAULTS Begin",
+        "channel": "The Military Show",
+        "source": "history"
+      },
+      {
+        "videoId": "hGBF17U9yso",
+        "url": "https://www.youtube.com/watch?v=hGBF17U9yso",
+        "title": "Ukrainian Forces Storm Russian Positions In Brutal Close Combat!",
+        "channel": "UaWarrior",
+        "source": "history"
+      },
+      {
+        "videoId": "7xEPve3bQtA",
+        "url": "https://www.youtube.com/watch?v=7xEPve3bQtA",
+        "title": "Amazon Just OBLITERATED 600,000 Careers",
+        "channel": "The Infographics Show",
+        "source": "history"
+      }
+    ],
+    "seed_count": 12
+  },
+  {
+    "id": "trip-reports-consciousness",
+    "name": "Trip Reports & Consciousness",
+    "theme": "Psychedelics, altered states, consciousness research, philosophy of mind",
+    "description": "Long-form psychedelic trip reports plus serious consciousness/psychedelics research and philosophy-of-mind content. Pairs trip-report storytelling channels with academic/Sam-Harris-style discussions.",
+    "inclusion_rules": {
+      "channels": [
+        "Vivec",
+        "Chayse",
+        "fern",
+        "Psyphoria",
+        "Sam Harris",
+        "Big Think",
+        "Dr Ben Miles"
+      ],
+      "title_keywords_regex": [
+        "\\b(psychedelic|lsd|salvia|datura|dmt|mushroom|cannabis|trip[\\s-]?report|consciousness|altered state|matthew johnson|ego[\\s-]?death|hallucinogen)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 30,
+    "subscribed_channels_in_scope": [
+      "Sam Harris"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "8-fx00M0XFY",
+        "url": "https://www.youtube.com/watch?v=8-fx00M0XFY",
+        "title": "The Most Intense Cannabis Trips of All Time | Part One",
+        "channel": "Vivec",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "rJ8ioyxS3NY",
+        "url": "https://www.youtube.com/watch?v=rJ8ioyxS3NY",
+        "title": "1000ug LSD Trip Report: 'What Could Possibly Go Wrong?'",
+        "channel": "Vivec",
+        "source": "history"
+      },
+      {
+        "videoId": "Ug-uUYhijXo",
+        "url": "https://www.youtube.com/watch?v=Ug-uUYhijXo",
+        "title": "15 Gram Mushroom Trip Report: 'An Endless Cycle of Death & Rebirth'",
+        "channel": "Vivec",
+        "source": "history"
+      },
+      {
+        "videoId": "4ZJlrKVVljA",
+        "url": "https://www.youtube.com/watch?v=4ZJlrKVVljA",
+        "title": "A Trip to Horror-Land on Salvia 700x Extract",
+        "channel": "Vivec",
+        "source": "history"
+      },
+      {
+        "videoId": "U_sFWG5WFjo",
+        "url": "https://www.youtube.com/watch?v=U_sFWG5WFjo",
+        "title": "How one psychedelic trip can alter an entire lifetime | Matthew Johnson: Full Interview",
+        "channel": "Big Think",
+        "source": "history"
+      },
+      {
+        "videoId": "FbsW1VVhWPY",
+        "url": "https://www.youtube.com/watch?v=FbsW1VVhWPY",
+        "title": "The Insanity of Salvia",
+        "channel": "Chayse",
+        "source": "history"
+      },
+      {
+        "videoId": "SUPlCYMY2Is",
+        "url": "https://www.youtube.com/watch?v=SUPlCYMY2Is",
+        "title": "The Most Insane Psychedelic | DMT",
+        "channel": "Chayse",
+        "source": "history"
+      },
+      {
+        "videoId": "yE05KbntZKw",
+        "url": "https://www.youtube.com/watch?v=yE05KbntZKw",
+        "title": "The Nightmare Drug | Datura",
+        "channel": "Chayse",
+        "source": "history"
+      },
+      {
+        "videoId": "jfiBDuUVc-A",
+        "url": "https://www.youtube.com/watch?v=jfiBDuUVc-A",
+        "title": "How to pull yourself out of a cheap dopamine spiral | Mark Manson",
+        "channel": "Big Think Clips and 2 more",
+        "source": "history"
+      },
+      {
+        "videoId": "r5KRnstXYUg",
+        "url": "https://www.youtube.com/watch?v=r5KRnstXYUg",
+        "title": "Psychedelics Don't Distort Reality — They Reveal How Your Brain Constructs It",
+        "channel": "Sam Harris and 2 more",
+        "source": "history"
+      },
+      {
+        "videoId": "4clReDaxJV8",
+        "url": "https://www.youtube.com/watch?v=4clReDaxJV8",
+        "title": "The Most Horrifying Trip Reports Ever Written | Part One",
+        "channel": "Vivec",
+        "source": "history"
+      },
+      {
+        "videoId": "hhjhU5MXZOo",
+        "url": "https://www.youtube.com/watch?v=hhjhU5MXZOo",
+        "title": "The Strangest Drug Ever Studied",
+        "channel": "fern",
+        "source": "history"
+      },
+      {
+        "videoId": "MotgI0IKArQ",
+        "url": "https://www.youtube.com/watch?v=MotgI0IKArQ",
+        "title": "This video will only find you when you most need it.",
+        "channel": "Psyphoria",
+        "source": "history"
+      },
+      {
+        "videoId": "47U6uxEUDr8",
+        "url": "https://www.youtube.com/watch?v=47U6uxEUDr8",
+        "title": "We FINALLY Understand the Power of Psychedelics (...mostly)",
+        "channel": "Dr Ben Miles",
+        "source": "history"
+      }
+    ],
+    "seed_count": 14
+  },
+  {
+    "id": "crime-bodycam",
+    "name": "Bodycam & Crime Storytime",
+    "theme": "Police bodycam, true-crime narratives, dashcam compilations",
+    "description": "Police bodycam breakdowns, true-crime storytime channels, and dashcam-style compilations. Optimized for \"background-watching while doing something else.\"",
+    "inclusion_rules": {
+      "channels": [
+        "Code Blue Cam",
+        "EWU Bodycam",
+        "EWU Crime Storytime",
+        "Midwest Safety",
+        "Police Insider",
+        "Unpopular",
+        "Beyond Evil",
+        "John Lang",
+        "Humiliated Reacts & Commentary",
+        "Sgt. Pepperspray",
+        "Scammer Payback"
+      ],
+      "title_keywords_regex": [
+        "\\b(police|cop|sheriff|bodycam|dashcam|predator|arrested|gunman|standoff|chase|fleeing|crime|cartel|killer|hostage|home invasion)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\bukrain|russia|crimea\\b"
+      ]
+    },
+    "target_length": 35,
+    "subscribed_channels_in_scope": [
+      "Humiliated Reacts & Commentary",
+      "Scammer Payback"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "a4kNKL80RCA",
+        "url": "https://www.youtube.com/watch?v=a4kNKL80RCA",
+        "title": "Billionaire's Son Enters Deadly Standoff With Cops",
+        "channel": "Midwest Safety",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "_12y4-EnTt0",
+        "url": "https://www.youtube.com/watch?v=_12y4-EnTt0",
+        "title": "Cocky Teen Driver Gets Chewed Out by Dad After Fleeing Police",
+        "channel": "Sgt. Pepperspray",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "4rAQmOkn8aM",
+        "url": "https://www.youtube.com/watch?v=4rAQmOkn8aM",
+        "title": "150mph Police Chase Ends in Total Destruction",
+        "channel": "Police Insider",
+        "source": "history"
+      },
+      {
+        "videoId": "n2Cuqjdu784",
+        "url": "https://www.youtube.com/watch?v=n2Cuqjdu784",
+        "title": "Broad Daylight Home Invasion Spirals Into Chaos",
+        "channel": "Midwest Safety",
+        "source": "history"
+      },
+      {
+        "videoId": "Z_QFcacHMVc",
+        "url": "https://www.youtube.com/watch?v=Z_QFcacHMVc",
+        "title": "Business Owner Gets Himself & All His Customers Arrested",
+        "channel": "Code Blue Cam",
+        "source": "history"
+      },
+      {
+        "videoId": "n-1r2LsDWoQ",
+        "url": "https://www.youtube.com/watch?v=n-1r2LsDWoQ",
+        "title": "Corrupt Sheriff Gets Busted by the FBI and Goes to PRISON!",
+        "channel": "John Lang",
+        "source": "history"
+      },
+      {
+        "videoId": "r1cvbJJ5G54",
+        "url": "https://www.youtube.com/watch?v=r1cvbJJ5G54",
+        "title": "Evil Gunman Ambushes Three Cops Point-Blank",
+        "channel": "Midwest Safety",
+        "source": "history"
+      },
+      {
+        "videoId": "z-K_PSc4LGg",
+        "url": "https://www.youtube.com/watch?v=z-K_PSc4LGg",
+        "title": "Killer Lures 19-Year-Old to His Secret Dungeon",
+        "channel": "Beyond Evil",
+        "source": "history"
+      },
+      {
+        "videoId": "VO7Gsq-thCk",
+        "url": "https://www.youtube.com/watch?v=VO7Gsq-thCk",
+        "title": "Police Find Man Doing the Unthinkable With 14yo Girl in Backseat",
+        "channel": "Unpopular",
+        "source": "history"
+      },
+      {
+        "videoId": "biUpy9Zcoj8",
+        "url": "https://www.youtube.com/watch?v=biUpy9Zcoj8",
+        "title": "Predator Caught Hiding in 14-Year-Old's Closet for a Week",
+        "channel": "EWU Bodycam",
+        "source": "history"
+      },
+      {
+        "videoId": "zyGR_TObynA",
+        "url": "https://www.youtube.com/watch?v=zyGR_TObynA",
+        "title": "Predator Lurking Around School Realizes Cops Found Him",
+        "channel": "Police Insider",
+        "source": "history"
+      },
+      {
+        "videoId": "979WFI0VKpk",
+        "url": "https://www.youtube.com/watch?v=979WFI0VKpk",
+        "title": "She Hit the Gas With a Cop Standing in Front",
+        "channel": "Code Blue Cam",
+        "source": "history"
+      },
+      {
+        "videoId": "C0FofpKmMZ4",
+        "url": "https://www.youtube.com/watch?v=C0FofpKmMZ4",
+        "title": "Child Almost Drowns After Mom Leaves Beach",
+        "channel": "Midwest Safety",
+        "source": "history"
+      },
+      {
+        "videoId": "q1S44WXT7VQ",
+        "url": "https://www.youtube.com/watch?v=q1S44WXT7VQ",
+        "title": "Drunk Woman Realizes She Killed Her Girlfriend's Baby",
+        "channel": "EWU Crime Storytime",
+        "source": "history"
+      },
+      {
+        "videoId": "_5dNfyUzLmc",
+        "url": "https://www.youtube.com/watch?v=_5dNfyUzLmc",
+        "title": "How to Ruin Your Life & Girlfriend in Minutes",
+        "channel": "Code Blue Cam",
+        "source": "history"
+      },
+      {
+        "videoId": "a5Ui9k6Tecg",
+        "url": "https://www.youtube.com/watch?v=a5Ui9k6Tecg",
+        "title": "Man Does the Unthinkable After Talking to ChatGPT",
+        "channel": "EWU Bodycam",
+        "source": "history"
+      },
+      {
+        "videoId": "v6Eg-CexWtM",
+        "url": "https://www.youtube.com/watch?v=v6Eg-CexWtM",
+        "title": "She Laughed After Crashing Into Motorcyclist",
+        "channel": "Midwest Safety",
+        "source": "history"
+      },
+      {
+        "videoId": "S4idZ2M4pz0",
+        "url": "https://www.youtube.com/watch?v=S4idZ2M4pz0",
+        "title": "Underage Drinking Call Leads to Sudden Tragedy",
+        "channel": "Midwest Safety",
+        "source": "history"
+      },
+      {
+        "videoId": "-jwUBn7d4Uk",
+        "url": "https://www.youtube.com/watch?v=-jwUBn7d4Uk",
+        "title": "Woman Shuts Down The Whole TSA Line",
+        "channel": "Midwest Safety",
+        "source": "history"
+      }
+    ],
+    "seed_count": 19
+  },
+  {
+    "id": "homelab-selfhost",
+    "name": "Homelab & Self-Hosting",
+    "theme": "Self-hosting, homelab, networking, Linux, containers, NAS",
+    "description": "Homelab builds, self-hosted services, networking deep-dives (Unifi, Mikrotik, OPNsense), Kubernetes/OpenShift, ESP32, Raspberry Pi, and Linux/container plumbing.",
+    "inclusion_rules": {
+      "channels": [
+        "NetworkChuck",
+        "KTZ Systems",
+        "Noted",
+        "jakkuh",
+        "Craft Computing",
+        "Crosstalk Solutions",
+        "OpenShift",
+        "Andreas Spiess",
+        "Britec09",
+        "Geerling Engineering",
+        "Virtual Bytes",
+        "Toasty Answers",
+        "TripleWho?",
+        "Red Hat",
+        "Smart Home Solver",
+        "SingularityComputers"
+      ],
+      "title_keywords_regex": [
+        "\\b(homelab|self[\\s-]?host|self[-]?hosted|nas|truenas|proxmox|kubernet\\w+|openshift|docker|container|unifi|opnsense|pfsense|mikrotik|esp32|raspberry[\\s-]?pi|home automation|home assistant|vlan|smart home|cni|ovn)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [
+      "Crosstalk Solutions",
+      "jakkuh",
+      "KTZ Systems",
+      "NetworkChuck",
+      "Noted",
+      "OpenShift",
+      "SingularityComputers",
+      "Smart Home Solver"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "mnoZYlyebBc",
+        "url": "https://www.youtube.com/watch?v=mnoZYlyebBc",
+        "title": "#366 9 New ESP32 Boards: Comparison and Tests",
+        "channel": "Andreas Spiess",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "QE-jw1Bu0T8",
+        "url": "https://www.youtube.com/watch?v=QE-jw1Bu0T8",
+        "title": "How to Optimize a Unifi Network",
+        "channel": "Toasty Answers",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "BMLmHgYYfDI",
+        "url": "https://www.youtube.com/watch?v=BMLmHgYYfDI",
+        "title": "OpenShift with ovn-kubernetes CNI",
+        "channel": "TripleWho?",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "nKqHCF_xG5w",
+        "url": "https://www.youtube.com/watch?v=nKqHCF_xG5w",
+        "title": "The Perfect Compact Homelab Switch? - Mikrotik CRS310-8G+2S+IN",
+        "channel": "Craft Computing",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "lhmFBie-wSA",
+        "url": "https://www.youtube.com/watch?v=lhmFBie-wSA",
+        "title": "Best Single Board Computer You Never Heard Of",
+        "channel": "Britec09",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "ovZAbCqh_A0",
+        "url": "https://www.youtube.com/watch?v=ovZAbCqh_A0",
+        "title": "Choosing a UPS (Uninterruptible Power Supply)",
+        "channel": "Geerling Engineering",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "vhYMRtqvMg8",
+        "url": "https://www.youtube.com/watch?v=vhYMRtqvMg8",
+        "title": "Default to open: The story of open source and Red Hat",
+        "channel": "Red Hat",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "IdFuf3B8Tz4",
+        "url": "https://www.youtube.com/watch?v=IdFuf3B8Tz4",
+        "title": "Home Data Center - VMware Private Cloud - Update!",
+        "channel": "Virtual Bytes",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 8
+  },
+  {
+    "id": "tech-gear",
+    "name": "Tech Gear & Gadget Reviews",
+    "theme": "Consumer tech reviews, gadgets, phones, laptops, peripherals",
+    "description": "Mainstream consumer-tech reviews and gadget content. The \"fresh tech\" stream — phones, laptops, peripherals, audio, keyboards, weird tech curios.",
+    "inclusion_rules": {
+      "channels": [
+        "Linus Tech Tips",
+        "Marques Brownlee",
+        "Mac Address",
+        "Austin Evans",
+        "randomfrankp",
+        "MarzBar",
+        "Jonathan Morrison",
+        "Unbox Therapy",
+        "Digital Trends",
+        "ShortCircuit",
+        "TechLinked",
+        "Techquickie",
+        "The WAN Show",
+        "NCIX Tech Tips",
+        "Tom's Hardware",
+        "Tech Uploaded",
+        "TweitenTech",
+        "Hipyo Tech",
+        "Jason Vong",
+        "UrAvgConsumer",
+        "Wonk",
+        "Auto Focus",
+        "Christian Selig",
+        "Austin Nwachukwu",
+        "Adam Savage",
+        "Taeha Types"
+      ],
+      "title_keywords_regex": [
+        "\\b(iphone|android|laptop|keyboard|monitor|gpu|cpu|ssd|nvme|router|wifi|bluetooth|usb-?c|thunderbolt|airpod|review|unbox|setup|tech kit|backpack|gadget|peakdo|hdmi|ecc memory|cooler|case fan|cyberdeck)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\b(claude|codex|agent|llm|gpt|kubernet|openshift|homelab)\\b"
+      ]
+    },
+    "target_length": 30,
+    "subscribed_channels_in_scope": [
+      "Adam Savage’s Tested",
+      "Austin Evans",
+      "Austin Nwachukwu",
+      "Auto Focus",
+      "Christian Selig",
+      "Digital Trends",
+      "Jonathan Morrison",
+      "Linus Tech Tips",
+      "Mac Address",
+      "Marques Brownlee",
+      "MarzBar",
+      "MarzBarVlogs",
+      "NCIX Tech Tips",
+      "randomfrankp",
+      "ShortCircuit",
+      "Tech Uploaded",
+      "TechLinked",
+      "Techquickie",
+      "The WAN Show",
+      "Tom's Hardware",
+      "TweitenTech",
+      "Unbox Therapy"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "ZpJsj-barcs",
+        "url": "https://www.youtube.com/watch?v=ZpJsj-barcs",
+        "title": "Boundary Supply Errant Backpack and Peak Design Everyday Backpack indepth comparison!",
+        "channel": "Wonk",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "H8GptHQ0W2U",
+        "url": "https://www.youtube.com/watch?v=H8GptHQ0W2U",
+        "title": "Can we build a better bluetooth speaker? - LG XBOOM Go PL Series",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "k08oW0LitBI",
+        "url": "https://www.youtube.com/watch?v=k08oW0LitBI",
+        "title": "I Made the Ultimate Tech Kit",
+        "channel": "UrAvgConsumer",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "kojTyPdhp3s",
+        "url": "https://www.youtube.com/watch?v=kojTyPdhp3s",
+        "title": "It's Time to Disappear Cables - PeakDo Wireless HDMI",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "pPeCNrNTr3k",
+        "url": "https://www.youtube.com/watch?v=pPeCNrNTr3k",
+        "title": "Linus was right. - ECC Memory Explained",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "-fRn9DconGc",
+        "url": "https://www.youtube.com/watch?v=-fRn9DconGc",
+        "title": "My Man Cave Update - New Streaming Setup!",
+        "channel": "UrAvgConsumer",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "WaEIstGlWrw",
+        "url": "https://www.youtube.com/watch?v=WaEIstGlWrw",
+        "title": "Sony a1 - Most Fun I've Had in Awhile! | Initial Review 50MP 30FPS 8K",
+        "channel": "Jason Vong",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "u6zsHqdNRQ8",
+        "url": "https://www.youtube.com/watch?v=u6zsHqdNRQ8",
+        "title": "What Happens if you Water Cool an Air Cooler?",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "Lq47IpikGWk",
+        "url": "https://www.youtube.com/watch?v=Lq47IpikGWk",
+        "title": "What's in my Tech Travel Backpack 3.0!",
+        "channel": "UrAvgConsumer",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "tqbnjgbtDl0",
+        "url": "https://www.youtube.com/watch?v=tqbnjgbtDl0",
+        "title": "Double or Triple Your Internet Speed - This Method Actually Works!",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "6QDhiqsybAM",
+        "url": "https://www.youtube.com/watch?v=6QDhiqsybAM",
+        "title": "How to make keycaps for $20",
+        "channel": "Hipyo Tech",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "TQ6o0-z4umc",
+        "url": "https://www.youtube.com/watch?v=TQ6o0-z4umc",
+        "title": "I'm Not The Only CEO That Lost My Job - WAN Show November 17, 2023",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "y-eIhBThlrY",
+        "url": "https://www.youtube.com/watch?v=y-eIhBThlrY",
+        "title": "Mac vs PC Video Editing Showdown ft. iJustine!!",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "2jsqZMCPJts",
+        "url": "https://www.youtube.com/watch?v=2jsqZMCPJts",
+        "title": "Okay, Google… What happened? - Google Pixel Slate",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "ccnlAVDXd7k",
+        "url": "https://www.youtube.com/watch?v=ccnlAVDXd7k",
+        "title": "Retro Tech: Smart Homes",
+        "channel": "Marques Brownlee",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "gC6dQrScmHE",
+        "url": "https://www.youtube.com/watch?v=gC6dQrScmHE",
+        "title": "Running a YouTube Business is EASY (just kidding)",
+        "channel": "Linus Tech Tips",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "7icgNACYMcA",
+        "url": "https://www.youtube.com/watch?v=7icgNACYMcA",
+        "title": "The Taeha Types Studio/Gear Tour",
+        "channel": "Taeha Types",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "3xg9SordSpE",
+        "url": "https://www.youtube.com/watch?v=3xg9SordSpE",
+        "title": "Ultimate YouTuber Gear: Cameras",
+        "channel": "UrAvgConsumer",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "gIWp_F9PPzI",
+        "url": "https://www.youtube.com/watch?v=gIWp_F9PPzI",
+        "title": "I built a modular cyberdeck!",
+        "channel": "Jankbu",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "V3AMz-xZ2VM",
+        "url": "https://www.youtube.com/watch?v=V3AMz-xZ2VM",
+        "title": "M.2 NVME vs SSD vs HDD Loading Windows and Games",
+        "channel": "Testing Games",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 24
+  },
+  {
+    "id": "strategy-citybuilder",
+    "name": "Strategy & City-Builder Gaming",
+    "theme": "Civilization, Total War, city builders, grand strategy",
+    "description": "Civ, Total War, city-builder, and grand-strategy game content. Long-form sessions, tutorials, and \"let's play\" runs.",
+    "inclusion_rules": {
+      "channels": [
+        "HeirofCarthage",
+        "PotatoMcWhiskey",
+        "City Planner Plays",
+        "GrayStillPlays",
+        "Chaza"
+      ],
+      "title_keywords_regex": [
+        "\\b(civ\\s?\\d|civilization|total war|warhammer|city skylines|cities[\\s:]+skylines|minecraft|grand strategy|paradox|hoi4|stellaris|crusader kings|ck3)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "Chaza",
+      "City Planner Plays",
+      "GrayStillPlays",
+      "HeirofCarthage",
+      "PotatoMcWhiskey"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "16Ot710JCjw",
+        "url": "https://www.youtube.com/watch?v=16Ot710JCjw",
+        "title": "Assessing some Starting Locations - Civ6 Tutorials",
+        "channel": "PotatoMcWhiskey",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 1
+  },
+  {
+    "id": "ttrpg-fantasy",
+    "name": "Dungeons & Lore (TTRPG)",
+    "theme": "D&D, Critical Role, Pathfinder, TTRPG advice, miniature painting",
+    "description": "TTRPG content: Critical Role and other actual-play shows, DM/player advice, character building, miniature painting, terrain building.",
+    "inclusion_rules": {
+      "channels": [
+        "Critical Role",
+        "Dungeon Dudes",
+        "Ginny Di",
+        "Dicey",
+        "JoCat",
+        "Black Magic Craft",
+        "Squidmar Miniatures",
+        "Wyrmwood Vlogs"
+      ],
+      "title_keywords_regex": [
+        "\\b(d&d|dnd|dungeons.{0,4}dragons|ttrpg|pathfinder|frostgrave|kill team|miniature|paint(ing)?|warhammer|crit(ical)?[\\s-]?role|game master|dm|dungeon master)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [
+      "Black Magic Craft",
+      "Critical Role",
+      "Dicey",
+      "Dungeon Dudes",
+      "Ginny Di",
+      "JoCat",
+      "Squidmar Miniatures"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "_G3IZ9FALU0",
+        "url": "https://www.youtube.com/watch?v=_G3IZ9FALU0",
+        "title": "WYRMWOOD NEEDS TO HIRE! S3E12",
+        "channel": "Wyrmwood Vlogs",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "Nzw0nhJnu7k",
+        "url": "https://www.youtube.com/watch?v=Nzw0nhJnu7k",
+        "title": "Not The Best Road Trip Ever...",
+        "channel": "Wyrmwood Vlogs",
+        "source": "history"
+      }
+    ],
+    "seed_count": 2
+  },
+  {
+    "id": "car-hour",
+    "name": "Car Hour",
+    "theme": "Car reviews, auctions, automotive deep-dives",
+    "description": "Car reviews, auction picks, automotive deep-dives. Mix of mainstream (Doug DeMuro, Cars & Bids) and obscure modified-car/historic deep-dives.",
+    "inclusion_rules": {
+      "channels": [
+        "Doug DeMuro",
+        "Cars & Bids",
+        "MotoManTV",
+        "Saabkyle04",
+        "TheStraightPipes",
+        "Tavarish",
+        "Auto Focus",
+        "GommeBlog - Car & Performance",
+        "Internal Combustion",
+        "Krispy Media",
+        "LomaPrietaPCA"
+      ],
+      "title_keywords_regex": [
+        "\\b(porsche|ferrari|lamborghini|car review|track car|supercar|sports car|drift|engine swap|ls swap|widebody|tuner|cars & bids|nakai|rwb)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "Auto Focus",
+      "Cars & Bids",
+      "Doug DeMuro",
+      "MotoManTV",
+      "Saabkyle04",
+      "Tavarish",
+      "TheStraightPipes"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "Rnfp6eoI14Y",
+        "url": "https://www.youtube.com/watch?v=Rnfp6eoI14Y",
+        "title": "Deconstructing the Porsche 991: A Rare Look Inside",
+        "channel": "LomaPrietaPCA",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "aF71oTVwTcU",
+        "url": "https://www.youtube.com/watch?v=aF71oTVwTcU",
+        "title": "Keeping Up With Nakai | RWB Tampa #1 \"Pegasus\"",
+        "channel": "Krispy Media",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "XvrdSXyveEQ",
+        "url": "https://www.youtube.com/watch?v=XvrdSXyveEQ",
+        "title": "Widerstandsfahig Wide Body Porsche 944 951 with Renegade Hybrids LS1 V8 Swap [4K]",
+        "channel": "Internal Combustion",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "RIh5NnN-qfE",
+        "url": "https://www.youtube.com/watch?v=RIh5NnN-qfE",
+        "title": "Volvo XC90 2017 CAR FACTORY - HOW IT'S MADE Manufacturing SAFETY Luxury SUV",
+        "channel": "GommeBlog - Car & Performance",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 4
+  },
+  {
+    "id": "maker-bench",
+    "name": "Maker Bench: Fab & 3D Printing",
+    "theme": "3D printing, woodworking, electronics, CNC, fabrication",
+    "description": "Fabrication content: 3D printing, woodworking, CNC, electronics, prop-making, designing parts. The \"long-watch while in the shop\" feed.",
+    "inclusion_rules": {
+      "channels": [
+        "Adam Savage's Tested",
+        "Project Farm",
+        "Michael Alm (ALM FAB)",
+        "JohnGrimsmo",
+        "Shaun Boyd Made This",
+        "MandicReally",
+        "GreatScott!",
+        "ElectroBOOM",
+        "Small Batch Factory",
+        "Black Magic Craft",
+        "Squidmar Miniatures",
+        "Engineer Bo",
+        "Visual Thinker",
+        "FLIGHTORY",
+        "Patrick Sullivan"
+      ],
+      "title_keywords_regex": [
+        "\\b(3d[\\s-]?print|cnc|woodworking|router table|knife making|fabrication|electronics|soldering|laser cut|workshop|maker|fixed-wing drone|terrain|prop)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [
+      "Black Magic Craft",
+      "ElectroBOOM",
+      "GreatScott!",
+      "JohnGrimsmo",
+      "MandicReally",
+      "Michael Alm (ALM FAB)",
+      "Project Farm",
+      "Shaun Boyd Made This",
+      "Small Batch Factory",
+      "Squidmar Miniatures"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "wAYwlVW0USQ",
+        "url": "https://www.youtube.com/watch?v=wAYwlVW0USQ",
+        "title": "Building a Fixed-Wing Drone with 3D Printing | Stallion",
+        "channel": "FLIGHTORY",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "2EYJdKTVeKM",
+        "url": "https://www.youtube.com/watch?v=2EYJdKTVeKM",
+        "title": "Mini Router Table",
+        "channel": "Patrick Sullivan",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "Dl-nDMVcje4",
+        "url": "https://www.youtube.com/watch?v=Dl-nDMVcje4",
+        "title": "170 Hours of 3D Printing For This",
+        "channel": "Visual Thinker",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "ehd3Ue2fKKM",
+        "url": "https://www.youtube.com/watch?v=ehd3Ue2fKKM",
+        "title": "Scaling Up the Full Scroll Dial - High Resolution Scrolling Device",
+        "channel": "Engineer Bo",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 4
+  },
+  {
+    "id": "story-decoded",
+    "name": "Story Decoded (Film & Lore)",
+    "theme": "Film analysis, lore theories — Harry Potter, Star Wars, Disney, MCU",
+    "description": "Film/show analysis and lore deep-dives: SuperCarlinBrothers, theory channels, breakdowns of single shots/scenes, Harry Potter/Star Wars/MCU/Disney explainers.",
+    "inclusion_rules": {
+      "channels": [
+        "SuperCarlinBrothers",
+        "SUPER FRAME",
+        "InCinematic",
+        "ScreenPuff",
+        "A Matter of Film and Tongal",
+        "Order 77",
+        "Harry Potter Theory",
+        "boonanaman",
+        "WatchMojo.com"
+      ],
+      "title_keywords_regex": [
+        "\\b(harry potter|voldemort|horcrux|hogwarts|star wars|jedi|sith|obi-?wan|marvel|mcu|dune|prince of egypt|cinema|film|movie|scene|audition|director\\b)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [
+      "boonanaman",
+      "SuperCarlinBrothers"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "bVH4PyfqMrI",
+        "url": "https://www.youtube.com/watch?v=bVH4PyfqMrI",
+        "title": "Top 20 Greatest Movie Scenes They Got On the First Take",
+        "channel": "WatchMojo.com",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "MelK_5yPUGM",
+        "url": "https://www.youtube.com/watch?v=MelK_5yPUGM",
+        "title": "All 15 Spells & Curses Voldemort CREATED - Harry Potter Explained",
+        "channel": "Harry Potter Theory",
+        "source": "history"
+      },
+      {
+        "videoId": "seSbnlkpBbQ",
+        "url": "https://www.youtube.com/watch?v=seSbnlkpBbQ",
+        "title": "How Dune Tricks You Into Worshipping Paul Atreides",
+        "channel": "A Matter of Film and Tongal",
+        "source": "history"
+      },
+      {
+        "videoId": "P0xZi2q1fVQ",
+        "url": "https://www.youtube.com/watch?v=P0xZi2q1fVQ",
+        "title": "The ACTUAL audition that changed cinema forever",
+        "channel": "ScreenPuff",
+        "source": "history"
+      },
+      {
+        "videoId": "Qz4Yp-8evs4",
+        "url": "https://www.youtube.com/watch?v=Qz4Yp-8evs4",
+        "title": "The Horcrux Kill That NEVER Made Sense… Until Now",
+        "channel": "SuperCarlinBrothers",
+        "source": "history"
+      },
+      {
+        "videoId": "pcmf-IhHHfc",
+        "url": "https://www.youtube.com/watch?v=pcmf-IhHHfc",
+        "title": "The Prince of Egypt is the BEST Animated Movie Ever Made",
+        "channel": "SUPER FRAME",
+        "source": "history"
+      },
+      {
+        "videoId": "kmWEDH-0d2Y",
+        "url": "https://www.youtube.com/watch?v=kmWEDH-0d2Y",
+        "title": "The Real Reason Obi-Wan Was WAY More Powerful Than the Others",
+        "channel": "Order 77",
+        "source": "history"
+      },
+      {
+        "videoId": "txOYbPdSZi8",
+        "url": "https://www.youtube.com/watch?v=txOYbPdSZi8",
+        "title": "This Voldemort Theory Is WAY Too Dark",
+        "channel": "SuperCarlinBrothers",
+        "source": "history"
+      },
+      {
+        "videoId": "qxm2JeYlEA8",
+        "url": "https://www.youtube.com/watch?v=qxm2JeYlEA8",
+        "title": "You missed the best shot in the film...",
+        "channel": "InCinematic",
+        "source": "history"
+      },
+      {
+        "videoId": "k1vCrsZ80M4",
+        "url": "https://www.youtube.com/watch?v=k1vCrsZ80M4",
+        "title": "The Neighbors' Window - Oscar Winning Short Film",
+        "channel": "Marshall Curry Productions",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 10
+  },
+  {
+    "id": "big-ideas-science",
+    "name": "Emergence & Big Ideas",
+    "theme": "Emergence, complexity, physics, neural networks, big-picture science",
+    "description": "Long-form science: emergence, complexity, AI/neural-net research, physics deep-dives, astronomy. Pairs Emergent Garden / Two Minute Papers / Veritasium with documentary-length space and physics content.",
+    "inclusion_rules": {
+      "channels": [
+        "Emergent Garden",
+        "Two Minute Papers",
+        "Veritasium",
+        "Hank Green",
+        "Cosmic Atoms and Late Science",
+        "Megaprojects",
+        "Sideprojects",
+        "Half as Interesting",
+        "Dr Ben Miles",
+        "NullSpace",
+        "Simplify Dude",
+        "Undecided with Matt Ferrell",
+        "Domain of Science",
+        "Wendover Productions",
+        "TED"
+      ],
+      "title_keywords_regex": [
+        "\\b(emergent|emergence|complexity|neural network|gradient descent|evolution|quantum|black hole|telescope|james webb|graphene|magellan|big bang|cosmology|relativity|space documentary|tidal|map of)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 25,
+    "subscribed_channels_in_scope": [
+      "Adam Savage’s Tested",
+      "Emergent Garden",
+      "Half as Interesting",
+      "Humiliated Reacts & Commentary",
+      "Megaprojects",
+      "Noted",
+      "TEDx Talks",
+      "Two Minute Papers"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "fH4MaSJ8gXU",
+        "url": "https://www.youtube.com/watch?v=fH4MaSJ8gXU",
+        "title": "The Fascinating Map of Board Games",
+        "channel": "Domain of Science",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "On2V_L9jwS4",
+        "url": "https://www.youtube.com/watch?v=On2V_L9jwS4",
+        "title": "The Hardest Problem Evolution Ever Solved",
+        "channel": "Hank Green",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "i3GIzBzNAAU",
+        "url": "https://www.youtube.com/watch?v=i3GIzBzNAAU",
+        "title": "TON 618: The Black Hole That Breaks the Universe | 4K",
+        "channel": "NullSpace",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "BrdUXTxJv0o",
+        "url": "https://www.youtube.com/watch?v=BrdUXTxJv0o",
+        "title": "2025 Best Solar Batteries Compared. Tesla Powerwall 3 vs Enphase 5P vs Franklin vs SolarEdge",
+        "channel": "Trusted Solar Pros",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "0HqUYpGQIfs",
+        "url": "https://www.youtube.com/watch?v=0HqUYpGQIfs",
+        "title": "Emergent Complexity",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "DB-TD3s3MZ0",
+        "url": "https://www.youtube.com/watch?v=DB-TD3s3MZ0",
+        "title": "Evolution in Higher Dimensions",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "Anc2_mnb3V8",
+        "url": "https://www.youtube.com/watch?v=Anc2_mnb3V8",
+        "title": "Gradient Descent vs Evolution | How Neural Networks Learn",
+        "channel": "Emergent Garden",
+        "source": "history"
+      },
+      {
+        "videoId": "3Sh7hghljuQ",
+        "url": "https://www.youtube.com/watch?v=3Sh7hghljuQ",
+        "title": "How China Built a Hospital in 10 Days",
+        "channel": "Wendover Productions",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "9H1nwqjzVVc",
+        "url": "https://www.youtube.com/watch?v=9H1nwqjzVVc",
+        "title": "How Graphene is Changing the World … Right Now",
+        "channel": "Undecided with Matt Ferrell",
+        "source": "history"
+      },
+      {
+        "videoId": "JaF-fq2Zn7I",
+        "url": "https://www.youtube.com/watch?v=JaF-fq2Zn7I",
+        "title": "Innovating to zero! | Bill Gates",
+        "channel": "TED",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "6tvsyJYaorY",
+        "url": "https://www.youtube.com/watch?v=6tvsyJYaorY",
+        "title": "James Webb Found a New Earth But It's Inhabited | Space Documentary",
+        "channel": "Simplify Dude",
+        "source": "history"
+      },
+      {
+        "videoId": "oW-846Kwm6Q",
+        "url": "https://www.youtube.com/watch?v=oW-846Kwm6Q",
+        "title": "Scientists Are Quietly Panicking About Quantum Fields Right Now",
+        "channel": "Cosmic Atoms and Late Science",
+        "source": "history"
+      },
+      {
+        "videoId": "6Y8yymVZpjI",
+        "url": "https://www.youtube.com/watch?v=6Y8yymVZpjI",
+        "title": "The Giant Magellan Telescope: The Telescope More Powerful that JWST",
+        "channel": "Megaprojects",
+        "source": "history"
+      },
+      {
+        "videoId": "MiUHjLxm3V0",
+        "url": "https://www.youtube.com/watch?v=MiUHjLxm3V0",
+        "title": "The World's Most Important Machine",
+        "channel": "Veritasium",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "EKrkhCErFgo",
+        "url": "https://www.youtube.com/watch?v=EKrkhCErFgo",
+        "title": "New Scientific Discoveries You might Have Missed",
+        "channel": "Sideprojects",
+        "source": "history"
+      },
+      {
+        "videoId": "5h5BOtJdFrY",
+        "url": "https://www.youtube.com/watch?v=5h5BOtJdFrY",
+        "title": "SLAM: The US' Most Insane Missile Project",
+        "channel": "Megaprojects",
+        "source": "history"
+      },
+      {
+        "videoId": "47U6uxEUDr8",
+        "url": "https://www.youtube.com/watch?v=47U6uxEUDr8",
+        "title": "We FINALLY Understand the Power of Psychedelics (...mostly)",
+        "channel": "Dr Ben Miles",
+        "source": "history"
+      }
+    ],
+    "seed_count": 17
+  },
+  {
+    "id": "mind-self",
+    "name": "Mind & Self",
+    "theme": "Therapy, autism/ADHD, philosophy of self, cognitive psychology",
+    "description": "Therapy frameworks (ACT, CBT), autism/AuDHD content, cognitive distortions, dopamine/attention, Sam-Harris-style philosophy-of-self. For the \"actively working on it\" mode.",
+    "inclusion_rules": {
+      "channels": [
+        "Therapy in a Nutshell",
+        "Auticate with Chris & Debby",
+        "Sam Harris",
+        "Pattern Weaver Mind",
+        "Big Think",
+        "Philosophical Calm With Rici",
+        "Psychic Yoo"
+      ],
+      "title_keywords_regex": [
+        "\\b(therapy|anxiety|autism|au[\\s-]?dhd|adhd|cognitive distortion|dopamine|mindful|meditation|attention|psychology|self-?talk|emotional|intrusive thoughts|self-?improvement)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\bpsychedelic|lsd|dmt|mushroom|trip[\\s-]?report\\b"
+      ]
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "Auticate with Chris & Debby",
+      "Sam Harris",
+      "Therapy in a Nutshell"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "Ek6V4F6nWM8",
+        "url": "https://www.youtube.com/watch?v=Ek6V4F6nWM8",
+        "title": "Cognitive Distortions and Autism: How Many Do YOU Have?",
+        "channel": "Auticate with Chris & Debby",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "tseK5lGAE78",
+        "url": "https://www.youtube.com/watch?v=tseK5lGAE78",
+        "title": "How to Stop an Anxiety Attack - Guided Walkthrough of The Activate Method",
+        "channel": "Therapy in a Nutshell",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "vofPn74xpRI",
+        "url": "https://www.youtube.com/watch?v=vofPn74xpRI",
+        "title": "The Psychology of People Who Love Staying at Home",
+        "channel": "Psychic Yoo",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "S6j8yxswZG8",
+        "url": "https://www.youtube.com/watch?v=S6j8yxswZG8",
+        "title": "The Truth About Autism And High IQ",
+        "channel": "Auticate with Chris & Debby",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "LQqM9DoVZeI",
+        "url": "https://www.youtube.com/watch?v=LQqM9DoVZeI",
+        "title": "5 Signs You Are Dangerously Smart (& This Scares People)",
+        "channel": "Philosophical Calm With Rici",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "jfiBDuUVc-A",
+        "url": "https://www.youtube.com/watch?v=jfiBDuUVc-A",
+        "title": "How to pull yourself out of a cheap dopamine spiral | Mark Manson",
+        "channel": "Big Think Clips and 2 more",
+        "source": "history"
+      },
+      {
+        "videoId": "IHOieCU4WQs",
+        "url": "https://www.youtube.com/watch?v=IHOieCU4WQs",
+        "title": "How to Stop Fighting Intrusive or Negative Thoughts - Passengers on a Bus Exercise from ACT",
+        "channel": "Therapy in a Nutshell",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "UpcJxZHU4lU",
+        "url": "https://www.youtube.com/watch?v=UpcJxZHU4lU",
+        "title": "Why Nothing Feels Normal After Realizing You're Autistic",
+        "channel": "Auticate with Chris & Debby",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "M_Ym61SEM0o",
+        "url": "https://www.youtube.com/watch?v=M_Ym61SEM0o",
+        "title": "If You Have Too Many Interests, You Have The “Pattern Weaver” Mind",
+        "channel": "Pattern Weaver Mind",
+        "source": "history"
+      }
+    ],
+    "seed_count": 9
+  },
+  {
+    "id": "y2k-time-machine",
+    "name": "Y2K Time Machine",
+    "theme": "Retro TV commercials, 90s/2000s nostalgia, vintage media",
+    "description": "90s and 2000s TV commercials, vintage broadcast archives, era-specific nostalgia. Long compilation videos for background watching.",
+    "inclusion_rules": {
+      "channels": [
+        "arwuns",
+        "90s Nostalgia",
+        "Dave's Archives",
+        "Armando Barron Gaming & Films"
+      ],
+      "title_keywords_regex": [
+        "\\b(\\d{2,4}s? (tv )?commercial|nostalgi\\w+|y2k|90s|2000s|vintage|retro tv|broadcast|throwback|remembering television)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "90s Nostalgia"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "HOvX9os7g8s",
+        "url": "https://www.youtube.com/watch?v=HOvX9os7g8s",
+        "title": "Half Hour of 2001 TV Commercials - 2000s Commercial Compilation #24",
+        "channel": "arwuns",
+        "source": "history"
+      },
+      {
+        "videoId": "aanXi683WW4",
+        "url": "https://www.youtube.com/watch?v=aanXi683WW4",
+        "title": "Half-Hour of 2002 TV Commercials - 2000s Commercial Compilation #40",
+        "channel": "arwuns",
+        "source": "history"
+      },
+      {
+        "videoId": "8t5HROVIFkM",
+        "url": "https://www.youtube.com/watch?v=8t5HROVIFkM",
+        "title": "One Hour of 1997 TV Commercials - 90s Commercial Compilation #1",
+        "channel": "arwuns",
+        "source": "history"
+      },
+      {
+        "videoId": "aW0k7tNSos8",
+        "url": "https://www.youtube.com/watch?v=aW0k7tNSos8",
+        "title": "One Hour of 2003 TV Commercials - 2000s Commercial Compilation #4",
+        "channel": "arwuns",
+        "source": "history"
+      },
+      {
+        "videoId": "Ig3_6dcQb08",
+        "url": "https://www.youtube.com/watch?v=Ig3_6dcQb08",
+        "title": "Over One Hour of 2004 TV Commercials - 2000s Commercial Compilation #46",
+        "channel": "arwuns",
+        "source": "history"
+      },
+      {
+        "videoId": "KfrHAol8Na8",
+        "url": "https://www.youtube.com/watch?v=KfrHAol8Na8",
+        "title": "Y2K Has Arrived! Remembering Television from the Year 2000  📺📼  V563",
+        "channel": "Dave's Archives",
+        "source": "history"
+      },
+      {
+        "videoId": "KJb7QA8iVp4",
+        "url": "https://www.youtube.com/watch?v=KJb7QA8iVp4",
+        "title": "Greatest 2000’s Commercial Hits 2021",
+        "channel": "Armando Barron Gaming & Films",
+        "source": "history"
+      }
+    ],
+    "seed_count": 7
+  },
+  {
+    "id": "toddler-rotation",
+    "name": "Toddler Rotation",
+    "theme": "Toddler-safe content: Ms Rachel, Cocomelon, Bluey",
+    "description": "Curated toddler content — known-safe channels only. Explicitly excludes anything from the parental playlists so this can be played on a kid-facing device.",
+    "inclusion_rules": {
+      "channels": [
+        "Ms Rachel - Toddler Learning Videos",
+        "Cocomelon - Nursery Rhymes",
+        "Bluey - Official Channel"
+      ],
+      "title_keywords_regex": [
+        "\\b(ms rachel|cocomelon|bluey|toddler|nursery rhyme|preschool)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 30,
+    "subscribed_channels_in_scope": [
+      "Cocomelon - Nursery Rhymes"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "ivOh5sxQH30",
+        "url": "https://www.youtube.com/watch?v=ivOh5sxQH30",
+        "title": "Exploring Bluey's House | Airbnb | Bluey",
+        "channel": "Bluey - Official Channel",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "8KtnrtHRiCg",
+        "url": "https://www.youtube.com/watch?v=8KtnrtHRiCg",
+        "title": "Animal Learning for Toddlers with Ms Rachel - 3 Full Episodes - Learn Animal Sounds - Best Videos",
+        "channel": "Ms Rachel - Toddler Learning Videos",
+        "source": "history"
+      }
+    ],
+    "seed_count": 2
+  },
+  {
+    "id": "outdoors-adventure",
+    "name": "Outdoors & Adventure",
+    "theme": "Outdoor projects, travel, off-grid, family adventures",
+    "description": "Outdoor and travel content: family camping/forging/cooking, full-time travel vlogs, off-grid builds. Pairs durable interests (Outdoor Boys, Kara and Nate) with one-off road trip and outdoor-hobby finds.",
+    "inclusion_rules": {
+      "channels": [
+        "Outdoor Boys",
+        "Kara and Nate",
+        "Wyrmwood Vlogs",
+        "Rick's Creations"
+      ],
+      "title_keywords_regex": [
+        "\\b(camping|forging|fossil hunting|magnet fish|off[\\s-]?grid|outdoor|wilderness|road trip|hike|hiking|travel vlog|adventure)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\bukrain|trench|russia|cop\\b"
+      ]
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "Kara and Nate",
+      "Outdoor Boys"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "Nzw0nhJnu7k",
+        "url": "https://www.youtube.com/watch?v=Nzw0nhJnu7k",
+        "title": "Not The Best Road Trip Ever...",
+        "channel": "Wyrmwood Vlogs",
+        "source": "history"
+      },
+      {
+        "videoId": "hkVGTHLgOIQ",
+        "url": "https://www.youtube.com/watch?v=hkVGTHLgOIQ",
+        "title": "The Only Hobby You Can Do Anywhere, Anytime",
+        "channel": "Rick's Creations",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "_G3IZ9FALU0",
+        "url": "https://www.youtube.com/watch?v=_G3IZ9FALU0",
+        "title": "WYRMWOOD NEEDS TO HIRE! S3E12",
+        "channel": "Wyrmwood Vlogs",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 3
+  },
+  {
+    "id": "music-piano-vocals",
+    "name": "Music: Piano & Vocals",
+    "theme": "Piano covers, vocal coach reactions, music performance breakdowns",
+    "description": "Long-form music content: piano covers with reactive visuals (Rousseau-style), vocal coach reactions and breakdowns of singer technique, sheet-music-style performances.",
+    "inclusion_rules": {
+      "channels": [
+        "Rousseau",
+        "The Charismatic Voice",
+        "Birds Piano Academy"
+      ],
+      "title_keywords_regex": [
+        "\\b(piano cover|piano|vocal coach|reaction|singer|opera|operatic|sheet music|sing(s|ing)|jazz|orchestral)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": [
+        "\\bcop\\b"
+      ]
+    },
+    "target_length": 15,
+    "subscribed_channels_in_scope": [
+      "Rousseau",
+      "The Charismatic Voice"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "oxcKAiR5rPo",
+        "url": "https://www.youtube.com/watch?v=oxcKAiR5rPo",
+        "title": "If someone asks you to play something... play this",
+        "channel": "Birds Piano Academy",
+        "source": "history"
+      }
+    ],
+    "seed_count": 1
+  },
+  {
+    "id": "storm-watch",
+    "name": "Storm Watch",
+    "theme": "Live severe weather, storm chasing, meteorology",
+    "description": "Severe-weather livestreams and storm-chase recap content. Small but distinctive interest — pulls from a tight set of meteorology channels.",
+    "inclusion_rules": {
+      "channels": [
+        "Ryan Hall, Y'all",
+        "TwisterChasers"
+      ],
+      "title_keywords_regex": [
+        "\\b(tornado|hurricane|storm chas\\w+|severe weather|meteorolog|supercell|funnel cloud|tropical storm)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 15,
+    "subscribed_channels_in_scope": [
+      "Ryan Hall, Y'all",
+      "TwisterChasers"
+    ],
+    "seed_videos_from_corpus": [],
+    "seed_count": 0
+  },
+  {
+    "id": "wealth-lifestyle",
+    "name": "Wealth, Mansions & Business",
+    "theme": "Luxury home tours, business strategy breakdowns, ultra-wealth profiles",
+    "description": "Luxury mansion tours, business-strategy explainers (WSJ Economics style), profiles of the ultra-wealthy, lifestyle aspirational content.",
+    "inclusion_rules": {
+      "channels": [
+        "Enes Yilmazer",
+        "The Enes Yılmazer Podcast",
+        "MagnatesMedia",
+        "The Wall Street Journal"
+      ],
+      "title_keywords_regex": [
+        "\\b(mansion|luxury|wealth|billionaire|ultra-?rich|economics of|business strateg|inside.+(home|mansion|estate)|net worth)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 15,
+    "subscribed_channels_in_scope": [
+      "Enes Yilmazer"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "kCBF5HICkPU",
+        "url": "https://www.youtube.com/watch?v=kCBF5HICkPU",
+        "title": "Inside a $8,995,000 Iconic LA Mansion With Designer Interiors",
+        "channel": "The Enes Yılmazer Podcast",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "B8d4uqQjk6o",
+        "url": "https://www.youtube.com/watch?v=B8d4uqQjk6o",
+        "title": "Levels of Wealth: Inside The Secret Lives of The Ultra-Rich",
+        "channel": "MagnatesMedia",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "fq6jDxJk1LM",
+        "url": "https://www.youtube.com/watch?v=fq6jDxJk1LM",
+        "title": "The Business Strategies Behind Chick-fil-A, Costco, Starbucks and More | WSJ The Economics Of",
+        "channel": "The Wall Street Journal",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "ktFlaBhpMu8",
+        "url": "https://www.youtube.com/watch?v=ktFlaBhpMu8",
+        "title": "Inside Apple's Multibillion-Dollar Push to Make Chips in the U.S. | WSJ",
+        "channel": "The Wall Street Journal",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "a4kNKL80RCA",
+        "url": "https://www.youtube.com/watch?v=a4kNKL80RCA",
+        "title": "Billionaire's Son Enters Deadly Standoff With Cops",
+        "channel": "Midwest Safety",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "RIh5NnN-qfE",
+        "url": "https://www.youtube.com/watch?v=RIh5NnN-qfE",
+        "title": "Volvo XC90 2017 CAR FACTORY - HOW IT'S MADE Manufacturing SAFETY Luxury SUV",
+        "channel": "GommeBlog - Car & Performance",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 6
+  },
+  {
+    "id": "comedy-wildcards",
+    "name": "Comedy & Wildcards",
+    "theme": "Sketch comedy, internet humor, scam-baiting, dev humor",
+    "description": "Sketch comedy, comedic challenges/stunts, scam-baiting content, and internet-niche humor (e.g. KRAZAM dev satire). The \"I just want a laugh\" feed.",
+    "inclusion_rules": {
+      "channels": [
+        "that's a bad idea",
+        "Channel Super Fun",
+        "PewDiePie",
+        "MrGreenGuy",
+        "Scammer Payback",
+        "JoCat",
+        "KRAZAM"
+      ],
+      "title_keywords_regex": [
+        "\\b(scammer|sketch|comedy|prank|microservices|skit|funniest|best fails)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 20,
+    "subscribed_channels_in_scope": [
+      "Channel Super Fun",
+      "JoCat",
+      "MrGreenGuy",
+      "PewDiePie",
+      "Scammer Payback",
+      "that's a bad idea"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "y8OnoxKotPQ",
+        "url": "https://www.youtube.com/watch?v=y8OnoxKotPQ",
+        "title": "Microservices",
+        "channel": "KRAZAM",
+        "source": "watch_later"
+      },
+      {
+        "videoId": "Y_5ZF5PJWjE",
+        "url": "https://www.youtube.com/watch?v=Y_5ZF5PJWjE",
+        "title": "Every Single Person Immediately Regretted EVERYTHING | Best Fails of the Week",
+        "channel": "America's Funniest Home Videos",
+        "source": "history"
+      }
+    ],
+    "seed_count": 2
+  },
+  {
+    "id": "disney-parks",
+    "name": "Disney Parks Day",
+    "theme": "Disney World/Disneyland food, attractions, parades",
+    "description": "Disney parks content: food guides (DFBGuide), parades, attraction breakdowns. For trip planning or armchair Disney watching.",
+    "inclusion_rules": {
+      "channels": [
+        "DFBGuide",
+        "The DIS"
+      ],
+      "title_keywords_regex": [
+        "\\b(disney|magic kingdom|epcot|disneyland|walt disney world|main street|electrical parade|disney cruise)\\b"
+      ]
+    },
+    "exclusion_rules": {
+      "title_keywords_regex": []
+    },
+    "target_length": 15,
+    "subscribed_channels_in_scope": [
+      "DFBGuide"
+    ],
+    "seed_videos_from_corpus": [
+      {
+        "videoId": "M7eP8ASn4iA",
+        "url": "https://www.youtube.com/watch?v=M7eP8ASn4iA",
+        "title": "Main Street Electrical Parade | 4K Ultra HD | Magic Kingdom | Walt Disney World",
+        "channel": "The DIS",
+        "source": "watch_later"
+      }
+    ],
+    "seed_count": 1
+  }
+]

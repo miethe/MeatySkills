@@ -1,0 +1,4 @@
+# Personal YouTube scrape data (local-only, never publish)
+skills/YT/scrape_history.json
+skills/YT/scrape_subscriptions.json
+skills/YT/scrape_watch_later.json
