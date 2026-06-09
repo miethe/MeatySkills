@@ -83,3 +83,35 @@ git config alias.sync-ibm '!bash scripts/sync.sh to-ibm'
 git config alias.sync-status '!bash scripts/sync.sh status'
 # usage: git sync-ibm   /   git sync-status
 ```
+
+## Licensing
+
+The entire library is licensed under the **MIT License**, `Copyright (c) 2026
+Nick Miethe` — retains ownership while opening the assets for use, modification,
+and redistribution.
+
+Every skill is licensed individually **and** at the repo root, so each skill
+stays self-contained when copied out (e.g. into SkillMeat):
+
+- Root `LICENSE` covers the whole repo.
+- A per-skill `LICENSE` (identical text, same copyright line) lives in **every**
+  `skills/<name>/` directory — including IBM-specific skills (you authored them).
+
+### Rule when adding a new skill
+
+Always drop a `LICENSE` into the new skill directory — `cp LICENSE
+skills/<name>/LICENSE`. Then:
+
+- **Generic / shareable skill:** add it (and its `LICENSE`) on `main`, push to
+  `origin`; it flows down to `ibm-main` via `to-ibm`.
+- **IBM-only skill** (e.g. `ica-delegate`): the skill and its `LICENSE` are added
+  on `ibm-main` as part of an `[ibm-only]` commit — they never reach the public repo.
+
+### Invariants
+
+- Keep the copyright line identical across the root and all per-skill files.
+- Never leave a skill without a `LICENSE`. Quick audit:
+
+  ```bash
+  for d in skills/*/; do test -f "$d/LICENSE" || echo "MISSING: $d"; done
+  ```
