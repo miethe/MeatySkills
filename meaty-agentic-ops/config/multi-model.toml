@@ -1,0 +1,265 @@
+# Multi-Model SDLC Configuration
+# Controls model routing, effort policies, and opt-in checkpoints.
+# All external model integrations are opt-in by default.
+
+[models]
+codex_enabled = true
+gemini_enabled = true
+nano_banana_enabled = true
+sora_enabled = true
+local_llm_enabled = false
+claude_teams_enabled = true
+
+[models.defaults]
+implementation = "claude-sonnet-4-6"
+review = "claude-sonnet-4-6"
+exploration = "claude-haiku-4-5"
+orchestration = "claude-opus-4-6"
+documentation = "claude-haiku-4-5"
+image_generation = "nano-banana-2"   # nb2 = Gemini 3.1 Flash Image (default); use nano-banana-pro for max quality
+svg_generation = "gemini-3.1-pro"
+video_generation = "sora-2"
+web_research = "gemini-3.1-pro"
+
+[models.effort_policy]
+# Claude: "adaptive" (default) | "extended" (deep reasoning)
+# Codex: "none" | "low" | "medium" | "high" | "xhigh"
+# Gemini: model selection handles this (Pro vs Flash)
+architecture_decisions = { claude = "adaptive", codex = "xhigh" }
+plan_generation = { claude = "adaptive", codex = "high" }
+plan_review = { claude = "adaptive", codex = "medium" }
+implementation = { claude = "adaptive", codex = "medium" }
+code_review = { claude = "adaptive", codex = "medium" }
+debugging = { claude = "adaptive", codex = "high" }
+debugging_escalated = { claude = "extended", codex = "xhigh" }
+simple_search = { claude = "adaptive", codex = "low" }
+documentation = { claude = "adaptive", codex = "low" }
+formatting = { claude = "adaptive", codex = "none" }
+escalation_requires_artifacts = true
+
+[models.codex]
+default_model = "gpt-5.3-codex"
+fast_model = "gpt-5.3-codex-spark"
+general_model = "gpt-5.3-codex"  # aligned to plugin entry; gpt-5.2 had no plugin entry
+default_reasoning = "medium"
+sandbox_default = "read-only"
+debug_escalation_threshold = 2
+
+[models.gemini]
+default_model = "gemini-3.1-pro"
+fast_model = "gemini-3-flash"
+flash_threshold = "simple"
+max_output_tokens = 65536
+chunking_threshold = 32000
+
+[models.nano_banana]
+# nano-banana-2 = Gemini 3.1 Flash Image (fast, cheap ~$0.067/1K image)
+# nano-banana-pro = Gemini 3 Pro Image (highest quality ~$0.134/1K image)
+default_model = "nb2"          # alias: flash, nb2
+quality_model = "pro"          # alias: pro, nb-pro
+default_size = "1K"
+ui_mockup_size = "2K"
+# Usage: nano-banana "prompt" -m nb2 -s 2K -a 16:9 -d assets/ai-gen/{date}/nano-banana-2/
+
+[models.local_llm]
+endpoint = "http://localhost:11434"
+model = "qwen2.5-coder:32b"
+always_local = []
+require_eval = true
+
+[models.claude_teams]
+max_parallel_threads = 3
+use_for = []
+
+[models.effort_levels.claude]
+# Claude uses adaptive thinking by default; budget_tokens deprecated on Opus 4.6
+levels = ["adaptive", "extended"]
+default = "adaptive"
+note = "Escalate to extended only when blocked with concrete artifacts"
+
+[models.effort_levels.codex]
+# GPT-5.3-Codex graduated reasoning
+levels = ["none", "low", "medium", "high", "xhigh"]
+default = "medium"
+note = "Graduate based on task complexity; xhigh for deep analysis only"
+
+[models.effort_levels.gemini]
+# Gemini 3.1 Pro/Flash thinking config
+levels = ["none", "low", "medium", "high"]
+default = "medium"
+note = "Flash defaults to low; Pro defaults to medium"
+
+[models.effort_levels.nano_banana]
+# Nano Banana Pro — image/asset generation
+levels = ["standard", "quality"]
+default = "standard"
+note = "Quality mode for final assets; standard for drafts/iterations"
+
+[checkpoints]
+plan_review = "ask"
+pr_cross_review = "ask"
+debug_escalation = "ask"
+creative_model_selection = "ask"
+
+[thresholds]
+files_changed_suggest_review = 10
+security_sensitive_patterns = [
+    "auth", "crypto", "token", "password", "secret",
+    "injection", "sanitiz", "escap"
+]
+suggest_gemini_for_context_above = 150000
+suggest_codex_debug_after_cycles = 2
+
+[asset_pipeline]
+output_dir = "assets/ai-gen"
+structure = "{date}/{model}/{filename}"
+store_prompts = true
+store_seeds = true
+store_metadata = true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER FLAGS — R2 policy: Opus/Sonnet default to claude primary.
+# ICA for Sonnet is an explicit per-task opt-in. See provider-routing-spec.md §2.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[models.providers]
+# Maps each model class to its default provider and whether cost-shift is allowed.
+# "default_provider" = the provider used when no explicit provider is set in frontmatter.
+# "cost_shift_allowed" = whether a task may opt in to a non-primary provider (R2).
+# "cost_shift_requires_explicit" = whether the opt-in must be a per-task override
+#    (true = no phase-level default allowed for core work).
+
+[models.providers.opus]
+default_provider = "claude"
+cost_shift_allowed = false
+cost_shift_requires_explicit = true
+note = "Opus MUST stay on claude primary. Never offload orchestration/verdict work."
+
+[models.providers.sonnet]
+default_provider = "claude"
+cost_shift_allowed = true
+cost_shift_requires_explicit = true
+note = "R2: core Sonnet implementation defaults to claude. ICA is explicit per-task opt-in only."
+
+[models.providers.haiku]
+default_provider = "ica"
+cost_shift_allowed = true
+cost_shift_requires_explicit = false
+note = "Haiku mechanical/extraction work defaults to ICA free-tier. No opt-in needed."
+
+[models.providers.gpt_5_3_codex]
+default_provider = "codex"
+cost_shift_allowed = false
+cost_shift_requires_explicit = false
+note = "Codex is the only provider for gpt-5.3-codex. No routing decision needed."
+
+[models.providers.gemini]
+default_provider = "gemini"
+cost_shift_allowed = false
+cost_shift_requires_explicit = false
+note = "Gemini models default to gemini provider. ICA bridge is a fallback only. Current models: gemini-3-flash, gemini-3.1-pro."
+
+[models.providers.bob_local]
+default_provider = "bob"
+cost_shift_allowed = false
+cost_shift_requires_explicit = false
+note = "bob-local is exclusive to the bob provider."
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER PROFILES — named execution profiles per provider.
+# Profiles are referenced in task-table Provider/Profile columns and wave-plan phases.
+# Full profile semantics: .claude/specs/provider-routing-spec.md §3
+# ──────────────────────────────────────────────────────────────────────────────
+
+[models.provider_profiles.claude]
+# Claude profiles are always null; included for completeness/schema uniformity.
+profiles = ["null"]
+default_profile = "null"
+
+[models.provider_profiles.ica]
+profiles = ["free-tier", "sonnet-tier", "opus-tier", "continuity-opt-in", "continuity-disabled"]
+default_profile = "free-tier"
+note = "free-tier = Haiku cost-shifted; sonnet-tier = Sonnet explicit opt-in; continuity-opt-in = --continue flag active."
+
+[models.provider_profiles.codex]
+profiles = ["sandbox=read-only", "sandbox=workspace-write", "sandbox=danger-full-access"]
+default_profile = "sandbox=read-only"
+note = "Sandbox escalates with effort: none/low=read-only; medium/high=workspace-write; xhigh=danger-full-access."
+
+[models.provider_profiles.bob]
+profiles = ["isolated", "interactive"]
+default_profile = "isolated"
+note = "Bob output is NEVER auto-applied. Validation gate required in both profiles."
+
+[models.provider_profiles.gemini]
+profiles = ["web-search=on", "web-search=off"]
+default_profile = "web-search=on"
+note = "Web search is on by default for gemini provider; disable for pure code-reading tasks."
+
+# ──────────────────────────────────────────────────────────────────────────────
+# OFFLOAD THRESHOLDS — conditions under which offload to non-primary providers
+# is recommended. Complements [thresholds] above.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[models.offload_thresholds]
+# Haiku offload: all mechanical/extraction/doc-gen tasks go to ICA free-tier by default.
+haiku_mechanical_to_ica = true
+
+# Sonnet offload: only when task is EXPLICITLY mechanical + non-core AND task author has
+# set provider: ica in the task table. Never a phase-level default (R2).
+sonnet_offload_requires_explicit_override = true
+
+# Codex escalation: after this many failed local debug cycles.
+codex_debug_escalation_after_cycles = 2
+
+# Gemini threshold: suggest Gemini when context exceeds this token count.
+suggest_gemini_above_tokens = 150000
+
+# Bob threshold: only for isolated bounded tasks with < N lines of output expected.
+bob_max_expected_output_lines = 500
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CI ASSERTIONS — checked by the P1 CI gate and the delegation-router at route time.
+# Fail-fast if these invariants are violated.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[ci_assertions]
+# The CI gate checks [models.providers], [models.codex], and [models.gemini] — the routing
+# config sections. It does NOT check [models.defaults], which uses versioned Claude API
+# model strings (e.g. "claude-sonnet-4-6") for the native API client, not plugin class names.
+# The router routes agentic coding/reasoning work across claude/ica/bob/gemini/codex only;
+# creative-generation models (image, video) and versioned API client strings are excluded.
+every_model_has_plugin_entry = true
+
+# Models excluded from the plugin-entry check:
+#   1. Creative-generation tools (image/video) — have their own skill pipelines, not
+#      delegation-router providers.
+#   2. Versioned Claude API client strings from [models.defaults] — these are native
+#      Claude API identifiers used by the API client layer, not delegation-router plugin names.
+#      The delegation-router uses class names (opus/sonnet/haiku) resolved via [models.providers].
+excluded_from_plugin_check = [
+    # Creative-generation — image/video tools, out of router scope:
+    "nano-banana-2",      # Gemini 3.1 Flash Image — image gen skill, not a routing provider
+    "nano-banana-pro",    # Gemini 3 Pro Image — image gen skill, not a routing provider
+    "nb2",               # alias for nano-banana-2
+    "pro",               # alias for nano-banana-pro
+    "sora-2",            # video generation — not a routing provider
+    # Versioned Claude API client strings ([models.defaults]) — not delegation-router plugin names:
+    "claude-sonnet-4-6", # API client identifier; router uses class name "sonnet" via [models.providers]
+    "claude-haiku-4-5",  # API client identifier; router uses class name "haiku"
+    "claude-opus-4-6",   # API client identifier; router uses class name "opus"
+]
+
+# The fallback_* chains in provider-plugins.toml [routing_rules] must not reference
+# a provider/model combination that does not appear in [[providers.X.models]].
+fallback_chains_reference_valid_models = true
+
+# deterministic_providers and nondeterministic_providers must be disjoint sets.
+provider_determinism_sets_disjoint = true
+
+# No provider may appear in both deterministic_providers and nondeterministic_providers.
+no_provider_in_both_determinism_sets = true
+
+# Every provider in routing_rules.deterministic_providers / nondeterministic_providers
+# must have a corresponding [providers.<id>] section in provider-plugins.toml.
+all_determinism_classified_providers_have_plugin_entry = true
