@@ -1,0 +1,158 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Feature Contract Frontmatter Schema"
+type: object
+description: "Schema for Tier 1 Feature Contract document frontmatter (3–8 pt features replacing PRD + Implementation Plan)."
+
+allOf:
+  - $ref: "./envelope.schema.yaml"
+  - type: object
+    required:
+      - schema_version
+      - doc_type
+      - title
+      - description
+      - status
+      - created
+      - updated
+      - feature_slug
+      - category
+      - estimated_points
+      - tier
+      - owner
+    properties:
+      schema_version:
+        type: integer
+        enum: [2]
+
+      doc_type:
+        type: string
+        enum: [feature_contract]
+
+      title:
+        type: string
+        minLength: 3
+        maxLength: 256
+
+      description:
+        type: string
+        minLength: 10
+        maxLength: 512
+
+      status:
+        type: string
+        enum:
+          - draft
+          - approved
+          - in-progress
+          - completed
+          - deferred
+          - cancelled
+
+      created:
+        type: string
+        format: date
+
+      updated:
+        type: string
+        format: date
+
+      feature_slug:
+        type: string
+        minLength: 2
+        maxLength: 128
+        pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+
+      category:
+        type: string
+        enum:
+          - features
+          - enhancements
+          - refactors
+          - harden-polish
+          - infrastructure
+
+      estimated_points:
+        type: integer
+        minimum: 1
+        maximum: 20
+
+      tier:
+        type: integer
+        enum: [1]
+
+      owner:
+        type: string
+        minLength: 2
+        maxLength: 128
+
+      # Optional fields
+      priority:
+        type: string
+        enum: [low, medium, high]
+
+      risk_level:
+        type: string
+        enum: [low, medium, high]
+
+      changelog_required:
+        type: boolean
+        default: true
+
+      related_documents:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+        default: []
+
+      spike_ref:
+        type: ["string", "null"]
+        minLength: 3
+        maxLength: 256
+        default: null
+
+      prd_ref:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+            maxLength: 256
+        default: null
+        description: "Null for Tier 1; set if feature is promoted to Tier 2."
+
+      plan_ref:
+        oneOf:
+          - type: "null"
+          - type: string
+            minLength: 3
+            maxLength: 256
+        default: null
+        description: "Null for Tier 1."
+
+      commit_refs:
+        type: array
+        items:
+          type: string
+          minLength: 7
+          maxLength: 64
+        default: []
+
+      pr_refs:
+        type: array
+        items:
+          type: string
+          minLength: 3
+          maxLength: 64
+        default: []
+
+      files_affected:
+        oneOf:
+          - type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 256
+          - type: string
+          - type: integer
+        default: []

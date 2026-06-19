@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillmeat.internal/schemas/execution-graph",
+  "title": "ExecutionGraph",
+  "description": "Structured args envelope passed by Opus pre-flight to every execution-style workflow. Built from wave_plan frontmatter; consumed verbatim by the workflow script. No shell/FS access from the script — all derivation happens in Opus.",
+  "type": "object",
+  "required": ["waves", "tier", "plan_ref", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "waves": {
+      "type": "array",
+      "description": "Sequential dependency levels. Each wave runs to completion before the next begins.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Wave"
+      }
+    },
+    "tier": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "Execution tier. Tier 1 = execute-contract (single sprint); Tier 2/3 = execute-plan (wave-driven)."
+    },
+    "plan_ref": {
+      "type": "string",
+      "description": "Relative path from repo root to the source implementation plan file. Used by agents to read full plan context."
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 timestamp passed from Opus (not generated inside the script — Date.now() and Math.random() are forbidden)."
+    },
+    "budget_total": {
+      "type": "integer",
+      "description": "Token ceiling for this run, derived from the plan's effort_estimate. Mapped to budget.total in the workflow.",
+      "minimum": 0
+    },
+    "dry_run": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the workflow returns the parsed graph for inspection without spawning implementation agents."
+    }
+  },
+  "$defs": {
+    "Wave": {
+      "type": "object",
+      "required": ["id", "phases"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable wave identifier, e.g. 'wave-1'."
+        },
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Phase"
+          }
+        }
+      }
+    },
+    "Phase": {
+      "type": "object",
+      "required": ["id", "title", "tasks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable phase identifier, e.g. 'phase-1'."
+        },
+        "title": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["A", "B", "C", "D", "E"],
+          "description": "Delegation mode per delegation-modes.md. Mode D phases are workflow boundaries — the script must return needs_opus without executing them."
+        },
+        "review_intensity": {
+          "type": "string",
+          "enum": ["standard", "tier3", "council"],
+          "default": "standard",
+          "description": "Reviewer gate routing. 'council' routes to agentType:'council-review'; 'tier3' routes to 'karen'; 'standard' routes to 'task-completion-validator'."
+        },
+        "isolation": {
+          "type": "string",
+          "enum": ["worktree", "shared"],
+          "default": "shared",
+          "description": "When 'worktree', each implementation agent receives isolation:'worktree'. Required for phases with parallel file-mutating tasks."
+        },
+        "phase_strategy": {
+          "type": "string",
+          "enum": ["static", "adaptive"],
+          "default": "static",
+          "description": "When 'adaptive', tasks cannot be enumerated up front; the workflow spawns agentType:'phase-owner' instead of dispatching per-task agents directly."
+        },
+        "fix_agent": {
+          "type": "string",
+          "description": "Optional override agentType for fix-loop agents. Defaults to the assigned_to of the first completed task in the phase."
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Task"
+          }
+        },
+        "batches": {
+          "type": "array",
+          "description": "List of batches; each batch is a list of Task objects run in parallel; batches run serially (file-ownership ordering).",
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Task"
+            }
+          }
+        }
+      }
+    },
+    "Task": {
+      "type": "object",
+      "required": ["id", "prompt", "assigned_to"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable task identifier, e.g. 'TASK-1.1'. Used as agent label and in progress YAML."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Full agent prompt including Mode marker, implementation instructions, and file paths. Must include 'Do NOT git add/commit/push/stash' for implementation agents."
+        },
+        "assigned_to": {
+          "type": "string",
+          "description": "agentType string referencing a registered agent definition (e.g. 'python-backend-engineer', 'ui-engineer-enhanced'). Prefer agentType over inline prompts to reuse tested agent definitions with their skills/permissions/memory.",
+          "examples": [
+            "python-backend-engineer",
+            "ui-engineer-enhanced",
+            "ui-engineer",
+            "frontend-developer",
+            "backend-typescript-architect",
+            "data-layer-expert",
+            "refactoring-expert",
+            "openapi-expert",
+            "feature-sprint-executor",
+            "codebase-explorer",
+            "task-completion-validator",
+            "karen",
+            "council-review"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "description": "Model override for this task. Omit to inherit session model. Use 'haiku' for mechanical search/extraction; 'sonnet' for implementation (default); 'opus' for deep reasoning/orchestration.",
+          "examples": ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"]
+        },
+        "effort": {
+          "type": "number",
+          "description": "Story-point effort estimate from the plan. Used to weight budget allocation and set scope expectations.",
+          "minimum": 0
+        },
+        "files_affected": {
+          "type": "array",
+          "description": "Relative paths of files this task is expected to modify. Used by Opus to precompute file-ownership batches. Mode D detection: if any path touches auth/payments/migrations/deletion signal files, mode should be 'D'.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isolation": {
+          "type": "string",
+          "enum": ["worktree", "shared"],
+          "description": "Per-task isolation override. Inherits from parent Phase.isolation if omitted."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["A", "B", "C", "D", "E"],
+          "description": "Per-task mode override. Inherits from parent Phase.mode if omitted."
+        }
+      }
+    }
+  }
+}

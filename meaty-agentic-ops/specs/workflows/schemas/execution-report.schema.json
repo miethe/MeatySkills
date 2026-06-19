@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillmeat.internal/schemas/execution-report",
+  "title": "ExecutionReport",
+  "description": "Structured return value from every execution-style workflow. Consumed by Opus post-run for cross-wave merges, progress YAML updates, plan-completion artifact, and Mode D escalation handling.",
+  "type": "object",
+  "required": ["status", "report"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["complete", "blocked", "needs_opus"],
+      "description": "'complete': all waves finished, all reviewers approved. 'blocked': a Mode D boundary was hit — Opus must run that phase interactively. 'needs_opus': reviewer escalation unresolved, budget exhausted, or a human-assigned (HITL) task gates the next wave — Opus must adjudicate."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Present when status is 'blocked' or 'needs_opus'. Indicates the specific cause. 'hitl_required': the wave's agent work + reviewer gates completed but one or more human-assigned tasks must be signed off before advancing (see hitl_tasks). 'scope_exceeds_single_pass' / 'spike_required' / 'plan_only' / 'plan_structure_failed' are autopilot-lane reasons (auto-feature workflow): respectively, the planned work exceeds single-pass capacity and needs full planning; unresolved research unknowns require a SPIKE/exploration first; planning ran with plan_only=true and awaits a go-ahead to execute; or the plan-structuring stage failed and Opus must read the plan artifact on disk.",
+      "enum": ["mode_d", "reviewer_unresolved", "budget_exhausted", "hitl_required", "scope_exceeds_single_pass", "spike_required", "plan_only", "plan_structure_failed"]
+    },
+    "blocked_phase": {
+      "type": "string",
+      "description": "When status is 'blocked', the id of the phase that triggered the Mode D boundary."
+    },
+    "hitl_tasks": {
+      "type": "array",
+      "description": "Present when reason is 'hitl_required'. The pending human-assigned tasks gating progression. Opus coordinates the human review (future: external task-tracker / intent-tree review request), then relaunches with these tasks marked complete / trimmed.",
+      "items": {
+        "type": "object",
+        "required": ["phase", "id", "assigned_to"],
+        "additionalProperties": false,
+        "properties": {
+          "phase": { "type": "string", "description": "Phase id the HITL task belongs to." },
+          "id": { "type": "string", "description": "Task id from the ExecutionGraph." },
+          "assigned_to": { "type": "string", "description": "The human assignee (non-agent), e.g. a username." },
+          "prompt": { "type": "string", "description": "What the human is asked to validate / sign off." }
+        }
+      }
+    },
+    "report": {
+      "type": "array",
+      "description": "Per-wave results in execution order. Partial — may contain only completed waves if the run was interrupted.",
+      "items": {
+        "$ref": "#/$defs/WaveResult"
+      }
+    },
+    "autopilot": {
+      "type": "object",
+      "description": "Present only on returns from the auto-feature (autopilot) workflow. Carries the classification + the durable plan artifact location so Opus can act on escalations or merge on success. Other execution workflows omit this field.",
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "type": "integer", "minimum": 0, "maximum": 3, "description": "Tier the planner classified the request into." },
+        "effort_points": { "type": "number", "description": "Story-point estimate from the planner." },
+        "wave_count": { "type": "integer", "description": "Sequential dependency depth of the planned ExecutionGraph." },
+        "phase_count": { "type": "integer", "description": "Total phases across all waves." },
+        "file_count": { "type": "integer", "description": "Estimated count of files affected." },
+        "plan_artifact_path": { "type": "string", "description": "Repo-relative path to the durable plan/contract artifact the planner wrote. Survives escalation so full planning gets a head start." },
+        "execution_target": { "type": "string", "enum": ["execute-contract", "execute-plan", "none"], "description": "Which engine the autopilot dispatched to (or 'none' when it escalated before executing)." },
+        "escalation_recommendation": { "type": "string", "description": "Human-readable next-step recommendation when the feasibility gate escalated." }
+      }
+    }
+  },
+  "$defs": {
+    "WaveResult": {
+      "type": "object",
+      "required": ["wave", "phases"],
+      "additionalProperties": false,
+      "properties": {
+        "wave": {
+          "type": "string",
+          "description": "Wave id matching the ExecutionGraph wave."
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PhaseResult"
+          }
+        }
+      }
+    },
+    "PhaseResult": {
+      "type": "object",
+      "required": ["phase", "tasks", "verdict"],
+      "additionalProperties": false,
+      "properties": {
+        "phase": {
+          "type": "string",
+          "description": "Phase id matching the ExecutionGraph phase."
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TaskResult"
+          }
+        },
+        "verdict": {
+          "$ref": "#/$defs/ReviewerVerdict"
+        },
+        "fix_cycles": {
+          "type": "integer",
+          "description": "Number of fix-loop iterations consumed. 0 means reviewer approved on first pass.",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "escalate": {
+          "type": "boolean",
+          "description": "True when fix_cycles reached the maximum and verdict.approved is still false. Triggers needs_opus status at wave level."
+        },
+        "files_touched": {
+          "type": "array",
+          "description": "Union of files_affected across completed tasks in this phase. Used by Opus to scope worktree merge.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "description": "Structured blockers preventing phase completion.",
+          "items": {
+            "$ref": "#/$defs/Blocker"
+          }
+        },
+        "hitl_gates": {
+          "type": "array",
+          "description": "Pending human-assigned (HITL) tasks in this phase. Aggregated at wave level into the top-level hitl_tasks field, which triggers reason:'hitl_required'.",
+          "items": {
+            "type": "object",
+            "required": ["phase", "id", "assigned_to"],
+            "additionalProperties": false,
+            "properties": {
+              "phase": { "type": "string" },
+              "id": { "type": "string" },
+              "assigned_to": { "type": "string" },
+              "prompt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "TaskResult": {
+      "type": "object",
+      "required": ["id", "assigned_to", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Task id from ExecutionGraph."
+        },
+        "assigned_to": {
+          "type": "string",
+          "description": "agentType used."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["completed", "skipped", "failed"],
+          "description": "'skipped' when agent() returned null (user skipped). 'failed' when the agent threw and was dropped by parallel()."
+        },
+        "commit_sha": {
+          "type": "string",
+          "description": "Git SHA of the commit authored by this agent in its worktree. Null/absent if no commit was made (e.g. read-only task, or task failed).",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief summary of what the agent did. At most 2 sentences."
+        }
+      }
+    },
+    "ReviewerVerdict": {
+      "type": "object",
+      "required": ["approved", "reviewer_type"],
+      "additionalProperties": false,
+      "properties": {
+        "approved": {
+          "type": "boolean"
+        },
+        "reviewer_type": {
+          "type": "string",
+          "description": "agentType of the reviewer that produced this verdict.",
+          "enum": [
+            "task-completion-validator",
+            "karen",
+            "council-review",
+            "code-reviewer",
+            "senior-code-reviewer",
+            "none"
+          ]
+        },
+        "required_fixes": {
+          "type": "array",
+          "description": "Present when approved is false. Each item is an actionable fix instruction for the fix-loop agent.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "council_artifacts": {
+          "$ref": "#/$defs/CouncilArtifacts",
+          "description": "Present only when reviewer_type is 'council-review'. Contains the ARC run artifact paths."
+        }
+      }
+    },
+    "CouncilArtifacts": {
+      "type": "object",
+      "description": "Paths to the ARC run artifacts produced by a council-review gate. All paths are relative to repo root.",
+      "required": ["run_dir"],
+      "additionalProperties": false,
+      "properties": {
+        "run_dir": {
+          "type": "string",
+          "description": "Path to the run directory, e.g. '.claude/skills/council-review/runs/2026-06-01-execute-plan-phase-2'."
+        },
+        "findings_yaml": {
+          "type": "string",
+          "description": "Path to findings.yaml within the run directory."
+        },
+        "scorecard_json": {
+          "type": "string",
+          "description": "Path to scorecard.json within the run directory."
+        },
+        "risk_register_yaml": {
+          "type": "string",
+          "description": "Path to risk_register.yaml within the run directory."
+        },
+        "decision_record_md": {
+          "type": "string",
+          "description": "Path to decision_record.md within the run directory."
+        },
+        "validation_plan_md": {
+          "type": "string",
+          "description": "Path to validation_plan.md within the run directory."
+        }
+      }
+    },
+    "Blocker": {
+      "type": "object",
+      "required": ["description"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string",
+          "description": "Task that surfaced the blocker, if applicable."
+        },
+        "resolution_hint": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

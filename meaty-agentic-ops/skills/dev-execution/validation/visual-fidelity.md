@@ -1,0 +1,116 @@
+# Visual-Fidelity Gate (sketch/mockup-faithful UI work)
+
+A gate for any phase that rebuilds or restyles UI against a **visual reference**
+(design sketches, Figma frames, mockup PNGs). Behavioral gates — `tsc`, ESLint,
+vitest, a11y — **never** catch a screen that compiles cleanly but looks wrong, is
+missing an element, or silently renders zeros. This protocol is how you catch it.
+
+Distilled from the Command Center v3 visual-rebuild AAR (2026-06-11). Every step
+below maps to a real failure or a real save from that run.
+
+> **Scope.** Run this gate when `ui_touched` **and** a visual reference exists.
+> Capture tooling is owned by the `chrome-devtools` (Puppeteer) and `demo-foundry`
+> (Playwright) skills — **delegate capture to them, don't reinvent it here.** This
+> doc owns the *review discipline* that wraps capture. The capture mechanics
+> (Playwright-to-disk, dnd-kit pointer choreography) are in the
+> `playwright-visual-review-capture` project memory.
+
+---
+
+## The five-step protocol
+
+### 1. Capture by structure, assert identity — never trust a text selector
+
+The only P0 of the v3 run was self-inflicted: a capture script used
+`get_by_text("Northwind Web Redesign").first`, which matched an *active item card*
+that reused the same title as the *project row* it meant to click. The reviewer
+then judged a screen that was never captured.
+
+- **Select by structural class / `data-testid`, never by visible text.** Seeds and
+  demos reuse titles across entity types; text selectors silently bind the wrong node.
+- **Assert a screen-identity marker before screenshotting.** Wait for / assert an
+  element unique to the target surface (an expected header class, a route-scoped
+  test-id) so a wrong-surface capture **fails loudly** instead of producing a
+  plausible-but-wrong artifact.
+- See R11 in the same AAR (and the seed-distinct-titles lesson): give demo entities
+  **distinct titles across types** so neither capture nor reviewer language is ambiguous.
+
+```js
+// WRONG — binds whichever node renders this text first
+await page.getByText("Northwind Web Redesign").first().click();
+
+// RIGHT — structural selector + identity assertion before the shot
+await page.locator('[data-testid="project-row"][data-project-id="proj_nw"]').click();
+await expect(page.locator('.project-drilldown__header')).toBeVisible(); // identity gate
+await page.screenshot({ path: 'review-shots/s3-project-drilldown.png' });
+```
+
+### 2. Capture to disk with delegate-visible artifacts
+
+- **Playwright-to-disk** (system Python + cached browsers) is the capture mechanism:
+  the PNGs land on disk where a downstream review delegate can `Read` them.
+- **Chrome MCP screenshots are invisible to delegates** — they live in the
+  orchestrator's tool stream, not on disk. Never hand a reviewer a Chrome-MCP shot.
+- **dnd-kit / drag flows need manual pointer choreography** (`page.mouse.down/move/up`);
+  `page.drag_and_drop` fails on dnd-kit sensors. Pattern: `playwright-visual-review-capture` memory.
+
+### 3. Region-crop the build shots before dispatching a reviewer (R1 — highest leverage)
+
+The Read-tool image pipeline **downsamples** full-page shots (a 1600×1000 PNG comes
+back illegible). Four of the v3 reviewer's "missing element" findings were elements
+that existed but were too small to read — the reviewer had zoom crops of the
+*sketches* but only a downsampled full-page image of the *build*. **Asymmetric
+evidence quality produces asymmetric errors.**
+
+- Auto-generate **region crops of the build shots** on the *same tile grid* you used
+  to crop the reference sketches (e.g. a 6-tile grid per screen).
+- Never make a reviewer judge fine detail from a single full-page image. Pair each
+  sketch crop with the matching build crop at the same zoom.
+
+### 4. Spot-check capture correctness yourself, then dispatch the reviewer (R9)
+
+Before spending a review delegate, the orchestrator spot-reads **1–2 interactive-state
+shots** to confirm the captures show the surfaces they claim. Cheap insurance: the
+unchecked s3 capture is exactly what produced the false P0 above.
+
+- One opus-tier read-only delegate is the right reviewer (see the free read-only delegate pattern — a
+  free opus-tier delegate carried the v3 adversarial review; paid subagents were not needed).
+- Hand the reviewer **paired crops** (sketch ↔ build) per region, not full-page images.
+
+### 5. Adjudicate every finding against zoom crops before writing code (R3 — mandatory)
+
+The review is **evidence, not a punch list.** Re-verify every reviewer claim against
+full-resolution crops *before* touching code, and classify each finding:
+
+| Disposition | Meaning | Action |
+|-------------|---------|--------|
+| **real** | Genuine fidelity miss, confirmed at full res | Fix it |
+| **capture artifact** | The shot was wrong/stale, not the build | Re-capture, re-judge |
+| **misread** | Element exists but reviewer couldn't see it (downsample) | Refute with a zoom crop; no code change |
+| **accepted deviation** | Intentional, in-scope divergence from the reference | Document; no code change |
+
+Write the disposition for each finding into the review report. In the v3 run, of 10
+ranked findings: 4 real, 2 capture artifacts, 4 misreads — adjudication prevented
+both under-reaction (missing the 4 real) and over-reaction (4 needless changes).
+
+---
+
+## Fidelity gaps that are really schema gaps (R12)
+
+When a reference shows data the model does not have (run target/thumbnails, packet
+harness-target / skill-pack / context-refs, owner avatar stacks), **do not fake it in
+the UI to match the picture.** File a data-model follow-up and note the deferral in
+the review report. Faked UI data is a worse lie than an honest gap.
+
+---
+
+## Evidence & integration
+
+- Emit crops + full shots under `.claude/evidence/phase-<N>/` (or a run-scoped
+  `review-shots/` + `crops/`), consistent with the `planning` skill's
+  `visual_evidence_required` AC field and `debugging`'s `smoke_gate` retrospective.
+- This gate composes with the standard gates in [`quality-gates.md`](./quality-gates.md):
+  run behavioral gates first (they're cheap and block hard), then this visual gate.
+- Cross-refs: the free read-only delegate pattern "Build-and-Gate Pre-Flight" item 3 (visual grounding for
+  FE delegates); `planning/references/ac-schema.md` (`visual_evidence_required`);
+  `debugging/modes/post-incident-retrospective.md` (`smoke_gate`).
