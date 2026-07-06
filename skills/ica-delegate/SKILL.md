@@ -4,15 +4,34 @@ description: >-
   Delegate bounded agentic work to IBM ICA-provisioned Claude instances via ~/ica-claude.sh.
   Use when offloading parallel subtasks, accessing free-tier models for mechanical work,
   or cost-shifting bounded tasks to a secondary subscription.
-version: 2.2
-app_version: "2026-06-08"
-updated: 2026-06-08
+version: 2.5
+app_version: "2026-06-11"
+updated: 2026-07-06
 spec: ./SPEC.md
 ---
 
 # ICA Delegate
 
 Delegate bounded work to a secondary Claude subscription accessed through the IBM ICA gateway. The transport is `~/ica-claude.sh -p "prompt"` with model, turn, and output flags. Each invocation is independent by default — no shared state with the calling session.
+
+> ### 🔑 You do NOT set, pass, or manage an API key
+> `~/ica-claude.sh` **already loads an active key** (`CC1` by default) from `~/.dotfiles/ICA_CLAUDE`
+> on every call, and points Claude Code at the ICA gateway for you. For a normal delegation there is
+> **nothing to configure** — just run the wrapper:
+> ```bash
+> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-4-6[1m]' --dangerously-skip-permissions --max-turns 20
+> ```
+> **Do NOT** set `ANTHROPIC_API_KEY`, `ICA_CLAUDE_CODE_API_KEY`, or `ANTHROPIC_AUTH_TOKEN`; **do NOT**
+> pass `--api-key`; **do NOT** `export` a key. Those either do nothing or break the wrapper's own
+> auth. A key is already active — you don't pick one unless you deliberately want a *different* named
+> key for parallel runs (see **Key Rotation**).
+>
+> The only two key-related env vars you might ever set (both optional, both advanced):
+> - `ICA_KEY=<NAME>` — select a **named block** to run on. The value is a block **name** like `CC1`,
+>   `CC2`, … `CC6` — **never a number** (`ICA_KEY=1` ❌) and **never a raw `sk-…` token**.
+> - `ICA_AUTH_TOKEN=sk-…` — supply a **raw token** ad-hoc (bypasses the key file entirely).
+>
+> These are different inputs: a **name** goes in `ICA_KEY`, a **token** goes in `ICA_AUTH_TOKEN`.
 
 ## When To Use
 
@@ -30,10 +49,28 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 | Anti-Pattern | Reason |
 |--------------|--------|
 | Tasks requiring the current session's MCP tools, memory, or project context | Delegates cannot access the calling session's MCP servers |
-| Tasks requiring more than 200k context (standard models only) | Standard models hard-capped at 200k; use `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `sonnet-4-6[1m]`) for tasks up to ~800k tokens |
+| Tasks requiring more than 200k context (standard models only) | Standard models hard-capped at 200k; use `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) for tasks up to ~800k tokens |
 | Interactive or multi-turn conversation with the user | Each invocation is a single Bash call; not interactive |
 | Tasks requiring models unavailable on the gateway | Check model inventory first |
 | Work that needs the primary session's file-edit capabilities | Delegate reads file paths, not edits in the calling workspace |
+
+## The Split That Works (orchestrator vs free ICA)
+
+On a taste-sensitive, multi-phase build (the Command Center v3 visual rebuild),
+paid subagents were **never needed** — this split delivered the whole feature:
+
+| Keep in the orchestrator session | Delegate to free ICA |
+|----------------------------------|----------------------|
+| Token-budget-sensitive work; the design-system / CSS application | Seed authoring, demo content, fixtures |
+| Novel components and anything where **taste / fidelity** is the deliverable | Test maintenance and mechanical wiring |
+| The **fix loop** (iterate → screenshot → compare) | Bounded backend enrichment with a clear contract |
+| Final adjudication and merge | One **opus-ICA read-only delegate** for the adversarial / visual-fidelity review |
+
+Heuristic: delegate to ICA when the task is **mechanical and ≤2–3 files in scope**
+with a clear deliverable; keep it in-session when the output is judged by taste, when
+it touches the design system, or when it's a tight iterate-and-verify loop. Whatever
+you delegate, re-run its gates in-session before trusting it (see Build-and-Gate
+Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 
 ## Confidence Anchor
 
@@ -42,9 +79,28 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 | `~/ica-claude.sh` exists and is executable | `test -x ~/ica-claude.sh` passes |
 | API key file present | `~/.dotfiles/ICA_CLAUDE` contains `ICA_CLAUDE_CODE_API_KEY=...` |
 | Gateway endpoint | `https://api.nextgen-beta.ica.ibm.com/ica` |
-| Default model in script | `claude-opus-4-8[1m]` (always override with `--model`) |
+| Default model in script | `claude-opus-4-8[1m]` via `ANTHROPIC_MODEL`, **and** `model: "claude-opus-4-8[1m]"` in `ica-settings.json` — both must be `[1m]` or the no-`--model` default silently downgrades to 200k (see "Durable fix" below). Still prefer an explicit `--model`. |
 | Free-tier models | `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, `ibm/granite-4-h-small` |
-| Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `sonnet-4-6[1m]`) — confirmed 2026-06-08 |
+| Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) — confirmed 2026-06-08 |
+
+## Prefer `[1m]` for Opus and Sonnet — Always
+
+**When delegating to ICA, always use the `[1m]` (1M-context) variant for Claude Opus and Sonnet** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work.
+
+| Class | Plain (avoid) | Use this `[1m]` variant |
+|-------|---------------|-------------------------|
+| Opus 4.8 (default) | `claude-opus-4-8` | `claude-opus-4-8[1m]` (or `opus[1m]` alias) |
+| Opus 4.7 | `claude-opus-4-7` | `claude-opus-4-7[1m]` |
+| Opus 4.6 | `claude-opus-4-6` | `claude-opus-4-6[1m]` |
+| Sonnet 4.6 | `claude-sonnet-4-6` | `claude-sonnet-4-6[1m]` |
+
+> ⚠️ **Keep the `claude-` prefix on the `[1m]` id.** The bare form `sonnet-4-6[1m]` **401s** on teams limited to the `global-models` group: the gateway strips `[1m]`, is left with the un-prefixed `sonnet-4-6` (not in `global-models`), and rejects it. Use the fully-prefixed `claude-sonnet-4-6[1m]` (probed working 2026-06-10). The `opus[1m]` alias is fine (it routes to `claude-opus-4-8[1m]`), but for Sonnet there is no bare alias — always write `claude-sonnet-4-6[1m]`.
+>
+> ⚠️ **Quote the model arg in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts the whole command with `no matches found` (NO_MATCH is fatal) and nothing runs. Always: `--model 'claude-sonnet-4-6[1m]'`.
+
+Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — used for mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists. GPT and Gemini are served at their native windows. The plain 200k Opus/Sonnet IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
+
+> The delegation-router enforces the same rule automatically: for ICA-served Opus/Sonnet it emits the `[1m]` model_id and keeps the plain 200k ID as a demoted fallback (see `model-registry.yaml` → "ICA 1M-CONTEXT PREFERENCE").
 
 ## ICA Gateway Model Routing (Agent Tool)
 
@@ -58,6 +114,50 @@ When the calling agent is itself running on the ICA profile, the built-in **Agen
 | Omitted (default) | Haiku dated ID | **No** — 401 error |
 
 The ICA gateway only accepts models in the `global-models` group. Dated model IDs (e.g., `claude-haiku-4-5-20251001`) are NOT in that group. **Always specify `model: "sonnet"` or `model: "opus"` when using the Agent tool on the ICA profile.** Alternatively, delegate via `~/ica-claude.sh` (Bash tool) which handles model routing through its own `--model` flag.
+
+### Durable fix — alias remap in `ica-settings.json` (no proxy needed)
+
+The 401 above is the `haiku`/`sonnet`/`opus` **alias** resolving to a non-`global-models` id (dated Haiku, or plain 200k Sonnet). The Claude Code model-config env vars remap what those aliases resolve to, and `~/ica-claude.sh` already loads `--settings ~/.claude/ica-settings.json` — so set them there once and **every** delegate, subagent (e.g. a `model: haiku` `document-writer`), and background task on the ICA profile is fixed, with zero effect on the primary Anthropic session:
+
+```jsonc
+{
+  "model": "claude-opus-4-8[1m]",            // no-`--model` default is now 1M, not plain 200k
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.nextgen-beta.ica.ibm.com/ica",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL":   "claude-opus-4-8[1m]",   // `opus`  alias → 1M
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6[1m]", // `sonnet` alias → 1M
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL":  "claude-haiku-4-5"       // `haiku` alias + background tasks → global-models id (kills the 401)
+  }
+}
+```
+
+- `ANTHROPIC_DEFAULT_HAIKU_MODEL` controls the `haiku` alias **and** background functionality (title-gen, summaries) — both otherwise resolve to the dated id and 401. This is the fix for any subagent pinned to `model: haiku`.
+- `CLAUDE_CODE_SUBAGENT_MODEL` is a heavier alternative: it forces **all** subagents to one model, overriding their frontmatter. Avoid it unless you want to flatten every subagent to a single model — the alias remaps above are more surgical.
+- A global LiteLLM-style proxy is unnecessary: these env vars do the same remap declaratively and stay scoped to the ICA profile.
+
+### Built-in `WebSearch` / `WebFetch` — broken under ICA, NOT alias-fixable
+
+When the session runs on the ICA profile, the built-in **`WebSearch`** and **`WebFetch`** tools fail for the orchestrator **and** every delegate/subagent:
+
+```
+API Error: 400 {"message":"The provided request is not valid"}. Received Model Group=claude-haiku-4-5
+```
+
+Key differences from the Agent-tool 401 above:
+
+- It is a **400** (malformed request), not a 401 (auth/model-group). These tools pin their **own** internal `claude-haiku-4-5` model group, which the gateway rejects outright.
+- The `ANTHROPIC_DEFAULT_HAIKU_MODEL` alias remap does **NOT** fix it — these tools do not resolve through the `haiku` alias. There is no settings-level fix.
+- Overriding a subagent's `model: opus` does **not** help — the failing model group is internal to the tool, not the agent. Verified: a delegate spawned with `model: opus` hits the identical 400.
+
+**Workaround — route web work through model-routing-independent CLIs (Bash tool), never the built-ins:**
+
+| Need | Use | Why it works |
+|------|-----|--------------|
+| Web search | `firecrawl search "<query>" --limit N` (firecrawl skill) | External Firecrawl API, independent of Anthropic model routing |
+| Scrape / fetch a URL | `firecrawl scrape <url>` | same |
+| Second search source | `gemini-cli` skill (Google Search) | Routes through Google, not the ICA gateway |
+
+Firecrawl auth/credits: `firecrawl --status` (shared credit pool, ~1,000/cycle — don't burn on loops). Because these are Bash CLI calls, **delegates can use them too** — pass the recipe in the delegate prompt rather than expecting `WebSearch` to work.
 
 ## Routing Posture
 
@@ -88,7 +188,9 @@ Always include `--dangerously-skip-permissions` unless a plan explicitly instruc
 | `--continue` | Resume most recent session | Multi-call workflows where prior context matters |
 | `--resume <id>` | Resume a specific session by ID | Targeted session continuity |
 | `--no-session-persistence` | Don't save session to disk | Ephemeral/fan-out delegations |
-| `--bare` | Skip hooks, skills, plugins, MCP, auto memory, CLAUDE.md | Faster for scripted/mechanical calls |
+| `--bare` | Skip hooks, LSP, plugin sync, attribution, **auto-memory, and CLAUDE.md auto-discovery** (skills still resolve via `/name`) | Repo-launched calls — but **must be paired with explicit context re-injection** (see "Context Injection Under `--bare`") |
+| `--append-system-prompt-file <path>` | Inject a specific file's contents into the system prompt | **The bare-mode companion** — feed the root/curated CLAUDE.md without triggering full-tree discovery |
+| `--system-prompt-file <path>` | Replace (not append) the default system prompt with a file | Heavily customized delegate personas (rare) |
 | `--fallback-model <models>` | Comma-separated fallback models on overload | Resilience for premium model calls |
 | `--bg` | Start as background agent, returns immediately | Fire-and-forget tasks |
 | `--exclude-dynamic-system-prompt-sections` | Improve prompt-cache reuse | Multi-user or cross-machine fan-out |
@@ -130,22 +232,115 @@ A delegate that hits `--max-budget-usd` or `--max-turns` is **hard-killed mid-ac
 
 1. **Omit `--max-budget-usd` and tight `--max-turns`.** If you must bound, set the turn cap generously above the worst-case step count and treat the dollar figure as telemetry, not a kill switch. A mutating delegate must be allowed to *finish or roll back*, never to stop halfway.
 2. **Make the prompt's safety rails self-restoring.** Bake in: take a backup first, never destroy data (`no -v`), and an explicit "if anything fails, roll back and restore service before reporting" clause — so even an unexpected death lands closer to a recoverable state.
-3. **Always pass `--bare` when launching from inside a repo that has a large `CLAUDE.md`/rules/memory** (e.g. this project). Without it the delegate auto-loads the entire project context on startup and fails with **`Prompt is too long`** before your task even runs. `--bare` skips hooks/skills/MCP/auto-memory/CLAUDE.md; the delegate still reads task-specific docs via `--add-dir`.
+3. **Always pass `--bare` when launching from inside a repo that has a large `CLAUDE.md`/rules/memory** (e.g. this project). Without it the delegate auto-loads the entire project context on startup and fails with **`Prompt is too long`** before your task even runs. `--bare` skips hooks/skills/MCP/auto-memory/CLAUDE.md — so **re-inject the bounded root CLAUDE.md via `--append-system-prompt-file`** (and `--add-dir` for on-demand reads of deeper docs) or the delegate flies blind on conventions. See "Context Injection Under `--bare`".
 4. **Transient gateway drops happen** (`API Error: socket connection closed unexpectedly`). Add `--fallback-model` for resilience and simply retry — a single drop is not a reason to abandon bash delegation.
 5. **Sequence live ops as: read-only verify → mutate → read-only verify.** Before a mutating retry, run a cheap read-only state-check delegate so you never mutate a system whose current state you cannot confirm.
+
+## Context Injection Under `--bare` — Don't Fly Blind
+
+`--bare` is **mandatory** for any delegate launched from inside a real project (it prevents the `Prompt is too long` startup failure). But `--bare` skips **CLAUDE.md auto-discovery AND auto-memory** — so a bare delegate launched naked gets **zero project conventions**. It only knows what you put in the prompt. This is the #1 silent quality leak in bash delegation: the delegate ignores frozen-file rules, commit policy, test commands, and arch invariants it was never told about.
+
+The CLI is designed to pair `--bare` with **explicit** context re-injection. Always do this when delegating into a project:
+
+| Mechanism | What it does | Use for |
+|-----------|--------------|---------|
+| `--append-system-prompt-file <root>/CLAUDE.md` | Injects the **root** CLAUDE.md only (~3–8k tokens) — bounded, deterministic | The always-on baseline for repo delegations |
+| `--add-dir <project>` | Grants filesystem access so the delegate can **read** nested/feature CLAUDE.md and context files on demand | Let the delegate pull deeper context itself (name the paths in the prompt) |
+| Prompt path list | "Read `./packages/foo/CLAUDE.md` and `./docs/ARCH.md` before editing" | Surgical, on-demand context without inlining file contents |
+
+### Why a naked `--bare` overloads in the first place
+
+The failure is **gateway ceiling × monorepo CLAUDE.md tree**, not "ICA loads more than normal":
+- ICA `[1m]` models **self-report a 200k window**; the CLI sizes its "prompt too long" / compaction logic against that, and the beta gateway enforces a real per-request input cap well under the advertised 1M.
+- CLAUDE.md **auto-discovery** in large monorepos is huge — e.g. `skillmeat` (**121 files / ~849k chars**), `meatywiki` (**49 files / ~1.14M chars**). Auto-discovery + a large inline prompt stacks past the effective ceiling → `Prompt is too long` *before the task runs*.
+- Normal subscription subagents don't hit this: correctly-reported large window + lazy interactive CLAUDE.md loading.
+
+`--bare` removes the runaway auto-discovery; `--append-system-prompt-file` adds back **only** the bounded root instructions. Never re-enable full auto-discovery (drop `--bare`) to "fix" missing context — that reintroduces the overload.
+
+### Recommended: a curated delegate context pack
+
+For a project you delegate into repeatedly, maintain a hand-trimmed `CLAUDE.delegate.md` (or `docs/AGENT_CONTEXT.md`) holding only what a fresh delegate needs — frozen-file/ownership rules, commit policy (orchestrator commits, delegates don't), test/build commands, arch invariants. Inject it with `--append-system-prompt-file`. Best of both: project-aware **and** bounded, with zero tree-discovery risk.
+
+### Canonical repo-delegation skeleton
+
+```bash
+~/ica-claude.sh -p "Task: ...
+Project conventions are in the injected CLAUDE.md. If you touch packages/foo,
+read ./packages/foo/CLAUDE.md first. Write files incrementally.
+Deliverable: ..." \
+  --model 'claude-opus-4-8[1m]' \
+  --bare \
+  --append-system-prompt-file /path/to/project/CLAUDE.md \
+  --add-dir /path/to/project \
+  --dangerously-skip-permissions \
+  --max-turns 40 \
+  --allowedTools "Read Write Edit Bash"
+```
+
+## Build-and-Gate Pre-Flight (worktree · env · data · visual)
+
+Before any build-and-gate delegation wave, run these checks. They each map to a
+real failure that cost a session (see the Command Center one-shot AAR). "Green
+gates" do **not** prove these — every one passed unit tests while the running app
+was broken or off-brief.
+
+1. **Worktree env parity.** A git worktree does **not** inherit the main checkout's
+   untracked files — including `.env`. The Command Center build broke because the
+   v2 worktree had **no `backend/.env`**, so the backend booted with config defaults
+   (`SEED_ON_STARTUP=false`, default DB creds) that diverged from the main checkout.
+   Preflight: copy/create the worktree's `.env` (DB URL, secrets, feature/seed flags)
+   and confirm it matches the surface you'll actually run. Plus the AAR's uv traps:
+   `uv sync --reinstall-package <editable-pkg>`, `uv sync --extra dev`, and assert the
+   resolved tool path (`which pytest && pytest --version`) to catch silent PATH fallbacks.
+
+2. **Data/seed assumptions.** Tests use fixtures; the *running app* needs real data.
+   The Command Center frontend hardcodes an active-workspace slug (`ACTIVE_TREE_SLUG
+   = "atlas"`) that only exists if the demo seed is loaded — and the seed had been made
+   opt-in. Result: every pre-existing page 404'd against a clean DB even though all
+   tests passed. Preflight: identify what data the running surface assumes (default
+   IDs/slugs, seed workspaces), and either seed the target DB or confirm the app
+   resolves it dynamically. **Smoke the live endpoints, not just the test suite.**
+
+3. **Visual grounding for any FE work (do not style from prose).** The #1 reason a
+   build "looks like crap / ignores the mockups": delegates were handed a *prose*
+   design brief, never the images. A prose paraphrase reproduces layout structure and
+   loses all aesthetic fidelity. Preflight for every FE delegate:
+   - Point it at the **specific** mockup/reference PNG(s) for its region and require it
+     to `Read` them (they're images — the Read tool renders them).
+   - Load the project's **design-system skill / token kit** (e.g. IntentTree's
+     `.agents/skills/intenttree-design-system/` — `tokens.css`, `components.css`,
+     `DESIGN.full.md`, per-view ref images) and require token use, not ad-hoc CSS.
+   - Add a **visual-fidelity review pass** (a read-only delegate that diffs the built
+     screen against the reference image) — behavioral/unit gates never catch this.
+     Run it per the `dev-execution` skill's `validation/visual-fidelity.md` protocol:
+     **capture by structural selector + screen-identity assertion** (never visible
+     text — title collisions clicked the wrong card and got a never-captured screen
+     reviewed in v3); **region-crop the build shots** on the same grid as the reference
+     crops before dispatching (the Read-tool downsamples full-page PNGs, so a reviewer
+     judging a full shot mistakes illegible-but-present elements for missing ones); and
+     keep an **adjudication pass mandatory** — re-verify every finding against zoom crops
+     and classify {real / capture artifact / misread / accepted deviation} before coding.
+     Capture to disk with **Playwright** (Chrome-MCP shots are invisible to delegates);
+     dnd-kit needs manual pointer choreography (`playwright-visual-review-capture` memory).
+
+4. **Run the orchestration inside the target repo.** Delegating a project build from a
+   *sibling* docs repo strands the target's own skills, `.agents/`, `CLAUDE.md`, and
+   design references out of scope. Launch the orchestrator with the **target repo** as
+   cwd (or `--add-dir` it and name the skill/ref paths) so design-system skills and
+   reference images are loadable by the FE delegates that need them.
 
 ## Routing Table
 
 | Intent | Pattern | Model | Tool Scope | Turn Cap |
 |--------|---------|-------|------------|----------|
 | Quick answer / extraction | Single-shot, no tools | `claude-haiku-4-5` (free) | None | — |
-| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-4-6` | `"Read Write Edit Bash"` | `--max-turns 20` |
+| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-4-6[1m]` | `"Read Write Edit Bash"` | `--max-turns 20` |
 | Large parallel fan-out (many small tasks) | Multiple single-shot calls | `claude-haiku-4-5` (free) | None | — |
-| Complex reasoning subtask | Agentic | `claude-opus-4-8` | `"Read Write Edit Bash"` | `--max-turns 50` (no cost cap — ICA is free-to-us) |
+| Complex reasoning subtask | Agentic | `claude-opus-4-8[1m]` | `"Read Write Edit Bash"` | `--max-turns 50` (no cost cap — ICA is free-to-us) |
 | Structured data extraction | Single-shot + `--json-schema` | `claude-haiku-4-5` (free) | None | — |
 | Second opinion (read-only review) | Agentic, read-only | `gpt-4o` or `gemini-3.1-pro-preview` | `"Read Bash(grep:*) Bash(find:*)"` | `--max-turns 15` |
 | **Large-context task (>100k–800k tokens input)** | Single-shot or agentic | `claude-opus-4-8[1m]` or `opus[1m]` | As needed | — |
-| **Live infra / DB / deploy (mutating)** | Agentic, `--bare`, self-restoring prompt | `claude-opus-4-7`/`-4-8` + `--fallback-model` | `"Read Bash"` | **No cost cap; generous `--max-turns` only** — see "Live/Stateful Delegations" |
+| **Live infra / DB / deploy (mutating)** | Agentic, `--bare`, self-restoring prompt | `claude-opus-4-7[1m]`/`-4-8[1m]` + `--fallback-model` | `"Read Bash"` | **No cost cap; generous `--max-turns` only** — see "Live/Stateful Delegations" |
 
 ## Context Budget Discipline
 
@@ -188,7 +383,7 @@ Post-delegation discipline:
 ~/ica-claude.sh -p "Task: [task description]
 Context: [minimal required context -- file paths, not contents]
 Deliverable: [expected output format]" \
-  --model claude-sonnet-4-6 \
+  --model 'claude-sonnet-4-6[1m]' \
   --dangerously-skip-permissions \
   --max-turns 20 \
   --allowedTools "Read Write Edit Bash" \
@@ -236,22 +431,25 @@ ICA is free-to-us, so do **not** dollar-cap opus reasoning — let it do the wor
 ~/ica-claude.sh -p "Task: [complex architecture/design task]
 Context: [paths to relevant files]
 Deliverable: [structured recommendation]" \
-  --model claude-opus-4-8 \
+  --model claude-opus-4-8[1m] \
   --bare \
+  --append-system-prompt-file /path/to/project/CLAUDE.md \
   --dangerously-skip-permissions \
   --max-turns 60 \
   --effort high \
-  --fallback-model claude-opus-4-7,claude-opus-4-6 \
+  --fallback-model claude-opus-4-7[1m],claude-opus-4-6[1m] \
   --allowedTools "Read Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/project
 ```
+
+> When launching from inside a project, pair `--bare` with `--append-system-prompt-file <root>/CLAUDE.md` so the delegate still gets project conventions. See "Context Injection Under `--bare`".
 
 ### Recipe 7 — Session-Continuity Workflow
 
 ```bash
 # First call — starts a session
 ~/ica-claude.sh -p "Analyze /path/to/codebase for security issues. Write findings to /tmp/security-report.md" \
-  --model claude-sonnet-4-6 \
+  --model 'claude-sonnet-4-6[1m]' \
   --dangerously-skip-permissions \
   --allowedTools "Read Write Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/codebase
@@ -300,6 +498,8 @@ PROMPT
 )" \
   --model claude-opus-4-8[1m] \
   --bare \
+  --append-system-prompt-file /path/to/project/CLAUDE.md \
+  --add-dir /path/to/project \
   --dangerously-skip-permissions \
   --max-turns 30 \
   --fallback-model claude-opus-4-8,claude-opus-4-7[1m],claude-opus-4-7
@@ -313,14 +513,77 @@ PROMPT
 
 | Prohibited Claim | Truth |
 |-----------------|-------|
-| "The ICA gateway supports unlimited context" | False. Standard models have a hard 200k cap; `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `sonnet-4-6[1m]`) are confirmed to ~1M but are NOT unlimited. |
+| "The ICA gateway supports unlimited context" | False. Standard models have a hard 200k cap; `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) are confirmed to ~1M but are NOT unlimited. |
 | "All models on the gateway are free" | Only specific small models (Haiku, Gemma) are free tier. |
 | "Use this for tasks requiring the current session's MCP tools" | Delegates cannot access the calling session's MCP servers. |
 | "The delegate can continue a previous conversation" | Each invocation is stateless by default. Use `--continue`/`--resume` for opt-in continuity. |
 | "Omit `--dangerously-skip-permissions` for safety" | Always include it — delegates cannot prompt for permissions in `-p` mode; omitting causes hangs or failures. |
 | "Use `--continue` for multi-turn conversations with users" | False. `--continue` resumes a prior session; it does NOT create an interactive multi-turn experience. Each `~/ica-claude.sh` call is still a single Bash invocation. |
 | "Use `--bare` for all delegations" | Not always. `--bare` skips skills/plugins which may be needed for some tasks. Use for mechanical/fan-out work. |
+| "`--bare` delegates still get the project's CLAUDE.md" | False. `--bare` skips CLAUDE.md auto-discovery AND auto-memory. A bare delegate gets project conventions ONLY if you inject them via `--append-system-prompt-file` (+ `--add-dir` for on-demand reads). See "Context Injection Under `--bare`". |
+| "If a `--bare` delegate is missing context, drop `--bare`" | False — that reintroduces the `Prompt is too long` overload (full nested CLAUDE.md tree × the gateway's effective ceiling). Keep `--bare`; re-inject the bounded root CLAUDE.md instead. |
 | "Use the Agent tool with default model on ICA profile" | Default model (Haiku) uses a dated ID that the gateway rejects. Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. |
+
+## Key Rotation
+
+Keys live in `~/.dotfiles/ICA_CLAUDE`. Format: `## NAME` header followed by `[#]ICA_CLAUDE_CODE_API_KEY=sk-...`. Exactly one line is uncommented (active). `ica-key` manages rotation non-interactively; use `$ICA_KEY_FILE` to point at a test copy.
+
+```bash
+ica-key list              # all keys: name, masked value, active marker
+ica-key list --json       # machine-readable (useful for scripts)
+ica-key current           # active key name + masked value
+ica-key use CC1           # activate CC1, comment all others (atomic write + .bak)
+ica-key next              # rotate to next key in file (wraps); prints old→new
+ica-key verify            # test active key against gateway; exit 0=ok / 1=failed
+ica-key verify CC1 --json # test a specific key; JSON: {name, masked_key, http_status, classification}
+ica-key add CC4 <key>     # append inactive block; --use to also activate
+ica-key remove CC3        # delete block; refuses if active (--force to override)
+```
+
+`ICA_KEY=<NAME>` env override — when set on `~/ica-claude.sh`, selects that named block's key (even if commented) without rewriting the file. **Most of the time you do not set this at all** — the active key (`CC1`) is used automatically. Set it only to run a *specific* named key, e.g. for parallel sessions on different keys:
+
+```bash
+ICA_KEY=CC1 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5' --dangerously-skip-permissions
+ICA_KEY=CC3 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5' --dangerously-skip-permissions
+```
+
+**`ICA_KEY` takes a block NAME, not a number and not a token.** Valid values are exactly the `## NAME`
+headers in `~/.dotfiles/ICA_CLAUDE`: `CC1`, `CC2`, `CC3`, `CC4`, `CC5`, `CC6` (run `ica-key list` to
+see them). Common mistakes:
+
+| ❌ Wrong | Why | ✅ Right |
+|---------|-----|--------|
+| `ICA_KEY=1` | There is no key named `1`; blocks are `CC1`…`CC6` → wrapper errors `ICA_KEY='1' not found` | `ICA_KEY=CC1` |
+| `ICA_KEY=sk-abc…` | `ICA_KEY` is a name selector, not a token slot → same "not found" error | `ICA_AUTH_TOKEN=sk-abc…` (raw-token slot) |
+| `export ICA_KEY=CC2` globally | Leaks onto every later call; hard to notice | prefix one call: `ICA_KEY=CC2 ~/ica-claude.sh …` |
+| Setting `ICA_KEY` "to authenticate" | Not needed — `CC1` is already active | omit it entirely |
+
+### Exhaustion + renewal
+
+Each key has its own allowance and a shared weekly renewal date. Per-key status
+(`fresh`/`partial`/`exhausted`) and the renewal live in a sidecar
+(`~/.dotfiles/ICA_CLAUDE.state.json`); the key file is never touched for state.
+
+```bash
+ica-key exhausted --rotate            # mark active key spent + rotate to next usable key
+ica-key mark CC2 partial --usage 75   # record a soft usage hint
+ica-key list                          # status column + renewal countdown
+ica-key renewal                       # show shared renewal (auto-rolls +7d when past, resets all fresh)
+```
+
+`ica-key next` automatically skips `exhausted` keys (`--any` to override).
+
+**Free-tier work does NOT require a fresh key.** ICA models marked
+`allowance: unlimited`/`free` in the model registry (Haiku / Gemma / Llama /
+Granite) stay callable on ANY key, including exhausted ones — only paid
+`shared_token_pool` models (Sonnet/Opus) are blocked. So:
+
+- On 401/allowance-exhaustion during **paid** delegation → `ica-key exhausted --rotate`, then retry once. If all keys are exhausted, downshift to a free model instead of failing.
+- For **free-tier** delegation, ignore exhaustion entirely.
+
+```bash
+ica-key exhausted --rotate && ~/ica-claude.sh -p "retry prompt" ...
+```
 
 ## Key References
 
@@ -328,5 +591,6 @@ PROMPT
 |----------|------|
 | Gateway wrapper script | `/Users/miethe/ica-claude.sh` |
 | API key env file | `/Users/miethe/.dotfiles/ICA_CLAUDE` |
+| Key rotation CLI | `/Users/miethe/.local/bin/ica-key` |
 | Capability contract | `/Users/miethe/.claude/skills/ica-delegate/SPEC.md` |
 | Model inventory and selection heuristics | `/Users/miethe/.claude/skills/ica-delegate/references/ica-models.md` |
