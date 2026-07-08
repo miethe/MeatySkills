@@ -43,8 +43,9 @@ models:                # model-keyed descriptors, each with provider sub-instanc
     tools: [...]
     related_skills: [...]
     status: active | scaffolded | deprecated
+    scores: { cost: ..., intelligence: ..., taste: ..., speed: ... }   # advisory; see § Scores block
     providers:
-      - { provider: ..., model_id: ..., cost_tier: ..., allowance: ..., enabled: ..., priority: ... }
+      - { provider: ..., model_id: ..., cost_tier: ..., allowance: ..., enabled: ..., priority: ..., cost_score: ... }
 ```
 
 ### `routing_policy` — chains are priority + free-first
@@ -92,12 +93,61 @@ never assumed**:
 | `allowance` | Meaning | Examples |
 |---|---|---|
 | `unlimited` | Genuinely free, cost-shifted off the primary budget ($0 to primary) | ICA Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small |
-| `shared_token_pool` | Token-limited on ICA's shared pool — **NOT free**; opt-in cost-shift only | ICA Sonnet, ICA Opus (`[1m]` variants) |
+| `shared_token_pool` | Token-limited on ICA's shared pool — **NOT free**; opt-in cost-shift only | ICA Sonnet, ICA Opus (`[1m]` variants), ICA Gemini 3.5 Flash |
 | `billed` | Primary subscription tokens | `claude/*` instances |
 
 Free-first routing applies **only** to `allowance: unlimited` instances. ICA Sonnet/Opus
 (`shared_token_pool`) stay opt-in — never an always-on free route. A model can be free on one
 provider and billed on another (e.g. `claude-haiku-4-5` is `unlimited` on ICA, `billed` on Claude).
+
+## Scores block — advisory scorecard metadata
+
+Each model entry in the global registry may carry a `scores:` block at the model level.
+Individual provider instances may carry a `cost_score:` override for lanes that differ materially
+in actual spend:
+
+```yaml
+claude-sonnet-4-6:
+  # … family/class/descriptor/when_to_use/tools/related_skills/status …
+  scores:
+    cost: 8          # 1–10; HIGHER = BETTER (cheaper to us) — preferred lane here is the ICA pool
+    intelligence: 7
+    taste: 7
+    speed: 6
+  providers:
+    - { provider: claude, model_id: "claude-sonnet-4-6", cost_tier: standard,
+        allowance: billed, cost_score: 5, ... }
+      # ↑ subscription lane spends real budget → cost_score overrides the model-level cost
+    - { provider: ica, model_id: "claude-sonnet-4-6[1m]", cost_tier: standard,
+        allowance: shared_token_pool, ... }
+```
+
+### Score field meanings
+
+| Field | Meaning |
+|---|---|
+| `cost` | What you *actually* pay on the preferred lane (1–10; **higher = better, i.e. cheaper to us** — same polarity as every other score). ICA lanes score 8–10 because they are cost-shifted off the primary budget. |
+| `intelligence` | Reasoning / coding capability ceiling (higher = more capable). |
+| `taste` | Prose quality, instruction-following, formatting adherence (higher = better). |
+| `speed` | Tokens-per-second / latency (higher = faster). |
+
+`cost_score` on a provider instance overrides the model-level `cost` value for that lane only
+(e.g. the ICA path of a subscription model that is cheaper on the ICA pool).
+
+### Mirror rule — keep doc and registry in sync
+
+The `scores:` values mirror the human-readable scorecard table in
+`agentic_meta_dev/docs/agentic-operator/MODEL-ROUTING.md § 1.5`. **When you update one, update
+both.** The authoritative editorial decision lives in MODEL-ROUTING §1.5; the registry carries the
+machine-readable twin. The operative selection heuristic: pick the highest-`cost` model that clears
+the task's `intelligence`/`taste` bar.
+
+### Resolver caveat — v3 does not read `scores:` yet
+
+The **v3 resolver does NOT read `scores:`**. Chain order, `priority`, availability, and
+capability-match (`when_to_use`) drive v3 resolution; `scores:` is advisory metadata for agents
+making their own delegation decisions and a reserved input for a future resolver upgrade. Do not
+rely on `scores:` influencing routing outcomes until a CHANGELOG entry confirms the upgrade.
 
 ## Adding a new model on release
 

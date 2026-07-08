@@ -107,7 +107,7 @@ path_patterns = [
 # Re-rank a specific "provider/model_id" instance (lower = preferred). Quoted keys.
 # [priority_overrides]
 # "ica/claude-haiku-4-5" = 0
-# "claude/claude-sonnet-4-6" = 5
+# "claude/claude-sonnet-5" = 5
 
 # Project-local routing_policy chain overrides, merged OVER the global routing_policy
 # per task_class. Only honored for NON-MUST-stay classes (MUST-stay entries dropped).

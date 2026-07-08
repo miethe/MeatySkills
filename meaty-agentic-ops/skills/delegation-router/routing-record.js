@@ -33,6 +33,10 @@
  * @property {string}          continuity_mode    - Provider continuity capability: 'stateless' | 'resumable'
  * @property {FallbackEntry[]} fallback_chain     - Ordered fallback candidates; walker stops at first available
  * @property {string}          reason             - Human-readable explanation of routing decision (ranking rationale)
+ * @property {string|null}     context_ref        - Absolute path to the assembled delegation context bundle, or
+ *                                                    null. 12th field (additive, optional; default null). FORCED to
+ *                                                    null for MUST-STAY classes and for bob by finalizeRoutingRecord
+ *                                                    (FR-10, flat-legs-only invariant). See delegation-context.md v2.
  */
 
 /**
@@ -68,6 +72,15 @@ const AGENT_TYPE_ID_MAP = {
   gemini: 'gemini-executor',
   codex: 'codex-executor',
 };
+
+/**
+ * Providers that NEVER receive a context bundle (FR-10). `bob` has no delegate-executor skill,
+ * so its context channel is deferred (DEF-1) — context_ref stays null until the transport exists.
+ *
+ * @readonly
+ * @type {string[]}
+ */
+const CONTEXT_REF_NULL_PROVIDERS = ['bob'];
 
 /**
  * Validates that a RoutingRecord has all required fields with correct types.
@@ -124,7 +137,41 @@ function validateRoutingRecord(record) {
     );
   }
 
+  // context_ref is the 12th field: additive + optional. Absent is tolerated (backward-compatible
+  // with 11-field records); when present it MUST be a string path or null.
+  if (record.context_ref !== undefined && record.context_ref !== null &&
+      typeof record.context_ref !== 'string') {
+    throw new Error(
+      `RoutingRecord.context_ref must be a string path or null; got ${typeof record.context_ref}`
+    );
+  }
+
   return record;
+}
+
+/**
+ * Enforce the context_ref policy at emit time (FR-10). MUST-STAY classes and providers in
+ * CONTEXT_REF_NULL_PROVIDERS (bob) ALWAYS emit context_ref: null, regardless of what the caller
+ * passed — a delegation context bundle is only ever threaded to flat, delegatable legs. This is
+ * enforced by the emitter, not merely a default, so a non-null context_ref cannot leak onto a
+ * MUST-STAY leg and escape audit (Risk-2, governance).
+ *
+ * The resolver MUST route every emitted record through this function before returning it.
+ *
+ * @param {RoutingRecord} record   - The record being emitted (mutated in place and returned)
+ * @param {string} [taskClass]     - The task_class driving the routing decision
+ * @returns {RoutingRecord} The same record with the context_ref invariant applied + validated
+ */
+function finalizeRoutingRecord(record, taskClass) {
+  if (record.context_ref === undefined) {
+    record.context_ref = null;
+  }
+  const mustStay = taskClass !== undefined && MUST_STAY_PRIMARY_CLASSES.includes(taskClass);
+  const nullProvider = CONTEXT_REF_NULL_PROVIDERS.includes(record.chosen_plugin_id);
+  if (mustStay || nullProvider) {
+    record.context_ref = null;
+  }
+  return validateRoutingRecord(record);
 }
 
 /**
@@ -146,12 +193,15 @@ function createEmptyRecord() {
     continuity_mode: 'resumable',
     fallback_chain: [],
     reason: '',
+    context_ref: null,
   };
 }
 
 module.exports = {
   MUST_STAY_PRIMARY_CLASSES,
+  CONTEXT_REF_NULL_PROVIDERS,
   AGENT_TYPE_ID_MAP,
   validateRoutingRecord,
+  finalizeRoutingRecord,
   createEmptyRecord,
 };

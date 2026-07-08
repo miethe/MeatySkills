@@ -6,9 +6,9 @@ description: >-
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
   determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
   platform skill executes it.
-version: "3.0"
+version: "3.1"
 app_version: "2026-06-09"
-updated: 2026-06-09
+updated: 2026-07-07
 scope: repo
 spec: ./SPEC.md
 ---
@@ -111,6 +111,12 @@ appendEntry({
   schema-recovery and cross-wave-merge are split out as distinct task_class strings.
 - Do not say ICA Sonnet/Opus are free — they are `allowance: shared_token_pool` (opt-in
   cost-shift). Only Haiku 4.5 / Gemma 4 / Llama 4 Maverick / Granite 4 are `allowance: unlimited`.
+  ICA Gemini 3.5 Flash (live 2026-07-07) is also `shared_token_pool` — **not free**.
+- Do not say the resolver ranks or orders candidates by the `scores:` block — v3 ranking is
+  chain / priority / availability / capability-match (all registry-driven). The `scores:` block
+  (`cost · intelligence · taste · speed`, 1–10) is advisory metadata mirroring MODEL-ROUTING §1.5
+  for agent decision-making; it is **not** a resolver input in v3 (reserved for a future upgrade;
+  see `references/model-registry.md § Scores block`).
 
 ## Key References
 

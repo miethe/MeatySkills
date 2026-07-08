@@ -3,6 +3,41 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-08 — Sonnet 5 default + version standardization (resolver.js, routing-record.js re-vendor)
+
+- **resolver.js**: `findClaudeSonnet` hardcoded fallback bumped `claude-sonnet-4-6` → `claude-sonnet-5`
+  (defensive default only; the resolver reads the sonnet model dynamically from the global registry,
+  where `claude-sonnet-5` now precedes 4.6). ICA now serves Sonnet 5 (`claude-sonnet-5[1m]`, 1M) as of
+  2026-07-08 — see MODEL-ROUTING.md §2. `references/bootstrap.md` priority-override example updated to match.
+- **routing-record.js + routing-record.test.js**: finalized the pending DCB v2 re-vendor — the
+  `context_ref` 12th field + `finalizeRoutingRecord` emitter + `CONTEXT_REF_NULL_PROVIDERS` (already
+  live-deployed in `~/.claude`, previously uncommitted here). Additive/inert (resolver wiring still
+  pending); test passes. This closes the routing-record.js version drift vs the skillmeat repo copy.
+- **Standardization**: backported the newer 2026-07-07 docs (SKILL.md v3.1, this CHANGELOG,
+  references/model-registry.md) so MeatySkills (upstream) + `~/.claude` (live) carry one canonical
+  version. skillmeat repo copy still re-vendors from here on its next clean commit.
+
+## 2026-07-07 — scores block + ICA Gemini 3.5 Flash (SKILL.md v3.1, references/model-registry.md)
+
+Documentation-only; no resolver, routing-record, audit-log, or test changes.
+
+- **references/model-registry.md**:
+  - Added `scores: { cost, intelligence, taste, speed }` to the top-level structure YAML snippet
+    (model level) and `cost_score:` to the provider-instance inline schema.
+  - Added ICA Gemini 3.5 Flash to the `shared_token_pool` row of the `cost_tier` vs `allowance`
+    table (live 2026-07-07; NOT free — `shared_token_pool`, not `unlimited`).
+  - Added new **"Scores block — advisory scorecard metadata"** section covering: schema with a
+    worked `claude-sonnet-5` example, per-field meanings, `cost_score` per-provider override
+    semantics, mirror rule ("update MODEL-ROUTING §1.5 and registry together"), and explicit caveat
+    that the **v3 resolver does NOT read `scores:` yet** (advisory metadata only; reserved for a
+    future resolver upgrade).
+- **SKILL.md** (v3.0 → v3.1, updated 2026-07-07):
+  - Expanded the ICA free/shared-pool "Do Not Say" bullet to note ICA Gemini 3.5 Flash is
+    `shared_token_pool` (not free).
+  - Added new "Do Not Say" bullet: do not say the resolver ranks by `scores:` — v3 ranking is
+    chain/priority/availability/capability-match; `scores` is advisory metadata mirroring
+    MODEL-ROUTING §1.5, not a v3 resolver input.
+
 ## 2026-06-11 — global-canonical registry cutover (resolver.js 3-tier lookup, SPEC.md v1.1.0)
 
 - **resolver.js**: Replaced single-path registry loading with a 3-tier lookup order:

@@ -882,7 +882,7 @@ function findClaudeSonnet(registry) {
     const claudeInst = (entry.providers || []).find(p => p.provider === 'claude');
     if (claudeInst) return claudeInst.model_id;
   }
-  return 'claude-sonnet-4-6';
+  return 'claude-sonnet-5';
 }
 
 function buildRegistryMustStayRecord(registry, model, effort, reason) {
