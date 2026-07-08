@@ -41,7 +41,7 @@ Delegate bounded work to IBM ICA-provisioned Claude instances.
 ~/ica-claude.sh -p "Task: Refactor /path/to/module.ts to use async/await
 Context: See /path/to/module.ts and /path/to/types.ts
 Deliverable: Updated file contents" \
-  --model claude-sonnet-4-6 \
+  --model 'claude-sonnet-5[1m]' \
   --dangerously-skip-permissions \
   --max-turns 20 \
   --allowedTools "Read Write Edit Bash" \
@@ -63,10 +63,10 @@ Deliverable: Updated file contents" \
 | Tier | Default Pick | Cost | Best For |
 |------|-------------|------|----------|
 | **Free** | `claude-haiku-4-5` | Unlimited | Extraction, scaffolding, fan-out |
-| **Standard** | `claude-sonnet-4-6` | Token-limited | Code generation, review, bounded reasoning |
-| **Premium** | `claude-opus-4-8` | Token-limited | Deep reasoning, architecture decisions |
+| **Standard** | `claude-sonnet-5[1m]` | Token-limited | Code generation, review, bounded reasoning (Sonnet 5 landed on ICA 2026-07-08; use the `[1m]` id for 1M — `claude-sonnet-4-6[1m]` is the older fallback) |
+| **Premium** | `claude-opus-4-8[1m]` | Token-limited | Deep reasoning, architecture decisions |
 
-See [`references/ica-models.md`](references/ica-models.md) for full inventory (13 models across 3 families).
+See [`references/ica-models.md`](references/ica-models.md) for full inventory. On ICA use the `[1m]` id for Claude Opus/Sonnet **and** Gemini (plain ids cap at 200k).
 
 ## Key Flags
 

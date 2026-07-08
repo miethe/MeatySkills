@@ -31,7 +31,7 @@ affects_commands: []
 - Session-continuity workflows via `--continue`/`--resume`
 - Schema-validated structured output via `--json-schema`
 - Bare-mode optimized fan-out for scripted mechanical work
-- 1M context delegation via `[1m]` model variants (`opus[1m]` → `claude-opus-4-8[1m]`, `sonnet-4-6[1m]`) — confirmed 2026-06-08 via `modelUsage`
+- 1M context delegation via `[1m]` model variants for ICA Claude Opus/Sonnet **and** Gemini (`opus[1m]` → `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`, `gemini-3.5-flash[1m]`, `gemini-3.1-pro-preview[1m]`) — plain ids cap at 200k on the gateway; confirmed via `modelUsage` (Claude 2026-06-08/09; Sonnet 5 + Gemini `[1m]` 2026-07-08)
 
 **Out of scope**:
 - Multi-turn interactive sessions requiring real-time user input (use `~/ica-claude.sh` directly for those)
@@ -57,7 +57,7 @@ affects_commands: []
 
 ## 3. Invariants & Constraints
 
-1. **Context ceiling**: Standard models have a 200k hard limit — keep prompt text under ~50k to leave headroom for tool-use overhead. Exception: `[1m]` variants (`opus[1m]` → `claude-opus-4-8[1m]`, `sonnet-4-6[1m]`) provide ~1M context (confirmed 2026-06-08 via `modelUsage`, NOT model self-report); prompt text can reach ~800k, leaving ~200k for overhead.
+1. **Context ceiling**: The gateway caps the plain id at 200k — keep prompt text under ~50k to leave headroom for tool-use overhead. Exception: `[1m]` variants for ICA Claude Opus/Sonnet **and** Gemini (`opus[1m]` → `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`, `gemini-3.5-flash[1m]`) provide ~1M context (confirmed via `modelUsage`, NOT model self-report; Claude 2026-06-08/09, Sonnet 5 + Gemini `[1m]` 2026-07-08); prompt text can reach ~800k, leaving ~200k for overhead.
 
 2. **Paths not contents**: When the delegate has filesystem access, agents must pass file paths in prompts, never file contents. This preserves context budget.
 

@@ -1,9 +1,9 @@
 # ICA Gateway Model Inventory
 
 Model reference for the IBM ICA gateway (`https://api.nextgen-beta.ica.ibm.com/ica`).
-Accessed via `~/ica-claude.sh --model <identifier>`. Standard models have a 200k context ceiling. Claude models with the `[1m]` suffix (e.g. `opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) provide ~1M context — confirmed 2026-06-09 via the authoritative `modelUsage.<id>.contextWindow` field (never trust the model's self-report). The `opus[1m]` alias routes to `claude-opus-4-8[1m]`. Script default is `claude-opus-4-8[1m]`.
+Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plain id at 200k** — even for models that are natively 1M (Sonnet 5, Gemini 3.x). Models with the `[1m]` suffix (Claude Opus/Sonnet AND Gemini — e.g. `opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`, `gemini-3.5-flash[1m]`) provide ~1M context — confirmed via the authoritative `modelUsage.<id>.contextWindow` field (never trust the model's self-report): Claude 2026-06-09, and Sonnet 5 + Gemini `[1m]` on 2026-07-08. The `opus[1m]` alias routes to `claude-opus-4-8[1m]`. Script default is `claude-opus-4-8[1m]`; **preferred Sonnet on ICA is now `claude-sonnet-5[1m]`** (Sonnet 5 landed on the gateway 2026-07-08, superseding `claude-sonnet-4-6[1m]`).
 
-> ⚠️ **`[1m]` ids must keep the `claude-` prefix.** The bare `sonnet-4-6[1m]` (no prefix) **401s** on teams scoped to the `global-models` group — the gateway strips `[1m]`, is left with `sonnet-4-6`, which is not in the group, and rejects it (observed 2026-06-10). Use `claude-sonnet-4-6[1m]`. Also **quote the model arg in zsh** (`--model 'claude-sonnet-4-6[1m]'`) — the `[1m]` glob otherwise aborts the command with `no matches found`.
+> ⚠️ **`[1m]` ids must keep the `claude-` prefix.** The bare `sonnet-5[1m]` / `sonnet-4-6[1m]` (no prefix) **401s** on teams scoped to the `global-models` group — the gateway strips `[1m]`, is left with `sonnet-5` / `sonnet-4-6`, which is not in the group, and rejects it (observed 2026-06-10). Use `claude-sonnet-5[1m]`. Also **quote the model arg in zsh** (`--model 'claude-sonnet-5[1m]'`) — the `[1m]` glob otherwise aborts the command with `no matches found`.
 
 ---
 
@@ -15,17 +15,22 @@ Accessed via `~/ica-claude.sh --model <identifier>`. Standard models have a 200k
 | Gemma 4 26B Preview | `gemma-4-26b-a4b-it` | Free | Google; good for simple extraction and classification |
 | Llama 4 Maverick 17B Instruct | `meta-llama/llama-4-maverick-17b-128e-instruct-fp8` | Free | Meta; fast, lightweight reasoning |
 | Granite 4 Small | `ibm/granite-4-h-small` | Free | IBM; smallest model, fastest response |
-| Claude Sonnet 4.5 | `claude-sonnet-4-5` | Token Limited | Script default; strong general-purpose |
-| Claude Sonnet 4.6 | `claude-sonnet-4-6` | Token Limited | Newer Sonnet; prefer over 4.5 for new work |
+| Claude Sonnet 5 | `claude-sonnet-5` | Token Limited | **Current-gen Sonnet; landed on ICA 2026-07-08.** Preferred ICA workhorse — use the `[1m]` variant. Plain id caps at 200k. |
+| Claude Sonnet 4.6 | `claude-sonnet-4-6` | Token Limited | Older Sonnet; now a fallback below Sonnet 5 |
+| Claude Sonnet 4.5 | `claude-sonnet-4-5` | Token Limited | Legacy; strong general-purpose |
 | OpenAI GPT-4o | `gpt-4o` | Token Limited | OpenAI multimodal; alternative reasoning style |
-| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | Token Limited | Google; long-context strength |
+| Gemini 3.5 Flash | `gemini-3.5-flash` | Token Limited | Google; fast cross-family lens. Plain id caps at 200k — use `[1m]`. NOT Search-grounded on the gateway. |
+| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | Token Limited | Google; long-context strength. Plain id caps at 200k — use `[1m]`. |
 | Claude Opus 4.6 | `claude-opus-4-6` | Token Limited | Deep reasoning, architecture decisions |
 | Claude Opus 4.7 | `claude-opus-4-7` | Token Limited | Stronger reasoning than 4.6 |
 | Claude Opus 4.6 (1M variant) | `claude-opus-4-6[1m]` | Token Limited | 1M context variant; same format as confirmed variants — untested but expected to work |
 | Claude Opus 4.7 (1M variant) | `claude-opus-4-7[1m]` | Token Limited | **Confirmed 1M** — 224k inline token test passed 2026-06-08; self-reports 200k (ignore). |
 | Claude Opus 4.8 (1M variant) | `claude-opus-4-8[1m]` | Token Limited | **Confirmed 1M (2026-06-09)** — `modelUsage` reports `contextWindow: 1000000`. **Preferred 1M model + script default.** (Earlier "401" note was stale — 4.8[1m] is now live on the gateway.) |
 | Opus alias (1M variant) | `opus[1m]` | Token Limited | **Confirmed 1M** — short alias; `modelUsage` shows it routes to `claude-opus-4-8[1m]`. |
-| Claude Sonnet 4.6 (1M variant) | `claude-sonnet-4-6[1m]` | Token Limited | **Confirmed working 2026-06-10** (returns output normally). MUST keep the `claude-` prefix — the bare `sonnet-4-6[1m]` **401s** on `global-models`-scoped teams (gateway strips `[1m]` → un-prefixed `sonnet-4-6` is rejected). |
+| Claude Sonnet 5 (1M variant) | `claude-sonnet-5[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `contextWindow: 1000000` (plain `claude-sonnet-5` = 200000). **Preferred Sonnet on ICA.** MUST keep the `claude-` prefix. |
+| Claude Sonnet 4.6 (1M variant) | `claude-sonnet-4-6[1m]` | Token Limited | **Confirmed working 2026-06-10** (returns output normally); older fallback below `claude-sonnet-5[1m]`. MUST keep the `claude-` prefix — the bare `sonnet-4-6[1m]` **401s** on `global-models`-scoped teams. |
+| Gemini 3.5 Flash (1M variant) | `gemini-3.5-flash[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). The ICA `[1m]` rule applies to Gemini too. Not Search-grounded on the gateway. |
+| Gemini 3.1 Pro Preview (1M variant) | `gemini-3.1-pro-preview[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). |
 | Claude Opus 4.8 | `claude-opus-4-8` | Token Limited | Latest and most capable Opus (200k variant) |
 | OpenAI GPT-5.1 | `gpt-5.1-chat-gus` | Token Limited | OpenAI frontier |
 | OpenAI GPT-5.4 | `gpt-5.4-gus` | Token Limited | OpenAI latest frontier |
@@ -37,11 +42,11 @@ Accessed via `~/ica-claude.sh --model <identifier>`. Standard models have a 200k
 | Tier | Models | Cost | Default Pick |
 |---|---|---|---|
 | Free | Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small | $0 (unlimited) | `claude-haiku-4-5` |
-| Standard | Sonnet 4.5, Sonnet 4.6, GPT-4o, Gemini 3.1 Pro | Token-limited | `claude-sonnet-4-6[1m]` |
+| Standard | Sonnet 5, Sonnet 4.6, Sonnet 4.5, GPT-4o, Gemini 3.5 Flash, Gemini 3.1 Pro | Token-limited | `claude-sonnet-5[1m]` |
 | Premium | Opus 4.6, Opus 4.7, Opus 4.8, GPT-5.1, GPT-5.4 | Token-limited (expensive) | `claude-opus-4-8[1m]` |
-| 1M Context | Opus 4.8[1m], opus[1m] alias (→4.8[1m]), Opus 4.7[1m], Sonnet 4.6[1m], Opus 4.6[1m] | Token-limited | `claude-opus-4-8[1m]` |
+| 1M Context | Sonnet 5[1m], Opus 4.8[1m], opus[1m] alias (→4.8[1m]), Opus 4.7[1m], Sonnet 4.6[1m], Opus 4.6[1m], Gemini 3.5 Flash[1m], Gemini 3.1 Pro[1m] | Token-limited | `claude-sonnet-5[1m]` (Opus for hardest) |
 
-> **Opus/Sonnet default to `[1m]`.** For ICA Claude Opus and Sonnet, always pick the `[1m]` variant — same token pool and cost tier, strictly larger context. The plain 200k IDs (`claude-sonnet-4-6`, `claude-opus-4-8`) are fallback-only. This is why the Standard/Premium default picks above are the `[1m]` forms.
+> **Opus/Sonnet/Gemini default to `[1m]` on ICA.** For ICA Claude Opus/Sonnet **and** ICA Gemini, always pick the `[1m]` variant — same token pool and cost tier, strictly larger context. The plain 200k IDs (`claude-sonnet-5`, `claude-opus-4-8`, `gemini-3.5-flash`) are fallback-only on the ICA path. This is why the Standard/Premium default picks above are the `[1m]` forms. (Native gemini-cli needs no suffix — it's 1M by default.)
 
 ---
 
@@ -53,16 +58,16 @@ Accessed via `~/ica-claude.sh --model <identifier>`. Standard models have a 200k
 | Summarization / extraction | Free | `claude-haiku-4-5` | Haiku excels at following structured instructions |
 | Simple classification / Q&A | Free | `gemma-4-26b-a4b-it` | Lightweight, fast |
 | High-volume batch (>10 calls) | Free | `claude-haiku-4-5` | Zero cost per call; accept minor quality tradeoff |
-| Code generation (single file) | Standard | `claude-sonnet-4-6[1m]` | Balances quality and token budget; 1m = no truncation risk |
-| Multi-file refactoring | Standard | `claude-sonnet-4-6[1m]` | Needs cross-file coherence + headroom |
-| Code review / bug finding | Standard | `claude-sonnet-4-6[1m]` | Needs nuance but not max depth |
+| Code generation (single file) | Standard | `claude-sonnet-5[1m]` | Balances quality and token budget; 1m = no truncation risk |
+| Multi-file refactoring | Standard | `claude-sonnet-5[1m]` | Needs cross-file coherence + headroom |
+| Code review / bug finding | Standard | `claude-sonnet-5[1m]` | Needs nuance but not max depth |
 | Second opinion / alternative approach | Standard | `gpt-4o` | Different model family provides genuine diversity |
 | Complex architecture decisions | Premium | `claude-opus-4-8[1m]` | Deep reasoning required |
 | Novel algorithm design | Premium | `claude-opus-4-8[1m]` | Benefits from strongest reasoning |
-| Context-heavy tasks (>100k input) | Standard+ | `claude-sonnet-4-6[1m]` | Free-tier quality degrades with long context |
+| Context-heavy tasks (>100k input) | Standard+ | `claude-sonnet-5[1m]` | Free-tier quality degrades with long context |
 | Very large context tasks (>200k input) | 1M Context | `claude-opus-4-8[1m]` | Standard models hard-capped at 200k; `[1m]` variants confirmed up to ~800k practical ceiling |
 
-**Decision shortcut:** Default to Free (`claude-haiku-4-5`) for anything mechanical. Use Standard (`claude-sonnet-4-6[1m]`) for tasks requiring judgment. Escalate to Premium (`claude-opus-4-8[1m]`) only when Standard output is demonstrably insufficient. For Opus/Sonnet always take the `[1m]` form — never the plain 200k ID except as a fallback.
+**Decision shortcut:** Default to Free (`claude-haiku-4-5`) for anything mechanical. Use Standard (`claude-sonnet-5[1m]`) for tasks requiring judgment. Escalate to Premium (`claude-opus-4-8[1m]`) only when Standard output is demonstrably insufficient. For Opus/Sonnet/Gemini always take the `[1m]` form on ICA — never the plain 200k ID except as a fallback.
 
 **Cross-family diversity:** When seeking a second opinion or alternative reasoning, prefer a different model family (e.g., use `gpt-4o` or `gemma-4-26b-a4b-it` if the primary session is Claude). Different training produces genuinely different perspectives.
 
@@ -98,7 +103,7 @@ Accessed via `~/ica-claude.sh --model <identifier>`. Standard models have a 200k
 | Non-Claude models have different tool-use support | May not support `--allowedTools` cleanly | Use single-shot for non-Claude models |
 | Token budget is shared across all token-limited models | Heavy Opus use depletes budget for Sonnet too | Prefer free tier when acceptable |
 | **Agent tool rejects dated model IDs** | Default subagent model (Haiku) uses `claude-haiku-4-5-20251001` which is NOT in the gateway's `global-models` group → 401 error | Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. Or delegate via `~/ica-claude.sh` Bash calls instead. |
-| **`[1m]` models self-report 200k but actually provide ~1M context** | `claude-opus-4-8[1m]` (preferred/default), `opus[1m]` (alias → `claude-opus-4-8[1m]`), `claude-opus-4-7[1m]`, and `claude-sonnet-4-6[1m]` are accepted by the gateway and provide ~1M context. **Verify only via the JSON `modelUsage.<id>.contextWindow` field** (`--output-format json`): `claude-opus-4-8[1m]` and `opus[1m]` both report `contextWindow: 1000000` (re-confirmed 2026-06-09). The model's *self-report* of its context window / identity is unreliable — it returned "Sonnet 4.5 / 200000" while `modelUsage` showed `claude-opus-4-8[1m]` at 1M. **NOTE:** an earlier (2026-06-08) test recorded `claude-opus-4-8[1m]` as 401; it is now live — opus-4.8's 1M variant came online since. The bracket-less dash form `claude-opus-4-8-1m` still does not route. | Default to `claude-opus-4-8[1m]` (or the `opus[1m]` alias) for tasks requiring >100k context. The bracket `[1m]` suffix on a full `claude-*` id is honored by the gateway; the script default (`~/ica-claude.sh`) is `claude-opus-4-8[1m]`. |
+| **Plain ids silently cap at 200k; `[1m]` unlocks ~1M — and this now covers Gemini** | `claude-opus-4-8[1m]` (preferred Opus/default), `opus[1m]` (alias), `claude-opus-4-7[1m]`, `claude-sonnet-5[1m]` (preferred Sonnet), `claude-sonnet-4-6[1m]` (older fallback), **`gemini-3.5-flash[1m]`, and `gemini-3.1-pro-preview[1m]`** are accepted by the gateway and provide ~1M context. **Verify only via the JSON `modelUsage.<id>.contextWindow` field** (`--output-format json`). Confirmed 2026-07-08: `claude-sonnet-5[1m]`=1M / plain `claude-sonnet-5`=200k; `gemini-3.5-flash[1m]`=1M / plain=200k; `gemini-3.1-pro-preview[1m]`=1M / plain=200k (Claude Opus re-confirmed 2026-06-09). The model's *self-report* of its window/identity is unreliable. The bracket-less dash form (`...-1m`) does not route. **The `[1m]` rule is ICA-gateway-specific for Gemini — native gemini-cli is 1M without a suffix.** | On ICA, use `[1m]` for Claude Opus/Sonnet **and** Gemini. Default Sonnet = `claude-sonnet-5[1m]`; default Opus = `claude-opus-4-8[1m]` (script default). |
 
 ---
 

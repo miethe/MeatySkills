@@ -19,7 +19,7 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 > on every call, and points Claude Code at the ICA gateway for you. For a normal delegation there is
 > **nothing to configure** — just run the wrapper:
 > ```bash
-> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-4-6[1m]' --dangerously-skip-permissions --max-turns 20
+> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-5[1m]' --dangerously-skip-permissions --max-turns 20
 > ```
 > **Do NOT** set `ANTHROPIC_API_KEY`, `ICA_CLAUDE_CODE_API_KEY`, or `ANTHROPIC_AUTH_TOKEN`; **do NOT**
 > pass `--api-key`; **do NOT** `export` a key. Those either do nothing or break the wrapper's own
@@ -49,7 +49,7 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 | Anti-Pattern | Reason |
 |--------------|--------|
 | Tasks requiring the current session's MCP tools, memory, or project context | Delegates cannot access the calling session's MCP servers |
-| Tasks requiring more than 200k context (standard models only) | Standard models hard-capped at 200k; use `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) for tasks up to ~800k tokens |
+| Tasks requiring more than 200k context (standard models only) | Standard models hard-capped at 200k; use `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) for tasks up to ~800k tokens |
 | Interactive or multi-turn conversation with the user | Each invocation is a single Bash call; not interactive |
 | Tasks requiring models unavailable on the gateway | Check model inventory first |
 | Work that needs the primary session's file-edit capabilities | Delegate reads file paths, not edits in the calling workspace |
@@ -81,26 +81,29 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 | Gateway endpoint | `https://api.nextgen-beta.ica.ibm.com/ica` |
 | Default model in script | `claude-opus-4-8[1m]` via `ANTHROPIC_MODEL`, **and** `model: "claude-opus-4-8[1m]"` in `ica-settings.json` — both must be `[1m]` or the no-`--model` default silently downgrades to 200k (see "Durable fix" below). Still prefer an explicit `--model`. |
 | Free-tier models | `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, `ibm/granite-4-h-small` |
-| Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) — confirmed 2026-06-08 |
+| Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) — confirmed 2026-06-08 |
 
-## Prefer `[1m]` for Opus and Sonnet — Always
+## Prefer `[1m]` for Opus, Sonnet, and Gemini — Always
 
-**When delegating to ICA, always use the `[1m]` (1M-context) variant for Claude Opus and Sonnet** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work.
+**When delegating to ICA, always use the `[1m]` (1M-context) variant for Claude Opus/Sonnet AND Gemini** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work. The gateway **silently caps the plain id at 200k** even for models that are natively 1M (Sonnet 5, Gemini 3.x); the `[1m]` suffix is what unlocks the full window on the ICA path.
 
 | Class | Plain (avoid) | Use this `[1m]` variant |
 |-------|---------------|-------------------------|
+| **Sonnet 5** (preferred ICA workhorse, since 2026-07-08) | `claude-sonnet-5` | `claude-sonnet-5[1m]` |
+| Sonnet 4.6 (older fallback) | `claude-sonnet-4-6` | `claude-sonnet-4-6[1m]` |
 | Opus 4.8 (default) | `claude-opus-4-8` | `claude-opus-4-8[1m]` (or `opus[1m]` alias) |
 | Opus 4.7 | `claude-opus-4-7` | `claude-opus-4-7[1m]` |
 | Opus 4.6 | `claude-opus-4-6` | `claude-opus-4-6[1m]` |
-| Sonnet 4.6 | `claude-sonnet-4-6` | `claude-sonnet-4-6[1m]` |
+| Gemini 3.5 Flash | `gemini-3.5-flash` | `gemini-3.5-flash[1m]` |
+| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | `gemini-3.1-pro-preview[1m]` |
 
-> ⚠️ **Keep the `claude-` prefix on the `[1m]` id.** The bare form `sonnet-4-6[1m]` **401s** on teams limited to the `global-models` group: the gateway strips `[1m]`, is left with the un-prefixed `sonnet-4-6` (not in `global-models`), and rejects it. Use the fully-prefixed `claude-sonnet-4-6[1m]` (probed working 2026-06-10). The `opus[1m]` alias is fine (it routes to `claude-opus-4-8[1m]`), but for Sonnet there is no bare alias — always write `claude-sonnet-4-6[1m]`.
+> ⚠️ **Keep the `claude-` prefix on the `[1m]` id.** The bare form `sonnet-4-6[1m]` / `sonnet-5[1m]` **401s** on teams limited to the `global-models` group: the gateway strips `[1m]`, is left with the un-prefixed `sonnet-4-6` (not in `global-models`), and rejects it. Use the fully-prefixed `claude-sonnet-5[1m]` (Sonnet 5 confirmed 1M via `modelUsage.contextWindow` on 2026-07-08). The `opus[1m]` alias is fine (routes to `claude-opus-4-8[1m]`), but for Sonnet there is no bare alias — always write `claude-sonnet-5[1m]`.
 >
-> ⚠️ **Quote the model arg in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts the whole command with `no matches found` (NO_MATCH is fatal) and nothing runs. Always: `--model 'claude-sonnet-4-6[1m]'`.
+> ⚠️ **Quote the model arg in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts the whole command with `no matches found` (NO_MATCH is fatal) and nothing runs. Always: `--model 'claude-sonnet-5[1m]'`.
 
-Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — used for mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists. GPT and Gemini are served at their native windows. The plain 200k Opus/Sonnet IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
+Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists; and **GPT**, served at its native window. ⚠️ **Gemini on ICA is NOT served at its native 1M** — the plain `gemini-3.5-flash` / `gemini-3.1-pro-preview` ids cap at 200k on the gateway; use the `[1m]` id there. (On the **native gemini-cli** path Gemini 3.x *is* 1M without a suffix — the `[1m]` id is an ICA-gateway artifact only.) The plain 200k Opus/Sonnet/Gemini IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
 
-> The delegation-router enforces the same rule automatically: for ICA-served Opus/Sonnet it emits the `[1m]` model_id and keeps the plain 200k ID as a demoted fallback (see `model-registry.yaml` → "ICA 1M-CONTEXT PREFERENCE").
+> The delegation-router enforces the same rule automatically: for ICA-served Opus/Sonnet/Gemini it emits the `[1m]` model_id and keeps the plain 200k ID as a demoted fallback (see `model-registry.yaml` → "ICA 1M-CONTEXT PREFERENCE").
 
 ## ICA Gateway Model Routing (Agent Tool)
 
@@ -125,7 +128,7 @@ The 401 above is the `haiku`/`sonnet`/`opus` **alias** resolving to a non-`globa
   "env": {
     "ANTHROPIC_BASE_URL": "https://api.nextgen-beta.ica.ibm.com/ica",
     "ANTHROPIC_DEFAULT_OPUS_MODEL":   "claude-opus-4-8[1m]",   // `opus`  alias → 1M
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6[1m]", // `sonnet` alias → 1M
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5[1m]",   // `sonnet` alias → Sonnet 5, 1M (ICA serves Sonnet 5 since 2026-07-08; was claude-sonnet-4-6[1m])
     "ANTHROPIC_DEFAULT_HAIKU_MODEL":  "claude-haiku-4-5"       // `haiku` alias + background tasks → global-models id (kills the 401)
   }
 }
@@ -334,7 +337,7 @@ was broken or off-brief.
 | Intent | Pattern | Model | Tool Scope | Turn Cap |
 |--------|---------|-------|------------|----------|
 | Quick answer / extraction | Single-shot, no tools | `claude-haiku-4-5` (free) | None | — |
-| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-4-6[1m]` | `"Read Write Edit Bash"` | `--max-turns 20` |
+| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-5[1m]` (4.6[1m] = older fallback) | `"Read Write Edit Bash"` | `--max-turns 20` |
 | Large parallel fan-out (many small tasks) | Multiple single-shot calls | `claude-haiku-4-5` (free) | None | — |
 | Complex reasoning subtask | Agentic | `claude-opus-4-8[1m]` | `"Read Write Edit Bash"` | `--max-turns 50` (no cost cap — ICA is free-to-us) |
 | Structured data extraction | Single-shot + `--json-schema` | `claude-haiku-4-5` (free) | None | — |
@@ -383,7 +386,7 @@ Post-delegation discipline:
 ~/ica-claude.sh -p "Task: [task description]
 Context: [minimal required context -- file paths, not contents]
 Deliverable: [expected output format]" \
-  --model 'claude-sonnet-4-6[1m]' \
+  --model 'claude-sonnet-5[1m]' \
   --dangerously-skip-permissions \
   --max-turns 20 \
   --allowedTools "Read Write Edit Bash" \
@@ -449,7 +452,7 @@ Deliverable: [structured recommendation]" \
 ```bash
 # First call — starts a session
 ~/ica-claude.sh -p "Analyze /path/to/codebase for security issues. Write findings to /tmp/security-report.md" \
-  --model 'claude-sonnet-4-6[1m]' \
+  --model 'claude-sonnet-5[1m]' \
   --dangerously-skip-permissions \
   --allowedTools "Read Write Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/codebase
@@ -513,7 +516,7 @@ PROMPT
 
 | Prohibited Claim | Truth |
 |-----------------|-------|
-| "The ICA gateway supports unlimited context" | False. Standard models have a hard 200k cap; `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-4-6[1m]`) are confirmed to ~1M but are NOT unlimited. |
+| "The ICA gateway supports unlimited context" | False. Standard models have a hard 200k cap; `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) are confirmed to ~1M but are NOT unlimited. |
 | "All models on the gateway are free" | Only specific small models (Haiku, Gemma) are free tier. |
 | "Use this for tasks requiring the current session's MCP tools" | Delegates cannot access the calling session's MCP servers. |
 | "The delegate can continue a previous conversation" | Each invocation is stateless by default. Use `--continue`/`--resume` for opt-in continuity. |
