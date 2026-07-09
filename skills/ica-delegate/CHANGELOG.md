@@ -1,5 +1,11 @@
 # Changelog — ica-delegate
 
+## v2.6 — 2026-07-09
+
+### Fixed
+- **CRITICAL caveat: ICA Sonnet 5 has no working extended thinking via Claude Code (verified 2026-07-09).** Sonnet 5 (Claude-5 family) dropped the legacy `thinking.type: enabled` + `budget_tokens` API and only reasons via `thinking.type: adaptive` + `output_config.effort`. Claude Code (`~/ica-claude.sh`) still emits the legacy format → Sonnet 5 silently **no-ops** it (0 thinking tokens, empty thinking block, **no error**). Added a 🚫 warning to the `[1m]` model-routing section, a note in Recipe 6, and a Do-Not-Say row. Reasoning-dependent offload must route to ICA **Opus** (`claude-opus-4-8[1m]`) or ICA **Sonnet 4.6** (`claude-sonnet-4-6[1m]`, Claude-4 family, legacy thinking still honored). Non-reasoning bounded waves still use `claude-sonnet-5[1m]`.
+- Validation: raw ICA API with `adaptive`+`effort=high` on a hard puzzle = 2,775 thinking tokens (model reasons fine); Sonnet 4.6 with legacy `budget_tokens` = 115 thinking tokens (works); Claude Code + Sonnet 5 = empty thinking block. Root cause is the Claude-Code→gateway thinking-param gap, not the model.
+
 ## v2.2.0 — 2026-06-09
 
 ### Changed
