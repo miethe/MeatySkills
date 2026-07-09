@@ -61,7 +61,7 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 | # | Field | Type | Meaning |
 |---|-------|------|---------|
 | 1 | `chosen_plugin_id` | string | Selected provider id (`claude`\|`ica`\|`bob`\|`gemini`\|`codex`) |
-| 2 | `model` | string | Model to use (e.g. `haiku`, `sonnet`, `opus`, `gpt-5.3-codex`) |
+| 2 | `model` | string | Model to use (e.g. `haiku`, `sonnet`, `opus`, `gpt-5.6-terra`) |
 | 3 | `effort` | string | Effort level (`none`\|`low`\|`standard`\|`high`\|`extended`\|`xhigh`\|`adaptive`) |
 | 4 | `agent_type_id` | string | agentType filename to instantiate (P2-INT-001 seam) |
 | 5 | `invocation_template` | string | Provider-specific shell invocation template (from registry/plugins) |

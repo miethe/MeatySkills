@@ -1,0 +1,510 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Global Model Registry (model-first)
+#
+# PURPOSE
+#   The single authoritative source of truth for EVERY model × every provider the
+#   delegation-router can reach. Folds in three previously-fragmented sources:
+#     - .claude/config/provider-plugins.toml  (provider-first invocation mechanics)
+#     - .claude/config/multi-model.toml        (task-class defaults + cost-shift policy)
+#     - ~/.claude/skills/ica-delegate/references/ica-models.md  (ICA prose inventory)
+#
+#   This file is model-keyed: each model carries its provider sub-instances. The
+#   resolver reads this registry directly (or a derived in-memory structure) and
+#   honors `enabled`, `priority`, `allowance`, and the `routing_policy` chains.
+#
+#   THIS IS THE AUTHORITATIVE SOURCE. Provider-plugins.toml / multi-model.toml
+#   routing tables are derived from / reconciled against this file.
+#
+# ADDING A NEW MODEL ON RELEASE
+#   Add a `models:` entry with `status: scaffolded` and every provider instance
+#   `enabled: false` until capabilities are confirmed. Registering it lets agents
+#   know the model exists without auto-routing real work to it. Promote to
+#   `status: active` + `enabled: true` only after the model is trusted.
+#
+# CRITICAL ACCURACY INVARIANT (do not assume — encode it)
+#   ICA "free" (`allowance: unlimited`, $0, cost-shifted off the primary budget)
+#   applies ONLY to: claude-haiku-4-5, gemma-4-26b, llama-4-maverick, granite-4-small.
+#   ICA Sonnet / Opus / GPT / Gemini are `allowance: shared_token_pool` — token-limited
+#   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
+#
+# ICA 1M-CONTEXT PREFERENCE (do not regress)
+#   For ICA-served Claude Opus/Sonnet AND ICA-served Gemini, the `[1m]` (1M-context)
+#   instance is ALWAYS preferred over the plain 200k instance — same provider, same
+#   shared token pool, strictly larger context window at no extra cost-tier. The `[1m]`
+#   instance therefore carries the LOWER `priority` number (preferred); the plain
+#   200k instance is kept only as a demoted fallback. opus-4-8 on ICA is 1m-only.
+#   The gateway silently caps the plain id at 200k even for models that are natively
+#   1M (Sonnet 5, Gemini 3.x) — the `[1m]` suffix is what unlocks the full window on
+#   the ICA path. (NOT needed on the NATIVE gemini-cli path: those models are 1M
+#   natively, no suffix.) Verified via `modelUsage.<id>.contextWindow` 2026-06-09
+#   (Claude) and 2026-07-08 (sonnet-5[1m]=1M/plain=200k; gemini-3.5-flash[1m]=1M/
+#   plain=200k; gemini-3.1-pro-preview[1m]=1M/plain=200k). When adding or editing any
+#   ICA Opus/Sonnet/Gemini instance, keep the `[1m]` variant ranked first.
+#
+# SCORECARD: scores{cost,intelligence,taste,speed} mirror MODEL-ROUTING.md §1.5 (agentic_meta_dev). Higher=better; cost=real spend on the preferred lane; per-provider cost_score overrides where lanes differ. Update doc and registry together.
+#
+# Reference: docs/project_plans/design-specs/model-registry-router-globalization-v1.md §3
+# ──────────────────────────────────────────────────────────────────────────────
+
+version: 1
+updated: 2026-07-09   # Codex gpt-5.6 line added (sol=frontier SOTA / terra=workhorse "better 5.5" / luna=cheap-fast); code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted to superseded-but-available. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only; Luna caps at xhigh); none/minimal remain below Light. Prior same-day: ICA Sonnet 5 reasoning caveat (extended thinking does NOT fire via Claude Code, legacy budget_tokens no-op → 0 thinking tokens; reasoning-dependent offload → ica Opus / ica claude-sonnet-4-6[1m]). Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Task-class → ordered preference chain. The chain IS the priority / free-first
+# mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
+# start at a free ICA instance; orchestration / mode_d pin to primary Claude.
+# ──────────────────────────────────────────────────────────────────────────────
+routing_policy:
+  exploration:      { chain: ["ica/claude-haiku-4-5", "claude/claude-haiku-4-5"], enabled: true }
+  documentation:    { chain: ["ica/claude-haiku-4-5", "claude/claude-haiku-4-5"], enabled: true }
+  mechanical:       { chain: ["ica/claude-haiku-4-5", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-4-5"], enabled: true }
+  second_opinion:   { chain: ["ica/gemma-4-26b-a4b-it", "ica/gemini-3.5-flash[1m]", "ica/meta-llama/llama-4-maverick-17b-128e-instruct-fp8", "ica/claude-haiku-4-5"], enabled: true }
+  implementation:   { chain: ["claude/claude-sonnet-5"], enabled: true }   # workhorse default; ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload)
+  web_research:     { chain: ["gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview[1m]"], enabled: true }   # leg1 native = Google-Search GROUNDED (needs GEMINI_API_KEY in ~/.config/aos/secrets.env; verified on free-tier key). leg2 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
+  code_review:      { chain: ["codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # codex workhorse = gpt-5.6-terra (successor to gpt-5.5); escalate to gpt-5.6-sol (frontier SOTA) on two failures per the two-failure rule
+  image_generation: { chain: ["nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
+  svg_generation:   { chain: ["gemini/gemini-3.5-flash"], enabled: true }
+  video_generation: { chain: ["sora/sora-2"], enabled: true }
+  orchestration:    { chain: ["claude/claude-opus-4-8"] }   # MUST-stay
+  mode_d:           { chain: ["claude/claude-opus-4-8"] }   # MUST-stay
+
+# Invariant: these classes can never be routed off primary Claude, regardless of
+# registry state. Enforced unconditionally by the resolver MUST-stay override.
+must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MODELS — one entry per DISTINCT model. Provider sub-instances carry the exact
+# invocation `model_id`, cost_tier, allowance, enable + priority.
+# ──────────────────────────────────────────────────────────────────────────────
+models:
+
+  # ── Claude family ───────────────────────────────────────────────────────────
+
+  claude-opus-4-8:
+    family: claude
+    class: opus
+    descriptor: "Latest, most capable Opus. Deep reasoning, orchestration, architecture. Subscription primary."
+    scores: { cost: 3, intelligence: 9, taste: 8, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [orchestration, deep-reasoning, architecture, verdicts, novel-algorithm-design]
+    tools: [agent_tool, task_tool]
+    related_skills: []
+    max_context: 200000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: claude, model_id: "claude-opus-4-8",     cost_tier: premium,  allowance: billed,            enabled: true, priority: 1 }
+      - { provider: ica,    model_id: "claude-opus-4-8[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+
+  claude-opus-4-7:
+    family: claude
+    class: opus
+    descriptor: "Opus 4.7 — stronger reasoning than 4.6. Available via ICA (shared pool)."
+    scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [deep-reasoning, architecture, planning]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
+      - { provider: ica, model_id: "claude-opus-4-7[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "claude-opus-4-7",     cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2 }
+
+  claude-opus-4-6:
+    family: claude
+    class: opus
+    descriptor: "Opus 4.6 — deep reasoning, architecture decisions. Available via ICA (shared pool)."
+    scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [deep-reasoning, architecture, planning]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
+      - { provider: ica, model_id: "claude-opus-4-6[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "claude-opus-4-6",     cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2 }
+
+  claude-sonnet-5:
+    family: claude
+    class: sonnet
+    descriptor: "Claude Sonnet 5 (released 2026-06-30). Near-Opus coding/agentic quality at Sonnet cost — the DEFAULT subscription implementation/workhorse tier. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $3/$15 per M (intro $2/$10 through 2026-08-31). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ⚠️ ICA path has NO working extended thinking (verified 2026-07-09): Claude Code emits the legacy budget_tokens API that Sonnet 5 removed → 0 thinking tokens, silent. Do NOT offload reasoning-dependent legs to ica/claude-sonnet-5[1m]; use ica Opus or ica claude-sonnet-4-6[1m] (legacy thinking still honored). Bounded non-reasoning waves unaffected."
+    scores: { cost: 5, intelligence: 8, taste: 8, speed: 7 }   # 1-10, higher=better; cost = preferred-lane real spend
+    reasoning_caveat: "ICA offload lane (ica/claude-sonnet-5[1m]) does not do extended thinking via Claude Code (verified 2026-07-09) — budget_tokens no-op → 0 thinking tokens. Subscription/native Sonnet 5 reasons fine. Reasoning-dependent offload → ica Opus or ica claude-sonnet-4-6[1m]."
+    when_to_use: [implementation, agentic-coding, code-review, multi-file-refactoring, planning, exploration, free-offload]
+    when_not_to_use_ica: [extended-thinking, deep-reasoning, chain-of-thought-dependent]
+    tools: [one_million_context]
+    related_skills: [ica-delegate]
+    max_context: 1000000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: claude, model_id: "claude-sonnet-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+      # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback. Verified 2026-07-08: [1m]=1M, plain=200k via modelUsage.
+      # ⚠️ reasoning DOES NOT fire on this ICA lane via Claude Code (verified 2026-07-09) — legacy budget_tokens no-op → 0 thinking tokens. Bounded non-reasoning waves only; reasoning-dependent → ica Opus / ica claude-sonnet-4-6[1m].
+      - { provider: ica,    model_id: "claude-sonnet-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica,    model_id: "claude-sonnet-5",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
+
+  claude-sonnet-4-6:
+    family: claude
+    class: sonnet
+    descriptor: "Previous-gen Sonnet (a generation behind Sonnet 5). Subscription billed; still available as an ICA offload lane (`claude-sonnet-4-6[1m]`, shared pool), but SUPERSEDED as the default ICA offload by claude-sonnet-5[1m] (same economics, current-gen) since 2026-07-08 — keep 4.6 only as an older fallback. Subscription real-implementation default is claude-sonnet-5."
+    scores: { cost: 8, intelligence: 7, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [implementation, planning, code-review, exploration, multi-file-refactoring, free-offload]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: claude, model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: billed,            enabled: true, priority: 1, cost_score: 5 }
+      # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is demoted fallback.
+      - { provider: ica,    model_id: "claude-sonnet-4-6[1m]",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica,    model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3 }
+
+  claude-haiku-4-5:
+    family: claude
+    class: haiku
+    descriptor: "Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option."
+    scores: { cost: 10, intelligence: 5, taste: 5, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [mechanical-tasks, doc-gen, adversarial-review, exploration]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica,    model_id: "claude-haiku-4-5", cost_tier: free,   allowance: unlimited, enabled: true, priority: 1 }
+      - { provider: claude, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }
+
+  # ── Frontier (Claude Fable 5 — Mythos-class; 2× Opus cost; EXPLICIT OPT-IN ONLY) ─────
+  #
+  # Fable 5's lead over Opus 4.8 GROWS with task length/complexity and ≈ 0 on short/routine
+  # work — so its 2× premium ($10/$50 vs Opus $5/$25 per M) only pays where the task is
+  # high-leverage, path-dependent, or one-shots what Opus would take many cycles to do.
+  # Deliberately NOT in any routing_policy chain and NOT in must_stay_primary: it is reached
+  # ONLY by an explicit `model: claude-fable-5` assignment, so it is never spent by default.
+  #
+  # WHEN IT EARNS THE 2× (assign it in plan frontmatter, or set it as the SESSION orchestrator
+  # model during planning/decomposition phases):
+  #   • Pre-commitment planning & architecture — PRDs, impl plans, ExecutionGraph design,
+  #     spike/exploration verdict synthesis. Authored once; constrains dozens of downstream
+  #     agent-hours, so a better decision dwarfs the token premium. (HIGHEST ROI.)
+  #   • Net-new / greenfield jumpstarts — initial schema, domain model, system shape. Max
+  #     uncertainty + path-dependency; early decisions compound for weeks. (Cross-project:
+  #     MeatyWiki / CityTiles / IntentTree foundations, not just SkillMeat.)
+  #   • Long-horizon autonomous sprints — large migrations / broad sweeps run unattended
+  #     (Tier 3 only). Premium is dwarfed by the cost of an off-the-rails multi-hour run.
+  #   • Escalated debugging — AFTER Opus has failed 1–2 cycles; one strong pass beats N more.
+  #   • High-stakes verdict gates — final sign-off on core-path / auth / migration work where
+  #     a wrong "done" ships a regression.
+  #
+  # WHEN NOT TO USE IT (Opus 4.8 is the sensible baseline — Fable's edge ≈ 0):
+  #   routine implementation (Sonnet/Opus already strong) · high-volume mechanical work
+  #   (→ Haiku/ICA, free) · latency-sensitive interactive loops · tight iterate-many-times
+  #   loops · anything you run dozens of times where 2× compounds.
+  claude-fable-5:
+    family: claude
+    class: fable
+    descriptor: "Claude Fable 5 (Mythos-class frontier, released 2026-06-09). SOTA agentic coding (SWE-bench Verified 95%, SWE-bench Pro 80%) and long-horizon reasoning; lead over Opus 4.8 grows with task length/complexity. $10/$50 per M = 2× Opus 4.8 — explicit opt-in only, never auto-routed. 1M context, 128K max output."
+    scores: { cost: 1, intelligence: 10, taste: 9, speed: 4 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [architecture, novel-algorithm-design, greenfield-jumpstart, long-horizon-autonomy, debug-escalation, high-stakes-verdict, deep-reasoning, planning]
+    tools: [one_million_context]
+    related_skills: []
+    max_context: 1000000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: claude, model_id: "claude-fable-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  # ── ICA free-tier open models (allowance: unlimited — genuinely free) ────────
+
+  gemma-4-26b:
+    family: open
+    class: gemma
+    descriptor: "Google Gemma 4 26B (preview). Free open model via ICA. Simple extraction, classification, diversity votes."
+    scores: { cost: 10, intelligence: 3, taste: 2, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [second-opinion, diversity-vote, simple-classification, mechanical-tasks]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gemma-4-26b-a4b-it", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+
+  llama-4-maverick:
+    family: open
+    class: llama
+    descriptor: "Meta Llama 4 Maverick 17B Instruct. Free open model via ICA. Fast, lightweight reasoning, cross-family votes."
+    scores: { cost: 10, intelligence: 3, taste: 2, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [second-opinion, diversity-vote, mechanical-tasks, lightweight-reasoning]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+
+  granite-4-small:
+    family: open
+    class: granite
+    descriptor: "IBM Granite 4 Small. Free open model via ICA. Smallest, fastest response. Simple Q&A / classification."
+    scores: { cost: 10, intelligence: 2, taste: 2, speed: 10 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [simple-classification, mechanical-tasks, fast-response]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "ibm/granite-4-h-small", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+
+  # ── ICA-served OpenAI / Gemini (allowance: shared_token_pool — NOT free) ─────
+
+  gpt-4o:
+    family: openai
+    class: gpt-4o
+    descriptor: "OpenAI GPT-4o (multimodal) via ICA. Alternative reasoning style for second opinions."
+    scores: { cost: 8, intelligence: 6, taste: 5, speed: 7 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [second-opinion, alternative-approach, multimodal]
+    tools: [vision]
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gpt-4o", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+
+  gpt-5.1:
+    family: openai
+    class: gpt-5
+    descriptor: "OpenAI GPT-5.1 frontier via ICA. Strong general reasoning (shared pool, token-limited)."
+    scores: { cost: 8, intelligence: 7, taste: 6, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [second-opinion, alternative-approach, complex-reasoning]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gpt-5.1-chat-gus", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1 }
+
+  gpt-5.4:
+    family: openai
+    class: gpt-5
+    descriptor: "OpenAI GPT-5.4 latest frontier via ICA. Strongest GPT reasoning available on the gateway (shared pool)."
+    scores: { cost: 8, intelligence: 8, taste: 6, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [second-opinion, alternative-approach, complex-reasoning]
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 200000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gpt-5.4-gus", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1 }
+
+  gemini-3.1-pro-preview-ica:
+    family: google
+    class: gemini-pro
+    descriptor: "Gemini 3.1 Pro Preview via ICA bridge. Long-context strength; bridge fallback for the native gemini provider (shared pool). Use the `[1m]` id — plain `gemini-3.1-pro-preview` is silently capped at 200k on the gateway (verified 2026-07-08)."
+    scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [web-research, large-context, exploration]
+    tools: [web_search, large_context]
+    related_skills: [ica-delegate]
+    max_context: 1000000
+    sampling: stochastic
+    status: active
+    providers:
+      # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback.
+      - { provider: ica, model_id: "gemini-3.1-pro-preview[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "gemini-3.1-pro-preview",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2 }
+
+  # ── Google (native gemini-cli, AI Studio GEMINI_API_KEY — metered; free Code Assist OAuth tier sunset 2026-07) ──
+
+  gemini-3.5-flash:
+    family: google
+    class: gemini-flash
+    descriptor: "Gemini 3.5 Flash via gemini-cli (DEFAULT workhorse). Google Search grounding (Gemini 3+ only; grounding VERIFIED on the current free-tier key 2026-07-08), 1M ctx, ~65K output, thinking. AUTH: AI Studio `GEMINI_API_KEY` (metered) at ~/.config/aos/secrets.env + settings.json selectedType=gemini-api-key — the free Code Assist OAuth tier was sunset (IneligibleTierError), do NOT re-OAuth. ALSO served via the ICA gateway (shared pool) as of 2026-07-07 — assume NO Search grounding on the ICA path (ICA-first for non-grounded work), and use the `[1m]` id there (plain `gemini-3.5-flash` is silently capped at 200k on the gateway; native gemini-cli is 1M without a suffix — verified 2026-07-08)."
+    scores: { cost: 6, intelligence: 7, taste: 6, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [web-research, large-context, svg-generation, exploration, adversarial-review, code-review]
+    tools: [web_search, large_context]
+    related_skills: [gemini-cli, ica-delegate]
+    max_context: 1000000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: gemini, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }   # native gemini-cli: 1M without a suffix, Search-grounded
+      # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
+      - { provider: ica, model_id: "gemini-3.5-flash[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "gemini-3.5-flash",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
+
+  gemini-3.1-pro-preview:
+    family: google
+    class: gemini-pro
+    descriptor: "Gemini 3.1 Pro Preview via gemini-cli. Heavy reasoning / deep analysis. (gemini-3-pro-preview is shut down; there is NO gemini-3.5-pro.)"
+    scores: { cost: 5, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [web-research, large-context, planning, adversarial-review, deep-reasoning]
+    tools: [web_search, large_context]
+    related_skills: [gemini-cli]
+    max_context: 1000000
+    sampling: stochastic
+    status: preview
+    providers:
+      - { provider: gemini, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+
+  gemini-3.1-flash-lite:
+    family: google
+    class: gemini-flash
+    descriptor: "Gemini 3.1 Flash Lite via gemini-cli. Cheapest/fastest for trivial work (formatting, one-liners)."
+    scores: { cost: 9, intelligence: 4, taste: 3, speed: 10 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [exploration, mechanical]
+    tools: [large_context]
+    related_skills: [gemini-cli]
+    max_context: 1000000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: gemini, model_id: "gemini-3.1-flash-lite", cost_tier: free, allowance: billed, enabled: true, priority: 1 }
+
+  # ── Codex (OpenAI gpt-5.6 line via codex CLI, sandbox-gated) ────────────────
+  # Verified codex-cli v0.144.0-alpha.4 (2026-07-09): three-model gpt-5.6 line —
+  #   gpt-5.6-sol   = frontier SOTA (hardest reasoning / escalation; ~/.codex default @ xhigh)
+  #   gpt-5.6-terra = workhorse "better 5.5" (DEFAULT codex delegation tier)
+  #   gpt-5.6-luna  = cheaper/faster (lighter review, mechanical, quick fixes)
+  # Reasoning-effort ladder (marketing → config string): Light=low · Medium=medium ·
+  #   High=high · Extra High=xhigh · Ultra=ultra (SOL/TERRA ONLY — Luna caps at xhigh).
+  #   `none`/`minimal` remain below Light for pure-mechanical work. The 400 API-enum
+  #   error message understates the set (omits `ultra`) — `ultra` verified accepted on
+  #   sol & terra 2026-07-09. gpt-5.5/-pro are SUPERSEDED (kept for compatibility).
+
+  gpt-5.6-sol:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.6 Sol via codex CLI — the new FRONTIER SOTA model (released 2026-07). Hardest reasoning / deep problem analysis; the escalation target when gpt-5.6-terra stalls. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Global ~/.codex/config.toml default (sol @ xhigh). Supersedes gpt-5.5-pro."
+    scores: { cost: 3, intelligence: 9, taste: 7, speed: 4 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [debug-escalation, deep-reasoning, agentic-coding, architecture, novel-algorithm-design]
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  gpt-5.6-terra:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain."
+    scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation]
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  gpt-5.6-luna:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line."
+    scores: { cost: 6, intelligence: 7, taste: 6, speed: 8 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+
+  # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
+
+  gpt-5.5:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.5 via codex CLI — SUPERSEDED by the gpt-5.6 line (2026-07). Still selectable for compatibility but no longer a default; prefer gpt-5.6-terra (workhorse) / gpt-5.6-sol (hardest) / gpt-5.6-luna (cheap). Reasoning efforts: minimal|low|medium|high|xhigh|ultra."
+    scores: { cost: 4, intelligence: 8, taste: 6, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
+    superseded_by: gpt-5.6-terra
+    when_to_use: [agentic-coding, debug-escalation, code-review, ac-validation]
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  gpt-5.5-pro:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.5 Pro via codex CLI — SUPERSEDED by gpt-5.6-sol (2026-07). Retained for compatibility; prefer gpt-5.6-sol for the hardest reasoning."
+    scores: { cost: 3, intelligence: 9, taste: 6, speed: 4 }   # 1-10, higher=better; cost = preferred-lane real spend
+    superseded_by: gpt-5.6-sol
+    when_to_use: [debug-escalation, deep-reasoning, agentic-coding]
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  # ── Bob (local, zero-cost, stateless) ───────────────────────────────────────
+
+  bob-local:
+    family: local
+    class: bob
+    descriptor: "Bob Shell local delegate. Zero-cost, stateless. Drafting, scaffolding, bounded exploration, fix-cycle (non-Mode-D)."
+    scores: { cost: 10, intelligence: 4, taste: 3, speed: 7 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [drafting, exploration, mechanical-tasks, fix-cycle]
+    tools: []
+    related_skills: [bob-shell-delegate]
+    max_context: 40000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: bob, model_id: "bob-local", cost_tier: free, allowance: local, enabled: true, priority: 1 }
+
+  # ── Image / video generation ────────────────────────────────────────────────
+
+  nano-banana-2:
+    family: google
+    class: image
+    descriptor: "Nano Banana 2 (Gemini 3.1 Flash Image). Fast, cheap (~$0.067/1K). Default image generation — UI mockups, sprites, assets."
+    when_to_use: [image-generation, ui-mockup, sprite, draft-asset]
+    tools: [imagegen]
+    related_skills: [nano-banana]
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: nano-banana, model_id: "nano-banana-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
+
+  nano-banana-pro:
+    family: google
+    class: image
+    descriptor: "Nano Banana Pro (Gemini 3 Pro Image). Highest quality (~$0.134/1K). Final assets; 1K/2K/4K, image-to-image edits."
+    when_to_use: [image-generation, final-asset, high-quality-image, image-edit]
+    tools: [imagegen]
+    related_skills: [nano-banana-pro]
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: nano-banana, model_id: "nano-banana-pro", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
+
+  sora-2:
+    family: openai
+    class: video
+    descriptor: "Sora 2 video generation. Walkthrough videos, animations, marketing clips."
+    when_to_use: [video-generation, animation, marketing-clip]
+    tools: [videogen]
+    related_skills: [sora]
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: sora, model_id: "sora-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }

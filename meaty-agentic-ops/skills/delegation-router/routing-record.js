@@ -23,7 +23,7 @@
 /**
  * @typedef {Object} RoutingRecord
  * @property {string}          chosen_plugin_id   - The selected provider id ('claude'|'ica'|'bob'|'gemini'|'codex')
- * @property {string}          model              - The model to use (e.g. 'haiku', 'sonnet', 'opus', 'gpt-5.3-codex')
+ * @property {string}          model              - The model to use (e.g. 'haiku', 'sonnet', 'opus', 'gpt-5.6-terra')
  * @property {string}          effort             - Effort level ('none'|'low'|'standard'|'high'|'extended'|'xhigh'|'adaptive')
  * @property {string}          agent_type_id      - agentType filename to instantiate (see P2-INT-001 seam)
  * @property {string}          invocation_template - Shell invocation template string (provider-specific; from provider-plugins.toml)

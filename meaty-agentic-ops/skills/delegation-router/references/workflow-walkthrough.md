@@ -29,7 +29,7 @@ task class unconditionally. Only the cheap investigation legs cost-shift.
 | Mechanical extraction / scaffolding | primary | ICA Haiku (free) |
 | Real implementation judgment | primary Sonnet | primary Sonnet (ICA Sonnet only on explicit opt-in — `shared_token_pool`) |
 | Fix-cycle | primary | Bob (local, $0) unless Mode-D |
-| AC validation / code review | primary | Codex (`gpt-5.3-codex`) |
+| AC validation / code review | primary | Codex (`gpt-5.6-terra`) |
 | Council-tier review | primary | **primary (MUST-stay)** |
 | **Anything touching auth / payments / migrations / deletion** | primary | **primary (Mode-D — MUST-stay)** |
 

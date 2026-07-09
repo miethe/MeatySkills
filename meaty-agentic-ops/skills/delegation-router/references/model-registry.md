@@ -3,9 +3,24 @@
 How to read `model-registry.yaml` and how to register a new model on release. This is the
 agent-facing companion to the registry.
 
-**Canonical location (global)**: `~/.claude/config/model-registry.yaml`
-Registry DATA lives here only. Edit it directly; the skillmeat repo no longer carries a
-canonical copy (the repo copy, if present, is a deprecated Tier-2 per-project override).
+**Tracked source (edit here)**: `meaty-agentic-ops/skills/delegation-router/model-registry.yaml`
+in the **MeatySkills** repo — co-located with the router it drives, version-controlled and
+PR-reviewed (same "edit the upstream, never the deployed copy" rule as every other artifact).
+
+**Deployed runtime copy (do NOT hand-edit)**: `~/.claude/config/model-registry.{yaml,generated.json}`.
+The resolver READS this global path at runtime (3-tier lookup, unchanged). It is produced by
+`scripts/sync-to-global.sh`, which copies the tracked YAML to `~/.claude/config/` and regenerates
+the JSON there. Edit the tracked source, commit, then run `sync-to-global.sh` (or `/redeploy`) to
+propagate to global + the node.
+
+> **History:** the registry originally lived in the skill dir (globalization-v1 spec §5), was briefly
+> relocated to an untracked `~/.claude/config/` "global-canonical, edit-in-place" model, and as of
+> 2026-07-09 is back to a **tracked co-located source deployed to the config path** — the config copy
+> is now a deployed artifact, not the edit surface. (The skillmeat repo previously carried a stale
+> duplicate; it has been removed — MeatySkills is the sole upstream.)
+
+Per-project overrides still work: the resolver's Tier-2 lookup reads `<cwd>/.claude/config/model-registry.*`
+when a repo opts into a local override.
 
 Design reference: `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 3`.
 
@@ -153,11 +168,14 @@ rely on `scores:` influencing routing outcomes until a CHANGELOG entry confirms 
 
 Worked example: **Claude Fable 5** ships. Register it before routing real work to it.
 
-Edit `~/.claude/config/model-registry.yaml` directly; then run:
+Edit the **tracked source** `meaty-agentic-ops/skills/delegation-router/model-registry.yaml` (in
+MeatySkills), commit it, then deploy:
 ```bash
-python3 ~/.claude/skills/delegation-router/scripts/build-model-registry.py
+bash meaty-agentic-ops/skills/delegation-router/scripts/sync-to-global.sh
 ```
-to regenerate `~/.claude/config/model-registry.generated.json`.
+which copies the YAML to `~/.claude/config/` and regenerates `model-registry.generated.json` there
+(then propagate to the node via `/redeploy` or rsync). Do **not** hand-edit the deployed
+`~/.claude/config/` copy.
 
 1. **Add the model entry** under `models:`, keyed by the model class name:
 
