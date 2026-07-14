@@ -758,6 +758,12 @@ const {
   plan_ref: planRef,
   dry_run: dryRun,
   progressFile,
+  // Advisory only — names the model that should drive the orchestration loop
+  // (session / main-loop) for the plan. Cascades to phases unless a phase sets
+  // its own orchestrator_model. The workflow cannot switch its own main-loop
+  // model mid-run; this value is echoed in the startup banner and carried in the
+  // graph for surfacing. It does NOT change the delegate model: on any agent() call.
+  orchestrator_model,
   // P3: provider routing feature flag — DEFAULT FALSE. When off, existing reviewer
   // selections are preserved byte-for-byte. When true, AC validation routes to
   // codex-executor two-stage pattern.
@@ -783,6 +789,15 @@ if (dryRun) {
 // ---------------------------------------------------------------------------
 
 const report = []
+
+// Advisory startup banner: echo the orchestration-loop model for this plan and any
+// per-phase overrides. The workflow runs under the operator's session model and cannot
+// switch its own main-loop model mid-run — this only surfaces intent.
+const orchOverrides = waves
+  .flatMap(w => w.phases)
+  .filter(p => p.orchestrator_model && p.orchestrator_model !== orchestrator_model)
+  .map(p => `${p.id}→${p.orchestrator_model}`)
+log(`Orchestrator model: ${orchestrator_model || 'session default'}${orchOverrides.length ? ` (per-phase overrides: ${orchOverrides.join(', ')})` : ''} — advisory; launch the session under this model.`)
 
 for (const wave of waves) {
   log(`Starting Wave ${wave.id}`)

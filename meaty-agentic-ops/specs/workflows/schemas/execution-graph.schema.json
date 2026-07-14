@@ -37,6 +37,10 @@
       "type": "boolean",
       "default": false,
       "description": "When true, the workflow returns the parsed graph for inspection without spawning implementation agents."
+    },
+    "orchestrator_model": {
+      "type": "string",
+      "description": "Plan-level default for the model that drives the ORCHESTRATION loop (session / main-loop) — distinct from a phase's delegate model. Registry short form (e.g. 'opus-4-8', 'fable-5', 'sonnet-5'). Cascades to all phases; a phase may override via its own orchestrator_model. Advisory: echoed in the startup banner and carried in the graph; the workflow cannot switch its own main-loop model mid-run."
     }
   },
   "$defs": {
@@ -96,6 +100,14 @@
         "fix_agent": {
           "type": "string",
           "description": "Optional override agentType for fix-loop agents. Defaults to the assigned_to of the first completed task in the phase."
+        },
+        "model": {
+          "type": "string",
+          "description": "Delegate/implementer model default for this phase — passed as model: on agent() dispatches (e.g. the phase-owner). Distinct from orchestrator_model. Omit to inherit the session model."
+        },
+        "orchestrator_model": {
+          "type": "string",
+          "description": "Per-phase override of the plan-level orchestrator_model — the model that should drive the orchestration loop for this phase. Registry short form (e.g. 'opus-4-8', 'fable-5', 'sonnet-5'). Use sparingly (Tier 3 / large Tier 2). Advisory: surfaced in the startup banner; does NOT change the delegate model: passed to any agent()."
         },
         "tasks": {
           "type": "array",
