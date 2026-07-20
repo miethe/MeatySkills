@@ -47,7 +47,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-07-20   # gpt-5.6-terra-dzus + gpt-5.6-luna-dzus: ICA gateway variants of the Codex 5.6 workhorse/cheap tiers — accessible via ica-claude.sh (chat completions path, NOT codex CLI). Tested and confirmed working. Bypasses known Codex-via-ICA Responses-API block. Added as ICA providers on gpt-5.6-terra + gpt-5.6-luna entries; code_review chain updated (ica/gpt-5.6-terra-dzus first — shared pool, no CLI issue). Prior (2026-07-09): Codex gpt-5.6 line added; code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only). ICA Sonnet 5 reasoning caveat. Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
+updated: 2026-07-20   # REVERTED the earlier same-day gpt-5.6-*-dzus ICA additions: those ICA gateway ids are listed on the gateway but NOT reliably servable (load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masked it via Opus fallback). code_review restored to codex/gpt-5.6-terra first. Parked design + retry trigger: docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. Prior (2026-07-09): Codex gpt-5.6 line added; code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only). ICA Sonnet 5 reasoning caveat. Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Task-class → ordered preference chain. The chain IS the priority / free-first
@@ -61,7 +61,7 @@ routing_policy:
   second_opinion:   { chain: ["ica/gemma-4-26b-a4b-it", "ica/gemini-3.5-flash[1m]", "ica/meta-llama/llama-4-maverick-17b-128e-instruct-fp8", "ica/claude-haiku-4-5"], enabled: true }
   implementation:   { chain: ["claude/claude-sonnet-5"], enabled: true }   # workhorse default; ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload)
   web_research:     { chain: ["gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview[1m]"], enabled: true }   # leg1 native = Google-Search GROUNDED (needs GEMINI_API_KEY in ~/.config/aos/secrets.env; verified on free-tier key). leg2 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
-  code_review:      { chain: ["ica/gpt-5.6-terra-dzus", "codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # ICA terra-dzus preferred (shared pool, chat-completions path — bypasses Codex CLI Responses-API issue on ICA; verified 2026-07-20); falls back to codex/gpt-5.6-terra (metered CLI); escalate to gpt-5.6-sol on two failures
+  code_review:      { chain: ["codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # codex workhorse = gpt-5.6-terra (successor to gpt-5.5); escalate to gpt-5.6-sol (frontier SOTA) on two failures per the two-failure rule. (An ICA gpt-5.6-terra-dzus lane was attempted 2026-07-20 but reverted — model not reliably servable on the gateway; see ica-codex-responses-shim-v1.md.)
   image_generation: { chain: ["nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
   svg_generation:   { chain: ["gemini/gemini-3.5-flash"], enabled: true }
   video_generation: { chain: ["sora/sora-2"], enabled: true }
@@ -398,34 +398,30 @@ models:
   gpt-5.6-terra:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Terra — the DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. Two lanes: (1) ICA gateway id `gpt-5.6-terra-dzus` via ica-claude.sh (chat completions, shared pool, preferred — bypasses Codex CLI Responses-API issue on ICA; verified 2026-07-20); (2) codex CLI `gpt-5.6-terra` (metered, full agentic mode with sandbox). code_review chain starts with the ICA lane."
-    scores: { cost: 7, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = ICA shared-pool lane (preferred for code_review; codex metered = cost 4)
-    when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation, second-opinion]
+    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: an ICA gateway id `gpt-5.6-terra-dzus` is listed on the gateway but NOT reliably servable (2026-07-20: load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masks it via Opus fallback). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation]
     tools: []
-    related_skills: [codex, ica-delegate]
+    related_skills: [codex]
     max_context: 400000
     sampling: deterministic
     status: active
     providers:
-      # ICA path preferred for code_review (shared pool, chat-completions — no Codex CLI Responses-API issue; verified 2026-07-20)
-      - { provider: ica,   model_id: "gpt-5.6-terra-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 7 }
-      - { provider: codex, model_id: "gpt-5.6-terra",      cost_tier: premium,  allowance: billed,            enabled: true, priority: 2, cost_score: 4 }
+      - { provider: codex, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
 
   gpt-5.6-luna:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Luna — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. Two lanes: (1) ICA gateway id `gpt-5.6-luna-dzus` via ica-claude.sh (chat completions, shared pool, preferred for quick passes — bypasses Codex CLI Responses-API issue on ICA; verified 2026-07-20); (2) codex CLI `gpt-5.6-luna` (metered, full agentic mode)."
-    scores: { cost: 8, intelligence: 7, taste: 6, speed: 8 }   # 1-10, higher=better; cost = ICA shared-pool lane (preferred; codex metered = cost 6)
-    when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration, quick-fixes]
+    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: an ICA gateway id `gpt-5.6-luna-dzus` is listed but NOT reliably servable (2026-07-20, same misconfigured-deployment issue as terra-dzus). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    scores: { cost: 6, intelligence: 7, taste: 6, speed: 8 }   # 1-10, higher=better; cost = preferred-lane real spend
+    when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
     tools: []
-    related_skills: [codex, ica-delegate]
+    related_skills: [codex]
     max_context: 400000
     sampling: deterministic
     status: active
     providers:
-      # ICA path preferred for cheap/fast passes (shared pool, chat-completions — no Codex CLI Responses-API issue; verified 2026-07-20)
-      - { provider: ica,   model_id: "gpt-5.6-luna-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 8 }
-      - { provider: codex, model_id: "gpt-5.6-luna",      cost_tier: standard, allowance: billed,            enabled: true, priority: 2, cost_score: 6 }
+      - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
 
