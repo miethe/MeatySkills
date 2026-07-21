@@ -1,7 +1,7 @@
 {
   "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "1e6e3243337698de25050e9354157a4a63d93c91a6ca46a6265226ffd7176bb2",
+  "_yaml_sha256": "d0587e975ad1b58f060307cc88873e1b377e26c9f65c9f299fd9a60c6f020a92",
   "version": 1,
   "updated": "2026-07-21",
   "routing_policy": {
@@ -643,7 +643,7 @@
     "gpt-5.5-gus": {
       "family": "openai",
       "class": "gpt-5",
-      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). enabled:false until a client can suppress `output_config` (a /messages param-strip proxy or a CC setting) — the delegation-router executes via ica-claude.sh, so enabling now would route work to a lane that 400s and silently falls back to Opus. Usable TODAY only by a raw OpenAI-SDK / curl client that omits the reasoning-control param.",
+      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). WORKING OPT-IN LANES exist (2026-07-21): **Codex** reaches it directly via `/responses` with NO shim (`~/ica-codex.sh` / `codex --profile ica`, model gpt-5.5-gus — verified agentic w/ tool use, free ICA shared-pool lane); **Claude Code** reaches it via the `/messages` param-strip proxy (`agentic_meta_dev/infra/ica-gpt-shim/ica-gpt.sh`, which drops `output_config` — verified agentic w/ tool use). Kept enabled:false because the delegation-router's ica-executor runs `ica-claude.sh` against the RAW gateway (still 400s) and auto-routing would need the shim daemon always up; these are opt-in lanes, not auto-routed. Enable only if the ica-executor is wired through the shim by default.",
       "scores": {
         "cost": 8,
         "intelligence": 8,
