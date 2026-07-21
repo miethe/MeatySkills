@@ -1,7 +1,7 @@
 {
   "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "d0587e975ad1b58f060307cc88873e1b377e26c9f65c9f299fd9a60c6f020a92",
+  "_yaml_sha256": "497e2e4313f2f7ae49e5a4cbe8c4120ec612ffe170d63a92b1755785dc0f41a4",
   "version": 1,
   "updated": "2026-07-21",
   "routing_policy": {
@@ -643,7 +643,7 @@
     "gpt-5.5-gus": {
       "family": "openai",
       "class": "gpt-5",
-      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). WORKING OPT-IN LANES exist (2026-07-21): **Codex** reaches it directly via `/responses` with NO shim (`~/ica-codex.sh` / `codex --profile ica`, model gpt-5.5-gus — verified agentic w/ tool use, free ICA shared-pool lane); **Claude Code** reaches it via the `/messages` param-strip proxy (`agentic_meta_dev/infra/ica-gpt-shim/ica-gpt.sh`, which drops `output_config` — verified agentic w/ tool use). Kept enabled:false because the delegation-router's ica-executor runs `ica-claude.sh` against the RAW gateway (still 400s) and auto-routing would need the shim daemon always up; these are opt-in lanes, not auto-routed. Enable only if the ica-executor is wired through the shim by default.",
+      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). WORKING OPT-IN LANES exist (2026-07-21): **Codex** reaches it directly via `/responses` with NO shim (`~/ica-codex.sh` / `codex --profile ica`, model gpt-5.5-gus — verified agentic w/ tool use, free ICA shared-pool lane); **Claude Code** reaches it via the `/messages` param-strip proxy (`agentic_meta_dev/infra/ica-gpt-shim/ica-gpt.sh`, which drops `output_config` — verified agentic w/ tool use). ENABLED 2026-07-21: the resolver's `buildRegistryInvocation` now routes `gpt-*` ICA models through `~/ica-gpt.sh` (the param-strip shim wrapper, which lazily self-starts the /messages proxy — no always-on daemon), instead of the raw-gateway `ica-claude.sh`. Explicit-selectable (`resolve({provider:'ica', model:'gpt-5.5-gus'})`); NOT added to any auto routing_policy chain. ⚠️ LAPTOP-ONLY: `~/ica-gpt.sh` + the proxy exist on the laptop; the node lacks the shim, so gpt-5.5-gus routing there is deferred until the shim is deployed to the node. Opt-in CLI lanes (`ica-gpt.sh` for CC, `~/ica-codex.sh` for Codex) remain the direct path.",
       "scores": {
         "cost": 8,
         "intelligence": 8,
@@ -666,14 +666,14 @@
       ],
       "max_context": 200000,
       "sampling": "stochastic",
-      "status": "scaffolded",
+      "status": "active",
       "providers": [
         {
           "provider": "ica",
           "model_id": "gpt-5.5-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": false,
+          "enabled": true,
           "priority": 1
         }
       ]

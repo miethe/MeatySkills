@@ -929,6 +929,15 @@ function buildRegistryInvocation(chosen, profile, effort) {
     case 'claude':
       return `claude -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
     case 'ica':
+      // GPT models on ICA 400 on the raw gateway: Claude Code attaches `output_config`
+      // on /messages and the Azure backend rejects it. Route gpt-* through the
+      // ica-gpt.sh param-strip shim wrapper (it lazily + idempotently self-starts the
+      // /messages proxy — no always-on daemon). Claude/Gemini ICA models stay on the raw
+      // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/ and the
+      // delegation-router-cross-client exploration (2026-07-21).
+      if (/gpt/i.test(modelId)) {
+        return `~/ica-gpt.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
+      }
       return `~/ica-claude.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
     case 'gemini':
       return `gemini "{prompt}" --model ${modelId} --yolo`;
