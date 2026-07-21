@@ -3,6 +3,31 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-21 — resolve-cli.js: headless resolve CLI for Codex/non-Claude-Code consumption
+
+- **`resolve-cli.js` added** — a thin (~200-line, mostly comments) CLI wrapper over `resolver.js`'s
+  pure `resolve()`. Lets Codex (or any harness that can shell out) obtain the same `RoutingRecord`
+  Claude Code would, without re-implementing the resolver. `node resolve-cli.js --model <id>
+  [--provider …] [--task-class …] [--effort …] [--profile …] [--resume-active] [--compact]` prints
+  the validated RoutingRecord as JSON and exits 0; an invalid/unresolvable request exits non-zero
+  with a one-line message on stderr. Pure read — no network, no model calls, no writes; the only
+  I/O beyond the resolver's existing registry lookup is a single `fs.existsSync` stat (see next
+  bullet).
+- **Node-safety fallback (CLI-side only)** — resolver.js's Track-1 `buildRegistryInvocation`
+  gpt-branch is left untouched (protected per the feature contract). Instead, `resolve-cli.js`
+  post-processes the emitted record: if `invocation_template` references `~/ica-gpt.sh` (the
+  laptop-only `/messages` param-strip shim) and that file isn't present on the host running the
+  CLI, it rewrites the template to the raw `~/ica-claude.sh` path so the record stays directly
+  runnable on hosts (e.g. the agentic node) that don't have the shim yet. Test/debug seam:
+  `ICA_GPT_SHIM_PATH` env var overrides the probed path.
+- **`scripts/sync-to-global.sh`** — added `resolve-cli.js` to `SKILL_FILES` so it deploys to
+  `~/.claude/skills/delegation-router/` alongside the engine files.
+- **`tests/test-resolve-cli.js` added** — 10 subprocess-based smoke tests (known-good request →
+  valid RoutingRecord + exit 0; invalid/missing input → non-zero + readable stderr; zero
+  network/model-call static check; node-safety fallback with/without the shim; `--help`).
+- Feature contract: `docs/project_plans/feature_contracts/infrastructure/delegation-router-codex-consumption.md`
+  (agentic_meta_dev).
+
 ## 2026-07-21 — ICA GPT retest: gpt-5.5-gus added, gpt-5.4/5.1 regressed, servability drift-detector
 
 - **`gpt-5.5-gus` added** (`status: scaffolded`, `enabled: false`) — a NEW, genuinely-working ICA
