@@ -4,7 +4,7 @@ description: >-
   Delegate bounded agentic work to IBM ICA-provisioned Claude instances via ~/ica-claude.sh.
   Use when offloading parallel subtasks, accessing free-tier models for mechanical work,
   or cost-shifting bounded tasks to a secondary subscription.
-version: 2.6
+version: 2.7
 app_version: "2026-06-11"
 updated: 2026-07-09
 spec: ./SPEC.md
@@ -101,21 +101,24 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 >
 > ⚠️ **Quote the model arg in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts the whole command with `no matches found` (NO_MATCH is fatal) and nothing runs. Always: `--model 'claude-sonnet-5[1m]'`.
 
-> 🚫 **ICA Sonnet 5 does NOT do extended thinking — do not offload reasoning to it (verified 2026-07-09).**
-> Sonnet 5 is a Claude-5-family model: it dropped the legacy `thinking.type: enabled` + `budget_tokens`
-> API and only reasons via the new `thinking.type: adaptive` + `output_config.effort` controls. But
-> Claude Code (which is what `~/ica-claude.sh` runs) still emits the **legacy** format, and Sonnet 5
-> silently **no-ops** it → **0 thinking tokens, empty thinking block, no error**. A leg you expect to
-> "think hard" runs flat, and you won't be told. The model itself reasons fine (raw API with
-> `adaptive`+`effort` = full reasoning); this is a Claude-Code-to-gateway gap.
+> ✅ **ICA Sonnet 5 reasoning WORKS via Claude Code — reasoning-dependent offload is fine (revalidated
+> 2026-07-20; supersedes the stale 2026-07-09 "no reasoning" caveat).** Claude Code (2.1.215) now emits
+> the `thinking.type: adaptive` + `output_config.effort` controls the Claude-5 family needs, and ICA
+> Sonnet 5 reasons end-to-end. Evidence (raw `/ica/v1/messages`, **`--fallback-model` OFF**, unique
+> nonces): legacy `thinking.type: enabled` now returns **HTTP 400** on Sonnet 5 (so if CC still sent
+> legacy the leg would *error*, not run flat); adaptive produces real thinking blocks and
+> `output_config.effort` scales depth (effort=low → ~1,116 think tokens, max → 6,000 capped); the CC
+> path is proven (`claude --model 'claude-sonnet-5[1m]'`, fallback off → thinking block, no 400).
+> 0-token cases are adaptive *correctly declining* to think on trivial prompts.
 >
-> **For reasoning-dependent offload, use one of these ICA lanes instead:**
-> - **Opus** — `claude-opus-4-8[1m]` (reasoning explicit-on; see Recipe 6), or `claude-opus-4-7[1m]` / `claude-opus-4-6[1m]`.
-> - **Sonnet 4.6** — `claude-sonnet-4-6[1m]` (Claude-4 family; still honors legacy `budget_tokens` — reasoning verified working).
+> **So `claude-sonnet-5[1m]` is the offload workhorse for both bounded/mechanical AND
+> reasoning-dependent waves** (behind the usual reviewer gate). `claude-opus-4-8[1m]` remains the pick
+> when you want the strongest reasoning, but Sonnet 5 reasoning is no longer disqualified from ICA.
 >
-> `claude-sonnet-5[1m]` stays the offload workhorse for **bounded, non-reasoning** waves (mechanical
-> edits, contract-clear implementation, extraction, votes). Revisit when Claude Code emits the adaptive
-> thinking controls to the ICA gateway. Full detail: MODEL-ROUTING §1.
+> **⚠️ One remaining gap:** `output_config.format` (structured-JSON schema) is silently **dropped** by
+> the ICA gateway (effort passes through, format does not) → you get prose, not schema-constrained
+> JSON. For structured output on the ICA Sonnet 5 lane, use a forced **tool-call** instead. Full
+> detail: MODEL-ROUTING §1.
 
 Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists; and **GPT**, served at its native window. ⚠️ **Gemini on ICA is NOT served at its native 1M** — the plain `gemini-3.5-flash` / `gemini-3.1-pro-preview` ids cap at 200k on the gateway; use the `[1m]` id there. (On the **native gemini-cli** path Gemini 3.x *is* 1M without a suffix — the `[1m]` id is an ICA-gateway artifact only.) The plain 200k Opus/Sonnet/Gemini IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
 
@@ -446,9 +449,11 @@ wait
 
 ICA is free-to-us, so do **not** dollar-cap opus reasoning — let it do the work. Bound only with a generous `--max-turns` as a runaway backstop. (Omit `--max-budget-usd` entirely; the old "budget-capped" framing is deprecated.)
 
-> 🚫 **Do not substitute Sonnet 5 here.** ICA `claude-sonnet-5[1m]` produces **0 thinking tokens** via
-> Claude Code (see the reasoning warning above). For reasoning use Opus (below) or, for a cheaper
-> reasoning lane, ICA **Sonnet 4.6** (`claude-sonnet-4-6[1m]`, legacy thinking still honored).
+> ✅ **Sonnet 5 is a valid cheaper reasoning lane here (revalidated 2026-07-20).** ICA
+> `claude-sonnet-5[1m]` now reasons via Claude Code (adaptive thinking + `output_config.effort`
+> honored — see the reasoning note above). Prefer **Opus** (`claude-opus-4-8[1m]`, below) for the
+> hardest reasoning; drop to `claude-sonnet-5[1m]` when Sonnet-tier reasoning suffices. Only caveat on
+> the Sonnet 5 lane: `output_config.format` structured JSON is dropped — use a tool-call.
 
 ```bash
 ~/ica-claude.sh -p "Task: [complex architecture/design task]
@@ -546,7 +551,8 @@ PROMPT
 | "`--bare` delegates still get the project's CLAUDE.md" | False. `--bare` skips CLAUDE.md auto-discovery AND auto-memory. A bare delegate gets project conventions ONLY if you inject them via `--append-system-prompt-file` (+ `--add-dir` for on-demand reads). See "Context Injection Under `--bare`". |
 | "If a `--bare` delegate is missing context, drop `--bare`" | False — that reintroduces the `Prompt is too long` overload (full nested CLAUDE.md tree × the gateway's effective ceiling). Keep `--bare`; re-inject the bounded root CLAUDE.md instead. |
 | "Use the Agent tool with default model on ICA profile" | Default model (Haiku) uses a dated ID that the gateway rejects. Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. |
-| "ICA Sonnet 5 will reason / think hard if I ask it to" | False (verified 2026-07-09). Extended thinking silently no-ops on ICA `claude-sonnet-5[1m]` via Claude Code — 0 thinking tokens, empty thinking block, no error. Reasoning-dependent offload → ICA Opus (`claude-opus-4-8[1m]`) or ICA Sonnet 4.6 (`claude-sonnet-4-6[1m]`). See the reasoning warning above. |
+| "ICA Sonnet 5 can't reason / think hard, so route reasoning to Opus/Sonnet 4.6" | Stale — this was the 2026-07-09 finding, **reversed 2026-07-20**. ICA `claude-sonnet-5[1m]` reasons fine via Claude Code now (adaptive thinking + `output_config.effort` honored). Reasoning-dependent offload to Sonnet 5 is fine; reserve Opus for the hardest reasoning. See the reasoning note above. |
+| "ICA Sonnet 5 returns schema-constrained JSON if I pass `output_config.format`" | False. The ICA gateway silently drops `output_config.format` (it forwards `effort` but not `format`) → you get prose, not schema JSON. Use a forced **tool-call** for structured output on the ICA lane. |
 
 ## Key Rotation
 

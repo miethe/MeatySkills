@@ -107,6 +107,14 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 
 ---
 
+## Reasoning & structured output (Claude 5 family via Claude Code)
+
+| Behavior | Status | Notes |
+|---|---|---|
+| Extended thinking on `claude-sonnet-5[1m]` | ✅ **Works via Claude Code** (revalidated 2026-07-20) | CC 2.1.215 emits `thinking.type: adaptive` + `output_config.effort`; ICA Sonnet 5 reasons end-to-end. Legacy `thinking.type: enabled` now **400s** (was silently no-op'd pre-CC-fix, the basis of the stale 2026-07-09 "no reasoning" finding). `effort` scales depth: low → ~1,116 think tokens, max → 6,000 capped. Reasoning-dependent offload to `claude-sonnet-5[1m]` is fine behind a reviewer gate. |
+| `output_config.format` (structured-JSON schema) | ⚠️ **Silently dropped by the gateway** | The ICA gateway forwards `effort` but **not** `format` → you get prose, not schema-constrained JSON. Use a forced **tool-call** for structured output on the ICA lane. |
+| Gemini (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) reasoning | ⚠️ Not surfaced as thinking blocks | Reachable via both `/v1/messages` and `/chat/completions` + the CC `[1m]` path; tool use works. Gemini's internal reasoning is not exposed as Anthropic thinking blocks via ICA, and Google-Search grounding is native-key-only (not via ICA). |
+
 ## Pending Information
 
 - [ ] Exact rate limits (requests/min, tokens/min per tier)

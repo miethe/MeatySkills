@@ -1,5 +1,24 @@
 # Changelog — ica-delegate
 
+## v2.7 — 2026-07-20
+
+### Changed
+- **REVERSED the v2.6 caveat: ICA Sonnet 5 reasoning WORKS via Claude Code (revalidated 2026-07-20).**
+  Claude Code (2.1.215) now emits `thinking.type: adaptive` + `output_config.effort` to the gateway,
+  so ICA `claude-sonnet-5[1m]` reasons end-to-end. Revalidation (raw `/ica/v1/messages`,
+  `--fallback-model` **OFF**, unique nonces to dodge the LiteLLM cache): legacy `thinking.type: enabled`
+  now returns **HTTP 400** (so if CC still sent legacy it would error, not no-op); adaptive produces
+  real thinking blocks; `output_config.effort` scales depth (effort=low → ~1,116 think tokens, max →
+  6,000 capped); CC path proven (`claude --model 'claude-sonnet-5[1m]'`, fallback off → thinking
+  block, no 400). Flipped the `[1m]` model-routing 🚫 block → ✅, Recipe 6 note, and the Do-Not-Say row.
+  **Reasoning-dependent offload to `claude-sonnet-5[1m]` is now allowed** behind the usual reviewer gate.
+- **New gotcha documented:** `output_config.format` (structured-JSON schema) is silently **dropped** by
+  the ICA gateway (effort passes through, format does not) → prose, not schema JSON. Use a forced
+  **tool-call** for structured output on the ICA lane. Added a Do-Not-Say row for it.
+- **Gemini** (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) confirmed usable via ICA on both endpoints
+  (`/v1/messages` + `/chat/completions`) and the CC `[1m]` path; reasoning is not surfaced as thinking
+  blocks, and Google-Search grounding remains native-key-only (not via ICA).
+
 ## v2.6 — 2026-07-09
 
 ### Fixed

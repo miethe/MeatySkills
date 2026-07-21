@@ -1,9 +1,9 @@
 {
-  "_generated_from": "/Users/miethe/.claude/config/model-registry.yaml",
+  "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "e554af518b133b7d5f47ef971c00b996b6a4d29bad296bcacc882e6223831b5b",
+  "_yaml_sha256": "88127625944598208c82694d709cb72e90509a05e7b6a72863ef2e79dbec926e",
   "version": 1,
-  "updated": "2026-07-09",
+  "updated": "2026-07-20",
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -236,14 +236,14 @@
     "claude-sonnet-5": {
       "family": "claude",
       "class": "sonnet",
-      "descriptor": "Claude Sonnet 5 (released 2026-06-30). Near-Opus coding/agentic quality at Sonnet cost — the DEFAULT subscription implementation/workhorse tier. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $3/$15 per M (intro $2/$10 through 2026-08-31). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ⚠️ ICA path has NO working extended thinking (verified 2026-07-09): Claude Code emits the legacy budget_tokens API that Sonnet 5 removed → 0 thinking tokens, silent. Do NOT offload reasoning-dependent legs to ica/claude-sonnet-5[1m]; use ica Opus or ica claude-sonnet-4-6[1m] (legacy thinking still honored). Bounded non-reasoning waves unaffected.",
+      "descriptor": "Claude Sonnet 5 (released 2026-06-30). Near-Opus coding/agentic quality at Sonnet cost — the DEFAULT subscription implementation/workhorse tier. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $3/$15 per M (intro $2/$10 through 2026-08-31). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
       "scores": {
         "cost": 5,
         "intelligence": 8,
         "taste": 8,
         "speed": 7
       },
-      "reasoning_caveat": "ICA offload lane (ica/claude-sonnet-5[1m]) does not do extended thinking via Claude Code (verified 2026-07-09) — budget_tokens no-op → 0 thinking tokens. Subscription/native Sonnet 5 reasons fine. Reasoning-dependent offload → ica Opus or ica claude-sonnet-4-6[1m].",
+      "reasoning_caveat": "ICA offload lane (ica/claude-sonnet-5[1m]) reasoning WORKS via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent offload is fine here. Only remaining gap: output_config.format (structured JSON) is dropped by the gateway — use a tool-call for structured output.",
       "when_to_use": [
         "implementation",
         "agentic-coding",
@@ -251,12 +251,12 @@
         "multi-file-refactoring",
         "planning",
         "exploration",
-        "free-offload"
+        "free-offload",
+        "extended-thinking",
+        "deep-reasoning"
       ],
       "when_not_to_use_ica": [
-        "extended-thinking",
-        "deep-reasoning",
-        "chain-of-thought-dependent"
+        "structured-json-output-schema"
       ],
       "tools": [
         "one_million_context"
@@ -860,7 +860,7 @@
     "gpt-5.6-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain.",
+      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: an ICA gateway id `gpt-5.6-terra-dzus` is listed on the gateway but NOT reliably servable (2026-07-20: load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masks it via Opus fallback). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 4,
         "intelligence": 8,
@@ -895,7 +895,7 @@
     "gpt-5.6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line.",
+      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: an ICA gateway id `gpt-5.6-luna-dzus` is listed but NOT reliably servable (2026-07-20, same misconfigured-deployment issue as terra-dzus). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 6,
         "intelligence": 7,

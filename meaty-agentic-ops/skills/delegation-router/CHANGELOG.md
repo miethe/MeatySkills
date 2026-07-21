@@ -3,6 +3,23 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-20 — ICA Sonnet 5 reasoning REVALIDATED working (model-registry.yaml + generated.json)
+
+- **Supersedes the 2026-07-09 "ICA Sonnet 5 has no reasoning" caveat.** Revalidation (Claude Code
+  2.1.215, raw `/ica/v1/messages`, `--fallback-model` OFF, unique nonces): CC now emits
+  `thinking.type:adaptive` + `output_config.effort` to the gateway and ICA Sonnet 5 reasons
+  end-to-end — adaptive thinking + effort scaling honored (effort=low → ~1,116 think tokens, max →
+  6,000 capped); legacy `thinking.type:enabled` now returns HTTP 400. The CC path is proven
+  (`claude --model 'claude-sonnet-5[1m]'`, fallback off → thinking block, no 400).
+- **`claude-sonnet-5` entry updated**: descriptor + `reasoning_caveat` flipped to WORKING; removed
+  `extended-thinking`/`deep-reasoning` from `when_not_to_use_ica` and added them to `when_to_use`;
+  `when_not_to_use_ica` now flags only the one real gap — `output_config.format` (structured-JSON
+  schema) is silently dropped by the gateway (effort passes, format doesn't) → use a forced
+  tool-call for structured output on the ICA lane. Regenerated `model-registry.generated.json`.
+- **Gemini** (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) confirmed usable via ICA both endpoints
+  (`/v1/messages` + `/chat/completions`) + the CC `[1m]` path; reasoning not surfaced as thinking
+  blocks, grounding still native-key-only. No routing change (already advisory).
+
 ## 2026-07-08 — Sonnet 5 default + version standardization (resolver.js, routing-record.js re-vendor)
 
 - **resolver.js**: `findClaudeSonnet` hardcoded fallback bumped `claude-sonnet-4-6` → `claude-sonnet-5`
