@@ -3,6 +3,28 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-21 — ICA GPT retest: gpt-5.5-gus added, gpt-5.4/5.1 regressed, servability drift-detector
+
+- **`gpt-5.5-gus` added** (`status: scaffolded`, `enabled: false`) — a NEW, genuinely-working ICA
+  reasoning GPT model. Validated (both keys, cache-busted, fallback OFF): tool calls + reasoning on
+  raw `/chat/completions` (`reasoning_effort` honored), `/responses` (`reasoning.effort` scales:
+  low→~24 / high→~99 reasoning tokens), and Anthropic `/messages` (plain + tool_use). Left disabled
+  because via `ica-claude.sh`/Claude Code it 400s — CC attaches `output_config` and the Azure backend
+  rejects it (`Unknown parameter: 'output_config'`). Enable only once a client can suppress that param.
+- **`gpt-5.4` + `gpt-5.1` regressed → `status: degraded`, `enabled: false`** — both non-servable on
+  every tested key/endpoint (`LLM Provider NOT provided` / 404). Superseded on the gateway by 5.5-gus.
+- **Unifying finding** (registry header + `ica-delegate/references/ica-models.md`): the ICA Azure-backed
+  GPT deployments reject the client's reasoning-control param (`reasoning_effort` on chat, `output_config`
+  on `/messages`); strip it and the working models complete, effort defaulting server-side. This
+  CONFIRMS the "strip reasoning_effort → it works" hypothesis — verified on `gpt-5.6-luna-dzus`
+  (CODEX key + chat + no effort). `gpt-5.6-terra-dzus` remains dead on all routes. dzus NOTEs refreshed.
+- **NEW: `scripts/probe-ica-models.sh`** — a report-only servability drift-detector. Fetches live
+  `/models`, runs a cache-busted (unique-nonce) real probe per model with a retry-once for transient
+  blips, and diffs vs this registry ([1m]-suffix normalized) to report new / regressed-enabled /
+  disabled-but-working / gone models. Never edits the registry (scoring + enable stay human). Run it
+  when the gateway roster changes; `--json` for tooling, `--key-block CODEX` to probe the OpenAI-line key.
+- Regenerated `model-registry.generated.json` (27 models).
+
 ## 2026-07-20 — ICA Sonnet 5 reasoning REVALIDATED working (model-registry.yaml + generated.json)
 
 - **Supersedes the 2026-07-09 "ICA Sonnet 5 has no reasoning" caveat.** Revalidation (Claude Code

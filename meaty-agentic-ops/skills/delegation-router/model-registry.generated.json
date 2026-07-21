@@ -1,9 +1,9 @@
 {
   "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "88127625944598208c82694d709cb72e90509a05e7b6a72863ef2e79dbec926e",
+  "_yaml_sha256": "1e6e3243337698de25050e9354157a4a63d93c91a6ca46a6265226ffd7176bb2",
   "version": 1,
-  "updated": "2026-07-20",
+  "updated": "2026-07-21",
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -577,7 +577,7 @@
     "gpt-5.1": {
       "family": "openai",
       "class": "gpt-5",
-      "descriptor": "OpenAI GPT-5.1 frontier via ICA. Strong general reasoning (shared pool, token-limited).",
+      "descriptor": "OpenAI GPT-5.1 (`gpt-5.1-chat-gus`) via ICA. ❌ REGRESSED / NOT SERVABLE (retested 2026-07-21): fails `LLM Provider NOT provided` on /chat/completions for BOTH the CC and CODEX keys (the deployment's litellm_params.model lost its provider prefix). Superseded on the gateway by gpt-5.5-gus. Disabled until it serves a fresh (cache-busted) request again.",
       "scores": {
         "cost": 8,
         "intelligence": 7,
@@ -595,14 +595,14 @@
       ],
       "max_context": 200000,
       "sampling": "stochastic",
-      "status": "active",
+      "status": "degraded",
       "providers": [
         {
           "provider": "ica",
           "model_id": "gpt-5.1-chat-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 1
         }
       ]
@@ -610,7 +610,7 @@
     "gpt-5.4": {
       "family": "openai",
       "class": "gpt-5",
-      "descriptor": "OpenAI GPT-5.4 latest frontier via ICA. Strongest GPT reasoning available on the gateway (shared pool).",
+      "descriptor": "OpenAI GPT-5.4 (`gpt-5.4-gus`) via ICA. ❌ REGRESSED / NOT SERVABLE (retested 2026-07-21): 404 `Resource not found` on /responses and `LLM Provider NOT provided` on /chat/completions for BOTH keys. Was enabled here but the gateway deployment no longer serves it. Superseded by gpt-5.5-gus. Disabled until it serves a fresh (cache-busted) request again.",
       "scores": {
         "cost": 8,
         "intelligence": 8,
@@ -628,14 +628,52 @@
       ],
       "max_context": 200000,
       "sampling": "stochastic",
-      "status": "active",
+      "status": "degraded",
       "providers": [
         {
           "provider": "ica",
           "model_id": "gpt-5.4-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.5-gus": {
+      "family": "openai",
+      "class": "gpt-5",
+      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). enabled:false until a client can suppress `output_config` (a /messages param-strip proxy or a CC setting) — the delegation-router executes via ica-claude.sh, so enabling now would route work to a lane that 400s and silently falls back to Opus. Usable TODAY only by a raw OpenAI-SDK / curl client that omits the reasoning-control param.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 6,
+        "speed": 5
+      },
+      "reasoning_caveat": "Works with reasoning on raw /chat/completions (reasoning_effort), /responses (reasoning.effort, scales), and /messages (plain+tools). But 400s via Claude Code/ica-claude.sh because CC sends output_config on /messages and Azure rejects it. Strip the reasoning-control param (or use a raw client) and it completes; effort then defaults server-side.",
+      "when_to_use": [
+        "second-opinion",
+        "alternative-approach",
+        "complex-reasoning"
+      ],
+      "when_not_to_use_ica": [
+        "claude-code-executor-path",
+        "output-config-effort"
+      ],
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.5-gus",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": false,
           "priority": 1
         }
       ]
@@ -860,7 +898,7 @@
     "gpt-5.6-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: an ICA gateway id `gpt-5.6-terra-dzus` is listed on the gateway but NOT reliably servable (2026-07-20: load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masks it via Opus fallback). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
+      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` is listed but DEAD on every route (retested 2026-07-21, both keys, cache-busted): /chat/completions + /messages → `LLM Provider NOT provided` (unconditional — missing provider prefix in the deployment), /responses → Azure api-version gate. Unlike luna-dzus, terra-dzus fails even the base chat call, so the strip-reasoning_effort trick can't rescue it. Do NOT route to the ICA dzus lane — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 4,
         "intelligence": 8,
@@ -895,7 +933,7 @@
     "gpt-5.6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: an ICA gateway id `gpt-5.6-luna-dzus` is listed but NOT reliably servable (2026-07-20, same misconfigured-deployment issue as terra-dzus). Do NOT route to the ICA dzus lane until fixed — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
+      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` is PARTIALLY servable (retested 2026-07-21) — it completes tool calls ONLY via the CODEX key on /chat/completions when `reasoning_effort` is OMITTED; adding `reasoning_effort` → `LLM Provider NOT provided`, the CC key fails it entirely, and /responses/messages are api-version/prefix-gated. This CONFIRMS the strip-the-reasoning-control-param hypothesis, but the working path (CODEX key + chat + no-effort) isn't reachable by either real executor (ica-claude.sh uses /messages+CC key; codex needs /responses). A Responses→ChatCompletions shim that strips reasoning_effort + uses the CODEX key would serve it — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 6,
         "intelligence": 7,

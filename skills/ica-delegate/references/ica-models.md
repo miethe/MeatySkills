@@ -32,8 +32,9 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 | Gemini 3.5 Flash (1M variant) | `gemini-3.5-flash[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). The ICA `[1m]` rule applies to Gemini too. Not Search-grounded on the gateway. |
 | Gemini 3.1 Pro Preview (1M variant) | `gemini-3.1-pro-preview[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). |
 | Claude Opus 4.8 | `claude-opus-4-8` | Token Limited | Latest and most capable Opus (200k variant) |
-| OpenAI GPT-5.1 | `gpt-5.1-chat-gus` | Token Limited | OpenAI frontier |
-| OpenAI GPT-5.4 | `gpt-5.4-gus` | Token Limited | OpenAI latest frontier |
+| OpenAI GPT-5.5 | `gpt-5.5-gus` | Token Limited | **NEW (2026-07)** OpenAI reasoning model. Works with tools+reasoning on raw `/chat/completions`, `/responses` (effort scales), and `/messages` — but ❌ **400s via `ica-claude.sh`/Claude Code** (`Unknown parameter: 'output_config'` — Azure rejects CC's effort param). Reachable only from a raw client that omits the reasoning-control param. See the ⚠️ note below. |
+| OpenAI GPT-5.1 | `gpt-5.1-chat-gus` | Token Limited | ❌ **REGRESSED — not servable** (2026-07-21): `LLM Provider NOT provided` on all keys. Superseded by `gpt-5.5-gus`. |
+| OpenAI GPT-5.4 | `gpt-5.4-gus` | Token Limited | ❌ **REGRESSED — not servable** (2026-07-21): 404 / `LLM Provider NOT provided` on all keys. Superseded by `gpt-5.5-gus`. |
 
 ---
 
@@ -43,10 +44,22 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 |---|---|---|---|
 | Free | Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small | $0 (unlimited) | `claude-haiku-4-5` |
 | Standard | Sonnet 5, Sonnet 4.6, Sonnet 4.5, GPT-4o, Gemini 3.5 Flash, Gemini 3.1 Pro | Token-limited | `claude-sonnet-5[1m]` |
-| Premium | Opus 4.6, Opus 4.7, Opus 4.8, GPT-5.1, GPT-5.4 | Token-limited (expensive) | `claude-opus-4-8[1m]` |
+| Premium | Opus 4.6, Opus 4.7, Opus 4.8 | Token-limited (expensive) | `claude-opus-4-8[1m]` |
 | 1M Context | Sonnet 5[1m], Opus 4.8[1m], opus[1m] alias (→4.8[1m]), Opus 4.7[1m], Sonnet 4.6[1m], Opus 4.6[1m], Gemini 3.5 Flash[1m], Gemini 3.1 Pro[1m] | Token-limited | `claude-sonnet-5[1m]` (Opus for hardest) |
 
 > **Opus/Sonnet/Gemini default to `[1m]` on ICA.** For ICA Claude Opus/Sonnet **and** ICA Gemini, always pick the `[1m]` variant — same token pool and cost tier, strictly larger context. The plain 200k IDs (`claude-sonnet-5`, `claude-opus-4-8`, `gemini-3.5-flash`) are fallback-only on the ICA path. This is why the Standard/Premium default picks above are the `[1m]` forms. (Native gemini-cli needs no suffix — it's 1M by default.)
+
+> ⚠️ **ICA GPT models reject the client's reasoning-control param (2026-07-21).** The gateway's
+> Azure-backed GPT deployments (`gpt-5.5-gus`, the `gpt-5.6-*-dzus` codex ids) 400 when the standard
+> client attaches its reasoning-control param — `output_config` on the Anthropic `/messages` path
+> that `ica-claude.sh`/Claude Code use, or `reasoning_effort` on `/chat/completions`. **Strip that
+> param and the working models complete** (effort then defaults server-side to LiteLLM's `high`).
+> Consequence: `gpt-5.5-gus` is fully usable from a raw curl/OpenAI-SDK client but **NOT via
+> `ica-claude.sh`** yet (CC always sends `output_config`). `gpt-5.6-luna-dzus` completes only via a
+> raw CODEX-key `/chat/completions` call with `reasoning_effort` omitted; `gpt-5.6-terra-dzus` is
+> dead on every route. Do not route real delegation waves to these GPT lanes until a param-strip
+> proxy or CC setting exists — the router keeps them `enabled: false`. Full probe:
+> `delegation-router/scripts/probe-ica-models.sh` (servability drift-detector).
 
 ---
 
