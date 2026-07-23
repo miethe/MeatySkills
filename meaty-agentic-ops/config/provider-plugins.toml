@@ -121,15 +121,18 @@ capabilities = [
 max_context = 200000
 sampling = "stochastic"
 
-# ICA additionally serves Gemini via bridge — registered here so the router can
-# fall back to ICA as a Gemini bridge when gemini provider hits rate limits.
+# ICA additionally serves Gemini — registered here so the router can fall back to
+# ICA when the gemini provider hits rate limits. Use the `[1m]` id: the plain
+# `gemini-3.5-flash` id is silently capped at 200k on the gateway. NOTE: the ICA
+# path is NOT Search-grounded (grounding is native-key-only), so `web-search` is
+# deliberately absent from these capabilities — route grounded work to provider gemini.
 [[providers.ica.models]]
-name = "gemini-bridge"
+name = "gemini-3.5-flash[1m]"
 cost_tier = "free"
 capabilities = [
-    "web-search",
     "large-context",
     "exploration",
+    "adversarial-review",
 ]
 max_context = 1000000
 sampling = "stochastic"
@@ -169,29 +172,40 @@ scope_flags = '--yes'
 # continuity: absent — bob is strictly stateless; no session carry-over.
 
 # ──────────────────────────────────────────────────────────────────────────────
-# PROVIDER: gemini  (gemini-cli, free tier, 60 req/min, 1000/day)
+# PROVIDER: gemini  (gemini-cli, metered AI Studio key)
 # ──────────────────────────────────────────────────────────────────────────────
+# Model entries mirror the routing SoT: ~/.claude/config/model-registry.yaml
+# (`models.gemini-*`). The previously-pinned gemini-3-flash / gemini-3.1-pro ids
+# no longer exist — gemini-3-pro-preview is shut down and there is NO gemini-3.5-pro.
+# AUTH: the free Code Assist OAuth tier was SUNSET (IneligibleTierError) — do NOT
+# re-OAuth. Use an AI Studio `GEMINI_API_KEY` (~/.config/aos/secrets.env) with
+# settings.json selectedType=gemini-api-key. Google Search grounding is Gemini 3+
+# and native-key-only; the ICA gateway path is NOT Search-grounded.
 
 [providers.gemini]
 id = "gemini"
 binary_path = "~/.local/share/mise/shims/gemini"
+auth_env = "GEMINI_API_KEY"
 auth_file = "~/.gemini/settings.json"
 availability_check = "test -f ~/.gemini/settings.json && which gemini"
 
+# DEFAULT workhorse — 1M ctx without a suffix on native gemini-cli, Search-grounded.
 [[providers.gemini.models]]
-name = "gemini-3-flash"
-cost_tier = "free"
+name = "gemini-3.5-flash"
+cost_tier = "standard"
 capabilities = [
     "web-search",
     "large-context",
     "exploration",
     "adversarial-review",
+    "code-review",
+    "svg-generation",
 ]
 max_context = 1000000
 sampling = "stochastic"
 
 [[providers.gemini.models]]
-name = "gemini-3.1-pro"
+name = "gemini-3.1-pro-preview"
 cost_tier = "standard"
 capabilities = [
     "web-search",
@@ -199,6 +213,18 @@ capabilities = [
     "exploration",
     "planning",
     "adversarial-review",
+    "deep-reasoning",
+]
+max_context = 1000000
+sampling = "stochastic"
+
+# Cheapest/fastest — trivial work only (formatting, one-liners).
+[[providers.gemini.models]]
+name = "gemini-3.1-flash-lite"
+cost_tier = "free"
+capabilities = [
+    "exploration",
+    "mechanical-tasks",
 ]
 max_context = 1000000
 sampling = "stochastic"
@@ -302,9 +328,10 @@ fallback_opus    = ["ica/opus", "claude/sonnet"]
 fallback_sonnet  = ["ica/sonnet", "claude/opus"]
 fallback_haiku   = ["ica/haiku", "claude/sonnet"]
 fallback_codex   = ["claude/sonnet", "claude/opus"]
-fallback_gemini  = ["ica/gemini-bridge", "ica/sonnet"]
+fallback_gemini  = ["ica/gemini-3.5-flash[1m]", "ica/sonnet"]
 # Note: gemini model names in fallback chains reference [[providers.gemini.models]] name values.
-# Current gemini models: gemini-3-flash (free), gemini-3.1-pro (standard).
+# Current gemini models: gemini-3.5-flash (default workhorse), gemini-3.1-pro-preview
+# (heavy reasoning), gemini-3.1-flash-lite (cheapest). ICA bridge id: gemini-3.5-flash[1m].
 
 # Determinism classification — used by the resume-safety filter.
 # Deterministic: output reproducible for fixed prompt + model config.

@@ -129,7 +129,7 @@ At-a-glance view of every phase with point estimates, target subagents, and mode
 | 2 | Repository Layer | X pts | python-backend-engineer, data-layer-expert | sonnet | claude | — | — |
 | 3 | Service Layer | X pts | python-backend-engineer, backend-architect | sonnet | claude | — | — |
 | 4 | API Layer | X pts | python-backend-engineer, backend-architect | sonnet | claude | — | — |
-| 5 | UI Layer | X pts | ui-engineer-enhanced, frontend-developer, ui-designer | sonnet (+ gemini-3.1-pro for design) | claude | — | External model for UI-001 wireframing |
+| 5 | UI Layer | X pts | ui-engineer-enhanced, frontend-developer, ui-designer | sonnet (+ gemini-3.1-pro-preview for design) | claude | — | External model for UI-001 wireframing |
 | 6 | Testing Layer | X pts | testing specialists, all developers | sonnet | claude | — | — |
 | 7 | Documentation Finalization | X pts | changelog-generator, documentation-writer, ai-artifacts-engineer | haiku (sonnet for skill SPECs) | ica | free-tier | — |
 | 8 | Deployment Layer | X pts | DevOps, lead-pm | sonnet | claude | — | — |
@@ -137,7 +137,7 @@ At-a-glance view of every phase with point estimates, target subagents, and mode
 
 **Model column conventions:**
 - Claude-only phases: list the single Claude model (e.g., `sonnet`, `haiku`).
-- Mixed phases: list the primary Claude model plus any external model in parens (e.g., `sonnet (+ gemini-3.1-pro for UI-001)`).
+- Mixed phases: list the primary Claude model plus any external model in parens (e.g., `sonnet (+ gemini-3.1-pro-preview for UI-001)`).
 - External-heavy phases: list external model first with Claude as fallback.
 - Reference `.claude/skills/planning/references/multi-model-guidance.md` for routing logic.
 
@@ -182,10 +182,10 @@ The final phase (Documentation Finalization) cannot be sealed until:
 
 **Column conventions** (apply to every phase task table below):
 - `Estimate` — Task size (story points OR hours; team convention). Goes here, NEVER in Effort.
-- `Model` — Assigned executor: `opus` | `sonnet` | `haiku` | `gpt-5.3-codex` | `gemini-3.1-pro` | `gemini-3.1-flash` | `nano-banana-pro`
+- `Model` — Assigned executor: `opus` | `sonnet` | `haiku` | `gpt-5.6-terra` | `gemini-3.1-pro-preview` | `gemini-3.1-flash-lite` | `nano-banana-pro`
 - `Effort` — Reasoning budget for the assigned Model. Valid values depend on Model — see [multi-model-guidance.md → Canonical Effort Vocabulary](../references/multi-model-guidance.md).
   - claude (opus/sonnet/haiku): `adaptive` | `extended`
-  - codex (gpt-5.3-codex): `none` | `low` | `medium` | `high` | `xhigh`
+  - codex (gpt-5.6-terra): `none` | `low` | `medium` | `high` | `xhigh`
   - gemini (3.1-pro/3.1-flash): `none` | `low` | `medium` | `high`
   - nano_banana (nano-banana-pro): `standard` | `quality`
 
@@ -279,7 +279,7 @@ The final phase (Documentation Finalization) cannot be sealed until:
 
 | Task ID | Task Name | Description | Acceptance Criteria | Estimate | Subagent(s) | Model | Effort | Dependencies |
 |---------|-----------|-------------|-------------------|----------|-------------|-------|--------|--------------|
-| UI-001 | Component Design | Design/update UI components | Components support all states | 3 pts | ui-designer | gemini-3.1-pro | medium | API-004 |
+| UI-001 | Component Design | Design/update UI components | Components support all states | 3 pts | ui-designer | gemini-3.1-pro-preview | medium | API-004 |
 | UI-002 | Hooks Implementation | Create state management hooks | Hooks handle loading/error/success | 2 pts | frontend-developer | sonnet | adaptive | UI-001 |
 | UI-003 | Component Implementation | Implement components in @miethe/ui | Components render correctly | 3 pts | ui-engineer-enhanced | sonnet | adaptive | UI-002 |
 | UI-004 | API Integration | Integrate with backend API | UI reflects backend functionality | 3 pts | frontend-developer | sonnet | adaptive | UI-003 |
@@ -467,9 +467,9 @@ The Model column specifies which AI model executes the task. Reference `.claude/
 **Default Models:**
 - **`sonnet`** (Claude 3.5 Sonnet) - Default for implementation, code changes, testing, and architectural decisions
 - **`haiku`** (Claude 3.5 Haiku) - Default for documentation, exploration, simple queries, and mechanical tasks
-- **`gemini-3.1-pro`** - For design/wireframing, web research, complex UI workflows, multi-modal analysis
+- **`gemini-3.1-pro-preview`** - For design/wireframing, web research, complex UI workflows, multi-modal analysis
 - **`nano-banana-pro`** - For image generation and image-specific tasks
-- **`gpt-5.3-codex`** - For escalation after 2+ failed Claude cycles or when specialist debug expertise is needed
+- **`gpt-5.6-terra`** - For escalation after 2+ failed Claude cycles or when specialist debug expertise is needed
 
 ### Effort Column
 
@@ -478,8 +478,8 @@ The Effort column specifies the reasoning budget for the assigned Model. **Effor
 | Model | Valid Effort values | Default |
 |---|---|---|
 | claude (opus/sonnet/haiku) | `adaptive`, `extended` | `adaptive` |
-| gpt-5.3-codex | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
-| gemini-3.1-pro / gemini-3.1-flash | `none`, `low`, `medium`, `high` | `medium` |
+| gpt-5.6-terra | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
+| gemini-3.1-pro-preview / gemini-3.1-flash-lite | `none`, `low`, `medium`, `high` | `medium` |
 | nano-banana-pro | `standard`, `quality` | `standard` |
 
 Source of truth: `.claude/config/multi-model.toml` § `[models.effort_levels]`. See also `references/multi-model-guidance.md` → **Canonical Effort Vocabulary**.

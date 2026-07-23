@@ -56,24 +56,24 @@ if (fs.existsSync(TMP_LOG_PATH)) {
 // ---------------------------------------------------------------------------
 
 // Model names must match provider-plugins.toml entries:
-//   gemini:  gemini-3-flash, gemini-3.1-pro (NOT 'sonnet')
+//   gemini:  gemini-3.5-flash, gemini-3.1-pro-preview (NOT 'sonnet')
 //   ica:     haiku, sonnet, opus
-//   codex:   gpt-5.3-codex, gpt-5.3-codex-spark
+//   codex:   gpt-5.6-terra, gpt-5.6-luna
 //   claude:  haiku, sonnet, opus
 const WAVE_PLAN_TASKS = [
-  // P3-002: explore.js — exploration legs → gemini-executor (gemini-3-flash model)
-  { id: 'EXPLORE-LEG-1', provider: 'gemini', model: 'gemini-3-flash',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
-  { id: 'EXPLORE-LEG-2', provider: 'gemini', model: 'gemini-3.1-pro',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
+  // P3-002: explore.js — exploration legs → gemini-executor (gemini-3.5-flash model)
+  { id: 'EXPLORE-LEG-1', provider: 'gemini', model: 'gemini-3.5-flash',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
+  { id: 'EXPLORE-LEG-2', provider: 'gemini', model: 'gemini-3.1-pro-preview',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
   // P3-003: spike.js — adversarial skeptic votes → ica-executor
   { id: 'SKEPTIC-1',     provider: 'ica',    model: 'sonnet',            task_class: 'skeptic-vote',       expected_agent_type_id: 'ica-executor',    resume_active: false },
   { id: 'SKEPTIC-2',     provider: 'ica',    model: 'haiku',             task_class: 'adversarial-review', expected_agent_type_id: 'ica-executor',    resume_active: false },
   // P3-004: review-council.js — evidence scribe → codex-executor
-  { id: 'EVID-SCRIBE-1', provider: 'codex',  model: 'gpt-5.3-codex',    task_class: 'mechanical-tasks',  expected_agent_type_id: 'codex-executor',  resume_active: false },
+  { id: 'EVID-SCRIBE-1', provider: 'codex',  model: 'gpt-5.6-terra',    task_class: 'mechanical-tasks',  expected_agent_type_id: 'codex-executor',  resume_active: false },
   // P3-005: execute-plan.js — AC validation → codex-executor
-  { id: 'AC-VALIDATE-1', provider: 'codex',  model: 'gpt-5.3-codex',    task_class: 'ac-validation',     expected_agent_type_id: 'codex-executor',  resume_active: false },
-  { id: 'AC-VALIDATE-2', provider: 'codex',  model: 'gpt-5.3-codex-spark', task_class: 'ac-validation',  expected_agent_type_id: 'codex-executor',  resume_active: false },
+  { id: 'AC-VALIDATE-1', provider: 'codex',  model: 'gpt-5.6-terra',    task_class: 'ac-validation',     expected_agent_type_id: 'codex-executor',  resume_active: false },
+  { id: 'AC-VALIDATE-2', provider: 'codex',  model: 'gpt-5.6-luna', task_class: 'ac-validation',  expected_agent_type_id: 'codex-executor',  resume_active: false },
   // P3-003/004: completeness critic → gemini-executor
-  { id: 'CRITIC-1',      provider: 'gemini', model: 'gemini-3-flash',   task_class: 'completeness-critic', expected_agent_type_id: 'gemini-executor', resume_active: false },
+  { id: 'CRITIC-1',      provider: 'gemini', model: 'gemini-3.5-flash',   task_class: 'completeness-critic', expected_agent_type_id: 'gemini-executor', resume_active: false },
   // MUST-stay: synthesis stage → claude (should NOT offload regardless of routing)
   { id: 'SYNTHESIS-1',   provider: 'claude', model: 'sonnet',            task_class: 'orchestration',     expected_agent_type_id: 'claude',          resume_active: false },
   // MUST-stay: verdict sign-off → claude

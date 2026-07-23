@@ -732,7 +732,7 @@ Sections:
    - Common phases: Database → Repository → Service → API → UI → Testing → Docs → Deployment
    - Consider parallel work opportunities
    - Identify critical path
-   - **Populate the Phase Summary table** in Implementation Strategy (after Critical Path) with every phase, point estimate, target subagents, and model designation. This table is mandatory — it is the canonical orchestration index executors use to plan delegation. Keep it synced with detailed phase breakdowns. Use Claude models by default (`sonnet` / `haiku`); note external models (e.g., `gemini-3.1-pro`, `nano-banana-pro`, `gpt-5.6-terra`) per `references/multi-model-guidance.md`.
+   - **Populate the Phase Summary table** in Implementation Strategy (after Critical Path) with every phase, point estimate, target subagents, and model designation. This table is mandatory — it is the canonical orchestration index executors use to plan delegation. Keep it synced with detailed phase breakdowns. Use Claude models by default (`sonnet` / `haiku`); note external models (e.g., `gemini-3.1-pro-preview`, `nano-banana-pro`, `gpt-5.6-terra`) per `references/multi-model-guidance.md`.
 
 2.5 **Opus Decisions Block (Tier 2/3 mandatory)** — author before delegating to `implementation-planner`:
    - Opus authors a ~200-line decisions block using `./templates/decisions-block-template.md`.
@@ -790,8 +790,8 @@ Sections:
    - Evaluate each task for the appropriate model:
      - Default: `sonnet` for implementation, `haiku` for docs/exploration
      - Route image generation → `nano-banana-pro`
-     - Route UI wireframing/design → `gemini-3.1-pro`
-     - Route web research → `gemini-3.1-pro`
+     - Route UI wireframing/design → `gemini-3.1-pro-preview`
+     - Route web research → `gemini-3.1-pro-preview`
      - Route debug escalation → `gpt-5.6-sol` (workhorse codex work stays on `gpt-5.6-terra`)
    - Assign effort levels per model using the **Canonical Effort Vocabulary** in `./references/multi-model-guidance.md`. Effort is a model-keyed reasoning budget, not a size estimate — use the `Estimate` column for story points or hours.
      - claude (opus/sonnet/haiku): `adaptive` (default) or `extended` only

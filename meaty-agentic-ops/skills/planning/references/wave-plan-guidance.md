@@ -29,7 +29,7 @@ wave_plan:
         - skillmeat/cache/models/foo.py
         - skillmeat/cache/migrations/202605_xx_add_foo.py
       model: sonnet           # Optional. Default model for this phase's implementer dispatches.
-                              #   Values: opus | sonnet | haiku | gpt-5.3-codex | gemini-3.1-pro | gemini-3.1-flash | nano-banana-pro
+                              #   Values: opus | sonnet | haiku | gpt-5.6-terra | gemini-3.1-pro-preview | gemini-3.1-flash-lite | nano-banana-pro
                               #   Per-task `Model` column overrides this default.
       effort: adaptive        # Optional. Default thinking budget for this phase's implementers.
                               #   Valid values depend on the chosen model — see Effort Vocabulary section below.
@@ -69,7 +69,7 @@ wave_plan:
 | `phases[].parallelizable` | `bool` | Optional | `true` | Set to `false` to force a phase into its own solo wave even when its deps are satisfied alongside siblings. Use for phases with known but unmodeled coupling. |
 | `phases[].owner_skills` | `string[]` | Optional | `[]` | Skills injected into the `phase-owner` agent at spawn via the `skills:` preload mechanism. Full SKILL.md is injected at startup — audit token size before adding. |
 | `phases[].files_affected` | `string[]` | Recommended | `[]` | Files the phase is expected to write. Used by the decomposition algorithm to detect barrier intersections. Glob patterns are permitted but discourage overly broad entries. |
-| `phases[].model` | `string` | Optional | — | Default model for this phase's implementer dispatches. Values: `opus` \| `sonnet` \| `haiku` \| `gpt-5.3-codex` \| `gemini-3.1-pro` \| `gemini-3.1-flash` \| `nano-banana-pro`. Per-task `Model` column overrides this default. |
+| `phases[].model` | `string` | Optional | — | Default model for this phase's implementer dispatches. Values: `opus` \| `sonnet` \| `haiku` \| `gpt-5.6-terra` \| `gemini-3.1-pro-preview` \| `gemini-3.1-flash-lite` \| `nano-banana-pro`. Per-task `Model` column overrides this default. |
 | `phases[].effort` | `string` | Optional | — | Default thinking budget for this phase's implementers. Valid values depend on the chosen model — see Effort Vocabulary section below. Per-task `Effort` column overrides this default. |
 | `phases[].provider` | `string` | Optional | — | Default provider for this phase's tasks. Values: `claude` \| `ica` \| `codex` \| `bob` \| `gemini`. Per-task `Provider` column overrides. See `.claude/specs/provider-routing-spec.md §2` for defaults. |
 | `phases[].profile` | `string` | Optional | — | Default profile for the provider in this phase. Examples: `free-tier`, `sandbox=read-only` (Codex), `web-search=on` (Gemini). Per-task `Profile` column overrides. |
@@ -344,8 +344,8 @@ Source of truth: `.claude/config/multi-model.toml` § `[models.effort_levels]`
 | Model family | Models | Valid Effort values | Default |
 |---|---|---|---|
 | claude | opus, sonnet, haiku | `adaptive`, `extended` | `adaptive` |
-| codex | gpt-5.3-codex | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
-| gemini | gemini-3.1-pro, gemini-3.1-flash | `none`, `low`, `medium`, `high` | `medium` |
+| codex | gpt-5.6-terra | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
+| gemini | gemini-3.1-pro-preview, gemini-3.1-flash-lite | `none`, `low`, `medium`, `high` | `medium` |
 | nano_banana | nano-banana-pro | `standard`, `quality` | `standard` |
 
 **Critical rule**: Effort is a model-keyed reasoning budget, NOT a size estimate. Story points or hours belong in the per-task `Estimate` column. Putting `"3pts"` or `"2h"` in the `Effort` column is a common mistake — those values should be in `Estimate`.

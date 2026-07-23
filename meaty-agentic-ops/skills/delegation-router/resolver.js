@@ -542,7 +542,7 @@ function matchRegistryModels(registry, model) {
     })
   );
 
-  // 4. model-key prefix match (e.g. 'gemini-3' → 'gemini-3-flash').
+  // 4. model-key prefix match (e.g. 'gemini-3' → 'gemini-3.5-flash').
   const byKeyPrefix = keys.filter(k => k.toLowerCase().startsWith(lower));
 
   // Merge preserving order of specificity, de-duped.

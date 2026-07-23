@@ -299,13 +299,13 @@ Purpose-keyed defaults for Pattern A:
 | Internal purpose | Default model | Default provider | Profile |
 |-----------------|--------------|-----------------|---------|
 | `skeptic-refutation` | haiku | ica | free-tier |
-| `gap-finder` | gemini-2.5-flash | gemini | — |
+| `gap-finder` | gemini-3.5-flash | gemini | — |
 | `json-structure` | gpt-5.6-terra | codex | sandbox=read-only |
-| `exploration-leg` | gemini-2.5-flash | gemini | — |
-| `completeness-critic` | gemini-2.5-flash | gemini | — |
+| `exploration-leg` | gemini-3.5-flash | gemini | — |
+| `completeness-critic` | gemini-3.5-flash | gemini | — |
 | `evidence-scribe` | gpt-5.6-terra | codex | sandbox=read-only |
-| `performance-reviewer` | gemini-2.5-flash | gemini | — |
-| `observability-reviewer` | gemini-2.5-flash | gemini | — |
+| `performance-reviewer` | gemini-3.5-flash | gemini | — |
+| `observability-reviewer` | gemini-3.5-flash | gemini | — |
 | `ac-validator` | gpt-5.6-terra | codex | sandbox=read-only |
 
 ---

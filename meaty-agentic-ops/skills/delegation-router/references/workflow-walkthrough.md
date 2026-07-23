@@ -14,7 +14,7 @@ a provider for a specific task, or toggling `enabled` in the registry.
 | Leg | Today | Proposed routing |
 |---|---|---|
 | Exploration / code-read legs | primary | ICA Haiku (free, `allowance: unlimited`) |
-| Web-research leg | primary | Gemini (`gemini-3.1-pro`, web-search profile) |
+| Web-research leg | primary | Gemini (`gemini-3.1-pro-preview`, web-search profile) |
 | Skeptic / diversity votes | primary | ICA Gemma / Haiku (free) |
 | **Synthesis + verdict** | primary | **primary Opus (MUST-stay)** |
 

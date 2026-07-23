@@ -14,7 +14,7 @@ Source of truth: `.claude/config/multi-model.toml` § `[models.effort_levels]`
 |---|---|---|---|
 | claude | opus, sonnet, haiku | `adaptive`, `extended` | `adaptive` |
 | codex | gpt-5.6-terra (workhorse) · gpt-5.6-sol (frontier) · gpt-5.6-luna (cheap/fast) | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `ultra` (`ultra` = Sol/Terra only) | `medium` |
-| gemini | gemini-3.1-pro, gemini-3.1-flash | `none`, `low`, `medium`, `high` | `medium` |
+| gemini | gemini-3.1-pro-preview, gemini-3.1-flash-lite | `none`, `low`, `medium`, `high` | `medium` |
 | nano_banana | nano-banana-pro | `standard`, `quality` | `standard` |
 
 **Effort is a model-keyed reasoning budget, not a size estimate.** Task size (story points, hours) belongs in the `Estimate` column of the phase task table, never in `Effort`.
@@ -51,7 +51,7 @@ parallelization:
       effort: quality
 
     - task: RESEARCH-1.1
-      assigned_to: gemini-3.1-pro
+      assigned_to: gemini-3.1-pro-preview
       effort: medium
 
   batch_1:
@@ -74,11 +74,11 @@ parallelization:
 | Task | Model | Effort | Rationale |
 |------|-------|--------|-----------|
 | Generate app icon (final) | nano-banana-pro | quality | visual asset generation at max quality |
-| Research Next.js 15 patterns | gemini-3.1-pro | medium | web search + synthesis needed |
+| Research Next.js 15 patterns | gemini-3.1-pro-preview | medium | web search + synthesis needed |
 | Implement user profile API | sonnet | adaptive | standard implementation |
 | Debug auth flow (3rd attempt) | gpt-5.6-sol | xhigh | escalated debugging (threshold: 2 cycles) |
 | Write component documentation | haiku | adaptive | documentation is cheap (haiku optimized) |
-| UI wireframe (layout/hierarchy) | gemini-3.1-pro | medium | SVG wireframe — machine-readable, editable, precise labels |
+| UI wireframe (layout/hierarchy) | gemini-3.1-pro-preview | medium | SVG wireframe — machine-readable, editable, precise labels |
 | UI mockup (aesthetic/feel) | nano-banana-pro | standard | raster mockup — visual aesthetics, color exploration |
 | UI mockup (stakeholder preview) | nano-banana-pro | quality | high-fidelity raster for sign-off |
 

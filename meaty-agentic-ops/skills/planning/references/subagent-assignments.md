@@ -323,11 +323,11 @@ Use `platform-engineer` (Opus model) for tasks involving Backstage/RHDH, Interna
 | Task Type | Model | Effort Default | When to Use |
 |-----------|-------|----------------|-------------|
 | Image/asset generation | nano-banana-pro | standard | Icons, sprites, UI assets, marketing images |
-| UI wireframing/SVG | gemini-3.1-pro | medium | Multi-element visual tasks, design exploration |
-| Web research | gemini-3.1-pro | medium | Current documentation, API references, trend analysis |
-| Debug escalation | gpt-5.3-codex | high | After 2+ failed Claude debugging cycles |
-| Plan review (second opinion) | gpt-5.3-codex | medium | Opt-in checkpoint for architecture decisions |
-| PR cross-validation | gemini-3.1-pro | medium | Opt-in checkpoint for code review |
+| UI wireframing/SVG | gemini-3.1-pro-preview | medium | Multi-element visual tasks, design exploration |
+| Web research | gemini-3.1-pro-preview | medium | Current documentation, API references, trend analysis |
+| Debug escalation | gpt-5.6-terra | high | After 2+ failed Claude debugging cycles |
+| Plan review (second opinion) | gpt-5.6-terra | medium | Opt-in checkpoint for architecture decisions |
+| PR cross-validation | gemini-3.1-pro-preview | medium | Opt-in checkpoint for code review |
 
 **Note**: External models are opt-in supplements. Configuration: `.claude/config/multi-model.toml`. Routing guidance: `references/multi-model-guidance.md`
 

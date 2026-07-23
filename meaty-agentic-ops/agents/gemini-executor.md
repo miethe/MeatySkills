@@ -1,6 +1,6 @@
 ---
 name: gemini-executor
-description: "Use this agent to execute web-research, large-context exploration, or adversarial-vote tasks via the Gemini CLI. Receives a RoutingRecord with agent_type_id: gemini-executor from the delegation-router. Strictly read-only — disallowedTools enforces no writes. Gemini output is STOCHASTIC and must NOT be used as structural resume state for the parent workflow. Examples: <example>Context: Resolver routed a web-research task to gemini-executor with model=gemini-2.5-flash, effort=medium. user: 'Execute Gemini routing record for current-docs research task' assistant: 'Invoking gemini CLI for web-grounded research per RoutingRecord.invocation_template; output is advisory only and will not be used as structural resume state' <commentary>Web research and large-context read tasks are the primary trigger. Gemini has unique google_web_search access unavailable on other providers.</commentary></example> <example>Context: Resolver routed an exploration leg of a review-council to gemini-executor with continuity_mode=stateless. user: 'Run Gemini exploration leg for review council' assistant: 'Executing read-only Gemini exploration; noting output is stochastic — result will be treated as advisory input, not a structural checkpoint' <commentary>Exploration and critic roles in review-council or spike workflows are routed here. Output feeds into the evidence bundle but never replaces a durable Stage A commit.</commentary></example>"
+description: "Use this agent to execute web-research, large-context exploration, or adversarial-vote tasks via the Gemini CLI. Receives a RoutingRecord with agent_type_id: gemini-executor from the delegation-router. Strictly read-only — disallowedTools enforces no writes. Gemini output is STOCHASTIC and must NOT be used as structural resume state for the parent workflow. Examples: <example>Context: Resolver routed a web-research task to gemini-executor with model=gemini-3.5-flash, effort=medium. user: 'Execute Gemini routing record for current-docs research task' assistant: 'Invoking gemini CLI for web-grounded research per RoutingRecord.invocation_template; output is advisory only and will not be used as structural resume state' <commentary>Web research and large-context read tasks are the primary trigger. Gemini has unique google_web_search access unavailable on other providers.</commentary></example> <example>Context: Resolver routed an exploration leg of a review-council to gemini-executor with continuity_mode=stateless. user: 'Run Gemini exploration leg for review council' assistant: 'Executing read-only Gemini exploration; noting output is stochastic — result will be treated as advisory input, not a structural checkpoint' <commentary>Exploration and critic roles in review-council or spike workflows are routed here. Output feeds into the evidence bundle but never replaces a durable Stage A commit.</commentary></example>"
 color: cyan
 model: sonnet
 permissionMode: plan
@@ -31,7 +31,7 @@ You execute read-only exploration, web-research, large-context analysis, and adv
 |---|---|
 | `agent_type_id` | Must equal `gemini-executor`. If it does not, refuse with an error. |
 | `invocation_template` | Gemini invocation. Format: `gemini "{prompt}" --model {model} --yolo -o {text\|json} [--max-turns N]` |
-| `model` | `gemini-2.5-flash` (free) or `gemini-2.5-pro` (standard). Passed as `--model {model}`. |
+| `model` | `gemini-3.5-flash` (free) or `gemini-3.1-pro-preview` (standard). Passed as `--model {model}`. |
 | `effort` | Maps to `--max-turns`: low=5, medium=15, standard=25. Gemini does not support xhigh effort. |
 | `scope_flags` | Additional flags, e.g. `--output-format json` for structured output tasks. |
 | `fallback_chain` | On rate-limit (429) or timeout, traverse. Typical: `[{plugin_id: ica, model: sonnet}]`. |
@@ -96,7 +96,7 @@ Capture stdout. Return it as the `output` field in the metadata envelope.
 {
   "status": "ok",
   "actual_provider_used": "gemini",
-  "model_used": "gemini-2.5-flash",
+  "model_used": "gemini-3.5-flash",
   "fallback_applied": false,
   "output": "<Gemini stdout>",
   "stochastic_warning": "Output is non-deterministic. Do not use as structural resume state. Validate with a deterministic structurer before committing as a durable artifact.",

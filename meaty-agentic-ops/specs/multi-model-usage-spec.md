@@ -166,7 +166,7 @@ Default: GPT-5.3-Codex for coding tasks. GPT-5.2 for non-coding review.
 - **Always** use `-o text` flag to avoid JSON envelope overhead
 - Chunk requests expecting >32K output tokens
 - For long diffs: split by file, not by arbitrary size
-- Flash (gemini-3-flash) for simple tasks; Pro (gemini-3.1-pro) for complex
+- Flash (gemini-3.5-flash) for simple tasks; Pro (gemini-3.1-pro-preview) for complex
 
 ---
 

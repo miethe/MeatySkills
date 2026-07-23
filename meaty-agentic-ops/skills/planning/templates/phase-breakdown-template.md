@@ -77,7 +77,7 @@ This phase implements the [layer name] following MeatyPrompts architecture:
 **Model Selection Guidance**: Refer to `.claude/config/multi-model.toml` for valid model values and effort policies:
 - **Sonnet** (default implementation): Complex features, multi-file changes, moderate reasoning
 - **Haiku** (default docs/extraction): Documentation, mechanical search, simple queries
-- **External models**: Use as specified in task (e.g., `nano-banana-pro` for images, `gemini-3.1-pro` for web research)
+- **External models**: Use as specified in task (e.g., `nano-banana-pro` for images, `gemini-3.1-pro-preview` for web research)
 
 **Effort Policy** (see `.claude/config/multi-model.toml`):
 - **adaptive**: Default reasoning for most tasks; model uses graduated thinking as needed

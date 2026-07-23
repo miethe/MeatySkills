@@ -17,9 +17,9 @@ exploration = "claude-haiku-4-5"
 orchestration = "claude-opus-4-6"
 documentation = "claude-haiku-4-5"
 image_generation = "nano-banana-2"   # nb2 = Gemini 3.1 Flash Image (default); use nano-banana-pro for max quality
-svg_generation = "gemini-3.1-pro"
+svg_generation = "gemini-3.5-flash"
 video_generation = "sora-2"
-web_research = "gemini-3.1-pro"
+web_research = "gemini-3.5-flash"   # Search-grounded on the NATIVE key only (not via ICA)
 
 [models.effort_policy]
 # Claude: "adaptive" (default) | "extended" (deep reasoning)
@@ -49,8 +49,12 @@ sandbox_default = "read-only"
 debug_escalation_threshold = 2
 
 [models.gemini]
-default_model = "gemini-3.1-pro"
-fast_model = "gemini-3-flash"
+# gemini-3.5-flash is the DEFAULT workhorse per the routing SoT (1M ctx, Search-grounded
+# on the native key). gemini-3.1-pro-preview is the heavy-reasoning escalation; there is
+# NO gemini-3.5-pro and gemini-3-pro-preview is shut down.
+default_model = "gemini-3.5-flash"
+fast_model = "gemini-3.1-flash-lite"
+heavy_model = "gemini-3.1-pro-preview"
 flash_threshold = "simple"
 max_output_tokens = 65536
 chunking_threshold = 32000
@@ -81,13 +85,13 @@ default = "adaptive"
 note = "Escalate to extended only when blocked with concrete artifacts"
 
 [models.effort_levels.codex]
-# GPT-5.3-Codex graduated reasoning
-levels = ["none", "low", "medium", "high", "xhigh"]
+# gpt-5.6 line graduated reasoning ("ultra" is Sol/Terra only — not available on Luna)
+levels = ["none", "minimal", "low", "medium", "high", "xhigh", "ultra"]
 default = "medium"
-note = "Graduate based on task complexity; xhigh for deep analysis only"
+note = "Graduate based on task complexity; xhigh/ultra for deep analysis only. ultra = Sol/Terra only"
 
 [models.effort_levels.gemini]
-# Gemini 3.1 Pro/Flash thinking config
+# Gemini 3.5 Flash / 3.1 Pro Preview thinking config
 levels = ["none", "low", "medium", "high"]
 default = "medium"
 note = "Flash defaults to low; Pro defaults to medium"
@@ -160,7 +164,7 @@ note = "Codex CLI is the only working provider for the gpt-5.6 line (terra/sol/l
 default_provider = "gemini"
 cost_shift_allowed = false
 cost_shift_requires_explicit = false
-note = "Gemini models default to gemini provider. ICA bridge is a fallback only. Current models: gemini-3-flash, gemini-3.1-pro."
+note = "Gemini models default to gemini provider. ICA bridge is a fallback only. Current models: gemini-3.5-flash, gemini-3.1-pro-preview."
 
 [models.providers.bob_local]
 default_provider = "bob"

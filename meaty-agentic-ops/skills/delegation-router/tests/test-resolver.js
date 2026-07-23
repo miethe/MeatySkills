@@ -147,7 +147,7 @@ id = "gemini"
 availability_check = "which gemini"
 
 [[providers.gemini.models]]
-name = "gemini-3-flash"
+name = "gemini-3.5-flash"
 cost_tier = "free"
 capabilities = [
     "web-search",
@@ -167,7 +167,7 @@ id = "codex"
 availability_check = "which codex"
 
 [[providers.codex.models]]
-name = "gpt-5.3-codex"
+name = "gpt-5.6-terra"
 cost_tier = "premium"
 capabilities = ["agentic-coding", "debug-escalation", "code-review", "ac-validation", "schema-recovery"]
 max_context = 400000
@@ -182,7 +182,7 @@ fallback_opus    = ["ica/opus", "claude/sonnet"]
 fallback_sonnet  = ["ica/sonnet", "claude/opus"]
 fallback_haiku   = ["ica/haiku", "claude/sonnet"]
 fallback_codex   = ["claude/sonnet", "claude/opus"]
-fallback_gemini  = ["ica/gemini-bridge", "ica/sonnet"]
+fallback_gemini  = ["ica/gemini-3.5-flash[1m]", "ica/sonnet"]
 deterministic_providers    = ["claude", "codex", "bob"]
 nondeterministic_providers = ["gemini", "ica"]
 `.trim();
@@ -242,7 +242,7 @@ describe('(a) Cheapest-provider selection — two equal-capability candidates', 
 
   test('gemini (free) selected for web-search task when provider=gemini', () => {
     const record = resolveWith({
-      model: 'gemini-3-flash',
+      model: 'gemini-3.5-flash',
       provider: 'gemini',
       effort: 'standard',
       task_class: 'web-search',
@@ -272,7 +272,7 @@ describe('(b) Nondeterministic-provider exclusion when resume_active=true + stru
 
   test('gemini (nondeterministic) is excluded for implementation stage when resume_active=true', () => {
     const record = resolveWith({
-      model: 'gemini-3-flash',
+      model: 'gemini-3.5-flash',
       provider: 'gemini',
       effort: 'standard',
       task_class: 'implementation',
@@ -297,7 +297,7 @@ describe('(b) Nondeterministic-provider exclusion when resume_active=true + stru
 
   test('deterministic provider (codex) is NOT excluded for structural stage when resume_active=true', () => {
     const record = resolveWith({
-      model: 'gpt-5.3-codex',
+      model: 'gpt-5.6-terra',
       provider: 'codex',
       effort: 'standard',
       task_class: 'ac-validation',
@@ -342,7 +342,7 @@ describe('(c) Fallback-chain traversal on simulated provider unavailability', ()
 
   test('fallback_chain for codex routes to claude/sonnet per routing_rules.fallback_codex', () => {
     const record = resolveWith({
-      model: 'gpt-5.3-codex',
+      model: 'gpt-5.6-terra',
       provider: 'codex',
       effort: 'standard',
       task_class: 'ac-validation',
@@ -401,7 +401,7 @@ describe('(d) MUST-stay rejection for ALL 6 MUST-stay stage classes', () => {
 
   test('MUST-stay: gemini provider rejected for orchestration', () => {
     const record = resolveWith({
-      model: 'gemini-3-flash',
+      model: 'gemini-3.5-flash',
       provider: 'gemini',
       effort: 'standard',
       task_class: 'orchestration',
@@ -412,7 +412,7 @@ describe('(d) MUST-stay rejection for ALL 6 MUST-stay stage classes', () => {
 
   test('MUST-stay: codex provider rejected for council-review', () => {
     const record = resolveWith({
-      model: 'gpt-5.3-codex',
+      model: 'gpt-5.6-terra',
       provider: 'codex',
       effort: 'standard',
       task_class: 'council-review',
@@ -513,7 +513,7 @@ describe('(f) P2-INT-001 — agent_type_id values match agentType filenames exac
 
   test('gemini-executor: routing gemini for web-search emits agent_type_id=gemini-executor', () => {
     const record = resolveWith({
-      model: 'gemini-3-flash',
+      model: 'gemini-3.5-flash',
       provider: 'gemini',
       effort: 'standard',
       task_class: 'web-search',
@@ -524,7 +524,7 @@ describe('(f) P2-INT-001 — agent_type_id values match agentType filenames exac
 
   test('codex-executor: routing codex for ac-validation emits agent_type_id=codex-executor', () => {
     const record = resolveWith({
-      model: 'gpt-5.3-codex',
+      model: 'gpt-5.6-terra',
       provider: 'codex',
       effort: 'standard',
       task_class: 'ac-validation',
@@ -593,7 +593,7 @@ describe('RoutingRecord completeness — all required fields present', () => {
 
   test('continuity_mode is stateless for stochastic providers (gemini)', () => {
     const record = resolveWith({
-      model: 'gemini-3-flash',
+      model: 'gemini-3.5-flash',
       provider: 'gemini',
       effort: 'standard',
       task_class: 'exploration',
