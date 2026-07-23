@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillmeat.local/schemas/delivery-report/v1.0",
+  "title": "Delivery Report Manifest",
+  "description": "Route-discriminated manifest for delivery-report. report.route selects backward-looking (feature) or forward-looking (program|phase|readiness) shape. The Python validator (delivery_report.py) is authoritative for the blocking honesty rules; this schema documents the shape.",
+  "type": "object",
+  "required": ["schema_version", "report"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "report": {
+      "type": "object",
+      "required": ["route", "title", "truth_status", "generated_by", "generated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "route": { "enum": ["feature", "program", "phase", "readiness"] },
+        "title": { "type": "string", "minLength": 1 },
+        "subject": { "type": "string", "description": "repo / program name (forward routes)" },
+        "project": { "type": "string", "description": "project slug (feature route)" },
+        "revision": { "type": "integer", "minimum": 1, "description": "increment on every re-render of the same report" },
+        "generated_from": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repo": { "type": "string", "description": "absolute path to the described repo" },
+            "ref": { "type": "string" },
+            "commit": { "type": "string" }
+          }
+        },
+        "truth_status": { "enum": ["verified", "partially_verified", "not_executed", "owner_data_absent", "branch_local", "shipped"] },
+        "generated_by": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "scope_note": { "type": "string" },
+        "constraints": { "type": "string", "description": "report-global invariants injected into every handoff payload" }
+      }
+    },
+
+    "report_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "explicit_request": { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "tier_system": { "enum": ["dev-execution", "aos", "custom"] },
+        "tier": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "estimated_points": { "type": "number", "minimum": 0 },
+        "signals": {
+          "type": "array",
+          "items": { "enum": ["visible", "cross_component", "security", "migration", "material_findings", "high_risk"] }
+        },
+        "waiver_reason": { "type": "string" }
+      }
+    },
+
+    "executive_summary": { "type": "string" },
+    "problem": { "type": "string" },
+    "solution": { "type": "string" },
+    "value_adds": { "type": "array", "items": { "$ref": "#/$defs/claim" } },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["area", "plain_english"],
+        "additionalProperties": false,
+        "properties": {
+          "area": { "type": "string" },
+          "plain_english": { "type": "string" },
+          "technical_detail": { "type": "string" },
+          "domains": { "$ref": "#/$defs/domain_list" },
+          "evidence_refs": { "$ref": "#/$defs/evidence_refs" }
+        }
+      }
+    },
+    "key_points": { "type": "array", "items": { "type": "string" } },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "detail", "impact", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "detail": { "type": "string" },
+          "impact": { "type": "string" },
+          "status": { "enum": ["resolved", "accepted", "deferred", "open", "not_executed"] },
+          "domains": { "$ref": "#/$defs/domain_list" },
+          "evidence_refs": { "$ref": "#/$defs/evidence_refs" }
+        }
+      }
+    },
+    "validation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "result", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "command": { "type": "string" },
+          "result": { "type": "string" },
+          "status": { "enum": ["passed", "failed", "not_executed", "owner_data_absent", "unverified"] },
+          "verified_by": { "enum": ["self", "delegated", "unverified"] },
+          "evidence_ref": { "type": "string" }
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "after"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "before": { "type": "number" },
+          "after": { "type": "number" },
+          "unit": { "type": "string" },
+          "direction": { "enum": ["higher", "lower", "neutral"] },
+          "evidence_ref": { "type": "string" }
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "detail"],
+        "additionalProperties": false,
+        "properties": { "label": { "type": "string" }, "detail": { "type": "string" } }
+      }
+    },
+    "diagrams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "type", "nodes", "edges"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "type": { "const": "flow" },
+          "caption": { "type": "string" },
+          "nodes": {
+            "type": "array", "minItems": 2, "maxItems": 8,
+            "items": {
+              "type": "object", "required": ["id", "label"], "additionalProperties": false,
+              "properties": { "id": { "type": "string" }, "label": { "type": "string" }, "detail": { "type": "string" } }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object", "required": ["from", "to"], "additionalProperties": false,
+              "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "label": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "followups": {
+      "type": "array",
+      "description": "Handoff-shaped objects (preferred) or bare strings (tolerated, warned).",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["title", "handoff"],
+            "additionalProperties": false,
+            "properties": {
+              "title": { "type": "string" },
+              "detail": { "type": "string" },
+              "handoff": { "$ref": "#/$defs/handoff" }
+            }
+          }
+        ]
+      }
+    },
+
+    "vitals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "measured_by"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": "string" },
+          "sub": { "type": "string" },
+          "severity": { "enum": ["ok", "warn", "critical", "neutral"] },
+          "measured_by": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["revision", "claimed", "actual", "verified_by"],
+        "additionalProperties": false,
+        "properties": {
+          "revision": { "type": "integer", "minimum": 1 },
+          "claimed": { "type": "string" },
+          "actual": { "type": "string" },
+          "verified_by": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "domains": {
+      "type": "object",
+      "description": "Closed, project-configurable vocabulary: domain name -> group (build|knowledge|governance).",
+      "additionalProperties": { "enum": ["build", "knowledge", "governance"] }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "kind", "domains"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "title": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["shipped", "partial", "not_started", "blocked_external", "deferred", "finding"] },
+          "domains": { "$ref": "#/$defs/domain_list" },
+          "status_label": { "type": "string" },
+          "note": { "type": "string" },
+          "verified_by": { "enum": ["self", "delegated", "unverified"] },
+          "evidence_refs": { "$ref": "#/$defs/evidence_refs" },
+          "handoff": { "$ref": "#/$defs/handoff" }
+        }
+      }
+    },
+    "visuals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flowsheet": {
+          "type": "object",
+          "required": ["columns", "rows"],
+          "additionalProperties": false,
+          "properties": {
+            "title": { "type": "string" },
+            "caption": { "type": "string" },
+            "columns": { "type": "array", "items": { "type": "string" } },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["label", "cells"],
+                "additionalProperties": false,
+                "properties": {
+                  "label": { "type": "string" },
+                  "tag": { "type": "string" },
+                  "cells": { "type": "array", "items": { "type": ["integer", "null"] } }
+                }
+              }
+            },
+            "legend": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "ladder": {
+          "type": "object",
+          "required": ["tracks"],
+          "additionalProperties": false,
+          "properties": {
+            "title": { "type": "string" },
+            "caption": { "type": "string" },
+            "tracks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["title", "steps"],
+                "additionalProperties": false,
+                "properties": {
+                  "title": { "type": "string" },
+                  "note": { "type": "string" },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["code", "state", "body"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": { "type": "string" },
+                        "state": { "enum": ["done", "part", "blocked", "none"] },
+                        "label": { "type": "string" },
+                        "body": { "type": "string" },
+                        "domains": { "$ref": "#/$defs/domain_list" },
+                        "ev": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "here": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": { "label": { "type": "string" }, "detail": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "path", "alt", "caption"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "enum": ["screenshot", "illustration"] },
+          "path": { "type": "string" },
+          "alt": { "type": "string", "minLength": 1 },
+          "caption": { "type": "string", "minLength": 1 },
+          "sensitive": { "type": "boolean" },
+          "provider": { "type": "string", "description": "image-gen provider that produced an illustration (audit trail, §5.1)" },
+          "evidence_ref": { "type": "string" }
+        }
+      }
+    },
+    "no_visual_reason": { "type": "string" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "label": { "type": "string" },
+          "kind": { "enum": ["commit", "tree", "test", "review", "deployment", "screenshot", "plan", "tracker", "runtime", "branch", "other"] },
+          "path": { "type": "string" },
+          "commit": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "report": { "properties": { "route": { "const": "feature" } } } } },
+      "then": { "required": ["executive_summary", "problem", "solution", "value_adds", "changes", "validation", "evidence"] }
+    },
+    {
+      "if": { "properties": { "report": { "properties": { "route": { "enum": ["program", "phase", "readiness"] } } } } },
+      "then": { "required": ["vitals", "items", "domains"] }
+    }
+  ],
+
+  "$defs": {
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "domain_list": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "type": "string" } },
+    "claim": {
+      "type": "object",
+      "required": ["title", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "detail": { "type": "string" },
+        "beneficiary": { "type": "string" },
+        "domains": { "$ref": "#/$defs/domain_list" },
+        "evidence_refs": { "$ref": "#/$defs/evidence_refs" }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["command", "repo", "prompt"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": ["string", "null"], "description": "slash-command / CLI, or null for human-only acts" },
+        "repo": { "type": "string", "minLength": 1, "description": "ABSOLUTE repo path" },
+        "paths": { "type": "array", "items": { "type": "string" } },
+        "requirement_ids": { "type": "array", "items": { "type": "string" } },
+        "gates": { "type": "array", "items": { "type": "string" } },
+        "tracker": { "type": ["string", "null"] },
+        "trigger": { "type": "string", "description": "REQUIRED when the item kind is deferred" },
+        "prompt": { "type": "string", "minLength": 1, "description": "self-contained, imperative, <=60 words" }
+      }
+    }
+  }
+}

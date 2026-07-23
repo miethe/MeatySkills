@@ -1,0 +1,1500 @@
+<title>Pediatric CDS Platform &#8212; Program Status, Day 8</title>
+<style>
+:root {
+  --paper:      #f4f7f5;
+  --paper-2:    #ffffff;
+  --rule:       #d3ded9;
+  --rule-hard:  #b3c4be;
+  --ink:        #0d1c1b;
+  --ink-2:      #354746;
+  --muted:      #6a7d79;
+  --accent:     #0e6f68;
+  --accent-dim: #d5e8e5;
+  --know:       #4a5486;
+  --crit:       #a3302b;
+  --crit-dim:   #f6e0de;
+  --warn:       #8a5f05;
+  --warn-dim:   #f7ecd2;
+  --ok:         #2f6d43;
+  --ok-dim:     #dcecdf;
+  --idle:       #8493a0;
+  --idle-dim:   #e6eaed;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --maxw: 1180px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:#0b1413; --paper-2:#111d1c; --rule:#233634; --rule-hard:#35504c;
+    --ink:#e7efec; --ink-2:#b3c5c1; --muted:#7d918d;
+    --accent:#4fc4b6; --accent-dim:#14312e; --know:#93a2e0;
+    --crit:#ef8078; --crit-dim:#371917; --warn:#d9a63c; --warn-dim:#33270e;
+    --ok:#74c68c; --ok-dim:#16301f; --idle:#7b8b95; --idle-dim:#1c2528;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#0b1413; --paper-2:#111d1c; --rule:#233634; --rule-hard:#35504c;
+  --ink:#e7efec; --ink-2:#b3c5c1; --muted:#7d918d;
+  --accent:#4fc4b6; --accent-dim:#14312e; --know:#93a2e0;
+  --crit:#ef8078; --crit-dim:#371917; --warn:#d9a63c; --warn-dim:#33270e;
+  --ok:#74c68c; --ok-dim:#16301f; --idle:#7b8b95; --idle-dim:#1c2528;
+}
+:root[data-theme="light"] {
+  --paper:#f4f7f5; --paper-2:#ffffff; --rule:#d3ded9; --rule-hard:#b3c4be;
+  --ink:#0d1c1b; --ink-2:#354746; --muted:#6a7d79;
+  --accent:#0e6f68; --accent-dim:#d5e8e5; --know:#4a5486;
+  --crit:#a3302b; --crit-dim:#f6e0de; --warn:#8a5f05; --warn-dim:#f7ecd2;
+  --ok:#2f6d43; --ok-dim:#dcecdf; --idle:#8493a0; --idle-dim:#e6eaed;
+}
+
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:var(--maxw); margin:0 auto; padding:0 28px 100px; }
+
+.masthead { border-bottom:2px solid var(--ink); padding:46px 0 20px; margin-bottom:34px; }
+.eyebrow { font-family:var(--mono); font-size:11px; letter-spacing:0.13em; text-transform:uppercase;
+  color:var(--accent); margin:0 0 14px; display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; }
+.eyebrow .sep { color:var(--rule-hard); }
+h1 { font-size:clamp(30px,4.4vw,47px); line-height:1.04; letter-spacing:-0.024em; font-weight:700;
+  margin:0 0 14px; text-wrap:balance; }
+.dek { font-size:17px; color:var(--ink-2); max-width:62ch; margin:0; }
+
+section { margin:52px 0 0; }
+h2 { font-size:12px; font-family:var(--mono); letter-spacing:0.13em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; margin:0 0 6px; padding-bottom:8px;
+  border-bottom:1px solid var(--rule); display:flex; justify-content:space-between; gap:16px; align-items:baseline; }
+h2 .h2-note { color:var(--rule-hard); letter-spacing:0.04em; text-transform:none; font-size:11px; }
+h3 { font-size:20px; letter-spacing:-0.015em; margin:26px 0 8px; font-weight:650; text-wrap:balance; }
+p { margin:0 0 14px; max-width:72ch; }
+code, .m { font-family:var(--mono); font-size:0.88em; }
+code { background:var(--accent-dim); color:var(--ink); padding:1px 5px; border-radius:3px; }
+
+.vitals { display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); margin:22px 0 0; }
+.vital { background:var(--paper-2); padding:15px 16px 14px; }
+.vital .k { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:7px; }
+.vital .v { font-family:var(--mono); font-size:26px; font-weight:600; line-height:1;
+  letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
+.vital .sub { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; }
+.vital.is-crit .v { color:var(--crit); }
+.vital.is-warn .v { color:var(--warn); }
+
+.callout { border:1px solid var(--rule); border-left:4px solid var(--muted); background:var(--paper-2);
+  padding:18px 20px; margin:22px 0; }
+.callout.crit { border-left-color:var(--crit); background:var(--crit-dim); }
+.callout.warn { border-left-color:var(--warn); background:var(--warn-dim); }
+.callout.fix  { border-left-color:var(--accent); background:var(--accent-dim); }
+.callout .ct { font-family:var(--mono); font-size:11px; letter-spacing:0.11em; text-transform:uppercase;
+  font-weight:600; margin-bottom:8px; }
+.callout.crit .ct { color:var(--crit); }
+.callout.warn .ct { color:var(--warn); }
+.callout.fix  .ct { color:var(--accent); }
+.callout p:last-child { margin-bottom:0; }
+.callout details.ns { border-top-color:var(--rule-hard); }
+
+.scroller { overflow-x:auto; border:1px solid var(--rule); background:var(--paper-2); margin:22px 0 10px; }
+table.flow { border-collapse:collapse; width:100%; min-width:760px; font-size:13px; }
+table.flow th, table.flow td { border-bottom:1px solid var(--rule); padding:0; }
+table.flow thead th { font-family:var(--mono); font-size:10px; letter-spacing:0.07em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; text-align:center; padding:10px 4px 9px;
+  border-bottom:1px solid var(--rule-hard); white-space:nowrap; }
+table.flow thead th.rowhead { text-align:left; padding-left:14px; min-width:190px; }
+table.flow th.rowhead { text-align:left; padding:9px 10px 9px 14px; font-weight:550; font-size:13px;
+  color:var(--ink); white-space:nowrap; }
+table.flow th.rowhead .tag { display:block; font-family:var(--mono); font-size:10px; letter-spacing:0.06em;
+  color:var(--muted); text-transform:uppercase; margin-top:1px; }
+td.cell { text-align:center; vertical-align:middle; padding:6px 3px; }
+.dot { display:inline-flex; align-items:center; justify-content:center; width:30px; height:22px;
+  border-radius:2px; font-family:var(--mono); font-size:11px; font-variant-numeric:tabular-nums; font-weight:600; }
+.d1 { background:color-mix(in srgb, var(--accent) 34%, transparent); color:var(--ink); }
+.d2 { background:color-mix(in srgb, var(--accent) 58%, transparent); color:var(--ink); }
+.d3 { background:var(--accent); color:var(--paper); }
+@media (prefers-color-scheme: dark) { .d3 { color:#06201e; } }
+:root[data-theme="dark"] .d3 { color:#06201e; }
+:root[data-theme="light"] .d3 { color:var(--paper); }
+td.cell.empty::after { content:"\00B7"; color:var(--rule-hard); font-family:var(--mono); }
+.legend { display:flex; flex-wrap:wrap; gap:6px 20px; font-family:var(--mono); font-size:10.5px;
+  letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:26px; }
+.legend span { display:inline-flex; align-items:center; gap:6px; }
+.swatch { width:13px; height:13px; border-radius:2px; display:inline-block; }
+
+.tracks { display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:22px; }
+@media (max-width:900px) { .tracks { grid-template-columns:1fr; } }
+.track-h { font-family:var(--mono); font-size:11px; letter-spacing:0.11em; text-transform:uppercase;
+  color:var(--ink); font-weight:600; padding-bottom:8px; border-bottom:1px solid var(--rule-hard); }
+.track-h em { font-style:normal; color:var(--muted); font-weight:400; letter-spacing:0.04em; }
+.step { display:grid; grid-template-columns:66px 1fr; gap:14px; border-bottom:1px solid var(--rule);
+  padding:13px 14px 13px 12px; border-left:4px solid var(--idle); background:var(--paper-2); }
+.step.s-done { border-left-color:var(--ok); }
+.step.s-part { border-left-color:var(--accent); }
+.step.s-blocked { border-left-color:var(--warn); }
+.step.s-none { border-left-color:var(--rule-hard); }
+.step .code { font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:-0.01em;
+  color:var(--ink); line-height:1.4; }
+.step .code small { display:block; font-size:9.5px; font-weight:600; letter-spacing:0.09em;
+  text-transform:uppercase; margin-top:3px; }
+.s-done .code small { color:var(--ok); }
+.s-part .code small { color:var(--accent); }
+.s-blocked .code small { color:var(--warn); }
+.s-none .code small { color:var(--idle); }
+.step .body { font-size:13.5px; line-height:1.5; }
+.step .body .ev { display:block; font-family:var(--mono); font-size:11px; color:var(--muted);
+  margin-top:5px; line-height:1.45; }
+.step .body .domline { margin-bottom:6px; }
+.step .body > .doms { display:flex; margin-bottom:6px; }
+.move .domline .doms { display:flex; }
+table.data td .doms { display:flex; max-width:130px; }
+.here { background:var(--accent); color:var(--paper); padding:9px 14px; font-family:var(--mono);
+  font-size:11px; letter-spacing:0.13em; text-transform:uppercase; font-weight:700;
+  display:flex; justify-content:space-between; gap:10px; align-items:center; }
+@media (prefers-color-scheme: dark) { .here { color:#06201e; } }
+:root[data-theme="dark"] .here { color:#06201e; }
+:root[data-theme="light"] .here { color:var(--paper); }
+
+table.data { border-collapse:collapse; width:100%; min-width:820px; font-size:13.5px; }
+table.data th { font-family:var(--mono); font-size:10px; letter-spacing:0.09em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; text-align:left; padding:10px 14px;
+  border-bottom:1px solid var(--rule-hard); white-space:nowrap; }
+table.data td { padding:11px 14px; border-bottom:1px solid var(--rule); vertical-align:top; line-height:1.45; }
+table.data tr:last-child td { border-bottom:none; }
+table.data td.nowrap { white-space:nowrap; }
+.pill { display:inline-block; font-family:var(--mono); font-size:10px; letter-spacing:0.07em;
+  text-transform:uppercase; font-weight:600; padding:3px 8px; border-radius:2px; white-space:nowrap; }
+.p-ok { background:var(--ok-dim); color:var(--ok); }
+.p-part { background:var(--accent-dim); color:var(--accent); }
+.p-none { background:var(--idle-dim); color:var(--idle); }
+.p-blocked { background:var(--warn-dim); color:var(--warn); }
+.p-crit { background:var(--crit-dim); color:var(--crit); }
+
+.doms { display:inline-flex; flex-wrap:wrap; gap:4px; vertical-align:middle; }
+.dom { font-family:var(--mono); font-size:9.5px; letter-spacing:0.09em; text-transform:uppercase;
+  font-weight:600; padding:2px 6px; border-radius:2px; white-space:nowrap;
+  border:1px solid currentColor; line-height:1.5; }
+.dom-build { color:var(--accent); }
+.dom-know { color:var(--know); }
+.dom-gov { color:var(--warn); }
+
+details.ns { margin-top:10px; border-top:1px dashed var(--rule); }
+details.ns > summary { cursor:pointer; list-style:none; padding:7px 0 0; font-family:var(--mono);
+  font-size:10px; letter-spacing:0.11em; text-transform:uppercase; color:var(--accent);
+  font-weight:600; display:flex; align-items:center; gap:7px; user-select:none; }
+details.ns > summary::-webkit-details-marker { display:none; }
+details.ns > summary::before { content:"\25B8"; display:inline-block; transition:transform 0.14s ease; font-size:11px; }
+details.ns[open] > summary::before { transform:rotate(90deg); }
+details.ns > summary:hover { color:var(--ink); }
+.ns-body { margin-top:9px; border:1px solid var(--rule); background:var(--paper);
+  padding:12px 13px 11px; display:grid; gap:9px; }
+.ns-row { display:grid; grid-template-columns:82px 1fr; gap:10px; align-items:baseline; }
+.ns-row .kk { font-family:var(--mono); font-size:9.5px; letter-spacing:0.09em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; }
+.ns-row .vv { font-family:var(--mono); font-size:11.5px; line-height:1.6; word-break:break-word; }
+.ns-row .vv .cmd { color:var(--accent); font-weight:600; }
+.ns-row .vv .idc { display:inline-block; background:var(--idle-dim); color:var(--ink-2);
+  padding:0 4px; border-radius:2px; margin:0 3px 3px 0; }
+.ns-row .vv .gate { background:var(--warn-dim); color:var(--warn); }
+.ns-prompt { font-family:var(--mono); font-size:11.5px; line-height:1.6; color:var(--ink-2);
+  background:var(--paper-2); border-left:2px solid var(--rule-hard); padding:9px 11px;
+  white-space:pre-wrap; margin:0; }
+.ns-foot { display:flex; justify-content:flex-end; }
+.copy-btn { font-family:var(--mono); font-size:10px; letter-spacing:0.09em; text-transform:uppercase;
+  font-weight:600; padding:5px 11px; cursor:pointer; background:var(--accent); color:var(--paper-2);
+  border:1px solid var(--accent); border-radius:2px; transition:background 0.12s ease, color 0.12s ease; }
+@media (prefers-color-scheme: dark) { .copy-btn { color:#06201e; } }
+:root[data-theme="dark"] .copy-btn { color:#06201e; }
+:root[data-theme="light"] .copy-btn { color:var(--paper-2); }
+.copy-btn:hover { background:transparent; color:var(--accent); }
+.copy-btn.done { background:var(--ok); border-color:var(--ok); color:var(--paper-2); }
+.ns-payload { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:pre; }
+.ns-fallback { width:100%; min-height:150px; font-family:var(--mono); font-size:11px; line-height:1.55;
+  background:var(--paper-2); color:var(--ink); border:1px solid var(--accent); border-radius:2px;
+  padding:9px 11px; resize:vertical; white-space:pre; }
+td .ns-body { background:var(--paper-2); }
+
+figure { margin:26px 0; }
+figure img { width:100%; height:auto; display:block; border:1px solid var(--rule-hard); }
+figcaption { font-family:var(--mono); font-size:11px; color:var(--muted); line-height:1.5; margin-top:9px;
+  padding-left:10px; border-left:2px solid var(--rule-hard); max-width:78ch; }
+figcaption b { color:var(--ink-2); font-weight:600; }
+.figs { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+@media (max-width:800px) { .figs { grid-template-columns:1fr; } }
+.figs figure { margin:0; }
+
+.moves { display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:22px; }
+.move { background:var(--paper-2); padding:17px 20px; display:grid; grid-template-columns:34px 1fr; gap:16px; }
+.move .n { font-family:var(--mono); font-size:19px; font-weight:700; color:var(--accent);
+  font-variant-numeric:tabular-nums; line-height:1.2; }
+.move h4 { margin:0 0 5px; font-size:16px; font-weight:650; letter-spacing:-0.012em; }
+.move p { margin:0 0 8px; font-size:13.5px; color:var(--ink-2); max-width:78ch; }
+.move .meta { font-family:var(--mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--muted); display:flex; flex-wrap:wrap; gap:5px 16px; }
+.move .meta b { color:var(--ink-2); font-weight:600; }
+.move .domline { margin:0 0 8px; }
+
+footer { margin-top:62px; padding-top:20px; border-top:2px solid var(--ink); font-family:var(--mono);
+  font-size:11px; color:var(--muted); line-height:1.7; }
+footer strong { color:var(--ink); }
+
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { *, details.ns > summary::before, .copy-btn { transition:none !important; animation:none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">
+    <span>Program status</span><span class="sep">/</span>
+    <span>Pediatric CDS Platform</span><span class="sep">/</span>
+    <span>2026-07-22 &middot; day 8</span><span class="sep">/</span>
+    <span>origin/main 263120b</span><span class="sep">/</span>
+    <span>rev 2</span>
+  </div>
+  <h1>Eight days in: the safety substrate is built, the product is still one module.</h1>
+  <p class="dek">Every line of clinical governance machinery the platform needs to be defensible now
+  exists. Almost none of it is visible to a clinician, and no second module has reached the browser.
+  This is the map of what shipped, what's blocked on humans, and what isn't &mdash; with a copyable
+  handoff on every item.</p>
+</header>
+
+<section aria-label="Vitals">
+  <div class="vitals">
+    <div class="vital"><div class="k">Elapsed</div><div class="v">8</div><div class="sub">days &middot; Jul 15 &rarr; Jul 22</div></div>
+    <div class="vital"><div class="k">Merged</div><div class="v">24</div><div class="sub">PRs &middot; 52 commits on main</div></div>
+    <div class="vital is-warn"><div class="k">Unmerged</div><div class="v">30</div><div class="sub">commits on the review-workflow branch</div></div>
+    <div class="vital is-warn"><div class="k">Modules</div><div class="v">4</div><div class="sub">1 reaches the browser</div></div>
+    <div class="vital is-crit"><div class="k">Grounded</div><div class="v">0</div><div class="sub">of 91 rules &middot; ledger empty by design</div></div>
+    <div class="vital is-crit"><div class="k">check gate</div><div class="v">FAIL</div><div class="sub">25 of 2,412 tests red on main</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Corrections to revision 1 <span class="h2-note">two claims in the first cut were wrong</span></h2>
+  <div class="callout warn">
+    <div class="ct">What I got wrong, and what's actually true</div>
+    <p><strong>1. The clinical review workflow is not unstarted.</strong> Revision 1 said DF-E1-01 had
+    "zero of five phases executed," reading the trackers on <code>main</code>. Those trackers are stale
+    because the work is unmerged: branch <code>worktree-exec-clinical-review-workflow</code> is
+    <strong>30 commits ahead</strong>, with phases 1, 2 and 4 complete, phase 3 in progress and phase 5
+    pending. There is substantially more built here than main shows &mdash; it just needs landing.</p>
+    <p><strong>2. G0 spans eight ADRs, not three.</strong> Revision 1 named ADR-0004/0005/0006.
+    <code>docs/adr/</code> holds <strong>eight</strong> ADRs (0001&ndash;0008) and every one of them is
+    still <code>proposed</code>. G0 is correspondingly wider than stated, and each ADR clears
+    independently.</p>
+    <p>One refinement rather than an error: the "units-applied chip row" is
+    <code>renderUnitAssumptions()</code> &mdash; an aside listing field names in <code>&lt;code&gt;</code>
+    tags. It reads as chips because of how <code>&lt;code&gt;</code> is styled; structurally it's a list,
+    and it reports only assumed defaults, never the accepted unit set per field.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Read this first <span class="h2-note">verified on a clean tree at 263120b</span></h2>
+
+  <div class="callout crit">
+    <div class="ct">main is red &mdash; the mandatory gate did not hold</div>
+    <p><code>npm run check</code> fails on <code>origin/main</code>: <strong>25 of 2,412 tests</strong>
+    with a clean working tree. Two PRs merged ~6 hours apart on 2026-07-22 collided.</p>
+    <p><b>PR #20</b> (Rights-Aware Evidence Capture, 04:06Z) tightened <code>evidence.schema.json</code>
+    &mdash; every passage now requires <code>evidence_item_type</code>, <code>judgment_basis</code>,
+    <code>judgment_basis_attestation</code>, <code>rights_component_class</code>,
+    <code>structured_locator</code> and <code>not_captured</code>, and every source must resolve to a
+    <code>rights/rights-ledger.json</code> entry. <b>PR #22</b> (E1 multi-bundle, 10:25Z) then landed
+    <code>growth_suite_v1</code> and <code>kidney_suite_v1</code> carrying none of them.</p>
+    <p>Measured directly: <strong>11 of 11</strong> growth passages and <strong>12 of 12</strong> kidney
+    passages are missing all six required fields, and the rights ledger holds <strong>zero</strong>
+    entries for either module against 33 for <code>cbc_suite_v1</code>. Failures cascade into
+    byte-identity baselines, converter round-trips, release-manifest goldens and the D7 mutation
+    controls. It is an unmigrated fixture set, not a design flaw &mdash; roughly a day of backfill.</p>
+    <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/dev:autopilot</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">modules/growth_suite_v1/evidence.json<br />modules/kidney_suite_v1/evidence.json<br />schemas/evidence.schema.json<br />rights/rights-ledger.json<br />scripts/validate-rights.mjs<br />.claude/findings/multi-bundle-conversion-e1-findings.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">EPR3-T2</span><span class="idc">EPR3-T4</span><span class="idc">EPR3-T6</span><span class="idc">D1</span><span class="idc">D2</span></span></div><p class="ns-prompt">All 11 growth_suite_v1 and all 12 kidney_suite_v1 evidence passages are missing the six schema-required EPR3 fields (evidence_item_type, judgment_basis, judgment_basis_attestation, rights_component_class, structured_locator, not_captured), and rights/rights-ledger.json has zero entries for either module versus 33 for cbc_suite_v1. Regenerate both files against the current evidence.schema.json and backfill the ledger. Never invent field values &#8212; mark unresolved fields explicitly. npm run check must be green before commit.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/dev:autopilot
+
+Task: Repair the red check gate
+Domains: Evidence, Validation, Infra
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - modules/growth_suite_v1/evidence.json
+  - modules/kidney_suite_v1/evidence.json
+  - schemas/evidence.schema.json
+  - rights/rights-ledger.json
+  - scripts/validate-rights.mjs
+  - .claude/findings/multi-bundle-conversion-e1-findings.md
+
+Requirement IDs: EPR3-T2, EPR3-T4, EPR3-T6, D1, D2
+
+Prompt:
+All 11 growth_suite_v1 and all 12 kidney_suite_v1 evidence passages are missing the six schema-required EPR3 fields (evidence_item_type, judgment_basis, judgment_basis_attestation, rights_component_class, structured_locator, not_captured), and rights/rights-ledger.json has zero entries for either module versus 33 for cbc_suite_v1. Regenerate both files against the current evidence.schema.json and backfill the ledger. Never invent field values &#8212; mark unresolved fields explicitly. npm run check must be green before commit.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+  </div>
+
+  <div class="callout crit">
+    <div class="ct">Related: only one of four bundles used the real converter</div>
+    <p><code>.claude/findings/multi-bundle-conversion-e1-findings.md</code> records that the merged
+    multi-bundle pass ran <code>tools/rf-bundle-to-kb-pack</code> end-to-end for
+    <strong>one</strong> bundle (RF-CBC-002 into <code>cbc_suite_v1</code>). The anemia, kidney and
+    growth evidence projections came from bespoke, uncommitted scripts &mdash; so those three are not
+    reproducible from the committed toolchain, which is also why they never picked up the new rights
+    fields. The plan's own frontmatter reads <code>status: completed</code>.</p>
+    <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md<br />docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md<br />modules/cbc_suite_v1/authoring-decisions.yaml<br />tools/rf-bundle-to-kb-pack<br />.claude/findings/multi-bundle-conversion-e1-findings.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-M1</span><span class="idc">DF-E1-M2</span><span class="idc">DF-E1-M3</span><span class="idc">OQ-1</span><span class="idc">OQ-5</span><span class="idc">FR-9</span><span class="idc">FR-22</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter</span></div><p class="ns-prompt">Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: E1 &#8212; finish the multi-bundle conversion pass
+Domains: Evidence, Governance, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md
+  - docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md
+  - modules/cbc_suite_v1/authoring-decisions.yaml
+  - tools/rf-bundle-to-kb-pack
+  - .claude/findings/multi-bundle-conversion-e1-findings.md
+
+Requirement IDs: DF-E1-M1, DF-E1-M2, DF-E1-M3, OQ-1, OQ-5, FR-9, FR-22
+IntentTree: node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter
+
+Prompt:
+Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+  </div>
+
+  <div class="callout warn">
+    <div class="ct">On the question you actually asked</div>
+    <p><strong>There are effectively no new visual enhancements in the app.</strong> The clinician-facing
+    SPA is still the anemia tool as it stood on 2026-07-15 &mdash; same five tabs, same layout. Three
+    provenance surfaces did land from Wave-0 (the documented-default-units notice, a range-source tile,
+    evidence-ID citation chips) and they're genuinely visible. Everything else built in eight days
+    lives below the waterline.</p>
+    <p>That is what the plan says, not an execution miss. <strong>No phase before P2 has a UI
+    deliverable, and P2 itself has no UI work package at all.</strong> The first scheduled front-end
+    work is <b>P3-WP7</b> &mdash; three phases away, behind a retrospective-validation gate and a HIPAA
+    scope expansion. If the goal is to prove value before committing to the clinical-review investment,
+    the plan as written does not get you there.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Where the eight days went <span class="h2-note">commits per workstream per day, on main</span></h2>
+  <p>A flowsheet: rows are workstreams, columns are days, each cell is that day's commit count. The
+  front end (row 1) flatlines after day 1; everything since has been governance, evidence and release
+  infrastructure.</p>
+
+  <div class="scroller">
+    <table class="flow">
+      <thead>
+        <tr><th class="rowhead">Workstream</th>
+          <th>Jul 15</th><th>Jul 16</th><th>Jul 17</th><th>Jul 18</th>
+          <th>Jul 19</th><th>Jul 20</th><th>Jul 21</th><th>Jul 22</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="rowhead">Clinician-facing SPA<span class="tag">index.html &middot; app.js</span></th>
+          <td class="cell"><span class="dot d3">4</span></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td></tr>
+        <tr><th class="rowhead">P0 &mdash; platform foundation<span class="tag">modules/&lt;id&gt;/ contract</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d1">1</span></td><td class="cell"><span class="dot d1">1</span></td>
+          <td class="cell"><span class="dot d1">1</span></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td></tr>
+        <tr><th class="rowhead">P1 &mdash; Wave-0 safety<span class="tag">EP-0 &hellip; EP-7</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d2">3</span></td><td class="cell"><span class="dot d2">4</span></td>
+          <td class="cell"><span class="dot d2">3</span></td><td class="cell empty"></td></tr>
+        <tr><th class="rowhead">ARC clinical council<span class="tag">P0 &hellip; P7 adoption</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d3">4</span></td><td class="cell"><span class="dot d3">6</span></td>
+          <td class="cell"><span class="dot d3">6</span></td><td class="cell empty"></td></tr>
+        <tr><th class="rowhead">Evidence Foundry E0/E1<span class="tag">converter &middot; review &middot; release</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d1">1</span></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d2">3</span></td><td class="cell"><span class="dot d2">3</span></td></tr>
+        <tr><th class="rowhead">Rights-aware capture<span class="tag">rights/ ledger + taxonomy</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d3">4</span></td><td class="cell"><span class="dot d1">1</span></td></tr>
+        <tr><th class="rowhead">rf evidence runs<span class="tag">7 verified bundles</span></th>
+          <td class="cell"><span class="dot d1">1</span></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td></tr>
+        <tr><th class="rowhead">Clinical review workflow<span class="tag">DF-E1-01 &middot; mostly unmerged</span></th>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell empty"></td><td class="cell empty"></td><td class="cell empty"></td>
+          <td class="cell"><span class="dot d1">1</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span><i class="swatch d1"></i> 1 commit</span>
+    <span><i class="swatch d2"></i> 2&ndash;3</span>
+    <span><i class="swatch d3"></i> 4+</span>
+    <span>&middot; = no activity</span>
+    <span>Jul 16 = no commits</span>
+    <span>excludes the 30 unmerged review-workflow commits</span>
+  </div>
+</section>
+
+<section>
+  <h2>The two tracks, and where you are on them <span class="h2-note">every item carries domains + a copyable handoff</span></h2>
+
+  <div class="tracks">
+    <div>
+      <div class="track-h">Product track <em>&mdash; docs/&hellip;/01-roadmap</em></div>
+
+      <div class="step s-done">
+        <div class="code">P0<small>complete</small></div>
+        <div class="body"><div class="domline"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-build">Infra</span></span></div>
+        <strong>Platform foundation refactor.</strong> Module-agnostic runtime,
+        <code>modules/&lt;id&gt;/</code> package contract, anemia output byte-equivalent.
+        <span class="ev">7/7 phases &middot; PR #1 &rarr; merged 2026-07-18 &middot; no next step</span></div>
+      </div>
+
+      <div class="step s-done">
+        <div class="code">P1<small>complete</small></div>
+        <div class="body"><div class="domline"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-know">Evidence</span><span class="dom dom-know">Validation</span></span></div>
+        <strong>Wave-0 safety &amp; defensibility.</strong> Four-state fact model across 56 fields,
+        closed unit table with fail-closed rejection, exact-passage evidence, signed KB manifest +
+        semantic diff, 91/91 rule activation witnesses, review-record schema.
+        <span class="ev">EP-0 &hellip; EP-7 all merged &middot; 8/9 trackers marked (EP-1 lags at "planning")</span></div>
+      </div>
+
+      <div class="step s-part">
+        <div class="code">P2<small>~5% &middot; first content</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-know">Evidence</span><span class="dom dom-know">Research</span></span>
+        <strong>CBC Suite</strong> &mdash; neutropenia, leukocytosis, platelets, pancytopenia, smear.
+        The module that makes this a <em>suite</em> holds <strong>4 rules and 1 candidate</strong>
+        against anemia's 91 and 26. One of six branches has content. No UI work package exists.
+        <span class="ev">modules/cbc_suite_v1 &middot; status: unsigned-stub &middot; approvedBy: []</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/cbc-suite-full-authoring.md<br />docs/project_plans/design-specs/cbc-12-angle-research-operation.md<br />modules/cbc_suite_v1/rules.json<br />modules/cbc_suite_v1/authoring-decisions.yaml<br />docs/adr/0001-canonical-authoring-model-rule-schema-v2.md<br />docs/project_plans/expansion/01-platform-expansion-roadmap.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-08</span><span class="idc">ADR-0001</span><span class="idc">P2-WP1</span><span class="idc">P2-WP2</span><span class="idc">P2-WP3</span><span class="idc">P2-WP4</span><span class="idc">P2-WP5</span><span class="idc">P2-WP6</span><span class="idc">P2-WP9</span><span class="idc">RF-CBC-001</span><span class="idc">RF-CBC-002</span><span class="idc">SPIKE-008</span><span class="idc">SPIKE-009</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XCS5J0WRNK8MX6EMP2VF &#8212; P2 CBC Suite expansion</span></div><p class="ns-prompt">cbc_suite_v1 holds only E0&#x27;s 4-rule vertical slice and 1 candidate; RF-CBC-002 evidence is projected but authors zero rules. Read the DF-E1-08 design-spec stub (cbc-suite-full-authoring.md, maturity: shaping) and run /plan-feature to scope the full CBC rule-authoring PRD. ADR-0001 is still proposed and decides the rule-schema-v2 boundary first.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P2 &#8212; CBC Suite: author the remaining branches
+Domains: Engine, Evidence, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/cbc-suite-full-authoring.md
+  - docs/project_plans/design-specs/cbc-12-angle-research-operation.md
+  - modules/cbc_suite_v1/rules.json
+  - modules/cbc_suite_v1/authoring-decisions.yaml
+  - docs/adr/0001-canonical-authoring-model-rule-schema-v2.md
+  - docs/project_plans/expansion/01-platform-expansion-roadmap.md
+
+Requirement IDs: DF-E1-08, ADR-0001, P2-WP1, P2-WP2, P2-WP3, P2-WP4, P2-WP5, P2-WP6, P2-WP9, RF-CBC-001, RF-CBC-002, SPIKE-008, SPIKE-009
+IntentTree: node_01KXQ7XCS5J0WRNK8MX6EMP2VF &#8212; P2 CBC Suite expansion
+
+Prompt:
+cbc_suite_v1 holds only E0&#x27;s 4-rule vertical slice and 1 candidate; RF-CBC-002 evidence is projected but authors zero rules. Read the DF-E1-08 design-spec stub (cbc-suite-full-authoring.md, maturity: shaping) and run /plan-feature to scope the full CBC rule-authoring PRD. ADR-0001 is still proposed and decides the rule-schema-v2 boundary first.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">P3<small>not started</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-build">Interop</span><span class="dom dom-build">UI</span></span>
+        <strong>Longitudinal workspace, referral-readiness, SMART-on-FHIR.</strong> The monetizable
+        layer &mdash; and where the <em>only</em> scheduled front-end work package lives (P3-WP7).
+        Triggers server/PHI mode and HIPAA scope.
+        <span class="ev">Gated behind P2 + V3 retrospective + V4 silent mode + V5 human factors</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/expansion/01-platform-expansion-roadmap.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P3-WP1</span><span class="idc">P3-WP2</span><span class="idc">P3-WP3</span><span class="idc">P3-WP4</span><span class="idc">P3-WP5</span><span class="idc">P3-WP6</span><span class="idc">P3-WP7</span><span class="idc">RF-LONG-001</span><span class="idc">RF-LONG-002</span><span class="idc">SPIKE-010</span><span class="idc">SPIKE-013</span><span class="idc">REG-004</span><span class="idc">REG-005</span><span class="idc">REG-006</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XE5TC61VXMDNPV11HQ55 &#8212; P3 Longitudinal workspace</span></div><p class="ns-prompt">No PRD or implementation plan exists for Phase 3 anywhere in the repo &#8212; only the roadmap-level description in 01-platform-expansion-roadmap.md. Run /plan-feature to author the PRD plus Tier-3 plan for the longitudinal workspace, work queue, referral packet, and SMART-on-FHIR/CDS-Hooks interop. This phase introduces server/PHI mode: gate the design with council-review before any code.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P3 &#8212; Longitudinal workspace + referral-readiness + SMART-on-FHIR
+Domains: Engine, Interop, UI
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/expansion/01-platform-expansion-roadmap.md
+
+Requirement IDs: P3-WP1, P3-WP2, P3-WP3, P3-WP4, P3-WP5, P3-WP6, P3-WP7, RF-LONG-001, RF-LONG-002, SPIKE-010, SPIKE-013, REG-004, REG-005, REG-006
+IntentTree: node_01KXQ7XE5TC61VXMDNPV11HQ55 &#8212; P3 Longitudinal workspace
+
+Prompt:
+No PRD or implementation plan exists for Phase 3 anywhere in the repo &#8212; only the roadmap-level description in 01-platform-expansion-roadmap.md. Run /plan-feature to author the PRD plus Tier-3 plan for the longitudinal workspace, work queue, referral packet, and SMART-on-FHIR/CDS-Hooks interop. This phase introduces server/PHI mode: gate the design with council-review before any code.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">P3<small>wp7 &middot; the ui slice</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span>
+        <strong>Four-state adaptive questionnaire UI.</strong> Broken out because it is the one P3
+        work package with no server, no PHI and no gate dependency &mdash; and the most clinically
+        legible thing the project has built.
+        <span class="ev">Engine support shipped EP-1; the browser still sends booleans</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/tri-state-fact-model.md<br />schemas/patient-input.schema.json<br />src/ruleEngine.js<br />src/app.js</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P3-WP7</span><span class="idc">P3-WP6</span><span class="idc">P1-WP1</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI</span></div><p class="ns-prompt">The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P3-WP7 &#8212; Four-state adaptive questionnaire UI
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/tri-state-fact-model.md
+  - schemas/patient-input.schema.json
+  - src/ruleEngine.js
+  - src/app.js
+
+Requirement IDs: P3-WP7, P3-WP6, P1-WP1
+IntentTree: node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI
+
+Prompt:
+The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">P4<small>scaffold only</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-know">Evidence</span><span class="dom dom-know">Research</span></span>
+        <strong>Kidney / urinalysis pathway.</strong> Module directory registered 2026-07-22 with
+        <strong>zero rules</strong> &mdash; evidence projection only, and currently breaking the gate.
+        <span class="ev">modules/kidney_suite_v1 &middot; rules.json = [] &middot; RF-KID-001 unconverted</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">modules/kidney_suite_v1/module.json<br />modules/kidney_suite_v1/rules.json<br />modules/kidney_suite_v1/evidence.json<br />docs/project_plans/expansion/01-platform-expansion-roadmap.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P4-WP1</span><span class="idc">P4-WP2</span><span class="idc">P4-WP3</span><span class="idc">P4-WP4</span><span class="idc">P4-WP5</span><span class="idc">RF-KID-001</span><span class="idc">SPIKE-015</span><span class="idc">REG-007</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XFGQ2HFZ90WGJ975C4B8 &#8212; P4 Kidney / Urinalysis pathway</span></div><p class="ns-prompt">modules/kidney_suite_v1/ is a registered status: unsigned-stub scaffold with 0 rules; RF-KID-001 evidence (CKiD U25 eGFR) is projected but unauthored. No PRD exists. Run /plan-feature for the kidney pathway. SPIKE-015 (calc-lib pattern) must resolve before any eGFR calculated-fact code is written. Fix the red check gate first &#8212; this module is one of the two breaking it.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P4 &#8212; Kidney / urinalysis pathway
+Domains: Engine, Evidence, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - modules/kidney_suite_v1/module.json
+  - modules/kidney_suite_v1/rules.json
+  - modules/kidney_suite_v1/evidence.json
+  - docs/project_plans/expansion/01-platform-expansion-roadmap.md
+
+Requirement IDs: P4-WP1, P4-WP2, P4-WP3, P4-WP4, P4-WP5, RF-KID-001, SPIKE-015, REG-007
+IntentTree: node_01KXQ7XFGQ2HFZ90WGJ975C4B8 &#8212; P4 Kidney / Urinalysis pathway
+
+Prompt:
+modules/kidney_suite_v1/ is a registered status: unsigned-stub scaffold with 0 rules; RF-KID-001 evidence (CKiD U25 eGFR) is projected but unauthored. No PRD exists. Run /plan-feature for the kidney pathway. SPIKE-015 (calc-lib pattern) must resolve before any eGFR calculated-fact code is written. Fix the red check gate first &#8212; this module is one of the two breaking it.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">P5<small>scaffold only</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-build">Engine</span><span class="dom dom-know">Evidence</span><span class="dom dom-know">Research</span></span>
+        <strong>Growth faltering pathway.</strong> Same state as P4. Its evidence carries an
+        un-averaged WHO-vs-CDC conflict that must stay visible.
+        <span class="ev">modules/growth_suite_v1 &middot; rules.json = [] &middot; RF-GRO-002 unconverted</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">modules/growth_suite_v1/module.json<br />modules/growth_suite_v1/rules.json<br />modules/growth_suite_v1/evidence.json<br />docs/project_plans/expansion/01-platform-expansion-roadmap.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P5-WP1</span><span class="idc">P5-WP2</span><span class="idc">P5-WP3</span><span class="idc">P5-WP4</span><span class="idc">RF-GRO-002</span><span class="idc">SPIKE-017</span><span class="idc">REG-008</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XGE1P8CRVRANDFRBY4BF &#8212; P5 Growth Faltering pathway</span></div><p class="ns-prompt">modules/growth_suite_v1/ is a registered status: unsigned-stub scaffold with 0 rules; RF-GRO-002 evidence (WHO/CDC z-score standards, carrying one un-averaged WHO-vs-CDC conflict) is projected but unauthored. No PRD exists. Run /plan-feature for the growth pathway and preserve the WHO/CDC conflict visibly &#8212; never average it. Fix the red check gate first.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P5 &#8212; Growth faltering / nutritional deficiency pathway
+Domains: Engine, Evidence, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - modules/growth_suite_v1/module.json
+  - modules/growth_suite_v1/rules.json
+  - modules/growth_suite_v1/evidence.json
+  - docs/project_plans/expansion/01-platform-expansion-roadmap.md
+
+Requirement IDs: P5-WP1, P5-WP2, P5-WP3, P5-WP4, RF-GRO-002, SPIKE-017, REG-008
+IntentTree: node_01KXQ7XGE1P8CRVRANDFRBY4BF &#8212; P5 Growth Faltering pathway
+
+Prompt:
+modules/growth_suite_v1/ is a registered status: unsigned-stub scaffold with 0 rules; RF-GRO-002 evidence (WHO/CDC z-score standards, carrying one un-averaged WHO-vs-CDC conflict) is projected but unauthored. No PRD exists. Run /plan-feature for the growth pathway and preserve the WHO/CDC conflict visibly &#8212; never average it. Fix the red check gate first.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">P6+<small>not started</small></div>
+        <div class="body"><div class="domline"><span class="doms"><span class="dom dom-gov">Release</span><span class="dom dom-know">Research</span></span></div>
+        Pilots, adjacent modules, enterprise/commercial layer.
+        <span class="ev">IntentTree work-area node_01KXQ7XH66BYFE64F0VNRWC083</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="track-h">Evidence Foundry <em>&mdash; docs/&hellip;/02-evidence-foundry</em></div>
+
+      <div class="step s-done">
+        <div class="code">E0<small>complete</small></div>
+        <div class="body"><div class="domline"><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-build">Infra</span></span></div>
+        <strong>Converter + vertical slice.</strong> <code>rf-bundle &rarr; kb-pack</code> built and
+        proven end-to-end on one bundle, producing <code>cbc_suite_v1</code>. Deterministic,
+        hash-provenanced, zero-dependency.
+        <span class="ev">7/7 phases &middot; PR #17 &middot; tools/rf-bundle-to-kb-pack/</span></div>
+      </div>
+
+      <div class="step s-part">
+        <div class="code">E1<small>machinery done</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-know">Research</span><span class="dom dom-know">Evidence</span><span class="dom dom-gov">Governance</span></span>
+        <strong>Governance triad shipped:</strong> five-role append-only review-record workflow,
+        Ed25519 signed-release manifest + registry, retrospective validation harness with a
+        de-identification gate. All three ship <em>schema-forced inert</em> &mdash; approval slots
+        pinned to <code>maxItems: 0</code>, signatures <code>TESTKEY-</code>-prefixed, real transitions
+        blocked at G0. Live discovery was never built.
+        <span class="ev">5/5 phases &middot; PR #21 &middot; only end-to-end run is a synthetic dry-run</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/cbc-12-angle-research-operation.md<br />docs/adr/0008-pathb-hardening-vs-native-adapter.md<br />docs/project_plans/expansion/02-evidence-foundry-on-research-foundry.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-02</span><span class="idc">EF-WP2</span><span class="idc">ADR-0008</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G0</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYG9GN2KEF45QN6FBW6N5 &#8212; EF-WP2 E1 operate</span></div><p class="ns-prompt">evidence-foundry-e1-v1 shipped only the review/signing/retrospective machinery, never live discovery. Read DF-E1-02&#x27;s design spec (cbc-12-angle-research-operation.md) and run /plan-feature for the 12-angle live research operation. ADR-0008 (Path-B hardening vs. native adapter) is still proposed; its G0 ratification decides which discovery lane this plan builds on.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: E1 &#8212; operate: live discovery + council + dual clinical review
+Domains: Research, Evidence, Governance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/cbc-12-angle-research-operation.md
+  - docs/adr/0008-pathb-hardening-vs-native-adapter.md
+  - docs/project_plans/expansion/02-evidence-foundry-on-research-foundry.md
+
+Requirement IDs: DF-E1-02, EF-WP2, ADR-0008
+Gates: G0 (blocked-external, human-only)
+IntentTree: node_01KXRTYG9GN2KEF45QN6FBW6N5 &#8212; EF-WP2 E1 operate
+
+Prompt:
+evidence-foundry-e1-v1 shipped only the review/signing/retrospective machinery, never live discovery. Read DF-E1-02&#x27;s design spec (cbc-12-angle-research-operation.md) and run /plan-feature for the 12-angle live research operation. ADR-0008 (Path-B hardening vs. native adapter) is still proposed; its G0 ratification decides which discovery lane this plan builds on.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-part">
+        <div class="code">E1<small>multi-bundle &middot; 1 of 4</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-gov">Governance</span><span class="dom dom-know">Research</span></span>
+        <strong>Multi-bundle conversion pass.</strong> Of 7 verified <code>rf</code> bundles, one is
+        converted through the real converter. This pass produced the two empty module scaffolds
+        &mdash; and the red gate.
+        <span class="ev">1/7 phase trackers complete, 5 in_progress &middot; PR #22</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md<br />docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md<br />modules/cbc_suite_v1/authoring-decisions.yaml<br />tools/rf-bundle-to-kb-pack<br />.claude/findings/multi-bundle-conversion-e1-findings.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-M1</span><span class="idc">DF-E1-M2</span><span class="idc">DF-E1-M3</span><span class="idc">OQ-1</span><span class="idc">OQ-5</span><span class="idc">FR-9</span><span class="idc">FR-22</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter</span></div><p class="ns-prompt">Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: E1 &#8212; finish the multi-bundle conversion pass
+Domains: Evidence, Governance, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md
+  - docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md
+  - modules/cbc_suite_v1/authoring-decisions.yaml
+  - tools/rf-bundle-to-kb-pack
+  - .claude/findings/multi-bundle-conversion-e1-findings.md
+
+Requirement IDs: DF-E1-M1, DF-E1-M2, DF-E1-M3, OQ-1, OQ-5, FR-9, FR-22
+IntentTree: node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter
+
+Prompt:
+Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-none">
+        <div class="code">E2<small>not started</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Release</span></span>
+        Guideline surveillance, impact analysis, signed updates, rollback. No PRD, plan or design-spec
+        stub exists &mdash; only a two-line mention in expansion doc 02.
+        <span class="ev">ADR-0007 still proposed &middot; shapes what this may encode as policy</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/expansion/02-evidence-foundry-on-research-foundry.md<br />docs/adr/0007-surveillance-cadence-materiality-classes.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">EF-WP3</span><span class="idc">ADR-0007</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G0</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYGECHWHKKNX75K5MS27G &#8212; EF-WP3 E2 maintain</span></div><p class="ns-prompt">E2 has no PRD, plan, or design-spec stub anywhere &#8212; only a two-line mention in expansion doc 02. Run /plan-feature to scope guideline-change surveillance, claim-to-release impact analysis, semantic diff, signed updates and rollback. ADR-0007 (surveillance cadence / materiality classes) is still proposed; G0 ratification shapes what this plan may encode as real policy.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: E2 &#8212; surveillance, impact analysis, signed updates, rollback
+Domains: Evidence, Governance, Release
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/expansion/02-evidence-foundry-on-research-foundry.md
+  - docs/adr/0007-surveillance-cadence-materiality-classes.md
+
+Requirement IDs: EF-WP3, ADR-0007
+Gates: G0 (blocked-external, human-only)
+IntentTree: node_01KXRTYGECHWHKKNX75K5MS27G &#8212; EF-WP3 E2 maintain
+
+Prompt:
+E2 has no PRD, plan, or design-spec stub anywhere &#8212; only a two-line mention in expansion doc 02. Run /plan-feature to scope guideline-change surveillance, claim-to-release impact analysis, semantic diff, signed updates and rollback. ADR-0007 (surveillance cadence / materiality classes) is still proposed; G0 ratification shapes what this plan may encode as real policy.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="track-h" style="margin-top:30px;">Governance &amp; review <em>&mdash; human-gated</em></div>
+
+      <div class="step s-blocked">
+        <div class="code">ARC<small>owner-blocked</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span><span class="dom dom-know">Validation</span></span>
+        <strong>Clinical council: repository-complete, unqualified.</strong> P0&ndash;P7 delivered,
+        portal-authorable, synthetic readiness audit done. The Phase-5 <em>qualifying</em> pilot has
+        never run &mdash; blocked on an SDK credential and evidence-rights receipts.
+        <span class="ev">ARC output can never populate approvedBy[] &mdash; enforced structurally (D-4)</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">arc</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">.claude/progress/arc-clinical-council-adoption-v1/phase-5-completion.md<br />docs/project_plans/expansion/03-arc-clinical-council-handoff.md<br />docs/project_plans/implementation_plans/enhancements/arc-clinical-council-adoption-v1.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P5-T1</span><span class="idc">P5-T2</span><span class="idc">P5-V1</span><span class="idc">RR-1</span><span class="idc">RR-2</span><span class="idc">DIS-1</span></span></div><p class="ns-prompt">P5-T1 is done and verified (55-locator immutable input manifest, all_clean data-boundary scan). P5-T2 &#8212; the actual arc_cli.agent.review.execute_review pilot run &#8212; is blocked on two owner-held items: an SDK credential (arc-runtime-owner) and a signed EvidenceRightsReceipt against the 15-source manifest (evidence-rights-owner). Neither is agent-clearable. Obtain both, then resume with the arc CLI. ARC output can never populate approvedBy[].</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">arc
+
+Task: ARC Phase 5 &#8212; the qualifying clinical-council pilot
+Domains: Governance, Compliance, Validation
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - .claude/progress/arc-clinical-council-adoption-v1/phase-5-completion.md
+  - docs/project_plans/expansion/03-arc-clinical-council-handoff.md
+  - docs/project_plans/implementation_plans/enhancements/arc-clinical-council-adoption-v1.md
+
+Requirement IDs: P5-T1, P5-T2, P5-V1, RR-1, RR-2, DIS-1
+
+Prompt:
+P5-T1 is done and verified (55-locator immutable input manifest, all_clean data-boundary scan). P5-T2 &#8212; the actual arc_cli.agent.review.execute_review pilot run &#8212; is blocked on two owner-held items: an SDK credential (arc-runtime-owner) and a signed EvidenceRightsReceipt against the 15-source manifest (evidence-rights-owner). Neither is agent-clearable. Obtain both, then resume with the arc CLI. ARC output can never populate approvedBy[].
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-blocked">
+        <div class="code">G0<small>8 adrs &middot; 0 accepted</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span></span>
+        <strong>ADR ratification.</strong> All eight ADRs in <code>docs/adr/</code> sit at
+        <code>proposed</code>. Each clears independently; partial ratification is real. G0 gates
+        E1-operate and E2 directly.
+        <span class="ev">ADR-0001 &hellip; ADR-0008 &middot; docs/governance/gates-registry.md</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">human decision &#8212; no agent path</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/governance/gates-registry.md<br />docs/adr/</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">G0</span><span class="idc">ADR-0001</span><span class="idc">ADR-0002</span><span class="idc">ADR-0003</span><span class="idc">ADR-0004</span><span class="idc">ADR-0005</span><span class="idc">ADR-0006</span><span class="idc">ADR-0007</span><span class="idc">ADR-0008</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G0</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYNJ9NFGFFYV1617726KY &#8212; XC-3 E1-unblocking ADRs</span></div><p class="ns-prompt">All 8 ADRs in docs/adr/ are authored and sit at status: proposed &#8212; none ratified. Clearing G0 requires each ADR&#x27;s named deciders (clinical-governance and platform-engineering leads) to independently change status to accepted in the ADR file itself. Each ADR clears G0 on its own; partial ratification is real. No agent, council, or /create-adr invocation can perform this act. Use /create-adr only if a new or amended ADR is needed first.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">human decision &#8212; no agent path
+
+Task: G0 &#8212; ADR ratification (8 ADRs, none accepted)
+Domains: Governance, Compliance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/governance/gates-registry.md
+  - docs/adr/
+
+Requirement IDs: G0, ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008
+Gates: G0 (blocked-external, human-only)
+IntentTree: node_01KXRTYNJ9NFGFFYV1617726KY &#8212; XC-3 E1-unblocking ADRs
+
+Prompt:
+All 8 ADRs in docs/adr/ are authored and sit at status: proposed &#8212; none ratified. Clearing G0 requires each ADR&#x27;s named deciders (clinical-governance and platform-engineering leads) to independently change status to accepted in the ADR file itself. Each ADR clears G0 on its own; partial ratification is real. No agent, council, or /create-adr invocation can perform this act. Use /create-adr only if a new or amended ADR is needed first.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-blocked">
+        <div class="code">G1<small>blocked &middot; human only</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span></span>
+        <strong>Credentialed reviewer roster.</strong> The roster holds synthetic personas only.
+        This is the gate that actually blocks rule grounding, and it blocks G4 behind it.
+        <span class="ev">governance/reviewer-roster.yaml &middot; synthetic: true throughout</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">human decision &#8212; no agent path</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/governance/gates-registry.md<br />governance/reviewer-roster.yaml<br />schemas/reviewer-roster.schema.json<br />docs/adr/0004-clinical-approval-identity-adjudication.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">G1</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G1</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYN5FS7F97W5WS45246WG &#8212; XC-1 Clinical advisory board + SOP</span></div><p class="ns-prompt">governance/reviewer-roster.yaml holds only synthetic dry-run personas. Clearing G1 requires the named clinical-governance/credentialing role to verify each real reviewer&#x27;s credentials out of band (hematologist, second clinician, lab-medicine, adjudicator, release-authorizer) and add a roster entry with synthetic: false plus credentialRef, moduleScopes[] and verificationRef. No agent may populate verificationRef. Route the cleared decision through op.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">human decision &#8212; no agent path
+
+Task: G1 &#8212; credentialed reviewer roster
+Domains: Governance, Compliance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/governance/gates-registry.md
+  - governance/reviewer-roster.yaml
+  - schemas/reviewer-roster.schema.json
+  - docs/adr/0004-clinical-approval-identity-adjudication.md
+
+Requirement IDs: G1
+Gates: G1 (blocked-external, human-only)
+IntentTree: node_01KXRTYN5FS7F97W5WS45246WG &#8212; XC-1 Clinical advisory board + SOP
+
+Prompt:
+governance/reviewer-roster.yaml holds only synthetic dry-run personas. Clearing G1 requires the named clinical-governance/credentialing role to verify each real reviewer&#x27;s credentials out of band (hematologist, second clinician, lab-medicine, adjudicator, release-authorizer) and add a roster entry with synthetic: false plus credentialRef, moduleScopes[] and verificationRef. No agent may populate verificationRef. Route the cleared decision through op.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-blocked">
+        <div class="code">G2<small>blocked &middot; human only</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Release</span></span>
+        <strong>Signing ceremony + key custody.</strong> Only ephemeral <code>TESTKEY-</code> keys have
+        ever existed; the manifest schema forces <code>signature: null</code>.
+        <span class="ev">tools/release-sign &middot; docs/governance/signing-ceremony-runbook.md</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">human decision &#8212; no agent path</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/governance/gates-registry.md<br />docs/governance/signing-ceremony-runbook.md<br />schemas/release-manifest.schema.json<br />tools/release-sign</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">G2</span><span class="idc">FR-17</span><span class="idc">ADR-0005</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G2</span></span></div><p class="ns-prompt">tools/release-sign/ only ever mints ephemeral TESTKEY- keys, and schemas/release-manifest.schema.json forces signature: const null on every real candidate. Clearing G2 requires designating a named signing custodian structurally distinct from the release author, running the offline Ed25519 key-generation ceremony per docs/governance/signing-ceremony-runbook.md, and registering the public key. No repository process may hold this key.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">human decision &#8212; no agent path
+
+Task: G2 &#8212; signing ceremony + key custody
+Domains: Governance, Release
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/governance/gates-registry.md
+  - docs/governance/signing-ceremony-runbook.md
+  - schemas/release-manifest.schema.json
+  - tools/release-sign
+
+Requirement IDs: G2, FR-17, ADR-0005
+Gates: G2 (blocked-external, human-only)
+
+Prompt:
+tools/release-sign/ only ever mints ephemeral TESTKEY- keys, and schemas/release-manifest.schema.json forces signature: const null on every real candidate. Clearing G2 requires designating a named signing custodian structurally distinct from the release author, running the offline Ed25519 key-generation ceremony per docs/governance/signing-ceremony-runbook.md, and registering the public key. No repository process may hold this key.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-blocked">
+        <div class="code">G3<small>1 agent-runnable step</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Legal</span><span class="dom dom-gov">Compliance</span></span>
+        <strong>Retrospective data source + DUA.</strong> SPIKE-007's charter is authored but unrun
+        &mdash; running it is the <em>only</em> agent-actionable step across all five gates. The verdict
+        and the partner DUA remain human acts.
+        <span class="ev">docs/project_plans/SPIKEs/spike-007-retrospective-data-source.md</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan:spike</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/governance/gates-registry.md<br />docs/project_plans/SPIKEs/spike-007-retrospective-data-source.md<br />docs/adr/0006-validation-data-boundary-deidentification.md<br />tools/retro-validate</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">G3</span><span class="idc">SPIKE-007</span><span class="idc">FR-25</span><span class="idc">DF-E1-09</span><span class="idc">R6</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G3</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYNCMXHTR5WEEMS5WCW68 &#8212; XC-2 Buyer interviews + data partner</span></div><p class="ns-prompt">SPIKE-007&#x27;s charter is authored but has never been run. Run /plan:spike against docs/project_plans/SPIKEs/spike-007-retrospective-data-source.md to produce the research recommendation &#8212; that part IS agent-runnable and is the only agent-actionable step on any of the five gates. The resulting go/no-go verdict, the partner negotiation, and DUA execution remain human-only acts that actually clear G3.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan:spike
+
+Task: G3 &#8212; retrospective data source + partner DUA
+Domains: Governance, Legal, Compliance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/governance/gates-registry.md
+  - docs/project_plans/SPIKEs/spike-007-retrospective-data-source.md
+  - docs/adr/0006-validation-data-boundary-deidentification.md
+  - tools/retro-validate
+
+Requirement IDs: G3, SPIKE-007, FR-25, DF-E1-09, R6
+Gates: G3 (blocked-external, human-only)
+IntentTree: node_01KXRTYNCMXHTR5WEEMS5WCW68 &#8212; XC-2 Buyer interviews + data partner
+
+Prompt:
+SPIKE-007&#x27;s charter is authored but has never been run. Run /plan:spike against docs/project_plans/SPIKEs/spike-007-retrospective-data-source.md to produce the research recommendation &#8212; that part IS agent-runnable and is the only agent-actionable step on any of the five gates. The resulting go/no-go verdict, the partner negotiation, and DUA execution remain human-only acts that actually clear G3.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-blocked">
+        <div class="code">G4<small>blocked behind g1</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Release</span></span>
+        <strong>Release authorizer.</strong> <code>approvedBy</code> is forced to
+        <code>maxItems: 0</code> on every module. Requires a G1-cleared reviewer signing a
+        release-auth record after all prior reviews complete.
+        <span class="ev">schemas/module-manifest.schema.json &middot; FR-6</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">human decision &#8212; no agent path</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/governance/gates-registry.md<br />schemas/module-manifest.schema.json<br />tools/review-record/README.md<br />docs/adr/0004-clinical-approval-identity-adjudication.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">G4</span><span class="idc">FR-6</span></span></div><div class="ns-row"><span class="kk">Gates</span><span class="vv"><span class="idc gate">G1</span><span class="idc gate">G4</span></span></div><p class="ns-prompt">schemas/module-manifest.schema.json forces approvedBy: maxItems 0 on every module, and no real release-auth review record exists. Clearing G4 requires a G1-cleared roster reviewer holding the release-authorization role to sign an rr-NNNN-release-auth record, and only after clinical review 1 and 2, lab review, and adjudication are complete. G1 must clear first. No agent may raise the maxItems ceiling.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">human decision &#8212; no agent path
+
+Task: G4 &#8212; release authorizer
+Domains: Governance, Release
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/governance/gates-registry.md
+  - schemas/module-manifest.schema.json
+  - tools/review-record/README.md
+  - docs/adr/0004-clinical-approval-identity-adjudication.md
+
+Requirement IDs: G4, FR-6
+Gates: G1, G4 (blocked-external, human-only)
+
+Prompt:
+schemas/module-manifest.schema.json forces approvedBy: maxItems 0 on every module, and no real release-auth review record exists. Clearing G4 requires a G1-cleared roster reviewer holding the release-authorization role to sign an rr-NNNN-release-auth record, and only after clinical review 1 and 2, lab review, and adjudication are complete. G1 must clear first. No agent may raise the maxItems ceiling.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+
+      <div class="step s-part">
+        <div class="code">DF-E1-01<small>30 commits unmerged</small></div>
+        <div class="body"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-build">Infra</span><span class="dom dom-gov">Compliance</span></span>
+        <strong>Git-signed review workflow layer.</strong> Phases 1, 2 and 4 complete, phase 3 in
+        progress, phase 5 pending &mdash; all on <code>worktree-exec-clinical-review-workflow</code>,
+        none merged. Main's trackers read 0/5 and are stale.
+        <span class="ev">30 commits ahead of main &middot; PRs #23, #25 landed the plan only</span>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/execute-plan</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/PRDs/infrastructure/clinical-review-workflow-v1.md<br />docs/project_plans/implementation_plans/infrastructure/clinical-review-workflow-v1.md<br />.claude/worktrees/exec-clinical-review-workflow<br />tools/review-record/cli.mjs<br />.claude/progress/clinical-review-workflow/phase-3-progress.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-01</span><span class="idc">ADR-0004</span><span class="idc">ADR-0005</span><span class="idc">OQ-8</span><span class="idc">FR-6</span><span class="idc">FR-7</span><span class="idc">FR-8</span><span class="idc">FR-11</span><span class="idc">FR-12</span><span class="idc">FR-27</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7 Clinical-review portal concept + data contract</span></div><p class="ns-prompt">Branch worktree-exec-clinical-review-workflow is 30 commits ahead of main: phases 1, 2 and 4 are complete, phase 3 is in progress, phase 5 pending. Main&#x27;s trackers still read 0/5 because none of it is merged. Run /execute-plan from that worktree to finish phase 3 (render queue/turn-state, FR-11) and phase 5, then open a PR to main. Re-run npm run check against current main before merging.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/execute-plan
+
+Task: DF-E1-01 &#8212; git-signed clinical review workflow (30 commits unmerged)
+Domains: Governance, Infra, Compliance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/PRDs/infrastructure/clinical-review-workflow-v1.md
+  - docs/project_plans/implementation_plans/infrastructure/clinical-review-workflow-v1.md
+  - .claude/worktrees/exec-clinical-review-workflow
+  - tools/review-record/cli.mjs
+  - .claude/progress/clinical-review-workflow/phase-3-progress.md
+
+Requirement IDs: DF-E1-01, ADR-0004, ADR-0005, OQ-8, FR-6, FR-7, FR-8, FR-11, FR-12, FR-27
+IntentTree: node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7 Clinical-review portal concept + data contract
+
+Prompt:
+Branch worktree-exec-clinical-review-workflow is 30 commits ahead of main: phases 1, 2 and 4 are complete, phase 3 is in progress, phase 5 pending. Main&#x27;s trackers still read 0/5 because none of it is merged. Run /execute-plan from that worktree to finish phase 3 (render queue/turn-state, FR-11) and phase 5, then open a PR to main. Re-run npm run check against current main before merging.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="here" style="margin-top:26px;">
+    <span>You are here &mdash; end of P1 &middot; mid-E1 &middot; P2 barely begun &middot; a large unmerged branch</span>
+    <span>&#9660;</span>
+  </div>
+  <p style="margin-top:16px;">Plainly: <strong>the platform can now defend a rule. It has no new rules
+  to defend, and no screen to show them on.</strong> Eight days bought a strong safety substrate &mdash;
+  real work, and the part nobody wants to retrofit. But the next scheduled step (finish P2 content)
+  needs evidence runs and clinical review, and the step after (P3 UI) sits behind three validation
+  stages. Nothing on the current board produces a demonstrable product before those gates.</p>
+</section>
+
+<section>
+  <h2>What a clinician actually sees today</h2>
+
+  <figure>
+    <img src="PLACEHOLDER-screenshot-data-uri" alt="The anemia assessment app showing a completed iron-deficiency case with a ranked pattern differential in the right-hand panel." />
+    <figcaption><b>The whole product surface, 2026-07-22.</b> Identical layout to 2026-07-15. Three
+    Wave-0 surfaces are visible and worth crediting: the <b>documented-default-units notice</b> (EP-2),
+    the <b>range-source tile</b> naming AAP pediatric fallback with its age band (EP-2), and the
+    <b>evidence-ID chips</b> under each ranked pattern (EP-3/4). Note what is <em>not</em> here: any
+    module selector, anything from the CBC/kidney/growth packages, and any four-state control &mdash;
+    the symptom fields are still plain checkboxes, so the model EP-1 built into the engine cannot be
+    expressed from the browser.</figcaption>
+  </figure>
+
+  <div class="figs">
+    <figure>
+      <img src="PLACEHOLDER-screenshot-data-uri" alt="A static HTML render of the CBC suite review records, each stamped as a synthetic non-credentialed review act." />
+      <figcaption><b>The one genuinely new visual artifact in eight days</b> &mdash; the read-only
+      review-record render (E1). It is a build output, not a route in the app, and every record is
+      stamped <em>"SYNTHETIC &mdash; NOT A CREDENTIALED REVIEW ACT."</em> Honest, and exactly right.
+      Also not something you can show a pediatrician to prove value.</figcaption>
+    </figure>
+    <figure>
+      <img src="PLACEHOLDER-screenshot-data-uri" alt="The empty-state assessment workspace with a six-step progress rail and a live case snapshot panel." />
+      <figcaption><b>The empty state.</b> The information design is already good &mdash; six-step rail,
+      live snapshot, explicit privacy boundary, completion meter. A solid chassis that has simply not
+      been asked to carry a second module.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Visual-surface audit <span class="h2-note">expand any row for its handoff</span></h2>
+  <div class="scroller">
+    <table class="data">
+      <thead><tr><th>Surface</th><th>Domains</th><th>State</th><th>Landed / owed by</th><th>Note &amp; next step</th></tr></thead>
+      <tbody>
+        <tr><td>Anemia assessment SPA, 5 tabs</td><td><span class="doms"><span class="dom dom-build">UI</span></span></td><td><span class="pill p-ok">shipped</span></td><td class="nowrap m">2026-07-15 &middot; pre-P0</td><td>v0.3.1. Unchanged in structure since day 1.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">index.html<br />src/app.js<br />docs/project_plans/design-specs/public-moduleid-api-surface.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-6</span></span></div><p class="ns-prompt">index.html loads only src/app.js and is anemia-only, with zero module-selection markup. To change it, run /plan-feature for the moduleId API surface (DEF-6) first &#8212; the shell cannot render a second module until the server/client contract for selecting one is designed and approved.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Anemia assessment SPA shell
+Domains: UI
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - index.html
+  - src/app.js
+  - docs/project_plans/design-specs/public-moduleid-api-surface.md
+
+Requirement IDs: DEF-6
+
+Prompt:
+index.html loads only src/app.js and is anemia-only, with zero module-selection markup. To change it, run /plan-feature for the moduleId API surface (DEF-6) first &#8212; the shell cannot render a second module until the server/client contract for selecting one is designed and approved.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Interactive algorithm explorer</td><td><span class="doms"><span class="dom dom-build">UI</span></span></td><td><span class="pill p-ok">shipped</span></td><td class="nowrap m">2026-07-15 &middot; pre-P0</td><td>Step paging, sticky ToC, branch grid. Anemia-only by design (DEF-7).<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">src/algorithmExplorer.js<br />data/algorithm-explainers.json<br />docs/project_plans/design-specs/algorithm-explainers-examples-relocation.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-7</span></span></div><p class="ns-prompt">src/algorithmExplorer.js reads only the top-level data/algorithm-explainers.json and examples/, both deliberately left outside the modules/&lt;id&gt;/ package contract per DEF-7 because no second module&#x27;s UI-content convention exists. Run /plan-feature to design a per-module explainer and example convention before extending the explorer to the other three modules.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Interactive algorithm explorer
+Domains: UI
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - src/algorithmExplorer.js
+  - data/algorithm-explainers.json
+  - docs/project_plans/design-specs/algorithm-explainers-examples-relocation.md
+
+Requirement IDs: DEF-7
+
+Prompt:
+src/algorithmExplorer.js reads only the top-level data/algorithm-explainers.json and examples/, both deliberately left outside the modules/&lt;id&gt;/ package contract per DEF-7 because no second module&#x27;s UI-content convention exists. Run /plan-feature to design a per-module explainer and example convention before extending the explorer to the other three modules.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Documented-default-units notice</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-ok">shipped</span></td><td class="nowrap m">2026-07-20 &middot; EP-2</td><td>Visible. Reports assumed defaults only, never the accepted unit set.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">src/app.js<br />src/units.js</span></div><p class="ns-prompt">What ships is renderUnitAssumptions() in src/app.js &#8212; an aside listing field names in code tags under the heading Documented default units applied. It reads as a chip row visually but is a plain list, and it only reports assumed defaults; it never shows the accepted unit set per field. Run /plan-feature to design a real per-field accepted-unit affordance over the already-built fail-closed unit service in src/units.js.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Documented-default-units notice
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - src/app.js
+  - src/units.js
+
+
+Prompt:
+What ships is renderUnitAssumptions() in src/app.js &#8212; an aside listing field names in code tags under the heading Documented default units applied. It reads as a chip row visually but is a plain list, and it only reports assumed defaults; it never shows the accepted unit set per field. Run /plan-feature to design a real per-field accepted-unit affordance over the already-built fail-closed unit service in src/units.js.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Range-source provenance tile</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-ok">shipped</span></td><td class="nowrap m">2026-07-20 &middot; EP-2</td><td>Names the range source + age band. Hardwired to anemia's values.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">src/app.js</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-6</span></span></div><p class="ns-prompt">The Range source tile ships in src/app.js renderClassification() &#8212; local laboratory vs. AAP pediatric fallback vs. WHO hemoglobin guidance &#8212; but is hardwired to anemia&#x27;s thresholdSource values. Run /plan-feature to generalize it per-module once the module switcher (DEF-6) lands. Do not hand-extend it ahead of that design.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Range-source provenance tile
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - src/app.js
+
+Requirement IDs: DEF-6
+
+Prompt:
+The Range source tile ships in src/app.js renderClassification() &#8212; local laboratory vs. AAP pediatric fallback vs. WHO hemoglobin guidance &#8212; but is hardwired to anemia&#x27;s thresholdSource values. Run /plan-feature to generalize it per-module once the module switcher (DEF-6) lands. Do not hand-extend it ahead of that design.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Evidence-ID citation chips</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-know">Evidence</span></span></td><td><span class="pill p-ok">shipped</span></td><td class="nowrap m">2026-07-20 &middot; EP-3/4</td><td>Chips resolve to evidence records; the trace is real. Anemia-only.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">src/app.js<br />modules/cbc_suite_v1/evidence-assertions.json</span></div><p class="ns-prompt">Citation chips ship and work &#8212; src/app.js citeChips() links rule, candidate and note output to evidence source URLs &#8212; but only for anemia&#x27;s evidence.js. Run /plan-feature to extend chip rendering to the other modules&#x27; evidence-assertions.json and to surface conflict-visible claim objects, which no UI renders anywhere today.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Evidence-ID citation chips
+Domains: UI, Evidence
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - src/app.js
+  - modules/cbc_suite_v1/evidence-assertions.json
+
+
+Prompt:
+Citation chips ship and work &#8212; src/app.js citeChips() links rule, candidate and note output to evidence source URLs &#8212; but only for anemia&#x27;s evidence.js. Run /plan-feature to extend chip rendering to the other modules&#x27; evidence-assertions.json and to surface conflict-visible claim objects, which no UI renders anywhere today.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Static review-record render</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-gov">Governance</span></span></td><td><span class="pill p-part">build output</span></td><td class="nowrap m">2026-07-22 &middot; E1</td><td>Not routed in the app. Queue view + redaction sit unmerged.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/execute-plan</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">tools/review-record/lib/render.mjs<br />tools/review-record/cli.mjs<br />.claude/worktrees/exec-clinical-review-workflow</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">FR-8</span><span class="idc">FR-11</span><span class="idc">FR-12</span><span class="idc">FR-27</span></span></div><p class="ns-prompt">The read-only static HTML render already ships on main (tools/review-record/lib/render.mjs &#8212; no server, no auth, no script tags) showing the passage to decision to rule to test chain. Its FR-11 queue/turn-state section and FR-27 sibling-identity redaction exist only on the unmerged worktree-exec-clinical-review-workflow branch. Run /execute-plan from that worktree to finish and land it.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/execute-plan
+
+Task: Static review-record render
+Domains: UI, Governance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - tools/review-record/lib/render.mjs
+  - tools/review-record/cli.mjs
+  - .claude/worktrees/exec-clinical-review-workflow
+
+Requirement IDs: FR-8, FR-11, FR-12, FR-27
+
+Prompt:
+The read-only static HTML render already ships on main (tools/review-record/lib/render.mjs &#8212; no server, no auth, no script tags) showing the passage to decision to rule to test chain. Its FR-11 queue/turn-state section and FR-27 sibling-identity redaction exist only on the unmerged worktree-exec-clinical-review-workflow branch. Run /execute-plan from that worktree to finish and land it.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Module switcher / multi-module UI</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-none">not built</span></td><td class="nowrap m">no owner</td><td><b>The gap.</b> P2 has six work packages, none of them UI.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/public-moduleid-api-surface.md<br />src/modules/registry.js<br />src/app.js<br />server.mjs</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-6</span></span></div><p class="ns-prompt">src/modules/registry.js registers all four modules but DEFAULT_MODULE_ID stays hardcoded to anemia, with no client-facing moduleId surface anywhere &#8212; no query param, no body field, no SPA selector. Read the DEF-6 design-spec stub (public-moduleid-api-surface.md); its own trigger condition (a second registered module) is now met three times over. Run /plan-feature. Every non-anemia module must render behind an unmissable unsigned-proposal banner.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Module switcher &#8212; render any module in the SPA
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/public-moduleid-api-surface.md
+  - src/modules/registry.js
+  - src/app.js
+  - server.mjs
+
+Requirement IDs: DEF-6
+
+Prompt:
+src/modules/registry.js registers all four modules but DEFAULT_MODULE_ID stays hardcoded to anemia, with no client-facing moduleId surface anywhere &#8212; no query param, no body field, no SPA selector. Read the DEF-6 design-spec stub (public-moduleid-api-surface.md); its own trigger condition (a second registered module) is now met three times over. Run /plan-feature. Every non-anemia module must render behind an unmissable unsigned-proposal banner.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>CBC / kidney / growth pathways in-app</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-none">not built</span></td><td class="nowrap m">P2 &middot; P4 &middot; P5</td><td>4, 0 and 0 rules respectively. Needs the switcher first.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">src/app.js<br />modules/cbc_suite_v1/module.json<br />docs/project_plans/design-specs/public-moduleid-api-surface.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-6</span></span></div><p class="ns-prompt">cbc_suite_v1 has zero surface in the SPA &#8212; src/app.js contains no moduleId reference at all. Run /plan-feature for the module switcher (DEF-6) as the prerequisite, then a second pass to wire module-specific input fields and result rendering once that client contract is approved. Kidney and growth have no rules yet, so they render as evidence-only until P4/P5 author content.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: CBC / kidney / growth pathways in the app
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - src/app.js
+  - modules/cbc_suite_v1/module.json
+  - docs/project_plans/design-specs/public-moduleid-api-surface.md
+
+Requirement IDs: DEF-6
+
+Prompt:
+cbc_suite_v1 has zero surface in the SPA &#8212; src/app.js contains no moduleId reference at all. Run /plan-feature for the module switcher (DEF-6) as the prerequisite, then a second pass to wire module-specific input fields and result rendering once that client contract is approved. Kidney and growth have no rules yet, so they render as evidence-only until P4/P5 author content.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Four-state questionnaire inputs</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-none">not built</span></td><td class="nowrap m">P3-WP7</td><td>Engine supports it since EP-1; the browser cannot express it.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/tri-state-fact-model.md<br />schemas/patient-input.schema.json<br />src/ruleEngine.js<br />src/app.js</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P3-WP7</span><span class="idc">P3-WP6</span><span class="idc">P1-WP1</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI</span></div><p class="ns-prompt">The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P3-WP7 &#8212; Four-state adaptive questionnaire UI
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/tri-state-fact-model.md
+  - schemas/patient-input.schema.json
+  - src/ruleEngine.js
+  - src/app.js
+
+Requirement IDs: P3-WP7, P3-WP6, P1-WP1
+IntentTree: node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI
+
+Prompt:
+The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Longitudinal timeline &middot; work queue &middot; referral packet</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-none">not built</span></td><td class="nowrap m">P3-WP1/2/3</td><td>The monetizable layer. A browser-local slice needs no gate.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/architecture.md<br />src/app.js</span></div><p class="ns-prompt">No design spec, PRD, or plan exists anywhere for a browser-local case timeline, unresolved-abnormality list, or printable referral packet &#8212; this is a net-new idea, not yet captured. Run /plan-feature to scope it as a localStorage-only, no-server, no-PHI alternative to Phase 3&#x27;s server-side longitudinal workspace, preserving the browser-only invariant in docs/architecture.md section 4. This tests the commercial thesis without opening HIPAA scope.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Browser-local longitudinal workspace + referral packet
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/architecture.md
+  - src/app.js
+
+
+Prompt:
+No design spec, PRD, or plan exists anywhere for a browser-local case timeline, unresolved-abnormality list, or printable referral packet &#8212; this is a net-new idea, not yet captured. Run /plan-feature to scope it as a localStorage-only, no-server, no-PHI alternative to Phase 3&#x27;s server-side longitudinal workspace, preserving the browser-only invariant in docs/architecture.md section 4. This tests the commercial thesis without opening HIPAA scope.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>Clinical review portal (server, auth, workflow)</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-gov">Governance</span></span></td><td><span class="pill p-blocked">paper design</span></td><td class="nowrap m">P1-WP7 &rarr; DF-E1-01</td><td>Design + concept PNG exist. Its own promotion trigger is unmet.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/clinical-review-portal-workflow.md<br />docs/project_plans/design-specs/review-portal-design.md<br />docs/project_plans/design-specs/assets/clinical-review-portal-concept-v2.png<br />docs/adr/0004-clinical-approval-identity-adjudication.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-01</span><span class="idc">DF-E1-M2</span><span class="idc">OQ-8</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7</span></div><p class="ns-prompt">No portal application exists &#8212; no server, API, database or auth anywhere in the repo; only a paper design at maturity: shaping plus one CONCEPT-ONLY watermarked mockup. Its own promotion trigger (OQ-8: a documented friction threshold from the file-based tools/review-record workflow) has not been declared met. Do not run /plan-feature speculatively &#8212; finish DF-E1-01 first, log the friction, then plan the portal if the threshold is genuinely crossed.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Clinical review portal (server + auth + workflow)
+Domains: UI, Governance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/clinical-review-portal-workflow.md
+  - docs/project_plans/design-specs/review-portal-design.md
+  - docs/project_plans/design-specs/assets/clinical-review-portal-concept-v2.png
+  - docs/adr/0004-clinical-approval-identity-adjudication.md
+
+Requirement IDs: DF-E1-01, DF-E1-M2, OQ-8
+IntentTree: node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7
+
+Prompt:
+No portal application exists &#8212; no server, API, database or auth anywhere in the repo; only a paper design at maturity: shaping plus one CONCEPT-ONLY watermarked mockup. Its own promotion trigger (OQ-8: a documented friction threshold from the file-based tools/review-record workflow) has not been declared met. Do not run /plan-feature speculatively &#8212; finish DF-E1-01 first, log the friction, then plan the portal if the threshold is genuinely crossed.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+        <tr><td>SMART-on-FHIR / CDS Hooks launch</td><td><span class="doms"><span class="dom dom-build">Interop</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-none">not built</span></td><td class="nowrap m">P3-WP4/5</td><td><code>src/fhir/</code> does not exist. Requires server mode &rarr; HIPAA.<details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/expansion/01-platform-expansion-roadmap.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P3-WP4</span><span class="idc">P3-WP5</span><span class="idc">P3-WP6</span><span class="idc">SPIKE-010</span><span class="idc">SPIKE-011</span><span class="idc">SPIKE-012</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XETSGRHX17SKF2KB66Y1 &#8212; P3-WP4 SMART App Launch</span></div><p class="ns-prompt">src/fhir/ does not exist &#8212; there is zero SMART App Launch, CDS Hooks or FHIR resource-mapping code anywhere. This sits entirely inside unstarted Phase 3. Run /plan-feature for Phase 3 as a whole first; SMART/FHIR cannot be scoped standalone without that plan&#x27;s server/PHI-mode decisions.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: SMART-on-FHIR / CDS Hooks launch
+Domains: Interop, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/expansion/01-platform-expansion-roadmap.md
+
+Requirement IDs: P3-WP4, P3-WP5, P3-WP6, SPIKE-010, SPIKE-011, SPIKE-012
+IntentTree: node_01KXQ7XETSGRHX17SKF2KB66Y1 &#8212; P3-WP4 SMART App Launch
+
+Prompt:
+src/fhir/ does not exist &#8212; there is zero SMART App Launch, CDS Hooks or FHIR resource-mapping code anywhere. This sits entirely inside unstarted Phase 3. Run /plan-feature for Phase 3 as a whole first; SMART/FHIR cannot be scoped standalone without that plan&#x27;s server/PHI-mode decisions.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Blocked on a human vs. buildable this week</h2>
+  <p>"Much is waiting on clinical/legal" is correct, but the blocked set is narrower than it feels
+  &mdash; and it does not include anything you'd need to demo the product.</p>
+  <div class="scroller">
+    <table class="data">
+      <thead><tr><th>Capability</th><th>Domains</th><th>Blocked?</th><th>By what, exactly</th></tr></thead>
+      <tbody>
+        <tr><td>Binding any rule to source-supported evidence</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span></span></td><td><span class="pill p-crit">blocked</span></td><td>G1 &mdash; a named credentialed clinician attesting each rule individually. 60 rules would draw from a 13-passage pool, and the threshold-bearing passages were quarantined. Not a licensing problem you can buy your way out of.</td></tr>
+        <tr><td>Signed, releasable KB pack</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Release</span></span></td><td><span class="pill p-crit">blocked</span></td><td>G2 &mdash; signing ceremony + custodian key generation, custodian distinct from release author.</td></tr>
+        <tr><td>Retrospective validation on real charts</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Legal</span><span class="dom dom-gov">Compliance</span></span></td><td><span class="pill p-blocked">partly</span></td><td>G3 &mdash; partner DUA is human-only, but running SPIKE-007 to produce the recommendation is agent-actionable today.</td></tr>
+        <tr><td>Any <code>approvedBy[]</code> / <code>clinicalApprovers[]</code> value</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Release</span></span></td><td><span class="pill p-crit">blocked</span></td><td>G4 behind G1, plus D-4. Structurally forced empty. ARC output can never satisfy it.</td></tr>
+        <tr><td>ADR ratification unblocking E1-operate and E2</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span></span></td><td><span class="pill p-crit">blocked</span></td><td>G0 &mdash; eight ADRs, all proposed, each ratified independently by its named deciders.</td></tr>
+        <tr><td>Landing the 30 unmerged review-workflow commits</td><td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-build">Infra</span><span class="dom dom-gov">Compliance</span></span></td><td><span class="pill p-ok">open</span></td><td>Nothing. Phase 3 finish + phase 5, then PR. Re-run the gate against current main first.</td></tr>
+        <tr><td>Authoring CBC/kidney/growth as marked proposals</td><td><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-gov">Governance</span><span class="dom dom-know">Research</span></span></td><td><span class="pill p-ok">open</span></td><td>Nothing. The <code>rf</code>&rarr;converter path emits <em>proposals</em> by design; six verified bundles sit unconverted.</td></tr>
+        <tr><td>Rendering a second module in the browser</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-ok">open</span></td><td>Nothing. P0 already made the runtime module-agnostic; only the client contract is missing.</td></tr>
+        <tr><td>Four-state input UI</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-ok">open</span></td><td>Nothing. Pure front-end work over an engine contract that already exists.</td></tr>
+        <tr><td>Longitudinal workspace, browser-local</td><td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></td><td><span class="pill p-ok">open</span></td><td>Nothing &mdash; <em>if</em> it stays in-browser. PHI/HIPAA scope opens only when state moves server-side.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>The shortest path to a demonstrable MVP <span class="h2-note">a proposal, not a decision</span></h2>
+  <p>If the objective is deciding whether the clinical-review investment is worth making, build a
+  product a pediatrician can sit in front of for ten minutes &mdash; with every clinical claim visibly
+  stamped as an unvalidated proposal. That is compatible with every guardrail in CLAUDE.md, and none of
+  it touches the human gates.</p>
+
+  <div class="moves">
+    <div class="move">
+      <div class="n">0</div>
+      <div>
+        <h4>Green the gate</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-know">Validation</span><span class="dom dom-build">Infra</span></span></div>
+        <p>Backfill the six rights fields and ledger entries for <code>growth_suite_v1</code> and
+        <code>kidney_suite_v1</code>, or revert their evidence projections until the migration exists.
+        Everything below assumes a trustworthy <code>npm run check</code>.</p>
+        <div class="meta"><span><b>size</b> ~1 day</span><span><b>blocks</b> everything</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/dev:autopilot</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">modules/growth_suite_v1/evidence.json<br />modules/kidney_suite_v1/evidence.json<br />schemas/evidence.schema.json<br />rights/rights-ledger.json<br />scripts/validate-rights.mjs<br />.claude/findings/multi-bundle-conversion-e1-findings.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">EPR3-T2</span><span class="idc">EPR3-T4</span><span class="idc">EPR3-T6</span><span class="idc">D1</span><span class="idc">D2</span></span></div><p class="ns-prompt">All 11 growth_suite_v1 and all 12 kidney_suite_v1 evidence passages are missing the six schema-required EPR3 fields (evidence_item_type, judgment_basis, judgment_basis_attestation, rights_component_class, structured_locator, not_captured), and rights/rights-ledger.json has zero entries for either module versus 33 for cbc_suite_v1. Regenerate both files against the current evidence.schema.json and backfill the ledger. Never invent field values &#8212; mark unresolved fields explicitly. npm run check must be green before commit.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/dev:autopilot
+
+Task: Repair the red check gate
+Domains: Evidence, Validation, Infra
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - modules/growth_suite_v1/evidence.json
+  - modules/kidney_suite_v1/evidence.json
+  - schemas/evidence.schema.json
+  - rights/rights-ledger.json
+  - scripts/validate-rights.mjs
+  - .claude/findings/multi-bundle-conversion-e1-findings.md
+
+Requirement IDs: EPR3-T2, EPR3-T4, EPR3-T6, D1, D2
+
+Prompt:
+All 11 growth_suite_v1 and all 12 kidney_suite_v1 evidence passages are missing the six schema-required EPR3 fields (evidence_item_type, judgment_basis, judgment_basis_attestation, rights_component_class, structured_locator, not_captured), and rights/rights-ledger.json has zero entries for either module versus 33 for cbc_suite_v1. Regenerate both files against the current evidence.schema.json and backfill the ledger. Never invent field values &#8212; mark unresolved fields explicitly. npm run check must be green before commit.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">1</div>
+      <div>
+        <h4>Land the 30 unmerged review-workflow commits</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-build">Infra</span><span class="dom dom-gov">Compliance</span></span></div>
+        <p>This is the cheapest real progress on the board and revision 1 missed it entirely. Three of
+        five phases are already done on branch; finishing phase 3 and phase 5 converts a large stranded
+        effort into merged, gated work.</p>
+        <div class="meta"><span><b>size</b> 1&ndash;3 days</span><span><b>already built</b> phases 1, 2, 4</span><span><b>gates</b> none</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/execute-plan</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/PRDs/infrastructure/clinical-review-workflow-v1.md<br />docs/project_plans/implementation_plans/infrastructure/clinical-review-workflow-v1.md<br />.claude/worktrees/exec-clinical-review-workflow<br />tools/review-record/cli.mjs<br />.claude/progress/clinical-review-workflow/phase-3-progress.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-01</span><span class="idc">ADR-0004</span><span class="idc">ADR-0005</span><span class="idc">OQ-8</span><span class="idc">FR-6</span><span class="idc">FR-7</span><span class="idc">FR-8</span><span class="idc">FR-11</span><span class="idc">FR-12</span><span class="idc">FR-27</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7 Clinical-review portal concept + data contract</span></div><p class="ns-prompt">Branch worktree-exec-clinical-review-workflow is 30 commits ahead of main: phases 1, 2 and 4 are complete, phase 3 is in progress, phase 5 pending. Main&#x27;s trackers still read 0/5 because none of it is merged. Run /execute-plan from that worktree to finish phase 3 (render queue/turn-state, FR-11) and phase 5, then open a PR to main. Re-run npm run check against current main before merging.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/execute-plan
+
+Task: DF-E1-01 &#8212; git-signed clinical review workflow (30 commits unmerged)
+Domains: Governance, Infra, Compliance
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/PRDs/infrastructure/clinical-review-workflow-v1.md
+  - docs/project_plans/implementation_plans/infrastructure/clinical-review-workflow-v1.md
+  - .claude/worktrees/exec-clinical-review-workflow
+  - tools/review-record/cli.mjs
+  - .claude/progress/clinical-review-workflow/phase-3-progress.md
+
+Requirement IDs: DF-E1-01, ADR-0004, ADR-0005, OQ-8, FR-6, FR-7, FR-8, FR-11, FR-12, FR-27
+IntentTree: node_01KXQ7XCJ44733CEGXJ00CKNFK &#8212; P1-WP7 Clinical-review portal concept + data contract
+
+Prompt:
+Branch worktree-exec-clinical-review-workflow is 30 commits ahead of main: phases 1, 2 and 4 are complete, phase 3 is in progress, phase 5 pending. Main&#x27;s trackers still read 0/5 because none of it is merged. Run /execute-plan from that worktree to finish phase 3 (render queue/turn-state, FR-11) and phase 5, then open a PR to main. Re-run npm run check against current main before merging.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">2</div>
+      <div>
+        <h4>Convert the idle evidence bundles for real</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-gov">Governance</span><span class="dom dom-know">Research</span></span></div>
+        <p>Seven <code>rf</code> bundles are verified; one went through the real converter. Fixing the
+        per-module authoring-decisions workflow makes the pass reproducible and turns RF-CBC-002,
+        RF-KID-001 and RF-GRO-002 into rule <em>proposals</em> &mdash; the sanctioned, non-AI-published
+        path. This is what takes CBC past 4 rules and gives kidney/growth first content.</p>
+        <div class="meta"><span><b>size</b> 3&ndash;5 days</span><span><b>planned</b> multi-bundle-conversion-e1</span><span><b>gates</b> none</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md<br />docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md<br />modules/cbc_suite_v1/authoring-decisions.yaml<br />tools/rf-bundle-to-kb-pack<br />.claude/findings/multi-bundle-conversion-e1-findings.md</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DF-E1-M1</span><span class="idc">DF-E1-M2</span><span class="idc">DF-E1-M3</span><span class="idc">OQ-1</span><span class="idc">OQ-5</span><span class="idc">FR-9</span><span class="idc">FR-22</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter</span></div><p class="ns-prompt">Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: E1 &#8212; finish the multi-bundle conversion pass
+Domains: Evidence, Governance, Research
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/PRDs/infrastructure/multi-bundle-conversion-e1.md
+  - docs/project_plans/implementation_plans/infrastructure/multi-bundle-conversion-e1.md
+  - modules/cbc_suite_v1/authoring-decisions.yaml
+  - tools/rf-bundle-to-kb-pack
+  - .claude/findings/multi-bundle-conversion-e1-findings.md
+
+Requirement IDs: DF-E1-M1, DF-E1-M2, DF-E1-M3, OQ-1, OQ-5, FR-9, FR-22
+IntentTree: node_01KXRTYFZVCRCM5FHYPHRJJC3R &#8212; EF-WP0 converter
+
+Prompt:
+Per .claude/findings/multi-bundle-conversion-e1-findings.md, the merged pass ran the real tools/rf-bundle-to-kb-pack converter end-to-end for only 1 of 4 bundles (RF-CBC-002 into cbc_suite_v1); the anemia, kidney and growth evidence projections came from bespoke uncommitted scripts, so they are not reproducible. Run /plan-feature to author the missing per-module authoring-decisions.yaml workflow so all four bundles convert through the real converter.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">3</div>
+      <div>
+        <h4>Put the module switcher in the SPA</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></div>
+        <p>The runtime has been module-agnostic since P0 and the browser has never used it. A selector
+        that renders any <code>modules/&lt;id&gt;/</code> package &mdash; behind an unmissable
+        <em>unsigned proposal &middot; not clinically reviewed</em> banner &mdash; is the highest-leverage
+        screen available. It converts eight days of invisible platform work into something a clinician
+        can perceive.</p>
+        <div class="meta"><span><b>size</b> 2&ndash;3 days</span><span><b>owner</b> none &mdash; the plan's real gap</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/public-moduleid-api-surface.md<br />src/modules/registry.js<br />src/app.js<br />server.mjs</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">DEF-6</span></span></div><p class="ns-prompt">src/modules/registry.js registers all four modules but DEFAULT_MODULE_ID stays hardcoded to anemia, with no client-facing moduleId surface anywhere &#8212; no query param, no body field, no SPA selector. Read the DEF-6 design-spec stub (public-moduleid-api-surface.md); its own trigger condition (a second registered module) is now met three times over. Run /plan-feature. Every non-anemia module must render behind an unmissable unsigned-proposal banner.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Module switcher &#8212; render any module in the SPA
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/public-moduleid-api-surface.md
+  - src/modules/registry.js
+  - src/app.js
+  - server.mjs
+
+Requirement IDs: DEF-6
+
+Prompt:
+src/modules/registry.js registers all four modules but DEFAULT_MODULE_ID stays hardcoded to anemia, with no client-facing moduleId surface anywhere &#8212; no query param, no body field, no SPA selector. Read the DEF-6 design-spec stub (public-moduleid-api-surface.md); its own trigger condition (a second registered module) is now met three times over. Run /plan-feature. Every non-anemia module must render behind an unmissable unsigned-proposal banner.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">4</div>
+      <div>
+        <h4>Pull P3-WP7 forward &mdash; four-state inputs</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></div>
+        <p>EP-1's whole thesis is that missingness is never read as normal. A checkbox cannot say
+        <em>not assessed</em>. Surfacing the four states is pure front-end work against a settled engine
+        contract, and it is the exact differentiator a pediatrician would notice against a free
+        calculator.</p>
+        <div class="meta"><span><b>size</b> 2&ndash;3 days</span><span><b>scheduled</b> P3 &middot; behind V3/V4/V5</span><span><b>gates</b> none</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/project_plans/design-specs/tri-state-fact-model.md<br />schemas/patient-input.schema.json<br />src/ruleEngine.js<br />src/app.js</span></div><div class="ns-row"><span class="kk">IDs</span><span class="vv"><span class="idc">P3-WP7</span><span class="idc">P3-WP6</span><span class="idc">P1-WP1</span></span></div><div class="ns-row"><span class="kk">IntentTree</span><span class="vv">node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI</span></div><p class="ns-prompt">The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: P3-WP7 &#8212; Four-state adaptive questionnaire UI
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/project_plans/design-specs/tri-state-fact-model.md
+  - schemas/patient-input.schema.json
+  - src/ruleEngine.js
+  - src/app.js
+
+Requirement IDs: P3-WP7, P3-WP6, P1-WP1
+IntentTree: node_01KXQ7XFBSFNEEAJA8XJM621PZ &#8212; P3-WP7 Tri-state adaptive questionnaire UI
+
+Prompt:
+The four-state fact model (present/absent/unknown/not-assessed) ships in the engine &#8212; src/ruleEngine.js has is-present/is-absent/is-unknown operators &#8212; but the SPA questionnaire is still boolean checkboxes, so a clinician cannot express not-assessed. No plan exists. Run /plan-feature scoped to P3-WP7 alone. Note it nominally depends on P3-WP6 (FHIR Questionnaire mapping), which has not started; scope the browser-only slice so it does not.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">5</div>
+      <div>
+        <h4>Browser-local longitudinal workspace + referral packet</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span></span></div>
+        <p>The commercial thesis is that the paid value is longitudinal state and referral output, not
+        facts. Test it entirely in <code>localStorage</code>: a case timeline, an unresolved-abnormality
+        list, a printable referral packet. No server, no PHI, no HIPAA scope, no new clinical claim
+        &mdash; and it demos the actual hypothesis rather than the calculator.</p>
+        <div class="meta"><span><b>size</b> 4&ndash;6 days</span><span><b>scheduled</b> P3-WP1/2/3 &middot; server-side</span><span><b>gates</b> none in-browser</span></div>
+        <details class="ns"><summary>Next step</summary><div class="ns-body"><div class="ns-row"><span class="kk">Command</span><span class="vv"><span class="cmd">/plan-feature</span></span></div><div class="ns-row"><span class="kk">Paths</span><span class="vv">docs/architecture.md<br />src/app.js</span></div><p class="ns-prompt">No design spec, PRD, or plan exists anywhere for a browser-local case timeline, unresolved-abnormality list, or printable referral packet &#8212; this is a net-new idea, not yet captured. Run /plan-feature to scope it as a localStorage-only, no-server, no-PHI alternative to Phase 3&#x27;s server-side longitudinal workspace, preserving the browser-only invariant in docs/architecture.md section 4. This tests the commercial thesis without opening HIPAA scope.</p><div class="ns-foot"><button class="copy-btn" type="button">Copy handoff</button></div><pre class="ns-payload">/plan-feature
+
+Task: Browser-local longitudinal workspace + referral packet
+Domains: UI, Engine
+Repo: /Users/miethe/dev/homelab/development/pediatric-anemia-site
+
+Paths:
+  - docs/architecture.md
+  - src/app.js
+
+
+Prompt:
+No design spec, PRD, or plan exists anywhere for a browser-local case timeline, unresolved-abnormality list, or printable referral packet &#8212; this is a net-new idea, not yet captured. Run /plan-feature to scope it as a localStorage-only, no-server, no-PHI alternative to Phase 3&#x27;s server-side longitudinal workspace, preserving the browser-only invariant in docs/architecture.md section 4. This tests the commercial thesis without opening HIPAA scope.
+
+Constraints: UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (it is currently RED on main -- see fix-gate).</pre></div></details>
+      </div>
+    </div>
+
+    <div class="move">
+      <div class="n">6</div>
+      <div>
+        <h4>Then decide on clinical review</h4>
+        <div class="domline"><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span></span></div>
+        <p>With four modules rendering, four-state intake and a referral packet in a clinician's hands,
+        "is it worth standing up the review pipeline?" becomes answerable with evidence instead of
+        estimate. Roughly three weeks, none of it wasted if the answer is yes &mdash; every screen above
+        is a P2/P3 deliverable pulled forward, not a throwaway prototype.</p>
+        <div class="meta"><span><b>net effect</b> the decision gets data</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="ct">One caution on sequencing</div>
+    <p>Moves 3&ndash;5 pull front-end work ahead of its planned phase. That is a deliberate trade and it
+    is safe here &mdash; none of them author clinical content or touch the evidence chain. The cost is
+    that a P3 built later inherits UI written before the longitudinal data model settled. Given the goal
+    is a go/no-go on a much larger investment, that reads cheap &mdash; but it is your call, not mine.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Domain key <span class="h2-note">closed vocabulary used throughout</span></h2>
+  <div class="scroller">
+    <table class="data" style="min-width:600px;">
+      <thead><tr><th>Group</th><th>Domains</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="doms"><span class="dom dom-build">Build</span></span></td>
+            <td><span class="doms"><span class="dom dom-build">UI</span><span class="dom dom-build">Engine</span><span class="dom dom-build">Interop</span><span class="dom dom-build">Infra</span></span></td>
+            <td>Code you write and ship. No external gate; bounded by the plan, not by a human decision.</td></tr>
+        <tr><td><span class="doms"><span class="dom dom-know">Knowledge</span></span></td>
+            <td><span class="doms"><span class="dom dom-know">Evidence</span><span class="dom dom-know">Research</span><span class="dom dom-know">Validation</span></span></td>
+            <td>Producing or verifying clinical content. Agent-runnable up to the proposal boundary; never past it.</td></tr>
+        <tr><td><span class="doms"><span class="dom dom-gov">Governance</span></span></td>
+            <td><span class="doms"><span class="dom dom-gov">Governance</span><span class="dom dom-gov">Compliance</span><span class="dom dom-gov">Legal</span><span class="dom dom-gov">Release</span></span></td>
+            <td>Requires a named human act. Every G0&ndash;G4 gate lives here, and no agent may clear one.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <strong>UNVALIDATED RESEARCH PROTOTYPE.</strong> Everything above describes software behavior,
+  repository state, and plan documents. Nothing in it is &mdash; or may be read as &mdash; a claim of
+  clinical validity, safety, diagnostic performance, or regulatory status. 0 of 91 anemia rules are
+  bound to a source-supported passage; <code>approvedBy[]</code> and <code>clinicalApprovers[]</code>
+  are empty across every module and are schema-forced to stay that way until a named credentialed human
+  clears G1/G4. The handoff prompts on this page are drafting aids for an operator; pasting one starts
+  work, it does not authorize anything.<br /><br />
+  Revision 2, generated 2026-07-22 from <code>origin/main</code> @ <code>263120b</code> &middot; test
+  counts from a clean-tree <code>npm test</code> &middot; unmerged-branch state from
+  <code>git rev-list main..worktree-exec-clinical-review-workflow</code> &middot; screenshots captured
+  live &middot; identifier and IntentTree references extracted from the repo and the live tree
+  <code>tree_01KXQ7WC1HQE2GKZSCNDVXA9G7</code>. Note: no <code>DI-</code> identifier convention exists
+  in this repository &mdash; the prefixes in use are <code>FR- AC- OQ- DF- DEF- ADR- SPIKE- REG- RF-
+  EP- EPR- G0..G4 V1..V6 P#-WP# P#-T#</code>.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.top = "-1000px";
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  // Last resort: expose the text in a real, selected textarea so the reader can copy by hand.
+  function revealForManualCopy(body, text) {
+    var existing = body.querySelector(".ns-fallback");
+    if (existing) { existing.focus(); existing.select(); return; }
+    var ta = document.createElement("textarea");
+    ta.className = "ns-fallback";
+    ta.value = text;
+    ta.setAttribute("aria-label", "Handoff text - select and copy manually");
+    body.insertBefore(ta, body.querySelector(".ns-foot"));
+    ta.focus(); ta.select();
+  }
+  function flash(btn, label) {
+    if (!btn.getAttribute("data-label")) btn.setAttribute("data-label", btn.textContent);
+    btn.textContent = label; btn.classList.add("done");
+    window.setTimeout(function () {
+      btn.textContent = btn.getAttribute("data-label");
+      btn.classList.remove("done");
+    }, 1600);
+  }
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest(".copy-btn") : null;
+    if (!btn) return;
+    var body = btn.closest(".ns-body");
+    var payload = body ? body.querySelector(".ns-payload") : null;
+    if (!payload) return;
+    var text = payload.textContent.replace(/^\s+/, "").replace(/\s+$/, "") + "\n";
+    function degrade() {
+      if (fallbackCopy(text)) { flash(btn, "Copied"); return; }
+      revealForManualCopy(body, text);
+      flash(btn, "Copy manually");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      // Chrome can leave this promise permanently pending when the click carries no
+      // user activation, so race it rather than risk a button that never responds.
+      var settled = false;
+      var guard = window.setTimeout(function () {
+        if (!settled) { settled = true; degrade(); }
+      }, 1200);
+      navigator.clipboard.writeText(text).then(
+        function () {
+          if (settled) return;
+          settled = true; window.clearTimeout(guard); flash(btn, "Copied");
+        },
+        function () {
+          if (settled) return;
+          settled = true; window.clearTimeout(guard); degrade();
+        }
+      );
+    } else {
+      degrade();
+    }
+  });
+})();
+</script>
