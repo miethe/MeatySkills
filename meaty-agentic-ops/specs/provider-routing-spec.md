@@ -64,7 +64,7 @@ effort, profile, task_class)` tuple to a deterministic, JSON-serializable `Routi
 ```json
 {
   "chosen_plugin_id": "codex",
-  "model": "gpt-5.3-codex",
+  "model": "gpt-5.6-terra",
   "effort": "high",
   "agent_type_id": "codex-executor",
   "invocation_template": "codex exec --sandbox read-only \"{prompt}\"",
@@ -88,7 +88,7 @@ Opus and `implementation-planner` follow this procedure when authoring plans:
 
 1. **Classify task → assign model.**
    - Image generation → `nano-banana-pro` (Gemini image).
-   - Debug escalation (2+ failed local cycles) → `gpt-5.3-codex`.
+   - Debug escalation (2+ failed local cycles) → `gpt-5.6-sol` (frontier tier; `gpt-5.6-terra` is the workhorse default for non-escalated codex work).
    - Needs current web info → `Gemini`.
    - Mechanical / boilerplate / extraction / doc-gen → `Haiku`.
    - Core implementation (most tasks) → `Sonnet`.
@@ -100,7 +100,7 @@ Opus and `implementation-planner` follow this procedure when authoring plans:
    - Sonnet explicitly opted in for cost-shift (mechanical, non-core) → `provider: ica`,
      `profile: sonnet-tier`. **Core Sonnet implementation stays `provider: claude` (R2).**
    - Gemini tasks → `provider: gemini`.
-   - gpt-5.3-codex → `provider: codex`.
+   - gpt-5.6-terra → `provider: codex`.
    - Low-risk isolated drafts/scaffolding → `provider: bob`.
 
 3. **Set profile/scope.**
@@ -135,15 +135,15 @@ to `provider: claude` / `profile: null` — no migration required, no parse erro
 | **Orchestration / verdict / synthesis** | Opus | claude | standard | Master plan, verdicts, Mode-D. **MUST-STAY PRIMARY.** | None — never offload |
 | **Implementation (core)** | Sonnet | **claude (R2 default)** | standard–high | Core coding stays on-primary. ICA is explicit per-task opt-in only. | Opus (claude) on structuring fail |
 | **Mechanical / extraction / CRUD / doc-gen** | Haiku | ica | low (free) | Boilerplate, schema transforms. Cost-shifted. | Sonnet (ica) on structuring miss |
-| **Code review / AC validation** | gpt-5.3-codex | codex | none–low | Edit-less checklist + JSON schema compliance. Sandbox=read-only. | Haiku (ica) + manual verify |
-| **Debug escalation** | gpt-5.3-codex | codex | xhigh | After 2 failed local cycles. SOTA agentic repair. | Opus (claude) after Codex attempt |
+| **Code review / AC validation** | gpt-5.6-terra | codex | none–low | Edit-less checklist + JSON schema compliance. Sandbox=read-only. | Haiku (ica) + manual verify |
+| **Debug escalation** | gpt-5.6-sol | codex | xhigh | After 2 failed local cycles. Frontier SOTA agentic repair; escalated from gpt-5.6-terra. | Opus (claude) after Codex attempt |
 | **Web research** | Gemini-2.5-pro | gemini | standard | Unique web-search grounding + 1M context. Read-only fan-out. | ICA (Sonnet) on 429/rate-limit |
 | **Adversarial vote / skeptic** | Haiku or Sonnet | ica | free–standard | Second opinion / refutation. Losing a skeptic ≠ safety regression. | Haiku (ica) on token exhaustion |
 | **Exploration / large-context read** | Gemini-2.5-flash | gemini | medium | ≈1M context + web. Read-only. | ICA (Sonnet/Gemini bridge) |
 | **Drafting / scaffolding (low-risk)** | bob-local | bob | standard | Isolated bounded tasks. Output NOT auto-applied. Validation gate required. | Sonnet (ica) on Bob timeout/no-binary |
 | **Image generation** | nano-banana-pro | gemini | standard | Hi-fidelity text-to-image via Gemini image model. | nano-banana-2 (Flash) on cost |
 | **Doc generation / summarization** | Haiku | ica | free | Low complexity; cheap + sufficient. | Sonnet (ica) on complexity miss |
-| **Deep-read structuring** | gpt-5.3-codex | codex | low | JSON schema compliance via `--json-schema`; preferred for deterministic output shape. | ICA (Haiku) + two-stage fallback |
+| **Deep-read structuring** | gpt-5.6-terra | codex | low | JSON schema compliance via `--json-schema`; preferred for deterministic output shape. | ICA (Haiku) + two-stage fallback |
 | **Completeness critic / gap analysis** | Gemini-2.5-flash | gemini | medium | Large-context gap analysis. Read-only. | ICA (Sonnet) on rate-limit |
 
 **Default preference precedence (highest first):**
@@ -183,7 +183,7 @@ per-stage classification (30 stages across 5 workflows).
 | Model class | Valid effort values | Default | Notes |
 |------------|-------------------|---------|-------|
 | **claude** (Opus/Sonnet/Haiku) | `adaptive`, `extended` | `adaptive` | `extended` = deep reasoning. Escalate only when blocked with concrete artifacts. Budget tokens deprecated on Opus 4.6. |
-| **codex** (gpt-5.3-codex) | `none`, `low`, `medium`, `high`, `xhigh` | `medium` | Graduate based on task complexity. `xhigh` for deep analysis / debug escalation only. |
+| **codex** (gpt-5.6 line) | `none`, `low`, `medium`, `high`, `xhigh`, `ultra` (`ultra` = Sol/Terra only) | `medium` | Graduate based on task complexity. `xhigh`/`ultra` for deep analysis / debug escalation only. |
 | **gemini** (Gemini 2.5 Pro/Flash) | `none`, `low`, `medium`, `high` | `medium` | Flash defaults to `low`; Pro defaults to `medium`. |
 | **bob** (bob-local) | `standard`, `quality` | `standard` | `quality` for final assets. |
 | **nano-banana** | `standard`, `quality` | `standard` | `quality` for final assets; `standard` for drafts/iterations. |
@@ -252,7 +252,7 @@ policy rules that flow from those values.
 4. **No aggressive Sonnet cost-shift default.** Sonnet core implementation stays `provider:
    claude`. Per-task ICA Sonnet opt-in is allowed when the task is clearly mechanical/CRUD and
    not part of core architecture (explicit task-table override, not a phase-level default).
-5. **Codex costs are accepted for its specialty.** `gpt-5.3-codex` is irreplaceable for
+5. **Codex costs are accepted for its specialty.** `gpt-5.6-terra` is irreplaceable for
    agentic coding, debug escalation, and JSON schema compliance. Cost is accepted; no
    substitution.
 6. **Bob/Gemini are free; prefer them for their specialties.** Bob for low-risk isolated
@@ -269,7 +269,7 @@ rate-limited, or exhausted. Chains are defined in `.claude/config/provider-plugi
 |---------|---------------|-------|
 | Sonnet (any provider) | `["ica/sonnet", "claude/opus"]` | ICA Sonnet first (cost-shifted); escalate to Opus only on second fail. |
 | Haiku (any provider) | `["ica/haiku", "claude/sonnet"]` | ICA Haiku first; escalate to Sonnet on second fail. |
-| gpt-5.3-codex | `["claude/sonnet", "claude/opus"]` | No substitute for Codex specialty; fall back to Sonnet, then Opus, with manual review. |
+| gpt-5.6-terra | `["claude/sonnet", "claude/opus"]` | No substitute for Codex specialty; fall back to Sonnet, then Opus, with manual review. |
 | Gemini | `["ica/sonnet"]` | ICA Sonnet as web-bridge; accept reduced web-grounding. |
 
 **Lazy availability checking (default).** The router assumes all providers available (fast
@@ -300,13 +300,13 @@ Purpose-keyed defaults for Pattern A:
 |-----------------|--------------|-----------------|---------|
 | `skeptic-refutation` | haiku | ica | free-tier |
 | `gap-finder` | gemini-2.5-flash | gemini | — |
-| `json-structure` | gpt-5.3-codex | codex | sandbox=read-only |
+| `json-structure` | gpt-5.6-terra | codex | sandbox=read-only |
 | `exploration-leg` | gemini-2.5-flash | gemini | — |
 | `completeness-critic` | gemini-2.5-flash | gemini | — |
-| `evidence-scribe` | gpt-5.3-codex | codex | sandbox=read-only |
+| `evidence-scribe` | gpt-5.6-terra | codex | sandbox=read-only |
 | `performance-reviewer` | gemini-2.5-flash | gemini | — |
 | `observability-reviewer` | gemini-2.5-flash | gemini | — |
-| `ac-validator` | gpt-5.3-codex | codex | sandbox=read-only |
+| `ac-validator` | gpt-5.6-terra | codex | sandbox=read-only |
 
 ---
 

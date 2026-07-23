@@ -211,8 +211,16 @@ output_format_json = '-o json'
 # For session continuity use --resume <index> per gemini-cli SKILL.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
-# PROVIDER: codex  (OpenAI gpt-5.3-codex, sandbox-gated, premium)
+# PROVIDER: codex  (OpenAI gpt-5.6 line via codex CLI, sandbox-gated)
 # ──────────────────────────────────────────────────────────────────────────────
+# Model entries mirror the global routing SoT: ~/.claude/config/model-registry.yaml
+# (`models.gpt-5.6-{sol,terra,luna}`) and docs/agentic-operator/MODEL-ROUTING.md.
+# The gpt-5.3-codex / -spark entries this block previously pinned are three
+# generations stale (5.3 → 5.5 → 5.6) and no longer exist as codex CLI targets.
+#   gpt-5.6-terra = workhorse, DEFAULT codex delegation tier
+#   gpt-5.6-sol   = frontier SOTA, escalation target when terra stalls
+#   gpt-5.6-luna  = cheaper/faster tier (lighter review, mechanical, quick fixes)
+# Reasoning efforts: none|minimal|low|medium|high|xhigh, plus `ultra` on Sol/Terra only.
 
 [providers.codex]
 id = "codex"
@@ -221,27 +229,58 @@ auth_file = "~/.codex/config.toml"
 availability_check = "test -f ~/.codex/config.toml && which codex"
 
 [[providers.codex.models]]
-name = "gpt-5.3-codex"
+name = "gpt-5.6-terra"
 cost_tier = "premium"
 capabilities = [
     "agentic-coding",
-    "debug-escalation",
     "code-review",
     "ac-validation",
+    "debug-escalation",
+    "implementation",
     "schema-recovery",
 ]
 max_context = 400000
 sampling = "deterministic"
 
 [[providers.codex.models]]
-name = "gpt-5.3-codex-spark"
+name = "gpt-5.6-sol"
 cost_tier = "premium"
 capabilities = [
+    "debug-escalation",
+    "deep-reasoning",
+    "agentic-coding",
+    "architecture",
+    "novel-algorithm-design",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+[[providers.codex.models]]
+name = "gpt-5.6-luna"
+cost_tier = "standard"
+capabilities = [
+    "code-review",
+    "ac-validation",
+    "mechanical-tasks",
+    "second-opinion",
+    "exploration",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+# Legacy gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, never a default.
+[[providers.codex.models]]
+name = "gpt-5.5"
+cost_tier = "premium"
+capabilities = [
+    "agentic-coding",
     "code-review",
     "ac-validation",
     "schema-recovery",
 ]
-max_context = 200000
+max_context = 400000
 sampling = "deterministic"
 
 [providers.codex.invocation_template]

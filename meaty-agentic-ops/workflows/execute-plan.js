@@ -128,6 +128,11 @@ const KNOWN_AGENT_TYPES = new Set([
   'task-completion-validator', 'karen', 'council-review', 'code-reviewer',
   'senior-code-reviewer', 'api-librarian', 'telemetry-auditor', 'prd-writer',
   'feature-planner', 'general-purpose',
+  // Provider-routing executors (registered agent definitions — see
+  // .claude/specs/provider-routing-spec.md). Omitting them here made any task with
+  // assigned_to:'ica-executor' (etc.) fall through isHitlTask() and be silently
+  // reclassified as a human gate, so cost-shifted leaves were never dispatched.
+  'ica-executor', 'codex-executor', 'gemini-executor', 'bob-delegate-executor',
 ])
 
 function isHitlTask(t) {

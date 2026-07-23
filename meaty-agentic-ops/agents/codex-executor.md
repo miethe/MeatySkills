@@ -1,6 +1,6 @@
 ---
 name: codex-executor
-description: "Use this agent to execute code review, AC validation, debug escalation, or agentic coding tasks via the Codex CLI (gpt-5.3-codex). Receives a RoutingRecord with agent_type_id: codex-executor from the delegation-router. Sandbox mode is controlled by RoutingRecord.scope_flags — defaults to read-only unless effort=xhigh or scope_flags grants workspace-write/danger-full-access. Examples: <example>Context: Resolver routed an AC-validation task to codex-executor with scope_flags=[--sandbox read-only], effort=low. user: 'Execute Codex routing record for acceptance-criteria validation' assistant: 'Running codex exec --sandbox read-only per RoutingRecord — deterministic, JSON-schema strict, no edits' <commentary>Code review and AC validation are the most common read-only Codex trigger. Codex never silently degrades schema validation.</commentary></example> <example>Context: Resolver routed a debug-escalation task after 2 failed local cycles, effort=xhigh, scope_flags=[--sandbox workspace-write]. user: 'Execute Codex routing record for debug escalation — effort xhigh, workspace-write' assistant: 'RoutingRecord grants workspace-write via scope_flags and effort=xhigh; running codex exec --sandbox workspace-write --full-auto with reasoning effort xhigh' <commentary>Debug escalation after 2 failed cycles is the only non-read-only trigger. scope_flags must explicitly carry the elevated sandbox level — it is never inferred from effort alone.</commentary></example>"
+description: "Use this agent to execute code review, AC validation, debug escalation, or agentic coding tasks via the Codex CLI (gpt-5.6-terra). Receives a RoutingRecord with agent_type_id: codex-executor from the delegation-router. Sandbox mode is controlled by RoutingRecord.scope_flags — defaults to read-only unless effort=xhigh or scope_flags grants workspace-write/danger-full-access. Examples: <example>Context: Resolver routed an AC-validation task to codex-executor with scope_flags=[--sandbox read-only], effort=low. user: 'Execute Codex routing record for acceptance-criteria validation' assistant: 'Running codex exec --sandbox read-only per RoutingRecord — deterministic, JSON-schema strict, no edits' <commentary>Code review and AC validation are the most common read-only Codex trigger. Codex never silently degrades schema validation.</commentary></example> <example>Context: Resolver routed a debug-escalation task after 2 failed local cycles, effort=xhigh, scope_flags=[--sandbox workspace-write]. user: 'Execute Codex routing record for debug escalation — effort xhigh, workspace-write' assistant: 'RoutingRecord grants workspace-write via scope_flags and effort=xhigh; running codex exec --sandbox workspace-write --full-auto with reasoning effort xhigh' <commentary>Debug escalation after 2 failed cycles is the only non-read-only trigger. scope_flags must explicitly carry the elevated sandbox level — it is never inferred from effort alone.</commentary></example>"
 color: purple
 model: sonnet
 permissionMode: acceptEdits
@@ -42,8 +42,8 @@ This maps 1:1 from `RoutingRecord.agent_type_id = codex-executor` per the router
 |---|---|
 | `agent_type_id` | Must equal `codex-executor`. If it does not, refuse with an error. |
 | `invocation_template` | Codex invocation. Format: `codex exec --sandbox {mode} "{prompt}" [--max-turns N] [--full-auto] --skip-git-repo-check 2>/dev/null` |
-| `model` | `gpt-5.3-codex` (default) or `gpt-5.3-codex-spark` (fast, trivial tasks). |
-| `effort` | Maps to `--config model_reasoning_effort="{effort}"`: none/low/medium/high/xhigh. |
+| `model` | `gpt-5.6-terra` (workhorse default), `gpt-5.6-luna` (fast, trivial tasks), or `gpt-5.6-sol` (frontier — debug escalation / hardest reasoning only). |
+| `effort` | Maps to `--config model_reasoning_effort="{effort}"`: none/minimal/low/medium/high/xhigh, plus `ultra` (Sol/Terra only). |
 | `scope_flags` | **Authoritative sandbox grant.** Contains `--sandbox {mode}` and optionally `--full-auto`. |
 | `fallback_chain` | On Codex unavailability, traverse. Typical: `[{plugin_id: claude, model: opus}]`. |
 | `validation_contract` | Schema to validate Codex output against. Codex never silently degrades — schema failure is a hard error, not a graceful fallback. |
@@ -119,7 +119,7 @@ This is a design invariant: Codex schema failures are hard errors that the orche
 {
   "status": "ok",
   "actual_provider_used": "codex",
-  "model_used": "gpt-5.3-codex",
+  "model_used": "gpt-5.6-terra",
   "effort_used": "high",
   "sandbox_mode": "read-only",
   "fallback_applied": false,

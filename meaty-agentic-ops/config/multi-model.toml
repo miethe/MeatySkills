@@ -38,9 +38,12 @@ formatting = { claude = "adaptive", codex = "none" }
 escalation_requires_artifacts = true
 
 [models.codex]
-default_model = "gpt-5.3-codex"
-fast_model = "gpt-5.3-codex-spark"
-general_model = "gpt-5.3-codex"  # aligned to plugin entry; gpt-5.2 had no plugin entry
+# gpt-5.6 line (see ~/.claude/config/model-registry.yaml — the routing SoT).
+# terra = workhorse default; sol = frontier escalation; luna = cheap/fast.
+default_model = "gpt-5.6-terra"
+fast_model = "gpt-5.6-luna"
+general_model = "gpt-5.6-terra"
+escalation_model = "gpt-5.6-sol"  # target when terra stalls (two-failure rule)
 default_reasoning = "medium"
 sandbox_default = "read-only"
 debug_escalation_threshold = 2
@@ -147,11 +150,11 @@ cost_shift_allowed = true
 cost_shift_requires_explicit = false
 note = "Haiku mechanical/extraction work defaults to ICA free-tier. No opt-in needed."
 
-[models.providers.gpt_5_3_codex]
+[models.providers.gpt_5_6_codex]
 default_provider = "codex"
 cost_shift_allowed = false
 cost_shift_requires_explicit = false
-note = "Codex is the only provider for gpt-5.3-codex. No routing decision needed."
+note = "Codex CLI is the only working provider for the gpt-5.6 line (terra/sol/luna). No routing decision needed. The ICA *-dzus gateway ids are NOT reliably servable — do not route there (see ica-codex-responses-shim-v1.md)."
 
 [models.providers.gemini]
 default_provider = "gemini"

@@ -13,7 +13,7 @@ Source of truth: `.claude/config/multi-model.toml` § `[models.effort_levels]`
 | Model family | Models | Valid Effort values | Default |
 |---|---|---|---|
 | claude | opus, sonnet, haiku | `adaptive`, `extended` | `adaptive` |
-| codex | gpt-5.3-codex | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
+| codex | gpt-5.6-terra (workhorse) · gpt-5.6-sol (frontier) · gpt-5.6-luna (cheap/fast) | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `ultra` (`ultra` = Sol/Terra only) | `medium` |
 | gemini | gemini-3.1-pro, gemini-3.1-flash | `none`, `low`, `medium`, `high` | `medium` |
 | nano_banana | nano-banana-pro | `standard`, `quality` | `standard` |
 
@@ -76,7 +76,7 @@ parallelization:
 | Generate app icon (final) | nano-banana-pro | quality | visual asset generation at max quality |
 | Research Next.js 15 patterns | gemini-3.1-pro | medium | web search + synthesis needed |
 | Implement user profile API | sonnet | adaptive | standard implementation |
-| Debug auth flow (3rd attempt) | gpt-5.3-codex | xhigh | escalated debugging (threshold: 2 cycles) |
+| Debug auth flow (3rd attempt) | gpt-5.6-sol | xhigh | escalated debugging (threshold: 2 cycles) |
 | Write component documentation | haiku | adaptive | documentation is cheap (haiku optimized) |
 | UI wireframe (layout/hierarchy) | gemini-3.1-pro | medium | SVG wireframe — machine-readable, editable, precise labels |
 | UI mockup (aesthetic/feel) | nano-banana-pro | standard | raster mockup — visual aesthetics, color exploration |
@@ -84,7 +84,7 @@ parallelization:
 
 ## Checkpoint Policies
 
-- **Plan Review**: Opt-in checkpoint via `multi-model.toml`. Route to gpt-5.3-codex at medium effort for second opinion.
+- **Plan Review**: Opt-in checkpoint via `multi-model.toml`. Route to gpt-5.6-terra at medium effort for second opinion.
 - **PR Cross-Review**: Opt-in checkpoint. Gemini 3.1 Pro for security-sensitive code (auth, crypto patterns).
 - **Debug Escalation**: Auto-trigger after `suggest_codex_debug_after_cycles` (default: 2) failed attempts.
 - **Privacy-Sensitive**: Route to local LLM (if enabled) instead of external services.
