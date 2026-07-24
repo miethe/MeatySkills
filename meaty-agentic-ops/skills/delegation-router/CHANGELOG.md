@@ -3,6 +3,24 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-24 — Opus 5 is the new spine (model-registry.yaml)
+
+- **`claude-opus-5` added** as the current flagship Opus and the AOS SPINE / MUST-stay tier
+  ($5/$25, 1M/128K, adaptive, effort defaults to `high`, new tokenizer, knowledge cutoff May 2026).
+  Anthropic moved **Opus 4.8 to legacy** the same day; Opus 5 is `>2x` Opus 4.8's agentic
+  performance at a lower cost per task.
+- **Routing-policy repoint:** the `orchestration` and `mode_d` chains now resolve to
+  `claude/claude-opus-5` (were `claude/claude-opus-4-8`). `must_stay_primary` (class names) is
+  unchanged, so verdict/synthesis/council legs follow the spine to Opus 5 as well.
+- **Opus 4.8 demoted but retained:** still selectable (`superseded_by: claude-opus-5`) and remains
+  the **ICA `claude-opus-4-8[1m]` spine-offload fallback**. `claude-opus-5[1m]` is registered
+  `scaffolded`/`enabled: false` pending a live ICA-gateway availability probe.
+- **Sonnet 5 unchanged as the default implementation workhorse**, with an added `token_economy_note`:
+  its new tokenizer emits ~30% more tokens than Sonnet 4.6, so for bounded/mechanical high-volume
+  fan-out on metered/ICA lanes prefer `claude-sonnet-4-6[1m]`/Haiku for token economy.
+- **Codex gpt-5.6 line (sol/terra/luna) unchanged** — already current; no new Codex models.
+- Human SSOT: `agentic_meta_dev/docs/agentic-operator/MODEL-ROUTING.md`.
+
 ## 2026-07-21 — resolve-cli.js: headless resolve CLI for Codex/non-Claude-Code consumption
 
 - **`resolve-cli.js` added** — a thin (~200-line, mostly comments) CLI wrapper over `resolver.js`'s

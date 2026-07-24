@@ -1,9 +1,9 @@
 {
   "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "497e2e4313f2f7ae49e5a4cbe8c4120ec612ffe170d63a92b1755785dc0f41a4",
+  "_yaml_sha256": "4c7a2ee9be9a4f3fb015ac7ffb6c94ddf7be549186bd05f1a1e5ab402d0ba5c0",
   "version": 1,
-  "updated": "2026-07-21",
+  "updated": "2026-07-24",
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -77,12 +77,12 @@
     },
     "orchestration": {
       "chain": [
-        "claude/claude-opus-4-8"
+        "claude/claude-opus-5"
       ]
     },
     "mode_d": {
       "chain": [
-        "claude/claude-opus-4-8"
+        "claude/claude-opus-5"
       ]
     }
   },
@@ -94,10 +94,10 @@
     "synthesis"
   ],
   "models": {
-    "claude-opus-4-8": {
+    "claude-opus-5": {
       "family": "claude",
       "class": "opus",
-      "descriptor": "Latest, most capable Opus. Deep reasoning, orchestration, architecture. Subscription primary.",
+      "descriptor": "Claude Opus 5 (released 2026-07-24). The current flagship Opus and the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA availability not yet confirmed (added scaffolded/disabled below); the ICA spine-offload lane stays on claude-opus-4-8[1m] until Opus 5 is probed on the gateway.",
       "scores": {
         "cost": 3,
         "intelligence": 9,
@@ -109,14 +109,67 @@
         "deep-reasoning",
         "architecture",
         "verdicts",
-        "novel-algorithm-design"
+        "novel-algorithm-design",
+        "synthesis",
+        "mode-d",
+        "agentic-coding"
       ],
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "related_skills": [],
+      "max_context": 1000000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-opus-5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-5[1m]",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        }
+      ]
+    },
+    "claude-opus-4-8": {
+      "family": "claude",
+      "class": "opus",
+      "descriptor": "Claude Opus 4.8 — LEGACY as of 2026-07-24 (superseded by claude-opus-5 as the spine; Anthropic moved it to the legacy model list). Still selectable and still the ICA [1m] spine-offload fallback until Opus 5 is confirmed on the ICA gateway. Deep reasoning, orchestration, architecture. $5/$25 per M, 1M context, 128K max output.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": 8,
+        "speed": 5
+      },
+      "when_to_use": [
+        "deep-reasoning",
+        "architecture",
+        "planning",
+        "spine-offload-fallback"
+      ],
+      "superseded_by": "claude-opus-5",
       "tools": [
         "agent_tool",
         "task_tool"
       ],
       "related_skills": [],
-      "max_context": 200000,
+      "max_context": 1000000,
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -244,6 +297,7 @@
         "speed": 7
       },
       "reasoning_caveat": "ICA offload lane (ica/claude-sonnet-5[1m]) reasoning WORKS via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent offload is fine here. Only remaining gap: output_config.format (structured JSON) is dropped by the gateway — use a tool-call for structured output.",
+      "token_economy_note": "Sonnet 5's new tokenizer emits ~30% more tokens than Sonnet 4.6 for the same text, so its EFFECTIVE metered cost is ~$3.90/$19.50-equivalent at full price (intro $2/$10 through 2026-08-31). Capability/one-shot rate on coding+agentic work usually offsets this, and on the subscription lane token count doesn't affect $ (pooled). BUT on the ICA shared-pool lane and any metered lane, prefer claude-sonnet-4-6[1m] (older, token-efficient, free-to-us) or claude-haiku-4-5 for BOUNDED/MECHANICAL high-volume fan-out where 4.6-class capability suffices — reserve claude-sonnet-5[1m] offload for capability-sensitive bounded waves. Sonnet 5 stays the default execution workhorse (see MODEL-ROUTING.md §2).",
       "when_to_use": [
         "implementation",
         "agentic-coding",
