@@ -37,6 +37,7 @@ The resolver honors that registry; it is not duplicated in the skill or in any p
 | Invoke the resolver from an agent or workflow | `SKILL.md` |
 | Understand the RoutingRecord schema, scoring, and invariants | `SPEC.md` |
 | Read or extend the model registry; add a new model on release | `references/model-registry.md` |
+| Validate a CCDash/external task-class feedback key | `task-class-vocabulary.v1.json`, `routing-feedback-contract.v1.json`, `task-class-vocabulary.js` |
 | Install this skill into a new project | `references/bootstrap.md` |
 | See concrete Today→Proposed routing examples | `references/workflow-walkthrough.md` |
 | Read the routing rules / cost policy (human-facing) | `.claude/specs/provider-routing-spec.md` |
@@ -44,9 +45,13 @@ The resolver honors that registry; it is not duplicated in the skill or in any p
 
 ## Status
 
-Spec-backed (`SPEC.md` at v1.1.0). Provider routing is governed per-workflow by the
+Spec-backed (`SPEC.md` at v1.2.0). Provider routing is governed per-workflow by the
 `provider_routing_enabled` flag (default-off). Free-tier-only classes are a candidate for
 auto-on. The engine is global at `~/.claude/skills/delegation-router/`; registry DATA is
 global-canonical at `~/.claude/config/model-registry.yaml`. Per-repo copies are deprecated —
 the resolver falls through to the global canonical automatically (see `references/bootstrap.md`
 for the migration checklist).
+
+External routing feedback is contract-pinned but not live. Raw CCDash `skill_name` values never
+feed `resolve()` directly; `validateFeedbackJoin()` must accept the exact producer, taxonomy, and
+mapping versions/digests before a future consumer may consider an empirical adjustment.

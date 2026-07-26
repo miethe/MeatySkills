@@ -6,9 +6,9 @@ description: >-
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
   determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
   platform skill executes it.
-version: "3.1"
+version: "3.2"
 app_version: "2026-06-09"
-updated: 2026-07-07
+updated: 2026-07-26
 scope: repo
 spec: ./SPEC.md
 ---
@@ -45,8 +45,10 @@ Repo-verified surfaces only:
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
 | Audit writer | `appendEntry({task_id, routing_record, actual_provider_used, fallback_applied})` in `audit-log.js` |
-| RoutingRecord fields | 11 (see SPEC §1) |
+| RoutingRecord fields | 12 (see SPEC §1; `context_ref` is additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
+| Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
+| External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
 | Audit CLI | `skillmeat routing audit [--task-type <class>] [--violations]` |
 
@@ -58,6 +60,29 @@ Repo-verified surfaces only:
 4. **Determinism filter** — when `resume_active=true` on a structural stage, exclude nondeterministic providers.
 5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout.
 6. **Flat legs only** — the router governs FLAT legs; nesting is **never routed cross-provider**. An offloaded executor (`ica-executor` / `codex-executor` / `gemini-executor` / `bob-delegate-executor`) MUST NOT spawn nested children via the `Agent` tool — a nested spawn from an offloaded leg escapes the `RoutingRecord` audit log. Nesting is claude-primary-only. See provider-routing-spec §5 (MUST-stay #7) and `.claude/specs/subagent-nesting-spec.md` § "Claude-Primary-Only Nesting".
+
+## External Feedback Join
+
+`task_class` supplied by a workflow and `sessions.skill_name` observed by CCDash are different
+namespaces. Never pass raw `skill_name` values to `resolve()` or treat resolver success as proof
+that a feedback key joined.
+
+The pinned external contract is:
+
+- canonical vocabulary: `task-class-vocabulary.v1.json`;
+- accepted producer/version/digest pins: `routing-feedback-contract.v1.json`;
+- fail-closed validator: `validateFeedbackJoin(...)` in `task-class-vocabulary.js`;
+- source binding: every payload's `source_skill_name → task_class` pair must match the pinned
+  producer rule mirrored in `routing-feedback-contract.v1.json`;
+- external identifiers: exact canonical `lower_snake_case` only; legacy aliases are workflow
+  compatibility spellings, not valid feedback keys;
+- `_unclassified`, unknown, alias, version/digest-mismatched, and MUST-stay keys contribute no
+  empirical adjustment.
+
+The validator returns `accepted: false` while `live_consumption` is disabled, even for a valid
+join. Live prior consumption remains disabled until the separate feedback-merge implementation lands
+with the router-owned bounded-adjustment cap/floor, minimum-sample defense, human-override
+precedence, feature disable, and RoutingRecord provenance.
 
 ## Invocation Patterns
 
@@ -93,7 +118,7 @@ appendEntry({
 
 ## Output Guidance
 
-- Emit the full `RoutingRecord` (11 fields); never a partial decision. Schema lives in `routing-record.js`.
+- Emit the full `RoutingRecord` (12 fields); never a partial decision. Schema lives in `routing-record.js`.
 - Always log via `appendEntry` in workflow integration (Pattern B) so `skillmeat routing audit --violations` stays meaningful.
 - On executor fallback, record `actual_provider_used` and `fallback_applied: true` for the realized hop.
 
@@ -117,6 +142,10 @@ appendEntry({
   (`cost · intelligence · taste · speed`, 1–10) is advisory metadata mirroring MODEL-ROUTING §1.5
   for agent decision-making; it is **not** a resolver input in v3 (reserved for a future upgrade;
   see `references/model-registry.md § Scores block`).
+- Do not say CCDash `skill_name` values are router `task_class` values. The v1 mapping is explicit
+  and versioned; raw or unpinned telemetry is rejected by `validateFeedbackJoin()`.
+- Do not say matching mapping metadata alone is sufficient. The validator also binds the exact
+  `source_skill_name` to its pinned canonical or telemetry-only target.
 
 ## Key References
 
@@ -129,6 +158,8 @@ appendEntry({
 | Resolver engine | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/resolver.js` |
 | RoutingRecord schema | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/routing-record.js` |
 | Audit log writer | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/audit-log.js` |
+| Task-class vocabulary | `task-class-vocabulary.v1.json` |
+| Feedback contract + validator | `routing-feedback-contract.v1.json`, `task-class-vocabulary.js` |
 | Model registry (authoritative source) | `~/.claude/config/model-registry.yaml` (global canonical) |
 | Routing rules / cost policy (human) | `/Users/miethe/dev/homelab/development/skillmeat/.claude/specs/provider-routing-spec.md` |
 | Design spec | `/Users/miethe/dev/homelab/development/skillmeat/docs/project_plans/design-specs/model-registry-router-globalization-v1.md` |

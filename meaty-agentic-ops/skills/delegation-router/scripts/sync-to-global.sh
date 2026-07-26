@@ -6,6 +6,7 @@
 # AUTHORITATIVE SOURCE: the MeatySkills repo skill dir
 #   meaty-agentic-ops/skills/delegation-router/
 #     - resolver.js, routing-record.js, audit-log.js  (pure engine)
+#     - task-class-vocabulary.js + versioned vocabulary/feedback contract
 #     - resolve-cli.js  (headless CLI wrapper over resolve() — Codex/non-CC consumption)
 #     - SKILL.md / SPEC.md / README.md / CHANGELOG.md + references/ + scripts/
 #     - model-registry.yaml (+ model-registry.generated.json)  ← TRACKED registry source
@@ -53,6 +54,9 @@ SKILL_FILES=(
   routing-record.js
   audit-log.js
   resolve-cli.js
+  task-class-vocabulary.js
+  task-class-vocabulary.v1.json
+  routing-feedback-contract.v1.json
   SKILL.md
   SPEC.md
   README.md

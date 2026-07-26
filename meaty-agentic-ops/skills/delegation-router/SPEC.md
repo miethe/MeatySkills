@@ -2,11 +2,11 @@
 schema_version: 2
 doc_type: skill_spec
 skill_name: delegation-router
-skill_version: 1.1.0
+skill_version: 1.2.0
 aligned_app_version: 0.54.0
 status: stable
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-07-26
 owner: nick
 source_docs:
   - docs/project_plans/design-specs/model-registry-router-globalization-v1.md
@@ -47,6 +47,7 @@ platform skill executes it.
 - Determinism filtering on resumed structural stages.
 - Failure-fallback chain emission for executor re-dispatch.
 - Append-only audit logging and `skillmeat routing audit` queries.
+- Versioned external task-class vocabulary and fail-closed feedback-key validation.
 
 **Out of scope**:
 - Executing the delegation — owned by the platform skills (`ica-delegate`, `codex`, `gemini-cli`, `bob-shell-delegate`).
@@ -54,7 +55,7 @@ platform skill executes it.
 - Changing the MUST-stay boundaries — invariant (design §2 non-goals).
 - True 429 / quota accounting — runtime error/timeout is the pragmatic fallback trigger (design §2 non-goals).
 
-### RoutingRecord schema (11 fields)
+### RoutingRecord schema (12 fields)
 
 The canonical output. Source of truth: `routing-record.js`. Every field is required on every emit.
 
@@ -71,6 +72,7 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 | 9 | `continuity_mode` | string | `stateless` \| `resumable` |
 | 10 | `fallback_chain` | FallbackEntry[] | Ordered `{plugin_id, model}` candidates; walker stops at first available |
 | 11 | `reason` | string | Human-readable ranking rationale |
+| 12 | `context_ref` | string \| null | Optional absolute delegation-context bundle path; forced null for protected/provider-excluded legs |
 
 `agent_type_id` MUST match an agentType definition filename exactly (P2-INT-001):
 `claude`→native (sentinel `claude`), `ica`→`ica-executor`, `bob`→`bob-delegate-executor`,
@@ -119,6 +121,28 @@ The global `model-registry.yaml` is shared across all repos. A project may layer
   routing-record literals schema-recovery / cross-wave-merge) is **ignored** (and warned). The
   unconditional MUST-stay short-circuit still runs on the original `task_class`, so even a
   successfully-parsed local chain cannot route a protected class off `claude`. See §3 invariant 1.
+
+### External task-class feedback contract
+
+The workflow resolver input and CCDash telemetry do not share a namespace by coincidence.
+`sessions.skill_name` names an invoked artifact; it is not itself a router task class.
+
+- `task-class-vocabulary.v1.json` is the router-owned machine-readable vocabulary
+  (`aos.routing.task_class` v1.0.0). Canonical external identifiers use exact
+  `lower_snake_case`.
+- `routing-feedback-contract.v1.json` pins accepted producer mapping versions and digests and
+  records the router/producer guardrail ownership split.
+- `task-class-vocabulary.js::validateFeedbackJoin()` rejects unknown classes, legacy aliases,
+  `_unclassified`, protected classes, contract/taxonomy/mapping mismatches, and absent/unlisted/
+  mismatched `source_skill_name → task_class` pairs before any empirical adjustment can be
+  considered.
+- A valid pinned join still returns `accepted:false` while the router contract's
+  `live_consumption` state is disabled. This is an executable default-off gate, not documentation.
+- Existing `resolve()` compatibility behavior is unchanged. Its ability to return a record for an
+  unknown workflow class is not evidence that an external feedback key joined.
+- Live empirical-prior consumption is not implemented by this contract. It stays disabled until a
+  separate merge implementation enforces the router-owned cap/floor, sample defense, human
+  override precedence, feature disable, protected-class immunity, and RoutingRecord provenance.
 
 ---
 
@@ -184,6 +208,20 @@ The global `model-registry.yaml` is shared across all repos. A project may layer
    edit-less, and no `Date.now`/`Math.random` in the script. The resolver call sits inside this contract.
    _Source_: `.claude/specs/workflows/workflow-authoring-spec.md` (four-constraints checklist)
 
+9. **External feedback joins fail closed.** A producer must match the pinned contract, taxonomy,
+   and source-mapping identifiers, versions, digests, and exact source-to-class rule. Unknown,
+   absent, alias, telemetry-only, protected, or source/class-mismatched inputs produce no empirical
+   adjustment. The default-off live-consumption state is enforced in code.
+
+10. **The router owns actuation guardrails.** Before live consumption can be enabled, the router
+    must enforce the bounded-adjustment cap and effective-score floor, a minimum-sample
+    defense-in-depth gate, absolute human-override precedence, MUST-stay immunity, instant feature
+    disable, and auditable RoutingRecord provenance. CCDash remains evidence-only.
+
+11. **Raw `skill_name` is never a live join key.** CCDash preserves it as producer provenance and
+    emits `task_class` only through the accepted versioned mapping. Resolver fallback behavior must
+    never be used as join validation.
+
 ---
 
 ## 4. Enhancement Backlog
@@ -218,6 +256,17 @@ The global `model-registry.yaml` is shared across all repos. A project may layer
 ---
 
 ## 5. Changelog
+
+### v1.2.0 — 2026-07-26
+
+- Added `aos.routing.task_class` v1.0.0 as a machine-readable canonical vocabulary with explicit
+  legacy aliases and protected-class status.
+- Added the pinned CCDash feedback contract and fail-closed `validateFeedbackJoin()` guard,
+  including exact `source_skill_name → task_class` binding and an executable default-off gate.
+- Assigned bounded-adjustment cap/floor, minimum-sample defense, human-override precedence,
+  protected-class immunity, disable, and routing provenance to the router.
+- Preserved legacy `resolve()` behavior while prohibiting raw `skill_name` or resolver success as
+  proof of an external vocabulary join.
 
 ### v1.1.0 — 2026-06-09
 

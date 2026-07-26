@@ -3,6 +3,23 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-26 — Versioned task-class vocabulary + fail-closed CCDash join
+
+- Added `task-class-vocabulary.v1.json` as the canonical `aos.routing.task_class` v1.0.0
+  vocabulary. External identifiers are exact `lower_snake_case`; legacy aliases are explicitly
+  listed for workflow compatibility but are invalid feedback keys.
+- Added `routing-feedback-contract.v1.json`, pinning the CCDash source-mapping version/digest and
+  assigning runtime adjustment cap/floor, sample defense, human-override precedence, protected
+  immunity, disable, and provenance to the router.
+- Added `task-class-vocabulary.js::validateFeedbackJoin()` and focused tests. Unknown,
+  `_unclassified`, alias, stale/mismatched, source/class-mismatched, and MUST-stay keys fail closed
+  with no empirical adjustment. All 17 pinned CCDash source rules are exercised.
+- Enforced the default-off state in code: a valid pinned join is visible as `join_valid:true` but
+  remains `accepted:false` until `live_consumption` is explicitly enabled in a future reviewed
+  implementation.
+- Kept live empirical-prior consumption disabled and preserved existing `resolve()` behavior;
+  resolver success is not treated as proof that an external key joined.
+
 ## 2026-07-24 — Opus 5 is the new spine (model-registry.yaml)
 
 - **`claude-opus-5` added** as the current flagship Opus and the AOS SPINE / MUST-stay tier

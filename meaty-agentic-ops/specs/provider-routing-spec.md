@@ -153,6 +153,27 @@ to `provider: claude` / `profile: null` — no migration required, no parse erro
 4. Determinism discipline: nondeterministic providers (Gemini, ICA) excluded from ranking when
    same-session resume is active and the stage role is `structural`.
 
+### External feedback task-class join
+
+Workflow `task_class` and CCDash `sessions.skill_name` are distinct namespaces. The router's
+canonical external vocabulary is `skills/delegation-router/task-class-vocabulary.v1.json`.
+CCDash may emit a feedback `task_class` only through the pinned, reviewed source mapping named in
+`routing-feedback-contract.v1.json`; raw skill names and legacy alias spellings are not accepted.
+
+`validateFeedbackJoin()` is the mandatory precondition for future empirical-prior consumption.
+It binds the payload's exact `source_skill_name → task_class` pair to the pinned producer rules.
+Unknown, absent, `_unclassified`, protected, alias, source/class-mismatched, or
+version/digest-mismatched inputs have no routing effect. A valid join also remains
+`accepted:false` while live consumption is disabled. Existing resolver fallback for unknown
+workflow classes is compatibility behavior, not a valid join.
+
+The router owns the actuation side of the §5 defenses: minimum-sample defense in depth,
+bounded-adjustment cap and effective-score floor, absolute registry human-override precedence,
+MUST-stay immunity, instant feature disable, and RoutingRecord provenance. CCDash owns
+deterministic evidence computation, freshness/window metadata, mapping coverage, and the read-only
+PULL surface. Live empirical feedback remains disabled until those router controls are
+implemented and validated.
+
 ---
 
 ## 5. MUST-Stay-Primary Boundary List
