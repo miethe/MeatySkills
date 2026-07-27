@@ -72,7 +72,9 @@ if [[ -z "${KEY}" ]]; then
   elif [[ -n "${KEY_BLOCK}" && -f "${ICA_DOTENV}" ]]; then
     # Pull the (possibly commented) key from a named "## NAME" block.
     KEY="$(awk -v name="${KEY_BLOCK}" '
-      /^##/ { b=$0; sub(/^##[[:space:]]*/,"",b); gsub(/[[:space:]]/,"",b); found=(toupper(b)==toupper(name)) }
+      # Match the FIRST whitespace-delimited token after "## " so headers with a
+      # trailing description still match — e.g. "## CODEX (OpenAI-line via ICA gateway)".
+      /^##/ { b=$0; sub(/^##[[:space:]]*/,"",b); split(b, parts, /[[:space:]]/); found=(toupper(parts[1])==toupper(name)) }
       found && /^#?ICA_(CLAUDE_CODE|CODEX)_API_KEY=/ { sub(/^#?ICA_(CLAUDE_CODE|CODEX)_API_KEY=/,""); print; exit }
     ' "${ICA_DOTENV}")"
   elif [[ -f "${ICA_DOTENV}" ]]; then
