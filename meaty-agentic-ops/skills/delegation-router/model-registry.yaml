@@ -245,8 +245,8 @@ models:
     class: fable
     descriptor: "Claude Fable 5 (Mythos-class frontier, released 2026-06-09). SOTA agentic coding (SWE-bench Verified 95%, SWE-bench Pro 80%) and long-horizon reasoning; lead over Opus 4.8 grows with task length/complexity. $10/$50 per M = 2× Opus 4.8 — explicit opt-in only, never auto-routed. 1M context, 128K max output."
     scores: { cost: 1, intelligence: 10, taste: 9, speed: 4 }   # 1-10, higher=better; cost = preferred-lane real spend
-    when_to_use: [architecture, novel-algorithm-design, greenfield-jumpstart, long-horizon-autonomy, debug-escalation, high-stakes-verdict, deep-reasoning, planning]
-    tools: [one_million_context]
+    when_to_use: [orchestration, architecture, novel-algorithm-design, greenfield-jumpstart, long-horizon-autonomy, debug-escalation, high-stakes-verdict, deep-reasoning, planning]
+    tools: [agent_tool, task_tool, one_million_context]   # frontier for agent delegation / orchestration / long-horizon work — declares the same orchestration tool-classes as the Opus tiers (was missing agent_tool/task_tool, corrected 2026-07-27)
     related_skills: []
     max_context: 1000000
     sampling: deterministic
