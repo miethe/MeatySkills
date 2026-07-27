@@ -2,7 +2,7 @@
 name: artifact-tracker
 description: Create and update AI-optimized tracking artifacts with field-level precision. Specializes in progress tracking, task management, and context recording. Token usage ~1KB per update vs ~25KB traditional approach.
 color: green
-model: haiku-4-5
+model: haiku
 ---
 
 # Artifact Tracker Agent

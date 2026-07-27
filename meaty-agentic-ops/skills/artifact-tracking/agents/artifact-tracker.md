@@ -2,7 +2,7 @@
 name: artifact-tracker
 description: Create and update progress/context files. For simple status updates, prefer CLI scripts (0 agent tokens).
 color: green
-model: haiku-4-5
+model: haiku
 ---
 
 # Artifact Tracker Agent

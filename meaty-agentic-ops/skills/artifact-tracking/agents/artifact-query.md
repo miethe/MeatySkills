@@ -2,7 +2,7 @@
 name: artifact-query
 description: Query and synthesize AI-optimized tracking artifacts across phases. Specializes in task filtering, blocker analysis, and session handoff reports. Token usage ~2-3KB per query vs ~60KB traditional approach.
 color: blue
-model: haiku-4-5
+model: haiku
 ---
 
 # Artifact Query Agent
