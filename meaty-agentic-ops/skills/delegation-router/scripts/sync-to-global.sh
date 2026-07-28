@@ -10,11 +10,21 @@
 #     - resolve-cli.js  (headless CLI wrapper over resolve() — Codex/non-CC consumption)
 #     - SKILL.md / SPEC.md / README.md / CHANGELOG.md + references/ + scripts/
 #     - model-registry.yaml (+ model-registry.generated.json)  ← TRACKED registry source
+#     - use-case-rankings.yaml  ← TRACKED grounded-evidence layer (co-located, rf-provenanced)
+#
+# ALSO DEPLOYS (sibling skill in this same MeatySkills repo):
+#   meaty-agentic-ops/skills/model-playbook/  ← per-model/per-route playbook, referenced from
+#     model-registry.yaml's `playbook_ref` fields. Deployed to ~/.claude/skills/ the same way
+#     as the delegation-router code (best-effort: a missing source dir is a WARN, not a failure,
+#     so this script stays forward-compatible while that skill is still being authored).
 #
 # WHAT THIS SCRIPT DOES (Option A — registry is co-located + tracked with the artifact):
 #   1. Copies the engine code into ~/.claude/skills/delegation-router/.
 #   2. Deploys the TRACKED registry (model-registry.yaml) to ~/.claude/config/ and
 #      regenerates ~/.claude/config/model-registry.generated.json from it.
+#   3. Deploys the TRACKED use-case-rankings.yaml alongside model-registry.yaml in
+#      ~/.claude/config/ (same target dir, verbatim copy — no derived JSON for this one).
+#   4. Deploys the sibling model-playbook skill into ~/.claude/skills/model-playbook/.
 #
 # WHY REGISTRY-IS-TRACKED-HERE (2026-07-09):
 #   The registry is now version-controlled alongside the router it drives — the same
@@ -48,6 +58,10 @@ SRC_SKILL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEST_SKILL_DIR="${HOME}/.claude/skills/delegation-router"
 DEST_CONFIG_DIR="${HOME}/.claude/config"
 
+# --- Sibling model-playbook skill (co-located in this repo, deployed alongside) ---
+SRC_PLAYBOOK_DIR="$(cd "${SRC_SKILL_DIR}/.." && pwd)/model-playbook"
+DEST_PLAYBOOK_DIR="${HOME}/.claude/skills/model-playbook"
+
 # --- Engine files to copy (no tests/, no node_modules) ---
 SKILL_FILES=(
   resolver.js
@@ -70,6 +84,9 @@ SKILL_DIRS=(
 # --- The tracked registry source (co-located in this skill dir) ---
 SRC_REGISTRY_YAML="${SRC_SKILL_DIR}/model-registry.yaml"
 BUILD_SCRIPT="${SRC_SKILL_DIR}/scripts/build-model-registry.py"
+
+# --- The tracked grounded-evidence layer (co-located in this skill dir) ---
+SRC_USE_CASE_RANKINGS_YAML="${SRC_SKILL_DIR}/use-case-rankings.yaml"
 
 # --- Validate source ---
 for f in "${SKILL_FILES[@]}"; do
@@ -129,9 +146,30 @@ else
   echo "  WARN: no tracked model-registry.yaml at ${SRC_REGISTRY_YAML} — skipping registry deploy" >&2
 fi
 
+# --- Deploy the tracked grounded-evidence layer alongside model-registry.yaml ---
+if [[ -f "${SRC_USE_CASE_RANKINGS_YAML}" ]]; then
+  cp -f "${SRC_USE_CASE_RANKINGS_YAML}" "${DEST_CONFIG_DIR}/use-case-rankings.yaml"
+  echo "  deployed use-case-rankings.yaml -> ${DEST_CONFIG_DIR}/"
+else
+  echo "  WARN: no tracked use-case-rankings.yaml at ${SRC_USE_CASE_RANKINGS_YAML} — skipping (not yet authored?)" >&2
+fi
+
+# --- Deploy the sibling model-playbook skill (best-effort — forward-compatible) ---
+if [[ -d "${SRC_PLAYBOOK_DIR}" ]]; then
+  mkdir -p "${DEST_PLAYBOOK_DIR}"
+  rm -rf "${DEST_PLAYBOOK_DIR:?}"/*
+  cp -R "${SRC_PLAYBOOK_DIR}/." "${DEST_PLAYBOOK_DIR}/"
+  rm -rf "${DEST_PLAYBOOK_DIR}/node_modules"
+  echo "  deployed model-playbook skill -> ${DEST_PLAYBOOK_DIR}/"
+else
+  echo "  WARN: no sibling model-playbook skill at ${SRC_PLAYBOOK_DIR} — skipping (not yet authored?)" >&2
+fi
+
 echo
 echo "Done. Global delegation-router refreshed at ${DEST_SKILL_DIR}"
-echo "      and registry deployed to ${DEST_CONFIG_DIR}/model-registry.{yaml,generated.json}."
+echo "      registry deployed to ${DEST_CONFIG_DIR}/model-registry.{yaml,generated.json},"
+echo "      use-case-rankings.yaml deployed to ${DEST_CONFIG_DIR}/,"
+echo "      and model-playbook deployed to ${DEST_PLAYBOOK_DIR}."
 echo
 echo "REMINDER: edit the registry HERE (${SRC_REGISTRY_YAML}) and commit it — it is the"
 echo "tracked source. Re-run this script (or /redeploy) to propagate to global + the node."

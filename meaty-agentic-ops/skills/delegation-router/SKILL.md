@@ -161,6 +161,8 @@ appendEntry({
 | Task-class vocabulary | `task-class-vocabulary.v1.json` |
 | Feedback contract + validator | `routing-feedback-contract.v1.json`, `task-class-vocabulary.js` |
 | Model registry (authoritative source) | `~/.claude/config/model-registry.yaml` (global canonical) |
+| Grounded evidence layer (`use-case-rankings.yaml`) | `/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/use-case-rankings.yaml` (co-located, rf-provenanced, human-gated; **advisory only — never read by `resolver.js`**); see `references/use-case-rankings.md` |
+| Per-model playbook (`playbook_ref` targets) | `/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/model-playbook/` (routes: `anthropic-claude.md`, `openai-gpt.md`, `google-gemini.md`, `ica-lanes.md`, `open-models.md`) |
 | Routing rules / cost policy (human) | `/Users/miethe/dev/homelab/development/skillmeat/.claude/specs/provider-routing-spec.md` |
 | Design spec | `/Users/miethe/dev/homelab/development/skillmeat/docs/project_plans/design-specs/model-registry-router-globalization-v1.md` |
 | Audit CLI | `skillmeat routing audit --help` |

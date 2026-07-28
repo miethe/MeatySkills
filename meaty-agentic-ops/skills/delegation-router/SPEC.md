@@ -12,6 +12,8 @@ source_docs:
   - docs/project_plans/design-specs/model-registry-router-globalization-v1.md
   - .claude/specs/provider-routing-spec.md
   - "~/.claude/config/model-registry.yaml"
+  - meaty-agentic-ops/skills/delegation-router/use-case-rankings.yaml
+  - meaty-agentic-ops/skills/model-playbook/
 related_skills:
   - ica-delegate
   - codex
@@ -153,6 +155,8 @@ The workflow resolver input and CCDash telemetry do not share a namespace by coi
 | Resolve where a single delegated task should run | `SKILL.md § "Invocation Patterns" — Pattern A` | `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 4` |
 | Resolve + log per-stage routing from a workflow script | `SKILL.md § "Invocation Patterns" — Pattern B` | `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 4` |
 | Understand or extend model metadata; add a new model on release | `references/model-registry.md` | `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 3` |
+| Read grounded evidence behind a `routing_policy` chain re-rank | `references/use-case-rankings.md` | `use-case-rankings.yaml` (co-located, rf-provenanced, human-gated) |
+| Look up a model's per-route playbook via its `playbook_ref` | `model-playbook` skill, `routes/<family>.md#<model-key>` | `meaty-agentic-ops/skills/model-playbook/` |
 | Self-install the skill into a new project | `references/bootstrap.md` | `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 5` |
 | See Today→Proposed routing for planning/execution legs | `references/workflow-walkthrough.md` | `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 7` |
 | Audit routing decisions or check MUST-stay violations | `skillmeat routing audit` | `skillmeat routing audit --help` |
