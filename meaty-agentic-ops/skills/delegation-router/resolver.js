@@ -928,17 +928,26 @@ function buildRegistryInvocation(chosen, profile, effort) {
   switch (providerId) {
     case 'claude':
       return `claude -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
-    case 'ica':
-      // GPT models on ICA 400 on the raw gateway: Claude Code attaches `output_config`
-      // on /messages and the Azure backend rejects it. Route gpt-* through the
-      // ica-gpt.sh param-strip shim wrapper (it lazily + idempotently self-starts the
-      // /messages proxy — no always-on daemon). Claude/Gemini ICA models stay on the raw
-      // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/ and the
-      // delegation-router-cross-client exploration (2026-07-21).
+    case 'ica': {
+      // ICA gpt-5.6-*-dzus are a free-to-us agentic *Codex* lane: ICA can't serve them on
+      // the /responses API Codex speaks (Azure api-version-gated), so ~/ica-codex.sh
+      // auto-starts a local Responses→Chat shim and drives `codex` against it. Route them
+      // to that wrapper, NOT ica-gpt.sh (which is the Claude-Code /messages lane).
+      // See agentic_meta_dev/infra/ica-codex-shim/ (shipped 2026-07-29).
+      if (/-dzus$/i.test(modelId)) {
+        const sandboxMode = sandboxModeFor(profile, effort);
+        return `~/ica-codex.sh exec --skip-git-repo-check --sandbox ${sandboxMode} -m ${modelId} "{prompt}"`;
+      }
+      // Other GPT models on ICA (e.g. gpt-5.5-gus) 400 on the raw gateway: Claude Code
+      // attaches `output_config` on /messages and the Azure backend rejects it. Route gpt-*
+      // through the ica-gpt.sh param-strip shim wrapper (it lazily + idempotently self-starts
+      // the /messages proxy — no always-on daemon). Claude/Gemini ICA models stay on the raw
+      // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/.
       if (/gpt/i.test(modelId)) {
         return `~/ica-gpt.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
       }
       return `~/ica-claude.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
+    }
     case 'gemini':
       return `gemini "{prompt}" --model ${modelId} --yolo`;
     case 'bob':

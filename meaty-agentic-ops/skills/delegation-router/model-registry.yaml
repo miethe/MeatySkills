@@ -490,7 +490,7 @@ models:
   gpt-5.6-terra:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). OPT-IN / explicit-selectable only: NO ICA provider row is carried, because resolver.js `case 'ica'` maps any gpt* id to ~/ica-gpt.sh (the Claude-Code /messages shim), which is wrong for a Codex lane; auto-routing it would need a resolver ICA-for-Codex vs ICA-for-CC distinction (follow-up). See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation]
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra
@@ -505,7 +505,7 @@ models:
   gpt-5.6-luna:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). OPT-IN / explicit-selectable only (same reason as terra-dzus: no ICA provider row carried; resolver's gpt* → ica-gpt.sh mapping is the CC lane). See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). The free ICA lane now has its OWN routable entry `gpt-5.6-luna-dzus` (routes via `~/ica-codex.sh`); this metered `codex/gpt-5.6-luna` entry is unchanged. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 6, intelligence: 7, taste: 6, speed: 8 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna
@@ -516,6 +516,36 @@ models:
     status: active
     providers:
       - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+
+  gpt-5.6-terra-dzus:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.6 Terra via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable."
+    scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = real spend (free-to-us shared pool)
+    when_to_use: [agentic-coding, code-review, ac-validation, implementation, second-opinion]
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra-dzus
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gpt-5.6-terra-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+
+  gpt-5.6-luna-dzus:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-5.6 Luna via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — the cheaper/faster dzus tier. Same routing as gpt-5.6-terra-dzus (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable."
+    scores: { cost: 8, intelligence: 7, taste: 6, speed: 6 }
+    when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna-dzus
+    tools: []
+    related_skills: [codex]
+    max_context: 400000
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: ica, model_id: "gpt-5.6-luna-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
 
