@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "contract_id": "aos.routing.feedback",
+  "contract_version": "1.0.0",
+  "live_consumption": "disabled_until_feedback_merge_implementation",
+  "taxonomy": {
+    "taxonomy_id": "aos.routing.task_class",
+    "taxonomy_version": "1.0.0",
+    "taxonomy_digest": "sha256:d96a0819b0a3a42d14eccc1421d3146b8364253d975d9d54f4f264d4b6adeaca"
+  },
+  "accepted_producers": {
+    "ccdash": {
+      "mapping_id": "ccdash.skill_name_to_aos.routing.task_class",
+      "mapping_version": "1.0.0",
+      "mapping_digest": "sha256:45a49bb1a6194c6a576160edab7c3212a9cc20e17e6a0b79d531c1c4928f63f5",
+      "source_task_class_rules": {
+        "artifact-tracking": "mechanical",
+        "changelog-sync": "documentation",
+        "claude-api": "_unclassified",
+        "codex": "_unclassified",
+        "debug": "implementation",
+        "debugging": "implementation",
+        "dev-execution": "implementation",
+        "enterprise-demo-deploy": "mode_d",
+        "firecrawl-scrape": "web_research",
+        "frontend-design": "implementation",
+        "ica-delegate": "_unclassified",
+        "plan-status": "documentation",
+        "planning": "orchestration",
+        "release": "mode_d",
+        "skillmeat-cli": "mechanical",
+        "symbols": "mechanical",
+        "workflow-authoring": "implementation"
+      }
+    }
+  },
+  "router_guardrail_ownership": {
+    "minimum_sample_gate": "required_defense_in_depth",
+    "bounded_adjustment_cap": "required_before_enablement",
+    "effective_score_floor": "required_before_enablement",
+    "human_override_wins": "absolute",
+    "must_stay_primary_immunity": "absolute",
+    "feature_flag_disable": "required",
+    "routing_record_provenance": "required"
+  },
+  "producer_guardrail_ownership": {
+    "deterministic_aggregation": "required",
+    "rolling_window_and_freshness": "required",
+    "mapping_coverage_reporting": "required",
+    "read_only_pull_surface": "required",
+    "no_model_on_compute_path": "absolute"
+  }
+}

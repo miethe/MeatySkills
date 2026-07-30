@@ -1,0 +1,80 @@
+# Changelog — delivery-report
+
+## Unreleased — 2026-07-28
+
+- **Plan-time dossier seeding — the lifecycle's missing first link.** Phase A shipped the `dossier`
+  route and the phase-boundary regeneration hook, but nothing created the manifest, and
+  `update-dossier.sh` is binding-gated on that manifest existing — so in practice the dossier stayed
+  dormant unless a human hand-seeded it. Closed (spec §A.1 step 1):
+  - **`dev-execution/hooks/seed-dossier.sh` + `seed_dossier.py`** — deterministic, offline, zero
+    model calls. Derives the stage spine (`research` → `plan` → one `execute` per plan phase →
+    `validate`) from `wave_plan.phases[]` / the `phases` map / `### Phase P1: …` body headings, and
+    carries the plan's `open_questions` + `decisions` frontmatter into the dossier's panels. Cites
+    the plan/PRD/spike as evidence and emits the `/dev:execute-plan` handoff as the one open item.
+    The skeleton still comes from `delivery_report.py init --route dossier`, so schema vocabulary is
+    never re-implemented outside this skill (AOS constraint 7).
+  - **Contract**: same family as its sibling — one master switch (`AOS_DELIVERY_DOSSIER`),
+    binding-gated (the plan file), **non-fatal, always exit 0**. Tier 2/3 auto-seeds; Tier 0/1 only
+    on explicit request (`DOSSIER_SEED_FORCE=1`, spec OD-4 resolved). An existing manifest is left
+    untouched — it accretes — unless `DOSSIER_SEED_RESEED=1`.
+  - **Wiring**: `planning` SKILL.md Workflow 2 step 10 (+ the `dossier` row in "Status & Readiness
+    Reporting"), `/plan:plan-feature` Tier 1/2/3. SKILL.md gains a "`dossier` lifecycle" table;
+    SPEC.md gains the route, invariants 13–14, integration rows, and the hook file layout.
+  - **Tests**: `dev-execution/hooks/tests/test_seed_dossier.sh` — 18 assertions over the gate
+    contract (switch/binding/tier/idempotency/always-exit-0) and the derivation (stage spine, titles
+    from headings, OQ/decision carry-through, research-stage-only-when-cited, and that the seeded
+    manifest passes `validate --expect-route dossier`).
+
+## Unreleased — 2026-07-27
+
+- **New `dossier` route (Phase A) — the living per-feature record.** A fifth route and a dedicated
+  renderer/validator for one longitudinal record per feature that spans research → plan → execute →
+  validate, is seeded at plan time, and is regenerated at each phase boundary. It is a **view over
+  canonical sources, never a new tracker**; the manifest is canonical and the HTML is derived.
+  - **Schema:** `report.route` gains `"dossier"`; new top-level `stages[]` (the required lifecycle
+    spine — id/label/kind/state + optional narrative/outcome/timing/domains/evidence_refs/
+    deviations/commits), `open_questions[]` (question/status/blocking/channel), and `decisions[]`
+    (decision/rationale/alternatives/answers). Reuses `handoff`, `domain_list`, `evidence_refs`.
+  - **Renderer (`render_dossier`):** masthead with a truth pill + "you are here" + DRAFT banner
+    while non-final; vitals; a stage timeline with expandable narratives and inline screenshots;
+    a blocking-first open-question panel; a decision log; the shared open-items handoff table;
+    evidence index + media gallery; corrections on re-render. Self-contained + CSP-clean.
+  - **Validation (`_validate_dossier`):** blocking honesty rules on stages/OQs/decisions and
+    evidence-ref resolution; a blocking OQ with no answer channel warns. Extracts shared
+    `_validate_items` / `_validate_vitals` / `_validate_corrections` (status behaviour unchanged).
+  - **Eligibility:** `dossier` is on-demand / recommended for Tier 2/3, never tier-gated as required.
+  - `init --route dossier` skeleton; `examples/dossier.example.json` (+ a placeholder screenshot);
+    stage-timeline / OQ-card / decision CSS and an expand/collapse-all control in the shared assets;
+    SKILL.md + route-policy.md updated; tests cover the skeleton, a clean render, and each rule.
+
+## Unreleased — 2026-07-24
+
+- **Next Actions table callout.** When a report is produced as part of an execution/planning
+  delivery, the flat **Next Actions table** (the always-on projection of the handoff vocabulary) now
+  stays front-and-center in the response, with the report path listed as an artifact rather than a
+  substitute. Added the response-callout section to `SKILL.md`, a references-table pointer, and a
+  flat-table-projection note to `references/handoff-contract.md`. Canonical spec:
+  `dev-execution/references/next-actions-table.md`.
+
+## 0.1.0 — 2026-07-23
+
+Initial release. Unified, route-discriminated report skill that **replaces `feature-report`**.
+
+- **Routes:** `feature` (retrospective single feature — absorbs `feature-report`) plus
+  `program` / `phase` / `readiness` (forward-looking, multi-item).
+- **Handoffs:** every open forward-route item carries a copyable agent handoff — absolute repo,
+  existence-checked paths, grep-verified requirement IDs, blocking gates, tracker node, and a
+  paste-ready prompt. Validation is blocking: `deferred` needs a `trigger`, `blocked_external` needs
+  `command: null`, `repo` must be absolute.
+- **Honesty mechanism:** every vital cites `measured_by`; `corrections[]` is first-class; evidence
+  and handoff paths are existence-checked when the repo is present; `verified_by` distinguishes
+  self / delegated / unverified claims.
+- **Feature-route enhancements** (the recommended `feature-report` changes, landed here):
+  handoff-shaped `followups[]`, optional `domains[]`, light theme, per-`<code>` copy buttons,
+  existence-checked evidence paths.
+- **Visuals:** activity flowsheet + two-track ladder from declarative data; inline SVG flows/metrics;
+  screenshots and clearly-labelled generated illustrations with recorded provider.
+- **Theming:** four-block token system (`:root`, dark media query, explicit `data-theme`) with a
+  viewer toggle that wins over the media query.
+- **AOS:** `export` writeback envelope (skillmeat/intenttree/meatywiki/ccdash) and IntentTree tracker
+  linking. Deterministic and offline throughout.
