@@ -45,7 +45,7 @@ Repo-verified surfaces only:
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
 | Audit writer | `appendEntry({task_id, routing_record, actual_provider_used, fallback_applied})` in `audit-log.js` |
-| RoutingRecord fields | 12 (see SPEC §1; `context_ref` is additive) |
+| RoutingRecord fields | 13 (see SPEC §1; `context_ref` + `context_class` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |

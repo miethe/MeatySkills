@@ -37,6 +37,14 @@
  *                                                    null. 12th field (additive, optional; default null). FORCED to
  *                                                    null for MUST-STAY classes and for bob by finalizeRoutingRecord
  *                                                    (FR-10, flat-legs-only invariant). See delegation-context.md v2.
+ * @property {string|null}     context_class      - Declared context class of the milestone this leg serves:
+ *                                                    'C1'|'C2'|'C3'|'C4', or null when the plan declares none.
+ *                                                    13th field (additive, optional; default null). PASSTHROUGH ONLY —
+ *                                                    it is carried onto the record so realized burn can be joined
+ *                                                    against declared class in the weekly review; it is NEVER a
+ *                                                    resolver input and never influences ranking. Distinct from
+ *                                                    context_ref, which is a bundle PATH. See the Claude-5 plan
+ *                                                    doctrine (agentic_meta_dev planning/references/plan-doctrine.md).
  */
 
 /**
@@ -47,6 +55,17 @@
  * @readonly
  * @type {string[]}
  */
+/**
+ * Declared context classes (Claude-5 plan doctrine §3). Sizes the AGENT CONTEXT a milestone
+ * needs, which is what predicts burn — as opposed to points, which size human-scale behavior.
+ * Carried through as an audit passthrough so realized burn can be joined against declared class;
+ * NEVER read by the resolver's ranking.
+ *
+ * @readonly
+ * @type {string[]}
+ */
+const CONTEXT_CLASSES = ['C1', 'C2', 'C3', 'C4'];
+
 const MUST_STAY_PRIMARY_CLASSES = [
   'orchestration',
   'verdict',
@@ -146,6 +165,17 @@ function validateRoutingRecord(record) {
     );
   }
 
+  // context_class is the 13th field: additive + optional, same backward-compatibility posture as
+  // context_ref. Absent is tolerated; when present it MUST be one of the four declared classes or
+  // null. Passthrough only — never read on the resolve path.
+  if (record.context_class !== undefined && record.context_class !== null &&
+      !CONTEXT_CLASSES.includes(record.context_class)) {
+    throw new Error(
+      `RoutingRecord.context_class must be one of ${CONTEXT_CLASSES.join('|')} or null; ` +
+      `got ${JSON.stringify(record.context_class)}`
+    );
+  }
+
   return record;
 }
 
@@ -165,6 +195,11 @@ function validateRoutingRecord(record) {
 function finalizeRoutingRecord(record, taskClass) {
   if (record.context_ref === undefined) {
     record.context_ref = null;
+  }
+  // context_class is a pure audit passthrough: default it, but never force or clear it the way
+  // context_ref is gated. It carries no context, so it cannot leak anything on a MUST-STAY leg.
+  if (record.context_class === undefined) {
+    record.context_class = null;
   }
   const mustStay = taskClass !== undefined && MUST_STAY_PRIMARY_CLASSES.includes(taskClass);
   const nullProvider = CONTEXT_REF_NULL_PROVIDERS.includes(record.chosen_plugin_id);
@@ -194,12 +229,14 @@ function createEmptyRecord() {
     fallback_chain: [],
     reason: '',
     context_ref: null,
+    context_class: null,
   };
 }
 
 module.exports = {
   MUST_STAY_PRIMARY_CLASSES,
   CONTEXT_REF_NULL_PROVIDERS,
+  CONTEXT_CLASSES,
   AGENT_TYPE_ID_MAP,
   validateRoutingRecord,
   finalizeRoutingRecord,

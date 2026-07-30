@@ -3,6 +3,25 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-07-30 — `context_class` audit passthrough (13th RoutingRecord field)
+
+- Added `context_class` (`C1`|`C2`|`C3`|`C4`|`null`) as the 13th RoutingRecord field, additive and
+  optional in the same posture as `context_ref`: absent is tolerated, so existing 11/12-field
+  callers and stored records keep validating.
+- It is a **passthrough for audit only** — stamped once in `resolve()` (after selection, so it
+  cannot influence ranking by construction) and carried onto every resolution path: registry,
+  TOML, MUST-stay, and determinism-filter. Its purpose is joining *realized* burn to the class a
+  plan *declared*.
+- Unlike `context_ref` it is **not** gated on MUST-stay classes or `CONTEXT_REF_NULL_PROVIDERS`:
+  `context_ref` is a path to a context bundle and must never leak onto a protected leg, whereas
+  `context_class` carries no context at all — only a size label.
+- Out-of-vocabulary values are rejected by `validateRoutingRecord`; `CONTEXT_CLASSES` is exported.
+- Added `tests/test-context-class.js` (10 cases: carry-through, default-null, empty-string
+  normalization, invalid rejection, selection-invariance, MUST-stay survival, legacy-record
+  tolerance). Existing suite unchanged and green (7/7).
+- Source doctrine: `agentic_meta_dev/.claude/skills/planning/references/plan-doctrine.md` §
+  "Context class"; spec `docs/project_plans/design-specs/claude5-plan-doctrine-v1.md` §4.
+
 ## 2026-07-26 — Versioned task-class vocabulary + fail-closed CCDash join
 
 - Added `task-class-vocabulary.v1.json` as the canonical `aos.routing.task_class` v1.0.0

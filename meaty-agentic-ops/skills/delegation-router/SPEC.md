@@ -57,7 +57,7 @@ platform skill executes it.
 - Changing the MUST-stay boundaries — invariant (design §2 non-goals).
 - True 429 / quota accounting — runtime error/timeout is the pragmatic fallback trigger (design §2 non-goals).
 
-### RoutingRecord schema (12 fields)
+### RoutingRecord schema (13 fields)
 
 The canonical output. Source of truth: `routing-record.js`. Every field is required on every emit.
 
@@ -75,6 +75,7 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 | 10 | `fallback_chain` | FallbackEntry[] | Ordered `{plugin_id, model}` candidates; walker stops at first available |
 | 11 | `reason` | string | Human-readable ranking rationale |
 | 12 | `context_ref` | string \| null | Optional absolute delegation-context bundle path; forced null for protected/provider-excluded legs |
+| 13 | `context_class` | `C1`\|`C2`\|`C3`\|`C4` \| null | Optional declared context class of the milestone this leg serves. **Audit passthrough only** — stamped after selection, never a resolver input, never gated on MUST-stay (it carries no context). Joins realized burn to declared class. |
 
 `agent_type_id` MUST match an agentType definition filename exactly (P2-INT-001):
 `claude`→native (sentinel `claude`), `ica`→`ica-executor`, `bob`→`bob-delegate-executor`,

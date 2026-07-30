@@ -645,10 +645,32 @@ function routingPolicyKeyFor(task_class) {
  * @returns {import('./routing-record.js').RoutingRecord}
  */
 function resolve(input) {
-  if (input && input._configPath) {
-    return resolveFromToml(input);
-  }
-  return resolveFromRegistry(input);
+  const record = (input && input._configPath)
+    ? resolveFromToml(input)
+    : resolveFromRegistry(input);
+  return stampContextClass(record, input);
+}
+
+/**
+ * Stamp the caller's declared `context_class` (C1–C4) onto the emitted record.
+ *
+ * Applied once here rather than at each of the four record-construction sites, so every
+ * resolution path — registry, TOML, MUST-stay, determinism-filter — carries it uniformly.
+ *
+ * This is a PASSTHROUGH for audit only: it lets realized burn be joined against the class the
+ * plan declared (Claude-5 plan doctrine §3). It is never read on the resolve path and never
+ * influences ranking, so it is stamped AFTER selection by construction. Unlike `context_ref`
+ * it carries no context, so it is not gated on MUST-stay/provider.
+ *
+ * @param {RoutingRecord} record
+ * @param {Object} input - the original resolve() input; `input.context_class` is optional
+ * @returns {RoutingRecord} the same record, with context_class set and re-validated
+ */
+function stampContextClass(record, input) {
+  if (!record) return record;
+  const declared = input && input.context_class;
+  record.context_class = (declared === undefined || declared === '') ? null : declared;
+  return validateRoutingRecord(record);
 }
 
 // ---------------------------------------------------------------------------
