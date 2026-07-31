@@ -14,9 +14,14 @@
  * returns needs_opus with a specific reason so Opus routes to full planning — always
  * leaving a durable plan artifact on disk so escalation gets a head start.
  *
+ * Post-execution, a Phase 4 Verify gate runs an adversarial claims-vs-code pass over the finished
+ * diff (only when the nested engine reported complete). "Green per-phase validators" is necessary
+ * but not sufficient — two AARs caught a critical data bug + a refresh gap that survived green
+ * per-phase gates. Confirmed critical/high findings downgrade complete → needs_opus/post_verify_failed.
+ *
  * Patterns used: two-stage structuring (durability), modeBoundary (gate), sub-workflow
- *   nesting (one level only). Reviewer gating + fix-loops are delegated to the nested
- *   engines — NOT reimplemented here.
+ *   nesting (one level only), adversarialVerify (Phase 4). Per-phase reviewer gating + fix-loops
+ *   are delegated to the nested engines — NOT reimplemented here; Phase 4 is the whole-diff pass on top.
  *
  * Durability design (see workflow-authoring-spec.md §16):
  *   - Plan stage: implementation-planner, NO schema. Writes the plan artifact (with an
@@ -27,7 +32,8 @@
  * Four-constraints checklist:
  *   [x] No FS/shell access in script body (planner writes the artifact; nested git merges = Opus)
  *   [x] Mode D triggers early return before the Execute phase / nested engine spawns
- *   [x] All reviewer agents use edit-less agentType (transitively, inside nested engines)
+ *   [x] All reviewer agents use edit-less agentType (nested engines + Phase 4 senior-code-reviewer)
+ *   [x] Phase 4 verify skeptics are read-only; they read the diff via git, never EnterWorktree
  *   [x] No Date.now() / Math.random() / new Date() in script body
  *   [x] meta is a pure literal object
  *   [x] phase() titles match meta.phases exactly
@@ -44,6 +50,7 @@ export const meta = {
     { title: 'Plan' },
     { title: 'Structure plan' },
     { title: 'Execute' },
+    { title: 'Verify' },
   ],
   whenToUse: 'A raw feature request that has no PRD/contract yet and plausibly fits single-pass capacity (≤13 pts, ≤3 waves, no auth/payments/migrations/deletion, no research unknowns). Invoke via /dev:autopilot. For clearly large/risky work, use /plan:explore or /plan:plan-feature directly.',
 }
@@ -78,6 +85,34 @@ const AUTOPILOT_PLAN_SCHEMA = {
     // The ExecutionGraph for execute-plan (waves[]), or a minimal object for execute-contract.
     execution_graph: { type: 'object' },
     escalation_recommendation: { type: 'string' },
+  },
+}
+
+// Post-execution claims-vs-code verify (Phase 4). Each skeptic returns this.
+// adversarialVerify precedent: workflow-patterns.md §adversarialVerify + explore.js Phase 3.
+const VERIFY_FINDINGS_SCHEMA = {
+  type: 'object',
+  required: ['verified', 'findings'],
+  additionalProperties: false,
+  properties: {
+    // true = the diff faithfully implements the plan's claims with no unresolved defect.
+    verified: { type: 'boolean' },
+    summary: { type: 'string' },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['severity', 'summary'],
+        additionalProperties: false,
+        properties: {
+          severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
+          summary: { type: 'string' },
+          claim: { type: 'string' },          // the plan/contract claim this challenges
+          code_location: { type: 'string' },  // file:line or symbol the defect lives at
+          mismatch: { type: 'string' },        // how the code diverges from the claim / the bug
+        },
+      },
+    },
   },
 }
 
@@ -226,6 +261,76 @@ STEPS:
    single_pass_feasible=false and escalation_recommendation explaining the miss.
 
 Do NOT edit any files. Read only. Do NOT git add/commit/push/stash.`
+}
+
+/**
+ * Verify stage (Phase 4 — adversarial claims-vs-code skeptic, edit-less senior-code-reviewer).
+ *
+ * Runs ONLY after the nested engine returns status:complete. The nested engines already ran a
+ * per-phase reviewer + fix-loop ("phase validators green"); this is the whole-diff pass that green
+ * per-phase validators demonstrably miss. Codified lesson (workflow-authoring-spec.md): a checklist
+ * validator rationalizes real bugs a code-tracing adversarial reviewer catches — and two autopilot
+ * AARs (cc-item-display-iteration-v2 + the cascade-revert/refresh-gap run) hit that exact miss.
+ *
+ * Harness note: background Workflow agents IGNORE EnterWorktree — the skeptic reads the finished
+ * work through git in the current working tree, never by switching worktrees.
+ */
+function verifyPrompt(parsed, plan) {
+  const artifact = plan.plan_artifact_path || '(the plan/contract artifact written this run)'
+  return `Mode: E — Reviewer (read-only adversarial verify; NO edits, NO git writes)
+
+An autopilot run just reported its nested engine COMPLETE with all per-phase validators green. That
+is necessary but NOT sufficient: per-phase checklist validators have repeatedly rationalized real
+defects (data-corruption and state-refresh bugs) that only a whole-diff, code-tracing pass catches.
+You are that pass. Be adversarial: assume the "green" result is hiding a defect until you prove otherwise.
+
+STEPS:
+1. Get the finished work via git IN THE CURRENT WORKING TREE (do NOT use EnterWorktree — background
+   workflow agents ignore it):
+     - \`git log --oneline -20\` to see this run's commits.
+     - \`git diff \$(git merge-base HEAD @{upstream} 2>/dev/null || git merge-base HEAD main)..HEAD\`
+       to see the full net diff. If that base resolution fails, diff against the earliest commit that
+       is clearly part of this run (inspect the log). Read the actual changed files as needed.
+2. Read the plan/contract artifact at: ${artifact}
+   Extract every concrete CLAIM / acceptance criterion it makes about behavior.
+3. Trace each claim to the actual diff. For each, decide: does the code REALLY do what is claimed?
+   Prioritize these two recurring failure classes (the ones prior AARs caught):
+     (a) DATA-INTEGRITY / STATE-MUTATION bugs — e.g. a revert/undo/cascade that overwrites or wipes
+         unrelated rows/fields; a write that clobbers concurrent state; an off-by-one on a batch.
+     (b) REFRESH / REFLECTION gaps — the mutation succeeds but the UI, cache, query, or derived state
+         is NOT refreshed/invalidated, so the change is invisible or stale to the next read.
+   Also flag: claims with no supporting code, error/empty paths left unhandled, and swallowed failures.
+4. Return VERIFY_FINDINGS_SCHEMA:
+     - verified: true ONLY if you traced the claims and found no critical/high defect.
+     - findings: one entry per real defect. Set severity honestly (critical = data loss / correctness
+       break / security; high = a claimed behavior is broken or a refresh gap makes it non-functional;
+       medium/low = smells worth noting). Include claim, code_location (file:line), and mismatch.
+   Do NOT invent findings to look thorough; an empty findings array with verified:true is the right
+   answer for a genuinely clean diff.
+
+Request under review:
+=== REQUEST ===
+${parsed.request}
+=== END REQUEST ===
+
+Do NOT edit any files. Read only. Do NOT git add/commit/push/stash.`
+}
+
+// ─── verify-gate decision (pure) ──────────────────────────────────────────────
+// Conservative bias (correctness over speed): downgrade on ANY confirmed critical, or when ≥2
+// independent skeptics each raise a high-severity finding. Returns {failed, findings}.
+function evaluateVerify(verdicts) {
+  const findings = []
+  let anyCritical = false
+  let highVoters = 0
+  for (const v of verdicts) {
+    if (!v || !Array.isArray(v.findings)) continue
+    const sevs = v.findings.map(f => f && f.severity)
+    if (sevs.includes('critical')) anyCritical = true
+    if (sevs.includes('high')) highVoters += 1
+    findings.push(...v.findings.filter(Boolean))
+  }
+  return { failed: anyCritical || highVoters >= 2, findings }
 }
 
 // ─── nested-engine arg builders (pure — timestamp threaded from args) ─────────
@@ -441,6 +546,54 @@ const result = {
 if (childReport.reason) result.reason = childReport.reason
 if (childReport.blocked_phase) result.blocked_phase = childReport.blocked_phase
 if (childReport.hitl_tasks) result.hitl_tasks = childReport.hitl_tasks
+
+// ── Phase 4: Verify (post-execution adversarial claims-vs-code gate) ─────────
+// Only meaningful when the nested engine reported complete. A non-complete result is already
+// Opus's to own, so we leave it untouched. This gate turns "green per-phase" into "green diff".
+if (result.status === 'complete') {
+  phase('Verify')
+  const VERIFY_FLOOR = 40000
+  if (budget && budget.total && budget.remaining() < VERIFY_FLOOR) {
+    // No silent caps: announce the skip so a buggy-but-green run is not mistaken for verified.
+    log(`WARNING: skipping post-workflow verify — budget remaining (${Math.round(budget.remaining() / 1000)}k) below floor (${VERIFY_FLOOR / 1000}k). Opus MUST run an adversarial claims-vs-code pass before merging.`)
+    result.autopilot.post_verify = 'skipped_budget'
+  } else {
+    log('Post-workflow adversarial verify: 2 skeptics tracing plan claims against the finished diff.')
+    const verdicts = (await parallel(
+      [0, 1].map(i => () =>
+        agent(verifyPrompt(parsed, plan), {
+          label: `verify-skeptic-${i}`,
+          phase: 'Verify',
+          agentType: 'senior-code-reviewer',
+          model: 'sonnet',
+          schema: VERIFY_FINDINGS_SCHEMA,
+        })
+      )
+    )).filter(Boolean)
+
+    if (verdicts.length === 0) {
+      // Both skeptics failed to return — treat as unverified, not as a pass.
+      log('WARNING: post-workflow verify produced no verdicts — escalating to Opus for manual verification.')
+      result.status = 'needs_opus'
+      result.reason = 'post_verify_failed'
+      result.verify_findings = []
+      result.autopilot.post_verify = 'inconclusive'
+    } else {
+      const { failed, findings } = evaluateVerify(verdicts)
+      if (failed) {
+        log(`Post-workflow verify FAILED: ${findings.length} finding(s), including confirmed critical/high defects. Downgrading complete → needs_opus.`)
+        result.status = 'needs_opus'
+        result.reason = 'post_verify_failed'
+        result.verify_findings = findings
+        result.autopilot.post_verify = 'failed'
+      } else {
+        log(`Post-workflow verify PASSED (${findings.length} advisory finding(s), none critical/high).`)
+        result.verify_findings = findings
+        result.autopilot.post_verify = 'passed'
+      }
+    }
+  }
+}
 
 log(`Autopilot complete — nested ${plan.execution_target} returned status: ${result.status}.`)
 return result
