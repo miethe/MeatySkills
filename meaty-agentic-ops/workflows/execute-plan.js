@@ -76,6 +76,14 @@ const VERDICT_SCHEMA = {
       enum: ['task-completion-validator', 'karen', 'council-review', 'code-reviewer', 'senior-code-reviewer'],
     },
     required_fixes: { type: 'array', items: { type: 'string' } },
+    // Gate-tiering v4.1: the defect class this round found, so fixLoop can apply the
+    // same-class stop rule (execution-doctrine.md rule 1). Two consecutive rounds
+    // surfacing the SAME class means the shape is wrong — the next action is a design
+    // change, not a third review. Reviewers set this on any non-approving verdict.
+    // Free-form but must be a stable label (e.g. 'fail-open-default',
+    // 'unguarded-sibling-callsite', 'missing-ac-coverage'), not a restatement of the
+    // individual finding — class identity is what the rule tests.
+    defect_class: { type: 'string' },
     council_artifacts: {
       type: 'object',
       properties: {
@@ -95,15 +103,29 @@ const VERDICT_SCHEMA = {
 // Pattern: councilEscalation — reviewer agentType routing per authoring-spec §8.
 // ---------------------------------------------------------------------------
 
-// Reviewer routing is driven PURELY by the per-phase review_intensity field
-// (schema default 'standard'), NOT by plan tier. The previous `tier === 3 → karen`
-// rule fired on every tier-3 phase and silently overrode the per-phase 'standard'
-// default — making karen (opus) the reviewer for all phases of a tier-3 plan
-// regardless of intent. Opus pre-flight now sets review_intensity:'tier3' only on
-// milestone phases (e.g. end-of-feature, security cutover); everything else stays
-// 'standard' → task-completion-validator. `tier` is retained for signature
-// compatibility but no longer changes the default.
+// Reviewer routing is driven PURELY by per-phase fields, NEVER by plan tier. The
+// previous `tier === 3 → karen` rule fired on every tier-3 phase and silently
+// overrode the per-phase 'standard' default — making karen (opus) the reviewer for
+// all phases of a tier-3 plan regardless of intent. `tier` is retained for signature
+// compatibility but does not change the default.
+//
+// Gate-tiering v4.1: `gate_lens` wins over `review_intensity`. The plan-optimizer
+// pass (dev-execution/modes/plan-optimization.md) risk-classes each phase and writes
+// gate_lens per references/gate-risk-classes.md §2 — one lens by default, a second
+// only when the phase matches a named trigger (untrusted-input / authz-boundary /
+// irreversible-outward). Until this branch existed, gate_lens was written and never
+// read, so a phase over an R1–R9 surface could silently get only
+// task-completion-validator — which in the grounding retro approved a critical
+// authorization bypass twice. Reading gate_lens here is what makes the ruleset's
+// "security is non-removable" invariant real rather than documentary.
+//
+// Order matters: security is the non-removable lens, so it is checked first and no
+// later branch can displace it.
 function councilEscalation(p, _tier) {
+  const lenses = Array.isArray(p.gate_lens) ? p.gate_lens : []
+  if (lenses.includes('security')) return 'council-review'
+  if (lenses.includes('karen') || lenses.includes('karen-final-tree-only')) return 'karen'
+
   if (p.review_intensity === 'council') return 'council-review'
   if (p.review_intensity === 'tier3') return 'karen'
   return 'task-completion-validator'
@@ -403,6 +425,12 @@ Explore the plan, implement the phase tasks with appropriate file-ownership batc
 async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
   let verdict = initialVerdict
   let cycles = 0
+  // Gate-tiering v4.1 (execution-doctrine.md rule 1, same-class stop rule): the class
+  // the PREVIOUS round found. If a round repeats it, the shape is wrong and the next
+  // action is a design change, not another review — so we exit needs_redesign instead
+  // of spending the remaining budget cycle rediscovering the same class one layer down.
+  let priorDefectClass = initialVerdict?.defect_class ?? null
+  let sameClassRepeat = null
 
   while (!verdict?.approved && cycles < 2 && budget.remaining() > 60_000) {
     const cycleLabel = `Fix cycle ${cycles + 1}`
@@ -486,6 +514,19 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
     })
 
     cycles++
+
+    // Same-class stop rule. Only fires on a non-approving verdict that names a class
+    // matching the previous round's. An absent defect_class never triggers it (we do
+    // not guess), and two rounds finding DIFFERENT classes is normal review progress.
+    if (!verdict?.approved && verdict?.defect_class && priorDefectClass &&
+        verdict.defect_class === priorDefectClass) {
+      sameClassRepeat = verdict.defect_class
+      log(`Same-class stop rule: phase ${p.id} surfaced defect class '${sameClassRepeat}' in two consecutive rounds after ${cycles} fix cycle(s). Halting the fix loop — the next action is a design change (surface reduction / choke point), not another review. See dev-execution/references/gate-risk-classes.md §3b.`)
+      break
+    }
+    if (!verdict?.approved && verdict?.defect_class) {
+      priorDefectClass = verdict.defect_class
+    }
   }
 
   return {
@@ -493,11 +534,19 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
     tasks: taskOut,
     verdict: verdict ?? { approved: false, reviewer_type: reviewerType },
     fix_cycles: cycles,
+    // Set only when the loop exited via the same-class stop rule. Opus reads this to
+    // route to redesign rather than adjudicating another review pass.
+    needs_redesign: sameClassRepeat ? { defect_class: sameClassRepeat, rounds: cycles } : null,
     escalate: !verdict?.approved,
     files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
     blockers: verdict?.approved
       ? []
-      : [{ description: 'Reviewer did not approve after fix-loop cycles.', resolution_hint: 'Opus adjudication required.' }],
+      : sameClassRepeat
+        ? [{
+            description: `Defect class '${sameClassRepeat}' recurred across two consecutive review rounds on phase ${p.id}.`,
+            resolution_hint: 'Do NOT re-review. Make a design change: render the unsafe state unrepresentable, or route every caller through one choke point, then re-enter the gate against the new shape (budget resets — the scope changed). See dev-execution/references/gate-risk-classes.md §3b.',
+          }]
+        : [{ description: 'Reviewer did not approve after fix-loop cycles.', resolution_hint: 'Opus adjudication required.' }],
   }
 }
 
