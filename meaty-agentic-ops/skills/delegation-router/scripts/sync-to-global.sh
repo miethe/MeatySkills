@@ -109,24 +109,45 @@ echo "  dest  config : ${DEST_CONFIG_DIR} (model-registry.{yaml,generated.json})
 echo
 
 # --- Prepare destinations ---
-mkdir -p "${DEST_SKILL_DIR}"
 mkdir -p "${DEST_CONFIG_DIR}"
 
-# --- Copy engine files ---
-for f in "${SKILL_FILES[@]}"; do
-  cp -f "${SRC_SKILL_DIR}/${f}" "${DEST_SKILL_DIR}/${f}"
-  echo "  copied  ${f}"
-done
+# Is the global skill dir a SYMLINK back to this source dir? Since the 2026-07-30
+# globals-symlinking pass, ~/.claude/skills/delegation-router is a symlink to this repo,
+# so the code copy below is a no-op BY CONSTRUCTION — and worse, BSD `cp -f src dst`
+# where both resolve to the same inode FAILS with "are identical (not copied)". Under
+# `set -e` that aborted the script at the very first file, silently skipping the
+# registry deploy further down. Net effect: ~/.claude/config/model-registry.yaml froze
+# on 2026-07-29 while the resolver kept reading it. Detect and skip instead of dying.
+# (Found + fixed 2026-07-31 while deploying the ICA Opus 5 registry change.)
+SKIP_CODE_COPY=0
+if [[ -L "${DEST_SKILL_DIR}" ]]; then
+  DEST_REAL="$(cd "${DEST_SKILL_DIR}" 2>/dev/null && pwd -P || true)"
+  if [[ -n "${DEST_REAL}" && "${DEST_REAL}" == "$(cd "${SRC_SKILL_DIR}" && pwd -P)" ]]; then
+    SKIP_CODE_COPY=1
+  fi
+fi
 
-# --- Copy engine dirs (replace contents to avoid stale leftovers) ---
-for d in "${SKILL_DIRS[@]}"; do
-  rm -rf "${DEST_SKILL_DIR:?}/${d}"
-  mkdir -p "${DEST_SKILL_DIR}/${d}"
-  # Copy directory contents (skip any nested node_modules just in case).
-  cp -R "${SRC_SKILL_DIR}/${d}/." "${DEST_SKILL_DIR}/${d}/"
-  rm -rf "${DEST_SKILL_DIR}/${d}/node_modules"
-  echo "  copied  ${d}/"
-done
+if [[ "${SKIP_CODE_COPY}" == "1" ]]; then
+  echo "  dest skill dir is a SYMLINK to the source — code already live, skipping code copy"
+else
+  mkdir -p "${DEST_SKILL_DIR}"
+
+  # --- Copy engine files ---
+  for f in "${SKILL_FILES[@]}"; do
+    cp -f "${SRC_SKILL_DIR}/${f}" "${DEST_SKILL_DIR}/${f}"
+    echo "  copied  ${f}"
+  done
+
+  # --- Copy engine dirs (replace contents to avoid stale leftovers) ---
+  for d in "${SKILL_DIRS[@]}"; do
+    rm -rf "${DEST_SKILL_DIR:?}/${d}"
+    mkdir -p "${DEST_SKILL_DIR}/${d}"
+    # Copy directory contents (skip any nested node_modules just in case).
+    cp -R "${SRC_SKILL_DIR}/${d}/." "${DEST_SKILL_DIR}/${d}/"
+    rm -rf "${DEST_SKILL_DIR}/${d}/node_modules"
+    echo "  copied  ${d}/"
+  done
+fi
 
 # --- Deploy the tracked registry to the global config dir + regenerate JSON ---
 if [[ -f "${SRC_REGISTRY_YAML}" ]]; then

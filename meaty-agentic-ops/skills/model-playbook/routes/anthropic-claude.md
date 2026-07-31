@@ -1,24 +1,40 @@
 # Route — Anthropic Claude
 
 Loaded only when the routed model is a Claude family member. Source: `model-registry.yaml`
-`models:` block (fields verified against the registry, updated 2026-07-27).
+`models:` block (fields verified against the registry, updated 2026-07-31 — ICA Opus 5 lane
+verified live on that date).
 
 ## claude-opus-5
 
 - **When to pick:** the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final
   synthesis, architecture, mode-d, schema-recovery, cross-wave merge, deep-reasoning,
   novel-algorithm-design. Current flagship as of 2026-07-24, supersedes claude-opus-4-8.
-- **Invocation lane:** `claude/claude-opus-5` (primary, billed, $5/$25 per M). ICA lane
-  `ica/claude-opus-5[1m]` is **disabled** — re-probed 2026-07-27 (both keys), still absent from
-  the gateway's model list. Do not attempt it; the ICA spine-offload fallback is
-  `ica/claude-opus-4-8[1m]` (see legacy note below).
+- **Invocation lane:** `claude/claude-opus-5` (primary, billed, $5/$25 per M). ICA offload:
+  `ica/claude-opus-5[1m]` is **enabled** (priority 2) and is now **the** ICA spine-offload lane —
+  verified servable 2026-07-31 (raw `/chat/completions` + the `~/ica-claude.sh` Claude Code
+  executor path, both with a unique nonce). `allowance: shared_token_pool` — token-limited,
+  **NOT free**. 1M context on the `[1m]` id (plain `claude-opus-5` caps at 200k), but
+  `maxOutputTokens` is **64000** on the ICA lane vs the 128K first-party ceiling — plan long
+  outputs accordingly. `ica/claude-opus-4-8[1m]` is now the offload *fallback* (see legacy note
+  below). MUST-stay-primary classes (`orchestration`, `mode_d`) still route to
+  `claude/claude-opus-5` — ICA availability does not make it legal to move them off the
+  subscription; the ICA lane is an explicit opt-in offload for bounded work behind a reviewer gate.
 - **Effort/context:** 1M context, 128K max output, adaptive thinking; effort defaults to `high`
   on the Claude API/Claude Code — set explicitly to change. New tokenizer (~30% more tokens than
   Opus 4.8/Sonnet 4.6 for the same text — same family as Sonnet 5+).
 - **Gotchas:** knowledge cutoff May 2026; trails Fable 5 on taste/quality but surpasses Opus 4.8
   (>2x Opus 4.8's agentic performance at the same price point per Anthropic).
+- **ICA lane capabilities (probed 2026-07-31):** adaptive thinking via `output_config.effort`
+  **works** (`thinking` block + `usage.output_tokens_details.thinking_tokens` returned), and the
+  legacy `thinking.type: "enabled"` form **also works** — a divergence from
+  `claude-sonnet-5[1m]`, where the legacy form 400s. Tool use works both via Claude Code and raw
+  `/v1/messages` (content `['thinking','tool_use']`, `stop_reason: tool_use`).
+  `output_config.format` (json_schema structured output) **is honored** — Opus 5 does not share
+  Sonnet 5's silently-dropped-`format` gap. Note the `[1m]` suffix is a Claude Code client-side
+  hint: raw transports must send the plain id (see `routes/ica-lanes.md`).
 - **Anti-patterns:** don't use for mechanical/bulk fan-out — route that to Haiku or a free ICA
-  lane instead. Don't assume ICA availability; it is confirmed absent as of the 2026-07-27 probe.
+  lane instead. Don't route MUST-stay classes (`orchestration`, `mode_d`) to the ICA lane just
+  because it exists.
 
 ## claude-fable-5
 
@@ -89,9 +105,10 @@ Loaded only when the routed model is a Claude family member. Source: `model-regi
 ## claude-opus-4-8
 
 LEGACY as of 2026-07-24 (superseded by opus-5 as spine), same $5/$25 per M pricing. Still
-selectable and remains the **enabled** ICA spine-offload fallback lane: `ica/claude-opus-4-8[1m]`
-(opus-5's ICA lane is unconfirmed/disabled — see above). Use when you need Opus-class reasoning
-on the free/shared ICA pool.
+selectable and its ICA lane `ica/claude-opus-4-8[1m]` remains **enabled** — but as of 2026-07-31
+it is the spine-offload **fallback**, behind the now-verified `ica/claude-opus-5[1m]` (see above).
+Still genuinely useful: 4.8 has the older/lighter tokenizer, which can win for bounded
+high-volume fan-out on a metered shared pool.
 
 ## claude-opus-4-7
 
@@ -112,9 +129,13 @@ unavailable.
 ## Do Not Say
 
 - Do not say ICA Opus/Sonnet lanes are free — `allowance: shared_token_pool`, an opt-in
-  cost-shift, not `unlimited`.
-- Do not say `claude-opus-5` is available via ICA — re-probed 2026-07-27, still absent from the
-  gateway's model list.
+  cost-shift, not `unlimited`. This includes `ica/claude-opus-5[1m]`.
+- Do not say `claude-opus-5` is unavailable via ICA — that was true through the 2026-07-27 probe
+  but is **stale**: it is present on the gateway model list and fully servable as of 2026-07-31.
+- Do not say the ICA gateway drops `output_config.format` universally — that gap is observed on
+  the Claude Sonnet 5 lane; on `claude-opus-5[1m]` `format` is honored.
+- Do not say ICA Opus 5 availability permits routing MUST-stay-primary classes
+  (`orchestration`, `mode_d`) off `claude/claude-opus-5`.
 
 **Full transport mechanics:** for Claude API params/pricing/tool-use detail see the `claude-api`
 skill; for ICA transport flags see `routes/ica-lanes.md` + `~/.claude/skills/ica-delegate/SKILL.md`.

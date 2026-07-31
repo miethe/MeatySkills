@@ -10,13 +10,35 @@ For ICA-served Claude Opus/Sonnet **and** ICA-served Gemini, **always** use the 
 shared pool, same cost tier, strictly larger context window, no downside. The gateway silently
 caps the plain id at 200k even for models natively 1M (Sonnet 5, Gemini 3.x). **Not** needed on
 native `gemini-cli` (already 1M without a suffix) or GPT (served at its native window).
-`claude-opus-4-8` on ICA is `[1m]`-only (no plain lane exists).
+`claude-opus-4-8` on ICA is `[1m]`-only (no plain lane exists) — don't generalize that to every
+Opus: `claude-opus-5` has **both** a plain lane (200k) and a `[1m]` lane (1M), so the `[1m]`-first
+rule is what picks the right one there.
 
+- ⚠️ **`[1m]` is a Claude Code CLIENT-SIDE hint, not a real gateway model id.** Raw transports
+  (`/v1/messages`, `/chat/completions`) must send the **plain** id. Sending
+  `claude-opus-5[1m]` to `/v1/messages` returns HTTP **403 `team_model_access_denied`** — *"team
+  not allowed to access model. This team can only access models=['global-models']"*. That message
+  reads like "no access to this model at all," but the real cause is the suffix: drop `[1m]` and
+  the same call succeeds. Applies to every `[1m]` id on a raw transport, not just Opus 5.
 - ⚠️ **Keep the `claude-` prefix.** Bare `sonnet-5[1m]` **401s** — the gateway strips `[1m]`,
   leaving the un-prefixed `sonnet-5` which is not in the `global-models` group. Always write
   `claude-sonnet-5[1m]`.
 - ⚠️ **Quote it in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts with `no matches found`
   and nothing runs. Always `--model 'claude-sonnet-5[1m]'`.
+
+## Which ICA Opus — `opus-5[1m]` first, `opus-4-8[1m]` as fallback
+
+`claude-opus-5[1m]` is the **preferred** ICA Opus and the ICA spine-offload lane, verified
+servable 2026-07-31 (raw `/chat/completions` and the `~/ica-claude.sh` executor path, unique
+nonce; the executor run kept its fallback chain, so servability was confirmed the sound way — by
+reading `modelUsage."claude-opus-5[1m]"` back and seeing real tokens billed against *that* id
+rather than trusting a bare exit code). Thinking (both `output_config.effort` and the legacy `thinking.type:
+"enabled"` form), tool use, and `output_config.format` all work on it. `maxOutputTokens` on this
+lane is **64000**, below the 128K first-party ceiling — plan long outputs accordingly.
+`claude-opus-4-8[1m]` stays enabled as the **fallback**: its older/lighter tokenizer can still win
+for bounded high-volume fan-out on a metered pool. Both are `shared_token_pool`, not free, and
+neither is a licence to move MUST-stay-primary classes off `claude/claude-opus-5` — see
+`routes/anthropic-claude.md`.
 
 ## Free-4 vs shared_token_pool — the only genuinely free lane
 
@@ -69,8 +91,9 @@ and the model completes with server-default effort.
 
 `output_config.format` (schema-constrained JSON) is silently **dropped** by the ICA gateway on
 the Claude Sonnet 5 lane — `effort` passes through, `format` does not — so you get prose, not
-schema JSON. Use a forced **tool-call** for structured output on any ICA lane; never rely on
-`output_config.format` there.
+schema JSON. This is **lane-specific, not gateway-wide**: on `claude-opus-5[1m]` `format` **is**
+honored (probed 2026-07-31, returned pure schema JSON). On any lane where you haven't confirmed
+`format` passes through, use a forced **tool-call** for structured output instead.
 
 ## Do Not Say
 
@@ -78,6 +101,8 @@ schema JSON. Use a forced **tool-call** for structured output on any ICA lane; n
   `shared_token_pool`.
 - Do not say fallback models make probing safe — they hide failures; disable `--fallback-model`
   for any validation run.
+- Do not read a 403 `team_model_access_denied` as "no access to this model" without first
+  checking for a `[1m]` suffix on a raw-transport call — the suffix alone produces that error.
 
 **Full transport mechanics:** flags, key rotation, exhaustion handling, `--bare` context
 injection — `~/.claude/skills/ica-delegate/SKILL.md`.
