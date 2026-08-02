@@ -13,7 +13,7 @@ commit SHAs.
 
 | Where | Identifier |
 |---|---|
-| SkillMeat enterprise bundle | **`aos-workflow-set`** version **`4.1.0`** — ⚠️ **not yet cut** (registry holds `3.5.0`); see [Remaining](#remaining--the-enterprise-bundle) |
+| SkillMeat enterprise bundle | **`aos-workflow-set-v4.1`** version **`4.1.0`**, 33 members, nuc enterprise (`b017065f-39da-41f3-96fc-6292ff8fb63d`) — name carries the set label, see [why](#why-the-bundle-name-carries-the-set-label) |
 | Git tag | **`workflow-set-v4.1`** (this repo, on the snapshot commit) |
 | Snapshot directory | `meaty-agentic-ops/workflow-sets/v4.1/` (here) |
 | Launchpad source ref | `agentic_meta_dev` `main` @ `46cd8ac` |
@@ -83,18 +83,40 @@ depends_on:
 ## Restore / deploy v4.1
 
 ```bash
-# straight from the frozen copies
-cp -R artifacts/skill/dev-execution ~/.claude/skills/dev-execution
+# from the enterprise registry
+skillmeat bundle deploy aos-workflow-set-v4.1
 
-# from the enterprise registry — once the 4.1.0 bundle is cut (see below)
-skillmeat bundle deploy aos-workflow-set --version 4.1.0
+# or straight from the frozen copies
+cp -R artifacts/skill/dev-execution ~/.claude/skills/dev-execution
 ```
 
 Run `verify` first if the frozen copies have been sitting a while.
 
-## Remaining — the enterprise bundle
+## Why the bundle name carries the set label
 
-Two of the contract's three artifacts exist (this directory + the git tag). The third — enterprise
-bundle `aos-workflow-set` `4.1.0` — has **not** been cut; the registry still holds `3.5.0` only.
-Membership is already decided (the 33 ids in `MANIFEST.yaml`), so cutting it is a registry
-operation, not a design one. Run enterprise writes **on the node**.
+Spec §5 step 4 says to cut bundle `aos-workflow-set` at version `4.1.0`. **That instruction is not
+implementable as written**, and following it literally would have destroyed the v3.5 rollback path
+that §5 step 5 requires.
+
+In SkillMeat (enterprise 0.73.0) a bundle **name holds exactly one mutable version**:
+
+- `bundle version <name> <semver>` *sets* the named bundle's version — it does not add one.
+- `bundle show <name>` and `bundle deploy <name>` take **no `--version` flag**.
+
+So there is no bundle version history. Bumping `aos-workflow-set` from `3.5.0` to `4.1.0` would have
+replaced the only registry entry for the v3.5 set, contradicting §5 step 5's rollback contract
+("older sets stay deployable for other users and legacy-generation models").
+
+Resolution: **one bundle per set version**, with the label in the name.
+`aos-workflow-set` stays at `3.5.0`; `aos-workflow-set-v4.1` carries `4.1.0`. Both are deployable
+side by side, which is what the contract actually wants.
+
+⚠️ **The documented rollback command is wrong.** Spec §5 step 5 and `../v3.5/README.md` both print:
+
+```bash
+skillmeat bundle deploy aos-workflow-set --version 3.5.0   # ← --version is not a real flag
+```
+
+`bundle deploy` has no `--version`; that invocation errors. The working equivalents are
+`skillmeat bundle deploy aos-workflow-set` (currently 3.5.0) or a copy from `../v3.5/artifacts/`.
+Fixing the spec + the v3.5 README is tracked separately — this README does not restate the fix.
