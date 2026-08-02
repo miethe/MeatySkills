@@ -22,6 +22,7 @@ whole-repo pointer; the directory gives discoverability. We keep both.
 |---|---|
 | `make-snapshot.py` | The generator — `build <label>` freezes a set, `verify <label>` re-hashes it. |
 | `v3.5/` | The pre-Claude-5-gen baseline (2026-07-30). See its README. |
+| `v4.1/` | The current set — Claude-5-gen doctrine + gate tiering (2026-08-02). See its README. |
 
 ## Snapshotting a set
 
@@ -43,6 +44,10 @@ hashes, not in the bundle. `verify` re-hashes the frozen copies and fails on any
 The member list and the deliberate exclusions live in `make-snapshot.py` (`MEMBERS`,
 `EXCLUSIONS`). Editing that list is how the set's boundary changes; the manifest records the
 result so each version's scope is explicit and diffable against the next.
+
+Each label also needs a `SET_META` row — the one-line generation label that goes into the
+manifest's `doctrine_status`. `build` **refuses** an unknown label rather than inheriting the
+previous set's status; pass `--doctrine-status` for a one-off.
 
 ## The three artifacts of a snapshot
 

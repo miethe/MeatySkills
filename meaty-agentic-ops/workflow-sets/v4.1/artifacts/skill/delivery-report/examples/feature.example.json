@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "report": {
+    "route": "feature",
+    "title": "Rich feature completion reports",
+    "project": "agentic-meta-dev",
+    "truth_status": "verified",
+    "generated_by": "delivery-report 0.1.0",
+    "generated_at": "2026-07-23T19:00:00Z",
+    "scope_note": "Example feature-route report for the delivery-report skill itself.",
+    "constraints": "The report presents evidence; git, tests, reviewer gates, and deployment receipts establish completion. Never mark owner-held validation as passed."
+  },
+  "report_policy": {
+    "tier_system": "dev-execution",
+    "tier": 2,
+    "estimated_points": 8,
+    "explicit_request": true,
+    "required": true,
+    "signals": ["visible", "cross_component", "material_findings"]
+  },
+  "executive_summary": "Completed features can now ship with a durable visual report that explains the delivered behavior, practical value, validation evidence, and residual limitations in plain English. The report source remains structured and auditable, while the generated HTML is portable, self-contained, and theme-aware. This example is verified against the bundled renderer and tests.",
+  "problem": "Feature closeouts were split across plans, diffs, test logs, and agent summaries, making it expensive for a stakeholder to understand what changed and why it matters.",
+  "solution": "The delivery-report skill introduces one evidence-linked manifest and a deterministic renderer that combines narrative, findings, validation, screenshots or illustrations, and small native graphics into one offline HTML artifact.",
+  "value_adds": [
+    {
+      "title": "Faster stakeholder comprehension",
+      "detail": "Readers get the outcome and value before implementation detail, without reconstructing the feature from engineering artifacts.",
+      "beneficiary": "Product, operations, and future maintainers",
+      "domains": ["UI", "Validation"],
+      "evidence_refs": ["spec", "smoke"]
+    },
+    {
+      "title": "Truthful, portable evidence",
+      "detail": "The HTML embeds local media and preserves exact validation and residual-state labels while remaining usable offline in both light and dark themes.",
+      "beneficiary": "Reviewers and project owners",
+      "evidence_refs": ["smoke", "renderer"]
+    }
+  ],
+  "changes": [
+    {
+      "area": "Completion workflow",
+      "plain_english": "Large completed features now have a standard rich report at closeout.",
+      "technical_detail": "Tier eligibility and the report path are integrated into the dev-execution completion contract.",
+      "evidence_refs": ["completion-contract"]
+    },
+    {
+      "area": "Portable presentation",
+      "plain_english": "Screenshots, illustrations, metrics, and architecture flows travel inside one HTML file.",
+      "technical_detail": "Media is encoded as data URIs and declarative graphics are rendered as inline SVG; a four-block token system makes both themes first-class.",
+      "evidence_refs": ["renderer", "smoke"]
+    }
+  ],
+  "key_points": [
+    "The source manifest is canonical; HTML is derived.",
+    "Rendering never calls a model or the network.",
+    "A rendered report does not replace tests, reviewer approval, or deployment receipts."
+  ],
+  "findings": [
+    {
+      "title": "Visual evidence needs an explicit truth boundary",
+      "detail": "Generated illustrations can explain architecture but must not be presented as product screenshots.",
+      "impact": "The manifest separates screenshot and illustration media types, requires captions, and records the generating provider.",
+      "status": "resolved",
+      "domains": ["UI"],
+      "evidence_refs": ["visual-guide"]
+    }
+  ],
+  "validation": [
+    {
+      "name": "Unit and cross-project smoke tests",
+      "command": "python3 -m pytest tests -q",
+      "result": "Renderer, eligibility, validation, media embedding, and safety checks passed.",
+      "status": "passed",
+      "verified_by": "self",
+      "evidence_ref": "smoke"
+    }
+  ],
+  "metrics": [
+    { "label": "Report routes", "before": 1, "after": 4, "unit": "routes", "direction": "higher", "evidence_ref": "spec" },
+    { "label": "External runtime dependencies", "before": 0, "after": 0, "unit": "dependencies", "direction": "neutral", "evidence_ref": "renderer" }
+  ],
+  "timeline": [
+    { "label": "Evidence locked", "detail": "Completion truth and exact validation results were collected." },
+    { "label": "Report authored", "detail": "Plain-English value, changes, findings, and visuals were linked to evidence." },
+    { "label": "Artifact validated", "detail": "The self-contained HTML passed safety and integrity checks." }
+  ],
+  "diagrams": [
+    {
+      "title": "Completion-report flow",
+      "type": "flow",
+      "caption": "Canonical evidence becomes a structured report manifest and then a portable presentation artifact.",
+      "nodes": [
+        { "id": "evidence", "label": "Evidence", "detail": "Git, tests, reviews" },
+        { "id": "manifest", "label": "Manifest", "detail": "Claims and truth" },
+        { "id": "html", "label": "HTML report", "detail": "Portable presentation" }
+      ],
+      "edges": [
+        { "from": "evidence", "to": "manifest", "label": "author" },
+        { "from": "manifest", "to": "html", "label": "render" }
+      ]
+    }
+  ],
+  "media": [],
+  "no_visual_reason": "This example ships without embedded media so the repository stays lightweight; the diagram above carries the visual explanation.",
+  "risks": [
+    "Reports can become stale if edited after the exact-tree review without revalidation.",
+    "Sensitive screenshots must be redacted before embedding."
+  ],
+  "followups": [
+    {
+      "title": "Wire Artifact Atlas catalog ingestion",
+      "detail": "Attach the generated HTML + manifest to the catalog once the hosting contract ships.",
+      "handoff": {
+        "command": "/plan-feature",
+        "repo": "/Users/miethe/dev/homelab/development/agentic_meta_dev",
+        "paths": ["docs/ARTIFACT-UPSTREAM-REGISTRY.md"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": null,
+        "prompt": "Scope catalog ingestion for delivery-report artifacts: attach the rendered HTML and its canonical manifest through the Artifact Atlas hosting contract when it lands. Keep render offline; ingestion is a separate approved action."
+      }
+    }
+  ],
+  "evidence": [
+    { "id": "spec", "label": "Delivery report capability contract", "kind": "plan", "path": "SPEC.md" },
+    { "id": "renderer", "label": "Deterministic renderer source", "kind": "other", "path": "scripts/delivery_report.py" },
+    { "id": "smoke", "label": "Delivery report test suite", "kind": "test", "path": "tests/test_delivery_report.py" },
+    { "id": "completion-contract", "label": "Dev-execution completion criteria", "kind": "tracker", "path": "references/route-policy.md" },
+    { "id": "visual-guide", "label": "Visual evidence policy", "kind": "other", "path": "references/visual-evidence.md" }
+  ]
+}
