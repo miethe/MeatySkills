@@ -440,6 +440,73 @@ describe('Registry lookup tiers', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Cross-model priority scope (regression: ICA sonnet resolved two gens stale)
+//
+// `priority` ranks lanes WITHIN one model. Comparing it across models lets an
+// ICA-only model win every `--provider ica` request: with no subscription row its
+// ICA lane is priority 1, while a current-gen model's ICA lane is priority 2.
+// Live symptom (2026-08-02): `--model sonnet --provider ica` returned
+// claude-sonnet-4-5[1m]. Both guards below are load-bearing — the comparator
+// fixes the ordering, `auto_select: false` states the intent in machine-readable
+// form so the fix does not silently depend on YAML declaration order.
+// ---------------------------------------------------------------------------
+
+describe('cross-model priority scope', () => {
+  /** baseRegistry + an ICA-ONLY stale sonnet whose ICA lane is priority 1. */
+  function registryWithStaleIcaOnlySonnet(extra = {}) {
+    const reg = baseRegistry();
+    reg.models['claude-sonnet-4-5'] = {
+      family: 'claude', class: 'sonnet', sampling: 'deterministic', status: 'active',
+      providers: [
+        { provider: 'ica', model_id: 'claude-sonnet-4-5', cost_tier: 'standard', allowance: 'shared_token_pool', enabled: true, priority: 1 },
+      ],
+      ...extra,
+    };
+    return reg;
+  }
+
+  test('bare class + explicit ica does NOT pick an ICA-only older model on priority 1', () => {
+    const record = resolveWithRegistry(registryWithStaleIcaOnlySonnet(), {
+      model: 'sonnet', provider: 'ica', task_class: 'implementation',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'ica', 'explicit provider must still be honored');
+    assert.ok(
+      /claude-sonnet-4-6/.test(JSON.stringify(record)),
+      `expected the current-gen sonnet ICA lane, got: ${record.invocation_template}`);
+    assert.ok(
+      !/claude-sonnet-4-5/.test(record.invocation_template || ''),
+      'must not select the ICA-only older lane on a bare class match');
+  });
+
+  test('auto_select:false removes a model from bare class matches', () => {
+    const record = resolveWithRegistry(registryWithStaleIcaOnlySonnet({ auto_select: false }), {
+      model: 'sonnet', provider: 'ica', task_class: 'implementation',
+    });
+    assert.ok(
+      !/claude-sonnet-4-5/.test(record.invocation_template || ''),
+      'auto_select:false must be excluded from a bare class match');
+  });
+
+  test('auto_select:false is still reachable by exact model key (explicit selection)', () => {
+    const record = resolveWithRegistry(registryWithStaleIcaOnlySonnet({ auto_select: false }), {
+      model: 'claude-sonnet-4-5', provider: 'ica', task_class: 'implementation',
+    });
+    assert.ok(
+      /claude-sonnet-4-5/.test(record.invocation_template || ''),
+      `auto_select:false must remain explicitly selectable, got: ${record.invocation_template}`);
+  });
+
+  test('within one model, priority still decides the lane', () => {
+    // haiku's ICA lane is priority 1 and claude's is priority 2 — unchanged behaviour.
+    const record = resolveWithRegistry(baseRegistry(), {
+      model: 'haiku', provider: 'claude', task_class: 'exploration',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'claude',
+      'explicit provider must still select the requested lane within a model');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 

@@ -531,7 +531,11 @@ function matchRegistryModels(registry, model) {
   if (models[model]) return [model];
 
   // 2. class match (e.g. 'haiku' → every model whose class === 'haiku').
-  const byClass = keys.filter(k => (models[k].class || '').toLowerCase() === lower);
+  //    `auto_select: false` marks a fallback-only lane: reachable by exact key or provider
+  //    model_id (both explicit, handled above/below) but never picked by a bare class name.
+  //    Before this flag the constraint lived only in prose descriptors the resolver cannot read.
+  const byClass = keys.filter(k =>
+    (models[k].class || '').toLowerCase() === lower && models[k].auto_select !== false);
 
   // 3. provider model_id exact/prefix match (e.g. 'gpt-5.6-terra', 'bob-local',
   //    'gemini-3.5-flash').
@@ -733,11 +737,25 @@ function resolveFromRegistry(input) {
   const modelKeys = matchRegistryModels(registry, model);
   const modelInstances = enabledInstancesForModels(registry, modelKeys);
 
+  // `priority` is a WITHIN-model rank (which lane to prefer for one model), so it must never
+  // be compared across different models. matchRegistryModels() already returns keys in
+  // preference order (exact key, then class match in registry-declaration order), so that
+  // rank is the cross-model signal and `priority` only breaks ties inside one model.
+  //
+  // Without this, an ICA-only model outranks every current-gen one on a `--provider ica`
+  // request: having no subscription row, its ICA lane is priority 1, while a current-gen
+  // model's ICA lane is priority 2 (priority 1 being its subscription row). That silently
+  // resolved `--model sonnet --provider ica` to claude-sonnet-4-5[1m], two generations stale.
+  const modelKeyRank = new Map(modelKeys.map((k, i) => [k, i]));
+  const byModelThenPriority = (a, b) =>
+    ((modelKeyRank.get(a.modelKey) ?? 99) - (modelKeyRank.get(b.modelKey) ?? 99)) ||
+    (a.priority - b.priority);
+
   if (input.provider && typeof input.provider === 'string') {
     const explicit = modelInstances
       .filter(c => c.providerId === requestedProvider)
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
-      .sort((a, b) => a.priority - b.priority)[0];
+      .sort(byModelThenPriority)[0];
     if (explicit) {
       chosen = explicit;
       selectionReason = `explicit provider='${requestedProvider}' honored for model='${model}'`;

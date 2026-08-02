@@ -202,6 +202,7 @@ models:
     class: sonnet
     descriptor: "Oldest-gen Sonnet still on the ICA gateway (two generations behind Sonnet 5, one behind 4-6). Present as an ICA offload FALLBACK only — prefer claude-sonnet-5 (subscription default) / claude-sonnet-4-6[1m] (older token-efficient offload) first. Surfaced by the 2026-07-27 gateway probe (was absent from the registry); ICA servability VERIFIED 2026-07-27 via ica-claude.sh. Not in any auto routing_policy chain; explicit-selectable only."
     scores: { cost: 8, intelligence: 6, taste: 6, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend. Slightly below 4-6 on intelligence/taste (older gen).
+    auto_select: false   # fallback-only: reachable by exact key / provider model_id, never by a bare `sonnet` class match. Enforces the "explicit-selectable only" clause in the descriptor above, which was prose-only (and therefore unenforced) until 2026-08-02.
     when_to_use: [free-offload, exploration, bounded-implementation]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-sonnet-4-5
     tools: []
