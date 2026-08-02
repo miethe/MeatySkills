@@ -12,7 +12,7 @@ per-member version field — so the reproducible pin lives here: a content hash 
 the source repo commits. `verify` re-hashes a snapshot to prove it has not drifted.
 
 Usage:
-    make-snapshot.py build v3.5 [--launchpad PATH] [--force]
+    make-snapshot.py build v3.5 [--launchpad PATH] [--force] [--doctrine-status TEXT]
     make-snapshot.py verify v3.5
 """
 
@@ -84,6 +84,14 @@ MEMBERS: list[tuple[str, str, str]] = [
     (MS, "meaty-agentic-ops/workflows/explore.js", "orchestration:explore"),
     (MS, "meaty-agentic-ops/workflows/review-council.js", "orchestration:review-council"),
 ]
+
+# Per-label prose that is not derivable from the tree: how a reader who finds this snapshot later
+# should understand the generation it belongs to. Add a row when cutting a new label — an unknown
+# label is a hard error rather than a silent inherit, because the wrong status is worse than none.
+SET_META: dict[str, str] = {
+    "v3.5": "pre-Claude-5-gen baseline",
+    "v4.1": "Claude-5-gen doctrine (§7) plus the gate-tiering amendment (§8) — production set",
+}
 
 # Deliberately out of scope, recorded so the v4 diff baseline has an explicit boundary.
 EXCLUSIONS: list[tuple[str, str]] = [
@@ -179,7 +187,16 @@ def resolve(repo_key: str, launchpad: Path) -> Path:
     return launchpad if repo_key == LP else MEATYSKILLS
 
 
-def build(version: str, launchpad: Path, force: bool) -> int:
+def build(version: str, launchpad: Path, force: bool, doctrine_status: str | None) -> int:
+    status = doctrine_status or SET_META.get(version)
+    if not status:
+        print(
+            f"error: no doctrine_status for label {version!r}. Add it to SET_META or pass "
+            "--doctrine-status; a snapshot must not inherit another set's generation label.",
+            file=sys.stderr,
+        )
+        return 1
+
     outdir = WORKFLOW_SETS / version
     artifacts = outdir / "artifacts"
     if artifacts.exists():
@@ -227,16 +244,17 @@ def build(version: str, launchpad: Path, force: bool) -> int:
         print("error: unresolved members:\n  " + "\n  ".join(missing), file=sys.stderr)
         return 1
 
+    semver = version.lstrip("v") + ".0" if version.count(".") == 1 else version.lstrip("v")
     manifest = {
         "workflow_set": "aos-workflow-set",
-        "version": version.lstrip("v") + ".0" if version.count(".") == 1 else version.lstrip("v"),
+        "version": semver,
         "set_label": version,
         "snapshot_date": date.today().isoformat(),
-        "doctrine_status": "pre-Claude-5-gen baseline",
+        "doctrine_status": status,
         "spec": "agentic_meta_dev/docs/project_plans/design-specs/claude5-plan-doctrine-v1.md#5",
         "enterprise_bundle": {
             "name": "aos-workflow-set",
-            "version": "3.5.0",
+            "version": semver,
             "instance": "nuc enterprise (rocket-fedora, http://127.0.0.1:8080 on-node)",
         },
         "git_tag": "workflow-set-" + version,
@@ -308,11 +326,17 @@ def main() -> int:
     b.add_argument("version", help="set label, e.g. v3.5")
     b.add_argument("--launchpad", type=Path, default=DEFAULT_LAUNCHPAD)
     b.add_argument("--force", action="store_true")
+    b.add_argument(
+        "--doctrine-status",
+        help="generation label for this set; defaults to SET_META[version]",
+    )
     v = sub.add_parser("verify", help="re-hash a snapshot against its manifest")
     v.add_argument("version")
     args = ap.parse_args()
     if args.cmd == "build":
-        return build(args.version, args.launchpad.resolve(), args.force)
+        return build(
+            args.version, args.launchpad.resolve(), args.force, args.doctrine_status
+        )
     return verify(args.version)
 
 
