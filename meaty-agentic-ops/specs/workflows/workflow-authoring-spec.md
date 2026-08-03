@@ -294,6 +294,38 @@ return { ...phaseResult, fix_cycles: cycles, escalate: !verdict.approved }
 
 Fix-loop caps at 2 cycles. If `verdict.approved` is still false after 2 cycles, `escalate: true` propagates to the wave result and triggers `status: 'needs_opus'`.
 
+### §8b — Verdict robustness: a gate that could not run is not a gate that passed
+
+Every reviewer dispatch in every workflow MUST satisfy all four:
+
+1. **The verdict is a validated tool call** — `schema:` on the reviewer `agent()` call, always. Never
+   accept a free-text `APPROVED` / `CHANGES_REQUESTED` string and parse it. Without a schema nothing
+   forces a decision to exist, so the reviewer can end mid-thought and the caller infers approval
+   from tone.
+2. **A null verdict is converted, loudly.** `agent()` returns `null` when the subagent dies after
+   retries or the user skips it. `verdict?.approved` correctly reads false — but `?? {approved:false}`
+   alone loses *why*. Synthesize a verdict tagged `verdict_source: 'gate_failure'` with a named
+   reason and `log()` it.
+3. **"Did not run" is distinguishable from "said no."** They are different next actions: a rejection
+   goes to the fix loop, a gate failure goes to re-dispatch or an explicit operator override. Sending
+   a fix loop after a phantom defect burns a fix cycle on nothing and then re-reviews the unchanged
+   code.
+4. **No `||` fallback reviewer.** An unmapped lens/intensity resolves to a gate failure, not a default
+   agent. A `||` fallback to a non-existent agent is how a "5-lens" council silently reviewed 4
+   (2026-08-03 agent-roster-drift AAR); `tests/test_workflow_agent_roster.py` now catches the phantom,
+   but the silent-fallback *shape* is what let one name take out two lenses.
+
+**What this does not provide: a wall-clock timeout.** `agent()` exposes no deadline and a script
+cannot impose one. What the workflow form buys against a slow reviewer is that the wait is
+*observable and out-of-line* — a stalled stage sits in `/workflows` progress under a named phase
+instead of freezing the main loop — not that it is bounded. Do not write specs, docs, or prompts
+that imply a reviewer is killed after N seconds.
+
+The reference implementation is `.claude/workflows/reviewer-gate.js` (spec:
+`reviewer-gate-workflow-spec.md`). Any gate outside `execute-plan`/`execute-contract` should invoke
+it rather than re-deriving the pattern; those two keep their own inline reviewer stages, which
+already satisfy this section.
+
 ---
 
 ## §9 — Council-Review Gate Embedding
@@ -428,6 +460,7 @@ All SkillMeat workflows are registered in `.claude/specs/workflows/workflow-regi
 | `explore` | `.claude/workflows/explore.js` | `explore-spike-workflow-spec.md` | active |
 | `spike` | `.claude/workflows/spike.js` | `explore-spike-workflow-spec.md` | active |
 | `review-council` | `.claude/workflows/review-council.js` | `review-council-workflow-spec.md` | active |
+| `reviewer-gate` | `.claude/workflows/reviewer-gate.js` | `reviewer-gate-workflow-spec.md` | active |
 
 See registry for future candidates (`release`, `migrate-sweep`, `audit`, `docs-sync`, `symbols-refresh`).
 

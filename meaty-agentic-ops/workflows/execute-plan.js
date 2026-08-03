@@ -100,6 +100,27 @@ const VERDICT_SCHEMA = {
 }
 
 // ---------------------------------------------------------------------------
+// Gate-failure verdict (authoring-spec §8b): a gate that could NOT run is not a gate
+// that passed — and it is not a gate that rejected, either. `agent()` returns null when
+// the reviewer dies after retries or is skipped, and a bare `?? {approved:false}` loses
+// that distinction: the caller then sends a fix loop after a defect nobody found, burns a
+// cycle, and re-reviews unchanged code. Tagging the synthesized verdict keeps the two
+// outcomes separable, because their next actions differ (fix vs. re-dispatch/override).
+// ---------------------------------------------------------------------------
+
+function gateFailureVerdict(reviewerType, reason) {
+  return {
+    approved: false,
+    reviewer_type: reviewerType,
+    verdict_source: 'gate_failure',
+    gate_failure_reason: reason,
+    required_fixes: [
+      `The reviewer gate produced no verdict (${reason}). This is NOT an approval and NOT a rejection — the gate did not run. Re-dispatch the reviewer, or record an explicit operator override, before treating this scope as reviewed.`,
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pattern: councilEscalation — reviewer agentType routing per authoring-spec §8.
 // ---------------------------------------------------------------------------
 
@@ -431,6 +452,9 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
   // of spending the remaining budget cycle rediscovering the same class one layer down.
   let priorDefectClass = initialVerdict?.defect_class ?? null
   let sameClassRepeat = null
+  // Set when the loop exits because a re-review produced NO verdict (§8b) rather than a
+  // rejection. Kept separate from sameClassRepeat: same exit, different next action.
+  let gateFailed = null
 
   while (!verdict?.approved && cycles < 2 && budget.remaining() > 60_000) {
     const cycleLabel = `Fix cycle ${cycles + 1}`
@@ -515,6 +539,14 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
 
     cycles++
 
+    // §8b: the re-review itself produced no verdict. Looping would spend the remaining
+    // budget on fixes chosen from a rejection that does not exist, so stop and say why.
+    if (!verdict) {
+      log(`GATE FAILURE on phase ${p.id} re-review (fix cycle ${cycles}): reviewer ${reviewerType} returned no structured verdict. Halting the fix loop — the fix so far is unreviewed, not rejected.`)
+      gateFailed = 'reviewer returned no structured verdict on re-review (died after retries, or skipped)'
+      break
+    }
+
     // Same-class stop rule. Only fires on a non-approving verdict that names a class
     // matching the previous round's. An absent defect_class never triggers it (we do
     // not guess), and two rounds finding DIFFERENT classes is normal review progress.
@@ -532,8 +564,10 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
   return {
     phase: p.id,
     tasks: taskOut,
-    verdict: verdict ?? { approved: false, reviewer_type: reviewerType },
+    verdict: verdict ?? gateFailureVerdict(reviewerType, gateFailed || 'reviewer returned no structured verdict'),
     fix_cycles: cycles,
+    // false only when the LAST reviewer pass produced nothing. A rejection still ran.
+    gate_ran: Boolean(verdict),
     // Set only when the loop exited via the same-class stop rule. Opus reads this to
     // route to redesign rather than adjudicating another review pass.
     needs_redesign: sameClassRepeat ? { defect_class: sameClassRepeat, rounds: cycles } : null,
@@ -541,12 +575,17 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
     files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
     blockers: verdict?.approved
       ? []
-      : sameClassRepeat
+      : gateFailed
         ? [{
-            description: `Defect class '${sameClassRepeat}' recurred across two consecutive review rounds on phase ${p.id}.`,
-            resolution_hint: 'Do NOT re-review. Make a design change: render the unsafe state unrepresentable, or route every caller through one choke point, then re-enter the gate against the new shape (budget resets — the scope changed). See dev-execution/references/gate-risk-classes.md §3b.',
+            description: `Reviewer gate did not run on phase ${p.id} after ${cycles} fix cycle(s) — ${reviewerType} returned no verdict on re-review.`,
+            resolution_hint: 'The last fix is UNREVIEWED, not rejected. Re-dispatch the reviewer against the current state (or invoke the reviewer-gate workflow on the same scope). Do NOT run another fix cycle — there is no finding to act on.',
           }]
-        : [{ description: 'Reviewer did not approve after fix-loop cycles.', resolution_hint: 'Opus adjudication required.' }],
+        : sameClassRepeat
+          ? [{
+              description: `Defect class '${sameClassRepeat}' recurred across two consecutive review rounds on phase ${p.id}.`,
+              resolution_hint: 'Do NOT re-review. Make a design change: render the unsafe state unrepresentable, or route every caller through one choke point, then re-enter the gate against the new shape (budget resets — the scope changed). See dev-execution/references/gate-risk-classes.md §3b.',
+            }]
+          : [{ description: 'Reviewer did not approve after fix-loop cycles.', resolution_hint: 'Opus adjudication required.' }],
   }
 }
 
@@ -705,7 +744,28 @@ async function reviewerGate(p, taskOut, tier) {
     })
   }
 
-  if (!verdict?.approved) {
+  // §8b: no verdict at all ⇒ the gate did not run. Do NOT enter the fix loop — there is no
+  // finding to fix, so a cycle would edit blind and then re-review unchanged code. Escalate
+  // immediately with the reason named.
+  if (!verdict) {
+    log(`GATE FAILURE on phase ${p.id}: reviewer ${reviewerType} returned no structured verdict (died after retries, or skipped). Recording as a gate failure, NOT as an approval or a rejection. The fix loop is deliberately skipped — re-dispatch the reviewer or record an operator override.`)
+    const failed = gateFailureVerdict(reviewerType, 'reviewer returned no structured verdict (died after retries, or skipped)')
+    return {
+      phase: p.id,
+      tasks: taskOut,
+      verdict: failed,
+      fix_cycles: 0,
+      gate_ran: false,
+      escalate: true,
+      files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
+      blockers: [{
+        description: `Reviewer gate did not run on phase ${p.id} — ${reviewerType} returned no verdict.`,
+        resolution_hint: 'Re-dispatch the reviewer for this phase (or invoke the reviewer-gate workflow against the same scope). Do NOT treat the phase as reviewed, and do NOT run a fix cycle: nothing has been found yet.',
+      }],
+    }
+  }
+
+  if (!verdict.approved) {
     return fixLoop(p, taskOut, verdict, reviewerType)
   }
 
@@ -714,6 +774,7 @@ async function reviewerGate(p, taskOut, tier) {
     tasks: taskOut,
     verdict: verdict,
     fix_cycles: 0,
+    gate_ran: true,
     escalate: false,
     files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
     blockers: [],
