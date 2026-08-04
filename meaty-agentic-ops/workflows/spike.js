@@ -58,6 +58,14 @@ export const meta = {
 // Defensive parse: args may arrive as a JSON string from the Workflow tool.
 const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args
 
+// CF-E §E.4 (Context Fabric E — auto-injection at every call boundary): every agent()
+// prompt below opens with the pre-truncated delegation-context slice the dispatching
+// orchestrator threads via args.contextSlice (resolved outside the sandbox with
+// `cf_context_resolve.py --print-slice --agent-type <legType>`). Optional and fail-open:
+// an absent slice degrades to the empty string, leaving every prompt byte-identical to the
+// pre-CF-E behaviour. args may arrive JSON-stringified (see the defensive parse above), so
+// call sites reference parsedArgs.contextSlice — the post-parse view of the same value.
+
 const {
   charter_ref,
   spike_slug,
@@ -181,13 +189,14 @@ if (leg_recursion_enabled) {
 // the call runs exactly as the flag-off path would (no wrapping behaviour change).
 async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offloadAgentType, primaryAgentType, model, schema, chosenPluginId }) {
   if (!offloaded) {
-    // Flag-off / on-primary: byte-identical to the pre-P5 direct call.
-    return await agent(prompt, { label, phase, agentType: primaryAgentType, model, schema })
+    // Flag-off / on-primary: byte-identical to the pre-P5 direct call (the CF-E preamble
+    // resolves to '' when no contextSlice is threaded — see the CF-E note above).
+    return await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, { label, phase, agentType: primaryAgentType, model, schema })
   }
   let result = null
   let failed = false
   try {
-    result = await agent(prompt, {
+    result = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, {
       label,
       phase,
       agentType: offloadAgentType,
@@ -210,7 +219,7 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
   }
   if (failed) {
     log(`P5 fallback: actual_provider_used='claude', fallback_applied=true for ${label}.`)
-    result = await agent(prompt, {
+    result = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, {
       label: `${label}-fallback`,
       phase,
       agentType: primaryAgentType,
@@ -285,7 +294,7 @@ log(`Deep read: structuring ${validLegResults.length} leg result(s)...`)
 const deepResults = await pipeline(
   validLegResults,
   async (legText) => agent(
-    buildDeepReadPrompt(legText, depth),
+    `${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${buildDeepReadPrompt(legText, depth)}`,
     {
       phase: 'Deep read',
       agentType: 'codebase-explorer',
@@ -434,7 +443,7 @@ const FEASIBILITY_BRIEF_RESULT_SCHEMA = {
   },
 }
 
-const synthesis = await agent(synthesisPromptText, {
+const synthesis = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${synthesisPromptText}`, {
   phase: 'Synthesis',
   agentType: 'implementation-planner',
   model: 'sonnet',
@@ -490,7 +499,7 @@ ${JSON.stringify(synthesis, null, 2)}`,
 
   if (critique?.gaps?.length && budget.remaining() > 60_000) {
     const improved = await agent(
-      buildGapFillPrompt(synthesis, critique.gaps, charter_ref, synthesis_output, timestamp),
+      `${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${buildGapFillPrompt(synthesis, critique.gaps, charter_ref, synthesis_output, timestamp)}`,
       {
         phase: 'Synthesis',
         agentType: 'implementation-planner',
