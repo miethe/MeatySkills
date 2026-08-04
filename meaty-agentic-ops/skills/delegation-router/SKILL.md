@@ -6,9 +6,9 @@ description: >-
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
   determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
   platform skill executes it.
-version: "3.2"
+version: "3.3"
 app_version: "2026-06-09"
-updated: 2026-07-26
+updated: 2026-08-04
 scope: repo
 spec: ./SPEC.md
 ---
@@ -45,7 +45,7 @@ Repo-verified surfaces only:
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
 | Audit writer | `appendEntry({task_id, routing_record, actual_provider_used, fallback_applied})` in `audit-log.js` |
-| RoutingRecord fields | 13 (see SPEC §1; `context_ref` + `context_class` are additive) |
+| RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
@@ -79,10 +79,28 @@ The pinned external contract is:
 - `_unclassified`, unknown, alias, version/digest-mismatched, and MUST-stay keys contribute no
   empirical adjustment.
 
-The validator returns `accepted: false` while `live_consumption` is disabled, even for a valid
-join. Live prior consumption remains disabled until the separate feedback-merge implementation lands
-with the router-owned bounded-adjustment cap/floor, minimum-sample defense, human-override
-precedence, feature disable, and RoutingRecord provenance.
+The validator returns `accepted: false` while `live_consumption` is disabled, even for a valid join.
+
+### Empirical feedback: merge + demotion (DI-1)
+
+The merge and actuation implementation now exists — `routing-feedback.js` — but **the gate is still
+closed**, so routing behaves exactly as it did before. What it does when opened:
+
+- `combined_signal` is computed **verbatim** per handoff-spec §2.2 (weights 0.5/0.3/0.2, regression
+  half-weight 0.5, D9c cost clamp, confidence 0.7) and used ONLY as a trigger.
+- At `combined_signal >= θ = 0.15`, one `routing_policy` chain entry is **demoted at most one
+  position**. Promotion is impossible; nothing is ever removed from a chain.
+- Overrides live in a dedicated machine file, `~/.claude/state/routing-feedback-overrides.json` —
+  **never** `routing.local.toml`. Precedence is structural:
+  `MUST-stay > routing.local.toml (human) > feedback state (machine) > registry`.
+- Kill switch: `AOS_ROUTING_FEEDBACK=0` (or `false`/`no`/`off`) disables consumption instantly.
+- An applied adjustment is recorded on `RoutingRecord.routing_feedback` with both the action and its
+  evidence.
+
+**Do not say** the router "downweights a model's score by up to 15%" — there is no score. `score_delta`
+and the `-0.15` magnitude are retired; `|0.15|` is a demotion *threshold*. And do not say feedback is
+live: a merge today would be **cost-only** (`success_rate` null until CCDash DI-4e, `regression_rate`
+permanently null), and the flip additionally waits on DI-4f. See SPEC.md § "Empirical routing feedback".
 
 ## Invocation Patterns
 
@@ -118,7 +136,8 @@ appendEntry({
 
 ## Output Guidance
 
-- Emit the full `RoutingRecord` (12 fields); never a partial decision. Schema lives in `routing-record.js`.
+- Emit the full `RoutingRecord` (14 fields; the last three are additive/optional and default null);
+  never a partial decision. Schema lives in `routing-record.js`.
 - Always log via `appendEntry` in workflow integration (Pattern B) so `skillmeat routing audit --violations` stays meaningful.
 - On executor fallback, record `actual_provider_used` and `fallback_applied: true` for the realized hop.
 
@@ -146,6 +165,14 @@ appendEntry({
   and versioned; raw or unpinned telemetry is rejected by `validateFeedbackJoin()`.
 - Do not say matching mapping metadata alone is sufficient. The validator also binds the exact
   `source_skill_name` to its pinned canonical or telemetry-only target.
+- Do not say empirical feedback "downweights a model's score" or applies a bounded `-0.15`
+  adjustment. There is no score in the resolver; `score_delta` and the `-0.15` magnitude are
+  **retired**. Feedback triggers a **one-position, demotion-only chain re-rank** at `θ = 0.15`.
+- Do not say routing feedback is live. `live_consumption` is disabled in the committed contract, so
+  the resolver read path is a no-op; and even when flipped, today's envelope makes it **cost-only**
+  (`success_rate` null until CCDash DI-4e; `regression_rate` permanently null — no signal exists).
+- Do not say feedback overrides go in `routing.local.toml`. That is the **human** channel; machine
+  feedback writes only `~/.claude/state/routing-feedback-overrides.json`, and the human channel wins.
 
 ## Key References
 
