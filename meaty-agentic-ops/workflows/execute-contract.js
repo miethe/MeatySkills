@@ -806,14 +806,23 @@ while (verdict && !verdict.approved && cycles < 2 && budget.remaining() > 60_000
 // ── Determine final status ────────────────────────────────────────────────────
 const approved = verdict?.approved === true
 const budgetExhausted = !approved && cycles < 2 && budget.remaining() <= 60_000
+// §8b: a gate that could not RUN is not a gate that rejected. `verdict` is null when the
+// reviewer died after retries or was skipped — that is an unreviewed sprint, and the next
+// action is re-dispatch, not a fix cycle. Conflating it with 'reviewer_unresolved' points
+// Opus at a defect nobody found.
+const gateFailed = !verdict
 
 let finalStatus = 'complete'
 let reason
 
 if (!approved) {
   finalStatus = 'needs_opus'
-  reason = budgetExhausted ? 'budget_exhausted' : 'reviewer_unresolved'
-  log(`Escalating to Opus — reason: ${reason} (cycles: ${cycles}).`)
+  reason = gateFailed ? 'gate_failure' : budgetExhausted ? 'budget_exhausted' : 'reviewer_unresolved'
+  if (gateFailed) {
+    log(`GATE FAILURE: reviewer ${reviewerType} returned no structured verdict after ${cycles} fix cycle(s). The sprint is UNREVIEWED, not rejected — re-dispatch the reviewer (or invoke the reviewer-gate workflow on this scope) before treating it as gated. Escalating to Opus — reason: gate_failure.`)
+  } else {
+    log(`Escalating to Opus — reason: ${reason} (cycles: ${cycles}).`)
+  }
 } else {
   log('Reviewer approved. Sprint complete.')
 }
@@ -822,8 +831,20 @@ if (!approved) {
 const phaseResult = {
   phase: 'sprint',
   tasks: [sprintTaskResult],
-  verdict: verdict || { approved: false, reviewer_type: reviewerType, required_fixes: ['Sprint agent returned null'] },
+  // §8b: name the actual failure. This fallback previously read 'Sprint agent returned null',
+  // which pointed at the wrong stage — the sprint result is `sprintResult`, and what is null
+  // here is the REVIEWER's verdict.
+  verdict: verdict || {
+    approved: false,
+    reviewer_type: reviewerType,
+    verdict_source: 'gate_failure',
+    gate_failure_reason: 'reviewer returned no structured verdict (died after retries, or skipped)',
+    required_fixes: [
+      `The reviewer gate produced no verdict. This is NOT an approval and NOT a rejection — the gate did not run, so the sprint is unreviewed. Re-dispatch ${reviewerType} against the current HEAD (or invoke the reviewer-gate workflow on this scope). Do NOT run another fix cycle: there is no finding to act on.`,
+    ],
+  },
   fix_cycles: cycles,
+  gate_ran: Boolean(verdict),
   escalate: !approved,
   files_touched: sprintResult.files_touched || [],
   blockers: sprintResult.blockers || [],
