@@ -57,7 +57,7 @@ platform skill executes it.
 - Changing the MUST-stay boundaries — invariant (design §2 non-goals).
 - True 429 / quota accounting — runtime error/timeout is the pragmatic fallback trigger (design §2 non-goals).
 
-### RoutingRecord schema (13 fields)
+### RoutingRecord schema (14 fields)
 
 The canonical output. Source of truth: `routing-record.js`. Every field is required on every emit.
 
@@ -76,6 +76,7 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 | 11 | `reason` | string | Human-readable ranking rationale |
 | 12 | `context_ref` | string \| null | Optional absolute delegation-context bundle path; forced null for protected/provider-excluded legs |
 | 13 | `context_class` | `C1`\|`C2`\|`C3`\|`C4` \| null | Optional declared context class of the milestone this leg serves. **Audit passthrough only** — stamped after selection, never a resolver input, never gated on MUST-stay (it carries no context). Joins realized burn to declared class. |
+| 14 | `routing_feedback` | object \| null | Provenance for an **empirical adjustment actually applied** to this decision, else null. Carries the action (`rank_displacement: [{entry, from, to, combined_signal, evidence}]`) and the reason (`combined_signal` + the §2.2 evidence block). Demotion-only and bounded to 1 position — validation rejects a promotion or a larger move. Forced null for MUST-stay classes at the emitter. Replaces the **retired** `score_delta`, which must never reappear. |
 
 `agent_type_id` MUST match an agentType definition filename exactly (P2-INT-001):
 `claude`→native (sentinel `claude`), `ica`→`ica-executor`, `bob`→`bob-delegate-executor`,
@@ -143,9 +144,71 @@ The workflow resolver input and CCDash telemetry do not share a namespace by coi
   `live_consumption` state is disabled. This is an executable default-off gate, not documentation.
 - Existing `resolve()` compatibility behavior is unchanged. Its ability to return a record for an
   unknown workflow class is not evidence that an external feedback key joined.
-- Live empirical-prior consumption is not implemented by this contract. It stays disabled until a
-  separate merge implementation enforces the router-owned cap/floor, sample defense, human
-  override precedence, feature disable, protected-class immunity, and RoutingRecord provenance.
+- The merge + actuation implementation now EXISTS (see the next section). `live_consumption`
+  nevertheless remains disabled: implementing the consumer was never the whole gate.
+
+### Empirical routing feedback — merge + actuation (DI-1)
+
+Implemented in `routing-feedback.js`. Authoritative design: CCDash
+`docs/project_plans/design-specs/routing-feedback-router-merge-handoff.md` §2.2 (merge math) and
+§2.4 ADR Option (C) (landing surface, ratified 2026-08-03). Read §2.4 **with** §2.2/§2.3 — it
+amends both.
+
+**The scalar is evidence; the action is discrete.** `combined_signal` is computed verbatim per §2.2
+step 2 — `penalty_for_failure*0.5 + penalty_for_cost*0.3 + penalty_for_regression*0.2`, with
+`regression_half_weight 0.5`, the D9c clamp `max(cost_index - 1.0, 0.0)` (cheapness earns no
+bonus), and `confidence_threshold 0.7`. It is then used ONLY as a trigger. There is no continuous
+score in the resolver for a delta to apply to (§2.4.2, independently source-verified), so:
+
+| Retired (§2.4.7) | Replacement |
+|---|---|
+| `max_adjustment_cap = -0.15` as a magnitude | `θ = 0.15` demotion **threshold** |
+| `max(-combined_signal, cap)` clamp | `combined_signal >= θ` compared directly |
+| `score_delta` RoutingRecord field | `routing_feedback.rank_displacement` |
+| the `-0.150` cap-bound worked example | `combined_signal 0.750 >= θ` → demote 1 position |
+
+A test asserts none of the retired names can reappear in executable code.
+
+- **Channel** — a dedicated machine-owned state file, `~/.claude/state/routing-feedback-overrides.json`
+  (override with `AOS_ROUTING_FEEDBACK_STATE`; tests inject `input._feedbackStatePath`). **Never**
+  `routing.local.toml`: that is the human channel, and two writers on one field cannot express
+  "human wins".
+- **Precedence is structural** — `MUST-stay (absolute) > routing.local.toml (human) >
+  routing-feedback state (machine) > registry defaults`. A `task_class` appearing in
+  `routing_policy_overrides`, or an instance appearing in `priority_overrides`, is skipped by
+  machine feedback entirely.
+- **Actuation point** — a pure `(chain, feedbackForClass) → chain'` reorder applied to the
+  `routing_policy` chain **before** the position-based walk, so the three-stage selection structure
+  is unchanged. **Demotion-only, at most one position, never a removal** (the reorder is a
+  permutation, so the never-empty / last-candidate floor holds by construction; a single-entry
+  chain is a hard no-op).
+- **Chainless classes** — the same one-position demotion is applied to the already-ranked candidate
+  list, **not** by mutating `priority`. `priority` is a *within-model* rank that must never be
+  compared across models (`b0ab62d`), so a cross-model demotion cannot be written into it
+  without corrupting that invariant. `priority_overrides` is never emitted: it is a proven no-op for
+  all 10 chain-routed eligible classes and it lives in the human channel.
+- **Null metrics contribute 0 and the weights are NOT re-normalized.** As of 2026-08-03
+  `success_rate` is null until CCDash DI-4e ships and `regression_rate` is *permanently* null (no
+  signal exists — `test_results`/`test_runs` are 0 rows, no retry linkage), so a merge running today
+  is **cost-only**: one live term carrying weight 0.3. Re-normalizing would promote it to full
+  strength and make a cost-only merge far more aggressive than the ratified design. A row whose
+  every metric is null is **skipped**, never read as healthy — absence of evidence must not lift a
+  demotion.
+- **Guardrails** (§2.4.6, each tested) — hysteresis (`θ = 0.15` demote, `θ_restore = 0.08` restore,
+  hold in between); TTL of one window, refreshed on re-confirmation; MUST-stay immunity enforced at
+  the record emitter; instant disable via `AOS_ROUTING_FEEDBACK=0|false|no|off`; minimum-sample
+  defense carried by the producer's `eligible_for_adjustment` and re-checked here.
+- **Provenance** — `RoutingRecord.routing_feedback` (14th field, additive/optional) carries the
+  action (`rank_displacement`) *and* the reason (`combined_signal` + the §2.2 evidence block), so
+  `skillmeat routing audit --violations` can answer "what changed and on what basis" from the record
+  alone. Validation rejects a promotion, a >1-position move, an empty block, and a displacement with
+  no signal.
+- **Still gated.** `live_consumption` stays disabled in the committed contract, so the resolver read
+  path is a no-op and selection is byte-identical to pre-DI-1 behavior. `mergeFeedback()` runs as an
+  inspectable **dry run** in the meantime. Flipping the gate requires CCDash **DI-4f**
+  (routing-key skill attribution — 61% of eligible keys have a NULL `skill_name`) **and** **DI-4e**
+  (populate `success_rate`), **or** a written decision accepting a cost-only merge that states why a
+  dead 0.5-weighted failure term is acceptable.
 
 ---
 
@@ -219,9 +282,16 @@ The workflow resolver input and CCDash telemetry do not share a namespace by coi
    adjustment. The default-off live-consumption state is enforced in code.
 
 10. **The router owns actuation guardrails.** Before live consumption can be enabled, the router
-    must enforce the bounded-adjustment cap and effective-score floor, a minimum-sample
-    defense-in-depth gate, absolute human-override precedence, MUST-stay immunity, instant feature
-    disable, and auditable RoutingRecord provenance. CCDash remains evidence-only.
+    must enforce: a **maximum rank displacement of 1 position, demotion-only** (promotion is
+    forbidden); a **never-empty / last-candidate floor** plus MUST-stay immunity; **hysteresis and
+    TTL** in place of decay (`θ = 0.15`, `θ_restore = 0.08`, TTL 1 window); a minimum-sample
+    defense-in-depth gate; absolute human-override precedence via physically separate channels;
+    instant feature disable; and auditable RoutingRecord provenance. CCDash remains evidence-only.
+    _Amended 2026-08-03_: the original wording required a "bounded-adjustment cap and
+    **effective-score floor**" over a score the resolver does not compute — an unsatisfiable
+    invariant (confirmed contradiction, not a misreading). A magnitude cap is meaningless when there
+    is exactly one available action, so boundedness is re-expressed as displacement limits and
+    hysteresis per handoff spec §2.4.6. Implemented in `routing-feedback.js` (DI-1).
 
 11. **Raw `skill_name` is never a live join key.** CCDash preserves it as producer provenance and
     emits `task_class` only through the accepted versioned mapping. Resolver fallback behavior must
@@ -233,8 +303,14 @@ The workflow resolver input and CCDash telemetry do not share a namespace by coi
 
 - **[BL-1] Registry-aware scoring fully wired** — resolver honors `enabled`, `priority`,
   availability, and capability match from `model-registry.yaml` (not cost_tier+sampling only).
-  _Status_: planned (design W2)
-  _Rationale_: v1/v2 resolver scored on `cost_tier + sampling`; the registry data is inert until W2 lands.
+  _Status_: **DELIVERED** (v3 registry path; status corrected 2026-08-03 — it had been left at
+  `planned (design W2)` after the work landed). `resolveFromRegistry` honors all four registry
+  fields; see SKILL.md's "Do Not Say" entry, which already instructs readers that v3 **is**
+  registry-aware.
+  _Not to be confused with_: wiring the registry's advisory `scores:` block (cost · intelligence ·
+  taste · speed) into ranking. That is a **distinct** future upgrade (resolver v4) and is explicitly
+  out of scope for DI-1 — BL-1 never scoped a continuous score, so DI-1 was not sequenced behind it.
+  See handoff spec §2.4.3.
 
 - **[BL-2] Failure-fallback in executors** — `ica-executor` and the Bob/codex offload paths
   re-dispatch down `fallback_chain` on runtime failure/timeout, not just binary-absence.
@@ -261,6 +337,28 @@ The workflow resolver input and CCDash telemetry do not share a namespace by coi
 ---
 
 ## 5. Changelog
+
+### v1.3.0 — 2026-08-04
+
+- **DI-1: empirical routing feedback merge + discrete demotion actuation** (`routing-feedback.js`).
+  §2.2's `combined_signal` is computed verbatim (weights 0.5/0.3/0.2, regression half-weight 0.5,
+  D9c cost clamp, confidence 0.7) but acts only as a **trigger**: at `combined_signal >= θ = 0.15` a
+  `routing_policy` chain entry is demoted at most one position, never promoted. New pure stage before
+  the position-based chain walk; three-stage structure unchanged.
+- **Retired** `score_delta`, the `max_adjustment_cap = -0.15` magnitude, and the
+  `max(-combined_signal, cap)` clamp — there is no continuous score in the resolver to apply a delta
+  to. A test asserts they cannot reappear in executable code. `|0.15|` survives only as θ.
+- **Dedicated machine-owned channel** `~/.claude/state/routing-feedback-overrides.json`, never
+  `routing.local.toml`, making `MUST-stay > human > machine > registry` structural rather than
+  conventional.
+- **RoutingRecord 14th field** `routing_feedback` — the applied action plus its evidence; rejects a
+  promotion, a >1-position move, an empty block, or a displacement with no signal.
+- Amended invariant 10 to the discrete guardrail vocabulary (the "effective-score floor" it required
+  was unsatisfiable), and corrected BL-1's stale `planned` status to DELIVERED.
+- `live_consumption` remains **disabled**; the resolver read path is a no-op and `mergeFeedback()` is
+  a dry run until CCDash DI-4f + DI-4e land or a cost-only merge is accepted in writing.
+- Fixed a pre-existing red test: the pinned source-rule count was left at 17 when mapping v1.1.0
+  landed 36 rules. Added `tests/test-routing-feedback.js` (65 cases).
 
 ### v1.2.0 — 2026-07-26
 

@@ -3,6 +3,59 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-08-04 — DI-1: empirical routing feedback merge + discrete demotion actuation
+
+CCDash proof can now change a routing decision. This is the consumer half of BP-6 — the step that
+makes "proof changes behavior, not just gets looked at" true rather than aspirational. Design:
+CCDash `docs/project_plans/design-specs/routing-feedback-router-merge-handoff.md` §2.2 (merge math)
++ §2.4 ADR Option (C) (landing surface, ratified 2026-08-03).
+
+- Added `routing-feedback.js`. `combined_signal` is computed **verbatim** per §2.2 step 2 — weights
+  0.5/0.3/0.2, `regression_half_weight 0.5`, D9c cost clamp `max(cost_index - 1.0, 0.0)`,
+  `confidence_threshold 0.7`. Those params survive the ADR unchanged.
+- **The scalar is evidence; the action is discrete.** At `combined_signal >= θ = 0.15` a
+  `routing_policy` chain entry is demoted **at most one position** and may **never** be promoted.
+  θ is the §2.2 *saturation* point, not its sensitivity point (0.01) — a whole rank flip is a
+  full-strength action and must not fire on a marginal signal.
+- **Retired outright** (§2.4.7), with a test asserting they cannot reappear in executable code:
+  `score_delta`, the `max_adjustment_cap = -0.15` **magnitude**, the `max(-combined_signal, cap)`
+  clamp, and the `-0.150` cap-bound worked example. There is no continuous score in the resolver for
+  a delta to land on (independently source-verified) — `|0.15|` survives only as θ.
+- Actuation is a pure `(chain, feedbackForClass) → chain'` reorder applied **before** the
+  position-based chain walk, so the three-stage selection structure is unchanged. It is a
+  permutation, so nothing is ever removed and the never-empty / last-candidate floor holds by
+  construction.
+- For a class with **no chain**, the same one-position demotion is applied to the already-ranked
+  candidate list rather than by mutating `priority`. `priority` is a within-model rank that must
+  never be compared across models (`b0ab62d`), so a cross-model demotion cannot be written into it
+  without corrupting that invariant. `priority_overrides` is never emitted — it is a proven no-op for
+  all 10 chain-routed eligible classes and it lives in the human channel.
+- **Precedence is now structural, not conventional.** Feedback reads/writes a dedicated
+  machine-owned `~/.claude/state/routing-feedback-overrides.json`, **never** `routing.local.toml`:
+  `MUST-stay > human > machine > registry`. A class pinned in `routing_policy_overrides` or an
+  instance pinned in `priority_overrides` is skipped entirely.
+- **Null metrics contribute 0 and the weights are NOT re-normalized.** `success_rate` is null until
+  CCDash DI-4e and `regression_rate` is *permanently* null (no signal exists), so a merge today is
+  cost-only — one live term at weight 0.3. Re-normalizing would promote it to full strength and make
+  a cost-only merge far more aggressive than ratified. A row whose every metric is null is skipped,
+  never read as healthy.
+- Guardrails, each tested: hysteresis (θ 0.15 demote / θ_restore 0.08 restore / hold between), TTL of
+  one window refreshed on re-confirmation, MUST-stay immunity enforced at the record emitter, instant
+  `AOS_ROUTING_FEEDBACK=0` kill switch, minimum-sample defense via `eligible_for_adjustment`, and
+  fail-closed joins through `validateFeedbackJoin()` (raw `skill_name` never reaches `resolve()`).
+- Added `routing_feedback` as the **14th RoutingRecord field** (additive/optional): the action
+  (`rank_displacement`) *and* the reason (`combined_signal` + the §2.2 evidence block). Validation
+  rejects a promotion, a >1-position move, an empty block, and a displacement with no signal.
+- Amended SPEC invariant 10 to the discrete guardrail vocabulary — the "effective-score floor" it
+  required was unsatisfiable over a score the resolver does not compute — and corrected BL-1's stale
+  `planned` status to DELIVERED (§2.4.8 router-repo follow-ups, both closed).
+- **`live_consumption` stays disabled.** The resolver read path is a no-op and selection is
+  byte-identical to pre-DI-1 behavior; `mergeFeedback()` runs as an inspectable dry run. Flipping the
+  gate needs CCDash **DI-4f** (61% of eligible keys have a NULL `skill_name`) **and** **DI-4e**
+  (populate `success_rate`), or a written decision accepting a cost-only merge.
+- Added `tests/test-routing-feedback.js` (65 cases). Fixed a pre-existing red test: the pinned
+  source-rule count was left at 17 when mapping v1.1.0 landed 36 rules. Full suite green.
+
 ## 2026-07-30 — `context_class` audit passthrough (13th RoutingRecord field)
 
 - Added `context_class` (`C1`|`C2`|`C3`|`C4`|`null`) as the 13th RoutingRecord field, additive and

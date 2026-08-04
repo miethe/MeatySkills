@@ -2,7 +2,15 @@
   "schema_version": 1,
   "contract_id": "aos.routing.feedback",
   "contract_version": "1.0.0",
-  "live_consumption": "disabled_until_feedback_merge_implementation",
+  "live_consumption": "disabled_pending_ccdash_di4f_and_di4e",
+  "live_consumption_gate": {
+    "note": "The merge + actuation implementation LANDED 2026-08-04 (routing-feedback.js, DI-1), so the old 'until implementation' reason is retired. What remains is producer-side signal quality: flipping this to 'enabled' requires BOTH of the conditions below, OR a written decision accepting a cost-only merge that states why a dead 0.5-weighted failure term is acceptable. Anything other than the exact string 'enabled' keeps consumption off.",
+    "requires": [
+      "ccdash DI-4f — routing-key skill attribution (114 of 188 min_sample-clearing keys have a NULL skill_name)",
+      "ccdash DI-4e — populate success_rate (0 non-null today; itself gated on DI-4f)"
+    ],
+    "not_waiting_on": "regression_rate — permanently null, no signal exists (test_results/test_runs are 0 rows, no retry linkage). The merge behaves correctly with it null rather than waiting."
+  },
   "taxonomy": {
     "taxonomy_id": "aos.routing.task_class",
     "taxonomy_version": "1.0.0",
@@ -54,13 +62,20 @@
     }
   },
   "router_guardrail_ownership": {
-    "minimum_sample_gate": "required_defense_in_depth",
-    "bounded_adjustment_cap": "required_before_enablement",
-    "effective_score_floor": "required_before_enablement",
-    "human_override_wins": "absolute",
-    "must_stay_primary_immunity": "absolute",
-    "feature_flag_disable": "required",
-    "routing_record_provenance": "required"
+    "_note": "Re-expressed in DISCRETE terms 2026-08-04 per routing-feedback-router-merge-handoff.md §2.4.6. The retired continuous vocabulary ('bounded_adjustment_cap' as a -0.15 magnitude, 'effective_score_floor') described an adjustment surface the resolver does not have: selection is by chain position and integer within-model priority, with no score to cap or floor. A magnitude cap is meaningless when there is exactly one available action, so boundedness comes from displacement limits and hysteresis instead. All rows below are IMPLEMENTED in routing-feedback.js and covered by tests/test-routing-feedback.js.",
+    "minimum_sample_gate": "implemented_defense_in_depth",
+    "max_rank_displacement": "implemented — 1 position, demotion-only; promotion is forbidden",
+    "never_empty_last_candidate_floor": "implemented — actuation is a permutation, so no candidate is ever removed; single-entry chains are a hard no-op",
+    "hysteresis_and_ttl": "implemented — demote at theta 0.15, restore below theta_restore 0.08, override expires after 1 window unless re-confirmed",
+    "human_override_wins": "absolute — structural, via physically separate channels: machine state is ~/.claude/state/routing-feedback-overrides.json and NEVER routing.local.toml",
+    "must_stay_primary_immunity": "absolute — enforced at the join validator, the actuation stage, and the record emitter",
+    "feature_flag_disable": "implemented — AOS_ROUTING_FEEDBACK=0|false|no|off, instant, plus this contract's live_consumption gate",
+    "routing_record_provenance": "implemented — RoutingRecord.routing_feedback carries rank_displacement (action) plus combined_signal and the §2.2 evidence block (reason)",
+    "retired_continuous_vocabulary": {
+      "bounded_adjustment_cap": "retired as a magnitude; |0.15| re-purposed as the demotion threshold theta",
+      "effective_score_floor": "retired as unsatisfiable; replaced by never_empty_last_candidate_floor",
+      "score_delta": "retired as a RoutingRecord field; replaced by rank_displacement"
+    }
   },
   "producer_guardrail_ownership": {
     "deterministic_aggregation": "required",
