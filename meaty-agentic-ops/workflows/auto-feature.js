@@ -244,23 +244,53 @@ Do NOT implement code. Do NOT git add/commit/push/stash.`
  * Structure stage (Stage B — haiku general-purpose, schema: AUTOPILOT_PLAN_SCHEMA).
  * Reads the artifact, extracts the `autopilot-graph` JSON block. Read-only.
  */
-function structurePrompt() {
+function structurePrompt(planText) {
+  // The planner's own report is passed in VERBATIM. Previously this function took no
+  // arguments at all (the call site's `parsed` was silently ignored), so the structurer
+  // was told "the planner's summary names the path" while never being shown that summary.
+  // Its only recourse was the step-1 fallback — "most recently modified file matching the
+  // slug" — which twice resolved to an unrelated, already-shipped contract and sent the
+  // executor off to rebuild the wrong feature (AARs 2026-08-03, 2026-08-04).
   return `Mode: A — Exploration Only
 
 The autopilot planner just wrote a plan artifact under docs/project_plans/ (a Feature Contract
 or an Implementation Plan). Its body contains a fenced \`\`\`json block tagged "autopilot-graph".
 
+Here is the planner's own report, verbatim. It names the exact artifact path it wrote. This is
+AUTHORITATIVE — the path you return MUST be the one named here:
+
+<planner-report>
+${planText}
+</planner-report>
+
 STEPS:
-1. Locate the artifact. It was written this run; the planner's summary names the path. If needed,
-   search docs/project_plans/feature_contracts/ and docs/project_plans/implementation_plans/ for
-   the most recently modified file matching the request slug.
-2. Read the artifact and find the fenced "autopilot-graph" JSON block.
+1. Take the artifact path from the planner report above. Do NOT search for it, and do NOT fall
+   back to "most recently modified file" — a stale artifact from an earlier, unrelated feature
+   is the single failure this stage has actually produced in practice, twice. If the report
+   somehow names no path, return single_pass_feasible=false and say so in
+   escalation_recommendation rather than guessing.
+2. Read THAT artifact and find the fenced "autopilot-graph" JSON block.
 3. Return that object EXACTLY as the structured AutopilotPlan, conforming to the schema. Pass
    execution_graph through verbatim. Do not invent or alter values; copy what the planner wrote.
+   In particular tier / effort_points / execution_graph must match the artifact — the caller's
+   feasibility gate depends on them, so understating tier silently disables it.
 4. If you cannot find the artifact or the block, return your best-effort object with
    single_pass_feasible=false and escalation_recommendation explaining the miss.
 
 Do NOT edit any files. Read only. Do NOT git add/commit/push/stash.`
+}
+
+// Cheap, deterministic drift check — no filesystem access needed, which matters because
+// workflow scripts have none. If the structurer returns an artifact path the planner never
+// mentioned, the two stages are describing different features and everything downstream
+// (feasibility gate, nested engine, report) is about to be applied to the wrong one.
+function planTextClaimsArtifact(planText, artifactPath) {
+  if (!planText || typeof artifactPath !== 'string' || !artifactPath.trim()) return false
+  if (planText.includes(artifactPath)) return true
+  // Tolerate a leading ./ or a repo-root prefix difference; compare on the basename+parent
+  // so a cosmetic path spelling does not halt an otherwise-consistent run.
+  const tail = artifactPath.split('/').slice(-2).join('/')
+  return tail.length > 0 && planText.includes(tail)
 }
 
 /**
@@ -486,7 +516,7 @@ log('Structuring the plan artifact into an AutopilotPlan.')
 
 let plan
 try {
-  plan = await agent(structurePrompt(parsed), {
+  plan = await agent(structurePrompt(planText), {
     label: 'plan-structurer',
     phase: 'Structure plan',
     agentType: 'general-purpose',
@@ -504,6 +534,39 @@ if (!plan) {
     reason: 'plan_structure_failed',
     report: [],
     autopilot: { execution_target: 'none', escalation_recommendation: 'Could not structure the plan artifact. Read the most recent file under docs/project_plans/ and decide manually.' },
+  }
+}
+
+// ── Plan-identity gate (deterministic; runs BEFORE the feasibility gate) ─────
+// The structurer must be describing the artifact the planner actually wrote. When it is not,
+// every field below is about a different feature — and because the feasibility gate reads
+// plan.tier / plan.effort_points, a drifted-down tier silently DISABLES that gate too.
+//
+// This is not hypothetical. It has fired twice in production, both times resolving to an
+// unrelated already-shipped contract and dispatching the executor to "re-implement" it:
+//   2026-08-03 — plan_artifact_path → enhancements/codex-effort-tier-ingestion.md
+//   2026-08-04 — plan_artifact_path → harden-polish/op-story-scan-worktree-sweep-guard.md
+//                (planner said tier 3 / 15 pts → would have escalated; structurer said tier 1
+//                 / 5 pts → executed the wrong feature and reported 4/4 ACs met)
+// Halting here costs one wasted planning stage. Not halting costs a full execution against the
+// wrong feature plus a completion report asserting work that was never done.
+if (!planTextClaimsArtifact(planText, plan.plan_artifact_path)) {
+  log(`HALT: plan-identity mismatch. The structurer returned plan_artifact_path=` +
+      `"${plan.plan_artifact_path}", which the planner's own report never names. ` +
+      `Refusing to execute against an artifact this run may not have written.`)
+  return {
+    status: 'needs_opus',
+    reason: 'plan_identity_mismatch',
+    report: [],
+    autopilot: autopilotAnnotation(
+      plan,
+      'none',
+      `Stage-B structurer drifted off the planner's artifact (returned ` +
+      `"${plan.plan_artifact_path}", unmentioned by the planner). The planner's own report is ` +
+      `trustworthy and the artifact IS on disk — read the planner output, confirm the real path ` +
+      `under docs/project_plans/, and either relaunch or execute it directly. Do NOT trust the ` +
+      `tier/effort figures in this annotation: they describe the wrong artifact.`,
+    ),
   }
 }
 
