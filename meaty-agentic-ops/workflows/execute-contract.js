@@ -273,18 +273,47 @@ Do NOT edit any files. Read only.`
  * @param {object} sprintResult - SprintResult from Stage B (may be the original or a
  *                                post-fix-cycle refresh with an updated commit_sha).
  */
+// The Completion Report and the sprint's commit_sha are CLAIMS. A sprint has returned without
+// committing, left failing tests, and later filed a report crediting itself with a fix written
+// by someone else (observed 2026-08-04). The reviewer must therefore establish that the commit
+// exists before reasoning about it — and when the sprint reported none, that absence is the
+// finding, not a detail to route around.
 function reviewPrompt(parsed, sprintResult) {
+  const sha = sprintResult.commit_sha
+  const shaBlock = sha
+    ? `Sprint commit SHA (claimed): ${sha}
+
+FIRST, confirm the claim resolves — a sha that does not exist, or is not on this branch,
+means the report describes work that is not here:
+  git cat-file -e ${sha}^{commit} && git merge-base --is-ancestor ${sha} HEAD && echo "${sha} OK"`
+    : `Sprint commit SHA: NONE REPORTED.
+
+The sprint claims to have finished without naming a commit. Establish what actually landed
+before reviewing anything, and treat "nothing committed" as a required_fix rather than a pass:
+  git status --porcelain     # work present but never durably committed
+  git log --oneline "$(git merge-base HEAD origin/main)"..HEAD`
+
   return `Mode: E — Reviewer
 
 Contract: ${parsed.contract_path}
-Completion Report: ${sprintResult.completion_report_path}
-Sprint commit SHA: ${sprintResult.commit_sha}
+Completion Report (a self-report, not evidence): ${sprintResult.completion_report_path}
+${shaBlock}
 
-Review the sprint output against all Acceptance Criteria in the Feature Contract.
-Diff the commit SHA against the branch base to verify the changes match the contract scope.
+Review the sprint output against all Acceptance Criteria in the Feature Contract, judging the
+CODE rather than the report. Where the two disagree, the code wins and the disagreement is
+itself a finding.
+
+  MB=$(git merge-base HEAD origin/main)   # pin the base ONCE
+  git diff "$MB"..HEAD
+
+Never diff \`origin/main..HEAD\`: main moves during a run, and the phantom diff that produces is
+self-consistent and plausible, so it will not announce itself as wrong.
 
 Return a structured VERDICT:
-  - approved: true only when ALL Acceptance Criteria are met with no required fixes outstanding.
+  - approved: true only when you have read the diff yourself and ALL Acceptance Criteria are met
+    with no required fixes outstanding. An approval you cannot support by naming what you
+    inspected is the failure this gate exists to catch — including when you are the one
+    producing it.
   - reviewer_type: your agentType string.
   - required_fixes: if approved is false, list each required fix as a clear, actionable instruction for the fix agent.
 
@@ -417,17 +446,27 @@ Contract: ${parsed.contract_path}
 Sprint commit SHA: ${sprintResult.commit_sha || '(none)'}
 Completion Report: ${sprintResult.completion_report_path}
 
-Sprint-reported AC verdicts:
+Sprint's SELF-REPORTED AC verdicts — these are the claims you are checking, not findings.
+A sprint has marked ACs met while shipping a conceptual bug behind exactly this claim:
 ${acVerdicts || '(none reported by sprint)'}
 
-Review the sprint output against all Acceptance Criteria in the Feature Contract.
-Use Codex to diff the commit SHA against the branch base and verify the changes satisfy each AC.
+Validate every Acceptance Criterion in the Feature Contract against the CODE, independently of
+the verdicts above. Reach your own conclusion first, then note any AC where you and the sprint
+disagree — that disagreement is a finding in its own right.
+
+  MB=$(git merge-base HEAD origin/main)   # pin the base once; never diff origin/main..HEAD
+  git diff "$MB"..HEAD
+  git status --porcelain                  # work that exists but was never committed
+${sprintResult.commit_sha ? `  git cat-file -e ${sprintResult.commit_sha}^{commit}   # the claimed commit must resolve\n` : ''}
+EVIDENCE RULE: evidence is a \`file:line\` you read or a behaviour you traced. A restatement of
+the sprint's own verdict is NOT evidence — it validates the report against itself. If you cannot
+point at code for an AC, it is NOT MET.
 
 IMPORTANT — TWO-STAGE DURABILITY:
 Write your complete AC validation checklist to: ${artifactPath}
 Use this format per AC item:
   - [ ] AC text — NOT MET: reason
-  - [x] AC text — MET: evidence (file:line or commit reference)
+  - [x] AC text — MET: evidence (file:line or traced behaviour)
 
 This file MUST exist before you return. A downstream structurer will read it to emit the verdict.
 Do NOT emit structured output yourself. Do NOT git add/commit/push/stash.`
@@ -454,6 +493,48 @@ Do NOT write any files. Do NOT git add/commit/push/stash. Read only.`
 
 // Parse args defensively: the Workflow tool may deliver args as a JSON string or object.
 const parsed = typeof args === 'string' ? JSON.parse(args) : args
+
+// ── repo-target guard ─────────────────────────────────────────────────────────
+// The sprint agent runs in the SESSION's cwd — there is no per-agent cwd, and
+// isolation:'worktree' branches the session repo. A contract whose work lives in a sibling
+// repo therefore does not fail; the sprint runs against the wrong repository and its
+// Completion Report says it succeeded. Full rationale + contract: the identical guard in
+// execute-plan.js. Checked before the dry run — a cross-repo dry run has nothing useful to
+// report, and this is the one defect an args-envelope inspection cannot see.
+function repoKey(v) {
+  if (typeof v !== 'string') return null
+  const trimmed = v.trim().replace(/\/+$/, '')
+  if (trimmed.length === 0) return null
+  const base = trimmed.split('/').pop()
+  return base && base.length > 0 ? base : trimmed
+}
+
+const _target = repoKey(parsed?.target_repo)
+const _session = repoKey(parsed?.session_repo)
+if (_target && !_session) {
+  log(`HALTING — cross_repo_unverified: target_repo '${parsed.target_repo}' declared with no session_repo.`)
+  return {
+    status: 'blocked',
+    reason: 'cross_repo_unverified',
+    report: [],
+    blockers: [{
+      description: `Contract declares target_repo '${parsed.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
+      resolution_hint: 'In Opus pre-flight, resolve `basename "$(git rev-parse --show-toplevel)"` and pass it as session_repo. Do NOT drop target_repo to silence this.',
+    }],
+  }
+}
+if (_target && _session && _target !== _session) {
+  log(`HALTING — cross_repo_target: contract targets '${parsed.target_repo}' but session is '${parsed.session_repo}'.`)
+  return {
+    status: 'blocked',
+    reason: 'cross_repo_target',
+    report: [],
+    blockers: [{
+      description: `Contract targets repo '${parsed.target_repo}' but this session is in '${parsed.session_repo}'. The sprint agent always runs in the session's cwd and isolation:'worktree' branches the SESSION repo, so the sprint would have executed against the wrong repository while reporting success. No agents were spawned.`,
+      resolution_hint: `Start a session in the '${parsed.target_repo}' checkout and re-run there, or hand-orchestrate and verify \`git rev-parse --show-toplevel\` + \`git branch --show-current\` + \`git diff\` yourself at each step (.claude/skills/dev-execution/git-worktree-pr-protocol.md).`,
+    }],
+  }
+}
 
 // ── dry-run short-circuit ─────────────────────────────────────────────────────
 if (parsed.dry_run === true) {

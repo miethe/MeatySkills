@@ -387,6 +387,55 @@ function autopilotAnnotation(plan, executionTarget, recommendation) {
 // Parse args defensively: the Workflow tool may deliver args as a JSON string or object.
 const parsed = typeof args === 'string' ? JSON.parse(args) : args
 
+// ── repo-target guard ─────────────────────────────────────────────────────────
+// Workflow agents run in the SESSION's cwd — there is no per-agent cwd, and
+// isolation:'worktree' branches the session repo. So an autopilot request whose work lives in
+// a sibling repo does not fail: every agent runs against the wrong repository and reports
+// success. This is autopilot's own recorded failure (`.claude/worknotes/
+// di294-outcome-consolidation/AAR.md` lesson 5 — "Autopilot's scripted lane cannot target a
+// sibling repo", where an executor committed to `main` ignoring its worktree and still
+// reported `complete`). The script cannot resolve either repo itself (no FS/shell), so Opus
+// pre-flight passes both and this compares them. Full rationale + contract: the identical
+// guard in execute-plan.js.
+// Checked before the dry-run short-circuit: a dry run of a cross-repo request has nothing
+// useful to report, and this is the one defect a graph-shape inspection cannot see.
+function repoKey(v) {
+  if (typeof v !== 'string') return null
+  const trimmed = v.trim().replace(/\/+$/, '')
+  if (trimmed.length === 0) return null
+  const base = trimmed.split('/').pop()
+  return base && base.length > 0 ? base : trimmed
+}
+
+const _target = repoKey(parsed?.target_repo)
+const _session = repoKey(parsed?.session_repo)
+if (_target && !_session) {
+  log(`HALTING — cross_repo_unverified: target_repo '${parsed.target_repo}' declared with no session_repo.`)
+  return {
+    status: 'blocked',
+    reason: 'cross_repo_unverified',
+    report: [],
+    blockers: [{
+      description: `Request declares target_repo '${parsed.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
+      resolution_hint: 'In Opus pre-flight, resolve `basename "$(git rev-parse --show-toplevel)"` and pass it as session_repo. Do NOT drop target_repo to silence this.',
+    }],
+    autopilot: { execution_target: 'none', escalation_recommendation: 'Pass session_repo alongside target_repo, or hand-orchestrate in the target repo.' },
+  }
+}
+if (_target && _session && _target !== _session) {
+  log(`HALTING — cross_repo_target: plan targets '${parsed.target_repo}' but session is '${parsed.session_repo}'.`)
+  return {
+    status: 'blocked',
+    reason: 'cross_repo_target',
+    report: [],
+    blockers: [{
+      description: `Request targets repo '${parsed.target_repo}' but this session is in '${parsed.session_repo}'. Autopilot's agents always run in the session's cwd and isolation:'worktree' branches the SESSION repo, so every task would have executed against the wrong repository while reporting success. No agents were spawned.`,
+      resolution_hint: `Start a session in the '${parsed.target_repo}' checkout and re-run there, or hand-orchestrate and verify \`git rev-parse --show-toplevel\` + \`git branch --show-current\` + \`git diff\` yourself at each step (.claude/skills/dev-execution/git-worktree-pr-protocol.md).`,
+    }],
+    autopilot: { execution_target: 'none', escalation_recommendation: `Cross-repo autopilot is not supported. Re-run from the '${parsed.target_repo}' repo, or hand-orchestrate.` },
+  }
+}
+
 // ── dry-run short-circuit ─────────────────────────────────────────────────────
 if (parsed.dry_run === true) {
   log('Dry-run mode — returning parsed args envelope without spawning agents.')

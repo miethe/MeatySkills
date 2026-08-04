@@ -84,6 +84,13 @@ const VERDICT_SCHEMA = {
     // 'unguarded-sibling-callsite', 'missing-ac-coverage'), not a restatement of the
     // individual finding — class identity is what the rule tests.
     defect_class: { type: 'string' },
+    // What the reviewer actually inspected, in its own words (the pinned merge-base it
+    // diffed, the commits it resolved, the files it read). Optional so the council
+    // synthesis path and older callers stay schema-valid, but reviewPrompt asks for it on
+    // every verdict: an approval that cannot say what it looked at is the abdication this
+    // gate exists to catch, and it is cheaper to notice a missing `evidence` field than to
+    // rediscover the defect it waved through.
+    evidence: { type: 'string' },
     council_artifacts: {
       type: 'object',
       properties: {
@@ -161,6 +168,33 @@ function councilEscalation(p, _tier) {
 // HITL when explicitly flagged (t.hitl === true) or its assigned_to is not a known agent.
 // ---------------------------------------------------------------------------
 
+// This set MUST mirror .claude/agents/ in THIS repo, plus the 'general-purpose' builtin — and
+// nothing else. Deliberately not ~/.claude/agents/: a workflow that could only dispatch an agent
+// present on one machine would pass here and fail on the node. Drift is bidirectional and
+// both directions silently corrupt a run:
+//   - a name listed here with NO agent file  → dispatched to nothing, agent() returns null,
+//     and the task is silently dropped from the wave (it looks like it ran).
+//   - a real agent missing from here         → isHitlTask() reclassifies it as a HUMAN gate,
+//     so a perfectly dispatchable task never runs.
+// Both had occurred in agentic_meta_dev: 4 phantoms (api-librarian, telemetry-auditor,
+// frontend-developer, council-review) alongside 17 real agents omitted. Its copy was repaired
+// against its own agents dir (05c5384); tests/test_workflow_agent_roster.py fails that repo's
+// build if it drifts again.
+//
+// ⚠️ THE SET BELOW IS THE UPSTREAM DEFAULT AND HAS NOT HAD THAT REPAIR. It is the pre-repair
+// legacy value, and it is what every deployment inherits until that deployment regenerates it.
+// `api-librarian`, `telemetry-auditor` and `frontend-developer` are still listed here and exist
+// in no known agents dir — a task assigned to one is dispatched to nothing and silently dropped
+// from the wave. They are left in place rather than removed because presence is per-deployment
+// and cannot be verified from upstream; removing a name that a given deployment DOES have would
+// reclassify a dispatchable task as a human gate. Regenerate this set from the deploying repo's
+// own .claude/agents/ — do not assume the default is correct for you.
+//
+// `council-review` is deliberately EXCLUDED: it is a skill, not an agent, in every deployment.
+// Its presence here was the mechanism of a real defect — a phase whose only security signal was
+// gate_lens:['security'] dispatched it as an agentType, so the security lens never ran while the
+// failure looked like a flaky reviewer. Keeping it in this set is what let that pass isHitlTask()
+// instead of being caught. Never re-add it.
 const KNOWN_AGENT_TYPES = new Set([
   'python-backend-engineer', 'ui-engineer-enhanced', 'ui-engineer', 'frontend-developer',
   'frontend-architect', 'backend-architect', 'backend-typescript-architect',
@@ -168,7 +202,7 @@ const KNOWN_AGENT_TYPES = new Set([
   'ai-engineer', 'documentation-complex', 'documentation-writer', 'documentation-expert',
   'api-documenter', 'changelog-generator', 'feature-sprint-executor', 'phase-owner',
   'codebase-explorer', 'search-specialist', 'symbols-engineer', 'artifact-tracker',
-  'task-completion-validator', 'karen', 'council-review', 'code-reviewer',
+  'task-completion-validator', 'karen', 'code-reviewer',
   'senior-code-reviewer', 'api-librarian', 'telemetry-auditor', 'prd-writer',
   'feature-planner', 'general-purpose',
   // Provider-routing executors (registered agent definitions — see
@@ -180,6 +214,154 @@ const KNOWN_AGENT_TYPES = new Set([
 
 function isHitlTask(t) {
   return t?.hitl === true || (!!t?.assigned_to && !KNOWN_AGENT_TYPES.has(t.assigned_to))
+}
+
+// ---------------------------------------------------------------------------
+// Batch member resolution + graph validation.
+//
+// `p.batches[][]` used to be consumed as if every member were a COMPLETE task object,
+// while /dev:execute-plan's pre-flight instruction ("group tasks by files_affected
+// disjointness") reads naturally as an INDEX over `p.tasks`. Nothing reconciled the two and
+// nothing rejected the mismatch, so an id-only member — `batches: [[{id:'M1-01'}]]` — took
+// the worst possible path: `t.prompt` was undefined, so the agent was dispatched with the
+// literal string "undefined" plus the durability footer; `t.assigned_to` was undefined, so
+// `agentType` was undefined; and `isHitlTask({id})` returned FALSE (no `hitl` flag, and the
+// unknown-agent branch is guarded by `!!t.assigned_to`), so the malformed member was
+// classified DISPATCHABLE rather than caught. The wave then "ran", the agents burned budget
+// on a one-word prompt, and their output flowed into taskOut and on to the reviewer gate,
+// which was asked to validate acceptance criteria against work that was never attempted.
+// No error, no null, no escalation — the phase could plausibly come back approved.
+//
+// Two changes close it. resolveBatchMember() makes the documented id-reference form work as
+// written by looking the member up in `p.tasks`. validateGraph() then asserts that EVERY
+// dispatchable member resolves to a usable prompt + assigned_to, and it runs BEFORE the wave
+// loop — so an unresolvable member halts the run instead of spawning anything. Resolution is
+// the convenience; the validation is the load-bearing half, because whichever form is
+// canonical, a member that cannot be resolved must never reach agent().
+// ---------------------------------------------------------------------------
+
+function resolveBatchMember(member, tasks) {
+  if (!member || typeof member !== 'object') return member
+  // Already a full task object — nothing to resolve.
+  if (typeof member.prompt === 'string' && member.prompt.length > 0) return member
+  const byId = (tasks ?? []).find(t => t && t.id != null && t.id === member.id)
+  if (!byId) return member
+  // Member fields win over the referenced task (a member may carry per-dispatch overrides
+  // such as `model` or `isolation`); an id-only member simply inherits the whole task.
+  return { ...byId, ...member, prompt: byId.prompt ?? member.prompt, assigned_to: member.assigned_to ?? byId.assigned_to }
+}
+
+function resolvedBatches(p) {
+  const raw = p.batches && p.batches.length > 0
+    ? p.batches
+    : [p.tasks ?? []] // Fallback: treat all tasks as one batch if batches not precomputed.
+  return raw.map(batch => (batch ?? []).map(m => resolveBatchMember(m, p.tasks)))
+}
+
+// Returns an array of human-readable graph errors (empty = valid). Pure; no agent() calls.
+function validateGraph(waves) {
+  const errors = []
+  for (const wave of waves ?? []) {
+    for (const p of wave?.phases ?? []) {
+      if (p?.phase_strategy === 'adaptive') continue // No static batches to resolve.
+      resolvedBatches(p).forEach((batch, bi) => {
+        batch.forEach((t, ti) => {
+          const where = `wave ${wave?.id} / phase ${p?.id} / batch ${bi} / member ${ti}`
+          if (!t || typeof t !== 'object') {
+            errors.push(`${where}: batch member is not an object (got ${typeof t}).`)
+            return
+          }
+          // HITL members are gates, never dispatched — they legitimately carry no prompt.
+          if (isHitlTask(t)) return
+          const ref = t.id ? `id '${t.id}'` : '(no id)'
+          if (typeof t.prompt !== 'string' || t.prompt.length === 0) {
+            errors.push(
+              `${where}: batch member ${ref} has no prompt after resolution against tasks[]. ` +
+              `A batch member must be a full task object, or an {id} reference matching an entry in this phase's tasks[]. ` +
+              `Dispatching it would send the literal prompt "undefined" to an agent.`
+            )
+          }
+          if (!t.assigned_to) {
+            errors.push(
+              `${where}: batch member ${ref} has no assigned_to after resolution against tasks[]. ` +
+              `Dispatching it would call agent() with agentType undefined.`
+            )
+          }
+        })
+      })
+    }
+  }
+  return errors
+}
+
+// ---------------------------------------------------------------------------
+// Repo-target guard — the workflow runs where the SESSION runs, and nowhere else.
+//
+// The Workflow tool spawns every agent in the session's cwd. There is no per-agent cwd
+// parameter, and `isolation:'worktree'` makes a worktree of the SESSION's repo — so a plan
+// whose work lives in a sibling repo does not fail, it succeeds against the wrong tree:
+// agents read the wrong files, commit to the wrong repo, and report `complete`. Observed
+// twice — /dev:autopilot invoked from agentic_meta_dev for work in the sibling intenttree
+// repo (di294-outcome-consolidation AAR lesson 5), and again on the DI-294 follow-ups, where
+// the operator hand-orchestrated specifically to avoid this and recorded it as the reason.
+//
+// The script cannot resolve either repo itself (no FS/shell — constraint 1), so Opus
+// pre-flight passes both and the script compares them. That split is deliberate: the
+// comparison is the load-bearing half and belongs where it cannot be skipped, while the
+// resolution belongs where a shell exists.
+//
+// Contract:
+//   - neither field present  → no-op. Every pre-existing graph keeps working unchanged.
+//   - target_repo only       → BLOCKED. A declared target with no proof of where the session
+//                              is standing is exactly the unverified claim this guard exists
+//                              to reject; "probably the same repo" is how both incidents read
+//                              at the time.
+//   - both present, differ   → BLOCKED. Hand-orchestrate in the target repo instead.
+//
+// Comparison is on basename as well as full path, so `/repos/intenttree` and
+// `~/dev/.../intenttree` match: the question is which repo, not which absolute path.
+// ---------------------------------------------------------------------------
+
+function repoKey(v) {
+  if (typeof v !== 'string') return null
+  const trimmed = v.trim().replace(/\/+$/, '')
+  if (trimmed.length === 0) return null
+  const base = trimmed.split('/').pop()
+  return base && base.length > 0 ? base : trimmed
+}
+
+// Returns a blocked ExecutionReport, or null when the target is verified (or unclaimed).
+function validateRepoTarget(graph) {
+  const target = repoKey(graph?.target_repo)
+  const session = repoKey(graph?.session_repo)
+
+  if (!target && !session) return null // Nothing declared — legacy graph, no-op.
+
+  if (target && !session) {
+    return {
+      status: 'blocked',
+      reason: 'cross_repo_unverified',
+      report: [],
+      blockers: [{
+        description: `Graph declares target_repo '${graph.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
+        resolution_hint: 'In Opus pre-flight, resolve the session repo (`basename "$(git rev-parse --show-toplevel)"`) and pass it as session_repo alongside target_repo. Do NOT drop target_repo to silence this — the guard is what stands between a cross-repo plan and agents editing the wrong tree.',
+      }],
+    }
+  }
+
+  if (target && session && target !== session) {
+    return {
+      status: 'blocked',
+      reason: 'cross_repo_target',
+      report: [],
+      blockers: [{
+        description: `Plan targets repo '${graph.target_repo}' but this session is in '${graph.session_repo}'. Workflow agents always run in the session's cwd and isolation:'worktree' branches the SESSION repo, so every task would have executed against the wrong repository — reading the wrong files and committing to the wrong tree while reporting success. No agents were spawned.`,
+        resolution_hint: `Re-run from the target repo: start a session in the '${graph.target_repo}' checkout and invoke the workflow there. If that is not possible, hand-orchestrate the plan and verify \`git rev-parse --show-toplevel\` + \`git branch --show-current\` + \`git diff\` yourself at each step — per .claude/skills/dev-execution/git-worktree-pr-protocol.md, never trust a completion report for repo identity.`,
+      }],
+    }
+  }
+
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -299,14 +481,50 @@ function fixTaskModeDGuard(phase, prompt) {
 // ---------------------------------------------------------------------------
 // Durability footer — appended to all implementation/sprint/fix agent prompts.
 // Encodes the commit-checkpoint invariant (workflow-authoring-spec.md §16):
-//   - Isolated worktree branch: commit each logical unit as you go.
-//   - Do NOT push, merge, stash, or touch other branches.
+//   - Commit each logical unit as you go, BY EXPLICIT PATHSPEC.
+//   - Never rewrite history; never push, merge, stash, or touch other branches.
 // Reviewer and tracker agents do NOT use this footer (they are edit-less).
+//
+// The footer is a FUNCTION of actual isolation, not a constant. The previous constant
+// asserted "an isolated worktree branch you own" to EVERY task agent, which is false for
+// a static batch: the batch runs via parallel() and, unless the task carries
+// isolation:'worktree', all its members share ONE working tree, ONE index and ONE HEAD.
+// Observed live 2026-08-04 (7-task batch): a pathspec-less `git commit` swept a sibling's
+// staged files into the wrong commit, and the follow-up `git reset --soft HEAD~1` to split
+// them raced a third sibling's commit — a history rewrite under 6 concurrent writers,
+// averted only by that agent's own caution. Attribution is the load-bearing loss: per-task
+// commit_sha feeds the reviewer gate and the progress file's commit_refs, and under a shared
+// index which files land in which commit is decided by scheduling.
+//
+// Two changes make the instruction survivable: (1) commits are pathspec-scoped and every
+// history-rewriting verb is forbidden outright, so a racing sibling cannot be captured or
+// clobbered; (2) the "branch you own" claim is made ONLY when isolation is real, so a
+// shared-tree agent is told plainly that siblings are writing to the same branch right now.
+//
+// This also reconciles a doctrine conflict the footer previously lost: dev-execution/SKILL.md
+// and git-worktree-pr-protocol.md both say the phase-owner is the SINGLE committer and that
+// children "never git add/commit/push/stash". That rule still holds for NESTED children
+// (see buildPhaseOwnerNestingClause). A batch task agent is not a nested child: it commits,
+// but only its own assigned files, and never rewrites.
 // ---------------------------------------------------------------------------
 
-const DURABILITY_FOOTER = `
+const DURABILITY_COMMON = `Commit each logical unit of your work as you go (this is required so your work survives a mid-run crash and is visible to the reviewer/resume).
 
-DURABILITY: You are on an isolated worktree branch you own. Commit each logical unit of your work to this branch as you go (this is required so your work survives a mid-run crash and is visible to the reviewer/resume). Do NOT push, do NOT merge, do NOT stash, do NOT touch other branches.`
+COMMIT ONLY YOUR OWN FILES, BY EXPLICIT PATHSPEC: \`git add <path> [<path>...]\` then \`git commit -- <paths>\`. NEVER \`git add -A\`, NEVER \`git add .\`, NEVER a pathspec-less \`git commit -a\` — those capture whatever a concurrently-running sibling task happens to have staged, and silently attribute its work to your commit.
+
+NEVER REWRITE HISTORY: no \`git reset\` (any mode), no \`git rebase\`, no \`git commit --amend\`, no \`git push --force\`, no \`git filter-branch\`. If you believe a previous commit is wrong, do NOT fix it by rewriting — record the problem in your summary and let the orchestrator resolve it.
+
+Do NOT push, do NOT merge, do NOT stash, do NOT touch other branches.`
+
+function durabilityFooter(isolated) {
+  return isolated
+    ? `
+
+DURABILITY: You are on an isolated worktree branch you own. ${DURABILITY_COMMON}`
+    : `
+
+DURABILITY: You are on a SHARED working tree and a SHARED branch. Sibling tasks in your batch are running CONCURRENTLY against this same index and HEAD right now — you do NOT own this branch. ${DURABILITY_COMMON}`
+}
 
 // ---------------------------------------------------------------------------
 // Per-task fallback structurer schema and prompt.
@@ -315,25 +533,41 @@ DURABILITY: You are on an isolated worktree branch you own. Commit each logical 
 // so the task is not silently dropped from the phase's taskOut array.
 // ---------------------------------------------------------------------------
 
+// The recovery path used to hard-code `status: "completed"` and accept an empty commit_sha,
+// which made it a laundry for the two worst outcomes it is supposed to surface: an agent that
+// produced nothing came back 'completed', and so did one that left everything uncommitted.
+// (The empty-string instruction was also unsatisfiable — commit_sha's schema pattern is
+// ^[0-9a-f]{7,40}$, so "" fails validation and the recovery itself dies, dropping the task
+// after all.) The agent's status is now DERIVED from what is on disk, and the field is
+// omitted rather than emptied when there is no commit.
 function fallbackStructurePrompt(t) {
   return `Mode: A — Exploration Only
 
-A task agent completed its work but failed to emit structured output.
-Recover its result by reading git state.
+A task agent finished without emitting structured output. Recover what ACTUALLY happened from
+git state. Do not assume the work succeeded — a missing structured result is equally consistent
+with an agent that crashed, stalled, or never wrote anything.
 
 Task id: ${t.id}
 Agent: ${t.assigned_to}
 
-Run:
-  git log -1 --oneline
-  git rev-parse HEAD
+Observe:
+  MB=$(git merge-base HEAD origin/main)
+  git log --oneline "$MB"..HEAD     # commits on this branch
+  git status --porcelain            # uncommitted work still in the tree
 
-Return a TASK_RESULT_SCHEMA result:
+Return a TASK_RESULT_SCHEMA result with:
   - id: "${t.id}"
   - assigned_to: "${t.assigned_to}"
-  - status: "completed"
-  - commit_sha: <the HEAD sha you found, or "" if no new commits>
-  - summary: "recovered from disk after StructuredOutput miss"
+  - status — DERIVED, not assumed:
+      "completed" ONLY if there is at least one commit on this branch plausibly belonging to
+                  this task; set commit_sha to that commit.
+      "failed"    if there are no such commits. Say so in the summary, and note whether
+                  \`git status --porcelain\` shows uncommitted changes (work done but never
+                  durably committed) or a clean tree (no work landed at all).
+  - commit_sha — OMIT THE FIELD ENTIRELY when there is no commit. Never send an empty string,
+    never send a sha you did not resolve.
+  - summary: what you observed, in one line — e.g. "recovered from disk: 2 commits, HEAD abc1234"
+    or "recovered from disk: no commits since merge-base; 4 files modified but uncommitted".
 
 Do NOT edit any files. Read only.`
 }
@@ -342,11 +576,61 @@ Do NOT edit any files. Read only.`
 // Prompt builders — pure string construction, no FS access.
 // ---------------------------------------------------------------------------
 
+// The reviewer's input is a set of CLAIMS, and it used to be its only input.
+//
+// The prompt listed each task's self-reported summary/status/commit_sha and asked for a
+// verdict, so an executor that mis-reported was reviewed on its mis-report. Observed live
+// 2026-08-04 across a three-executor delegation: one shipped a conceptual bug while claiming
+// per-AC verification, one returned without committing and later filed a report crediting
+// itself with a fix the operator had written, and the gate agent itself abdicated. Every
+// defect was found by re-running the gate and reading the diff; none was visible in any
+// report. A reviewer handed only reports cannot do better than the reports.
+//
+// So the prompt now (1) names the summaries as claims rather than facts, (2) requires the
+// reviewer to observe the diff itself against a PINNED merge-base — `origin/main..HEAD`
+// silently mixes in whatever landed on main mid-run, which already corrupted one review into
+// analysing another commit's work (di294-followups AAR lesson 4) — and (3) hands it the
+// claims that carry no commit at all, pre-computed, because "completed with no commit_sha"
+// is the exact shape of the executor that never committed and is the one thing the reviewer
+// can check cheaply and decisively.
 function reviewPrompt(p, taskOut) {
-  const taskSummaries = taskOut
-    .filter(Boolean)
-    .map(t => `- ${t.id} (${t.assigned_to}): ${t.summary ?? 'no summary'} [${t.status}]${t.commit_sha ? ' commit:' + t.commit_sha : ''}`)
+  const claimed = taskOut.filter(Boolean)
+
+  const taskSummaries = claimed
+    .map(t => `- ${t.id} (${t.assigned_to}): ${t.summary ?? 'no summary'} [${t.status}]${t.commit_sha ? ' commit:' + t.commit_sha : ' commit:NONE REPORTED'}`)
     .join('\n')
+
+  // Claims of completion with nothing committed to point at. Not necessarily wrong — a
+  // verification-only task legitimately produces no commit — but never self-evident.
+  const uncommitted = claimed.filter(t => t.status === 'completed' && !t.commit_sha)
+  const shas = claimed.map(t => t.commit_sha).filter(Boolean)
+
+  const verifyBlock = `
+INDEPENDENT VERIFICATION (required before you decide anything):
+The list above is what the task agents SAID they did. It is not evidence, and agents in this
+workflow have reported completion for work they did not commit, and credited themselves with
+fixes written by someone else. Verify against the repository itself:
+
+  MB=$(git merge-base HEAD origin/main)     # pin the base ONCE
+  git diff --stat "$MB"..HEAD               # what this branch actually changed
+  git log --oneline "$MB"..HEAD
+
+Never diff \`origin/main..HEAD\` — main moves during a run and the phantom diff that produces
+is self-consistent and plausible, so it will not announce itself as wrong.
+${shas.length ? `
+Confirm each reported commit exists and belongs to this branch:
+${shas.map(s => `  git cat-file -e ${s}^{commit} && git merge-base --is-ancestor ${s} HEAD && echo "${s} OK"`).join('\n')}
+A reported sha that does not resolve, or is not an ancestor of HEAD, means the report is
+describing work that is not here.` : ''}
+${uncommitted.length ? `
+These tasks claim status 'completed' but reported NO commit — treat each as UNVERIFIED until
+you find its work in the diff, and do not approve on the strength of its summary alone:
+${uncommitted.map(t => `  - ${t.id} (${t.assigned_to})`).join('\n')}
+Also check \`git status --porcelain\`: uncommitted changes in the tree mean the work exists
+but was never durably committed, which is a required_fix, not a pass.` : ''}
+
+Judge the acceptance criteria against what the diff shows, not against what the summaries
+assert. Where the two disagree, the diff wins and the disagreement itself is a finding.`
 
   return `Mode: E — Reviewer
 
@@ -355,11 +639,15 @@ Review the completed phase and determine whether acceptance criteria are met.
 Phase: ${p.id} — ${p.title}
 Plan reference: ${planRef}
 
-Completed tasks:
+Task agents' self-reported claims:
 ${taskSummaries || '(no tasks completed)'}
+${verifyBlock}
 
-Return a verdict conforming to the VERDICT_SCHEMA. Set approved:true only if all tasks completed
-successfully and no blockers remain. If approved:false, provide actionable required_fixes.
+Return a verdict conforming to the VERDICT_SCHEMA. Set approved:true only if you have observed
+the diff yourself, every acceptance criterion is met in the code you read, and no blockers
+remain. Record what you actually inspected in \`evidence\` — an approval with no evidence of
+inspection is the failure mode this gate exists to catch, including when you are the one
+producing it. If approved:false, provide actionable required_fixes.
 Do NOT git add/commit/push/stash.`
 }
 
@@ -373,7 +661,7 @@ Fix the following issues identified by the reviewer for phase ${p.id} — ${p.ti
 Required fixes:
 ${fixList || '(see phase context for issues)'}
 
-Apply all fixes.` + DURABILITY_FOOTER
+Apply all fixes.` + durabilityFooter(p?.isolation === 'worktree')
 }
 
 function trackerPrompt(progressFile, completedTaskIds) {
@@ -428,7 +716,7 @@ Isolation: ${p.isolation ?? 'shared'}
 Known tasks (may be partial):
 ${taskList || '(derive from plan context)'}
 
-Explore the plan, implement the phase tasks with appropriate file-ownership batching.` + buildPhaseOwnerNestingClause(nestingEnabled) + DURABILITY_FOOTER
+Explore the plan, implement the phase tasks with appropriate file-ownership batching.` + buildPhaseOwnerNestingClause(nestingEnabled) + durabilityFooter(p?.isolation === 'worktree')
 }
 
 // ---------------------------------------------------------------------------
@@ -531,13 +819,22 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
       })
     }
 
-    verdict = await agent(reviewPrompt(p, taskOut), {
-      phase: 'Review',
-      agentType: reviewerType,
-      schema: VERDICT_SCHEMA,
-    })
+    // Route through dispatchReview, never a bare agent(): for a council phase reviewerType
+    // is 'council-review', a skill with no agent file. Dispatching it here resolved nothing
+    // and returned null, so EVERY council rejection's re-review gate-failed by construction —
+    // a fix cycle that could never be re-reviewed on the path it came from.
+    const reReview = await dispatchReview(p, taskOut, reviewerType)
+    verdict = reReview.verdict
 
     cycles++
+
+    // A council re-review that came back conditional / partial / unvalidated is not a
+    // rejection to iterate on; stop for the same reason a null verdict stops the loop.
+    if (reReview.integrity_failure) {
+      log(`GATE INTEGRITY FAILURE on phase ${p.id} re-review (fix cycle ${cycles}): ${reReview.integrity_failure}. Halting the fix loop — the fix so far is unreviewed, not rejected.`)
+      gateFailed = reReview.integrity_failure
+      break
+    }
 
     // §8b: the re-review itself produced no verdict. Looping would spend the remaining
     // budget on fixes chosen from a rejection that does not exist, so stop and say why.
@@ -566,8 +863,10 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
     tasks: taskOut,
     verdict: verdict ?? gateFailureVerdict(reviewerType, gateFailed || 'reviewer returned no structured verdict'),
     fix_cycles: cycles,
-    // false only when the LAST reviewer pass produced nothing. A rejection still ran.
-    gate_ran: Boolean(verdict),
+    // false when the LAST reviewer pass produced nothing, OR produced something that cannot
+    // be trusted as a verdict (conditional / lost findings / failed arc validate). A plain
+    // rejection still ran. `gateFailed` covers both untrustworthy cases.
+    gate_ran: Boolean(verdict) && !gateFailed,
     // Set only when the loop exited via the same-class stop rule. Opus reads this to
     // route to redesign rather than adjudicating another review pass.
     needs_redesign: sameClassRepeat ? { defect_class: sameClassRepeat, rounds: cycles } : null,
@@ -590,6 +889,171 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
 }
 
 // ---------------------------------------------------------------------------
+// Council verdict assessment (authoring-spec §8b, one level up).
+//
+// §8b closes the case where a reviewer DIES: verdict === null ⇒ gate_failure, gate_ran:false,
+// escalate:true. It does not touch the case where a verdict EXISTS but is conditional,
+// partial, or self-reportedly under-evidenced — and that case was collapsing into a clean
+// pass. Observed 2026-08-04 at an M1 council gate: the council's own scorecard said
+// recommendation "proceed_with_conditions", overall 45/100, every lens 2–3/10, evidence
+// completeness 1/10, and its findings.yaml recorded that 5 of 8 adjudicated findings never
+// reached the artifact writer. The orchestrator received `approved:true` with
+// `required_fixes: []` and `arc_validate_passed:false`, and the wave advanced. Nothing in the
+// envelope pointed at any of it; it was found only by opening the scorecard by hand.
+//
+// Three independent losses, all pointing the same way — toward false assurance:
+//   1. 'proceed_with_conditions' → approved:true. The verdict is boolean, so "proceed, but
+//      these conditions hold" is indistinguishable from an unconditional pass, and the
+//      conditions are dropped rather than carried as required_fixes.
+//   2. Findings lost between adjudication and the artifact writer are reported as if the
+//      SURVIVORS were the whole population — the envelope actively asserts watchlist:0 for a
+//      run that had 3 watchlist findings it simply never received.
+//   3. arc_validate_passed:false is present, load-bearing, and keyed off by nothing.
+//
+// A lost-findings or failed-validation run is NOT a rejection: there is no finding to act on,
+// so a fix cycle would edit blind and then re-review unchanged code. It belongs in the same
+// family as gate_ran:false — re-dispatch or record an explicit operator override. A
+// conditional verdict IS actionable, so its conditions become required_fixes and it takes the
+// normal non-approval path.
+// ---------------------------------------------------------------------------
+
+const CONDITIONAL_RECOMMENDATIONS = new Set([
+  'proceed_with_conditions',
+  'approve_with_conditions',
+  'conditional',
+  'conditional_approval',
+])
+
+function assessCouncilVerdict(raw, phaseId) {
+  // workflow() returns null if the user skips it.
+  if (!raw) {
+    return {
+      verdict: {
+        approved: false,
+        reviewer_type: 'council-review',
+        required_fixes: ['Council workflow was skipped — manual review required.'],
+      },
+      integrity_failure: null,
+    }
+  }
+
+  // The council bailed before writing its decision record. It carries a fallback_verdict, but
+  // the previous spread produced an object with no `approved` key at all — falsy by accident.
+  if (raw.status === 'needs_opus' || raw.status === 'blocked') {
+    return {
+      verdict: {
+        ...(raw.fallback_verdict ?? {}),
+        approved: false,
+        reviewer_type: 'council-review',
+        council_status: raw.status,
+        council_reason: raw.reason ?? null,
+      },
+      integrity_failure: `the review-council sub-workflow did not complete (status '${raw.status}'${raw.reason ? `, reason '${raw.reason}'` : ''})`,
+    }
+  }
+
+  const summary = raw.summary ?? {}
+  const verdict = {
+    ...raw,
+    reviewer_type: 'council-review',
+    // Propagate the scorecard signals so the orchestrator can apply judgement from the
+    // envelope alone, instead of opening scorecard.json by hand.
+    council_recommendation: raw.recommendation ?? null,
+    council_overall: raw.overall ?? null,
+    council_by_lens: raw.by_lens ?? null,
+  }
+
+  // --- Integrity checks: a pass that cannot be trusted as a pass. ---
+  const integrityReasons = []
+
+  const claimed = summary.total_findings_claimed
+  const delivered = summary.total_findings
+  const notReceived = summary.findings_not_received
+  if (typeof notReceived === 'number' && notReceived > 0) {
+    integrityReasons.push(`${notReceived} adjudicated finding(s) never reached the artifact writer (findings_not_received=${notReceived})`)
+  } else if (typeof claimed === 'number' && typeof delivered === 'number' && claimed > delivered) {
+    integrityReasons.push(`the council claimed ${claimed} findings but only ${delivered} were delivered — ${claimed - delivered} lost at the adjudication/artifact seam`)
+  }
+  if (summary.arc_validate_passed === false) {
+    integrityReasons.push('the council\'s own `arc validate` did not pass (arc_validate_passed=false)')
+  }
+
+  if (integrityReasons.length > 0) {
+    return {
+      verdict: { ...verdict, approved: false, verdict_source: 'gate_integrity_failure' },
+      integrity_failure: integrityReasons.join('; '),
+    }
+  }
+
+  // --- Conditional recommendation: actionable, so it takes the normal rejection path. ---
+  const rec = typeof raw.recommendation === 'string' ? raw.recommendation.toLowerCase() : null
+  if (rec && CONDITIONAL_RECOMMENDATIONS.has(rec) && verdict.approved) {
+    const conditions = (raw.required_fixes ?? []).length > 0
+      ? raw.required_fixes
+      : [`The council returned '${raw.recommendation}' for phase ${phaseId} but supplied no explicit conditions in required_fixes. Read the council artifacts (${raw.council_artifacts?.scorecard_json ?? raw.council_artifacts?.run_dir ?? 'run_dir'}) and resolve the conditions before treating this phase as approved.`]
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'conditional_approval',
+        required_fixes: conditions,
+      },
+      integrity_failure: null,
+    }
+  }
+
+  return { verdict, integrity_failure: null }
+}
+
+// Invoke the review-council sub-workflow for a phase. One nesting level: execute-plan is the
+// top workflow and review-council is the only sub-workflow it may nest.
+async function runCouncil(p, taskOut) {
+  return workflow('review-council', {
+    target: { type: 'phase-taskout', ref: p.id, description: p.title || p.id },
+    task_summaries: JSON.stringify(taskOut.filter(Boolean)),
+    plan_ref: planRef,
+    phase_id: p.id,
+    timestamp: graph.timestamp,
+    intensity: 'standard',
+  })
+}
+
+// Single review dispatch point. Routing MUST go through here so that 'council-review' — a
+// SKILL, deliberately absent from KNOWN_AGENT_TYPES — can never land in an agentType position.
+// Returns { verdict, integrity_failure }.
+async function dispatchReview(p, taskOut, reviewerType) {
+  if (reviewerType === 'council-review') {
+    return assessCouncilVerdict(await runCouncil(p, taskOut), p.id)
+  }
+  const verdict = await agent(reviewPrompt(p, taskOut), {
+    phase: 'Review',
+    agentType: reviewerType,
+    schema: VERDICT_SCHEMA,
+  })
+  return { verdict, integrity_failure: null }
+}
+
+// Shared shape for "the gate could not be trusted to have run" — used by both the §8b
+// null-verdict case and the council-integrity case. Their next action is identical:
+// re-dispatch or record an explicit operator override. Never a fix cycle.
+function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles) {
+  return {
+    phase: p.id,
+    reviewer_type: reviewerType,
+    tasks: taskOut,
+    verdict,
+    fix_cycles: cycles ?? 0,
+    gate_ran: false,
+    escalate: true,
+    files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
+    blockers: [{
+      description: `Reviewer gate on phase ${p.id} did not produce a trustworthy verdict — ${reason}.`,
+      resolution_hint: 'This is NOT an approval and NOT a rejection. Re-dispatch the reviewer against the current state (or invoke the reviewer-gate workflow on the same scope), or record an explicit operator override. Do NOT run a fix cycle — there is no finding to act on.',
+    }],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pattern: reviewerGate — select reviewer, run, hand off to fixLoop on rejection.
 //
 // For review_intensity:'council' phases, invokes the review-council sub-workflow
@@ -599,23 +1063,36 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
 // ---------------------------------------------------------------------------
 
 async function reviewerGate(p, taskOut, tier) {
+  // Resolve the reviewer FIRST, then branch on it.
+  //
+  // The council branch used to be guarded by `p.review_intensity === 'council'` while the
+  // standard branch dispatched `agentType: councilEscalation(p, tier)`. Those two disagree
+  // for exactly the phase shape gate-tiering v4.1 prescribes: a phase carrying
+  // gate_lens:['security'] (per references/gate-risk-classes.md §2) but no legacy
+  // review_intensity field resolves to 'council-review' — which is a SKILL, deliberately
+  // absent from KNOWN_AGENT_TYPES — and was handed straight to agent() as an agentType. The
+  // dispatch resolved nothing, the verdict came back null, and §8b recorded a generic
+  // "reviewer returned no verdict" escalation. It did not silently approve, but the security
+  // lens never ran, and the failure looked like a flaky reviewer rather than an undispatchable
+  // gate config — so the operator's natural response (re-dispatch) reproduces it verbatim.
+  //
+  // Reading gate_lens was added precisely to stop a high-risk surface getting only
+  // task-completion-validator. Branching on the RESOLVED reviewer is what makes the
+  // "security is non-removable" invariant reachable rather than documentary.
+  const reviewerType = councilEscalation(p, tier)
+
   // Council path: invoke review-council sub-workflow for core-path / high-risk phases.
   // This codifies the "[Pair adversarial reviewer with AC validator]" lesson:
   // deterministically runs diverse-lens reviewers + adversarial code-tracer in parallel.
-  if (p.review_intensity === 'council') {
-    const councilVerdict = await workflow('review-council', {
-      target: { type: 'phase-taskout', ref: p.id, description: p.title || p.id },
-      task_summaries: JSON.stringify(taskOut.filter(Boolean)),
-      plan_ref: planRef,
-      phase_id: p.id,
-      timestamp: graph.timestamp,
-      intensity: 'standard',
-    })
+  if (reviewerType === 'council-review') {
+    const { verdict, integrity_failure } = assessCouncilVerdict(await runCouncil(p, taskOut), p.id)
 
-    // workflow() returns null if the user skips. Treat as a non-approval requiring escalation.
-    const verdict = councilVerdict
-      ? { ...councilVerdict, reviewer_type: 'council-review' }
-      : { approved: false, reviewer_type: 'council-review', required_fixes: ['Council workflow was skipped — manual review required.'] }
+    // A conditional / partial / unvalidated council result is not a pass, and — unlike a
+    // rejection — it is not something a fix cycle can act on.
+    if (integrity_failure) {
+      log(`GATE INTEGRITY FAILURE on phase ${p.id}: ${integrity_failure}. Recording as a gate failure, NOT as an approval or a rejection. The fix loop is deliberately skipped.`)
+      return gateIntegrityResult(p, taskOut, 'council-review', verdict, integrity_failure, 0)
+    }
 
     if (!verdict.approved) {
       return fixLoop(p, taskOut, verdict, 'council-review')
@@ -626,6 +1103,7 @@ async function reviewerGate(p, taskOut, tier) {
       tasks: taskOut,
       verdict,
       fix_cycles: 0,
+      gate_ran: true,
       escalate: false,
       files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
       blockers: [],
@@ -635,7 +1113,6 @@ async function reviewerGate(p, taskOut, tier) {
   // Standard / tier3 path: single edit-less reviewer agent.
   // P3: when provider_routing_enabled=true, use codex-executor two-stage AC validation
   // instead of direct agent() call with VERDICT_SCHEMA. Council path is MUST-STAY (above).
-  const reviewerType = councilEscalation(p, tier)
 
   let verdict
 
@@ -812,28 +1289,48 @@ function acValidationArtifactPath(phaseId, planRef, timestamp) {
   return `.claude/worknotes/ac-validation/${datePart}-${planSlug}-${phaseSlug}-ac-check.md`
 }
 
+// Evidence must be something the validator READ, not something it was TOLD. The prior
+// instruction accepted "one-line evidence citing task IDs or commit SHAs" — but a task id is
+// a pointer back to the same self-report being validated, so an AC could be marked MET on the
+// strength of the claim under review. Observed 2026-08-04: a phase shipped a conceptual bug
+// while its report claimed per-AC verification, and the AC pass did not contradict it.
 function codexAcValidationPrompt(p, taskOut, planRef, artifactPath) {
-  const taskSummaries = taskOut
-    .filter(Boolean)
-    .map(t => `- ${t.id} (${t.assigned_to}): ${t.summary ?? 'no summary'} [${t.status}]${t.commit_sha ? ' commit:' + t.commit_sha : ''}`)
+  const claimed = taskOut.filter(Boolean)
+
+  const taskSummaries = claimed
+    .map(t => `- ${t.id} (${t.assigned_to}): ${t.summary ?? 'no summary'} [${t.status}]${t.commit_sha ? ' commit:' + t.commit_sha : ' commit:NONE REPORTED'}`)
     .join('\n')
+
+  const uncommitted = claimed.filter(t => t.status === 'completed' && !t.commit_sha)
 
   return `Mode: A — Exploration Only. Read-only investigation. Do NOT write production code. Do NOT git add/commit/push/stash.
 
 You are the AC validator for phase: ${p.id} — ${p.title}
 Plan reference: ${planRef}
 
-Completed tasks:
+Task agents' self-reported claims (NOT evidence — these are what you are checking):
 ${taskSummaries || '(no tasks completed)'}
+${uncommitted.length ? `
+⚠️ These claim 'completed' but reported no commit. Find their work in the diff or treat the
+   corresponding ACs as NOT MET:
+${uncommitted.map(t => `   - ${t.id} (${t.assigned_to})`).join('\n')}
+` : ''}
+Validate every Acceptance Criterion in the plan reference against the CODE, not the claims:
 
-Validate that the completed tasks satisfy all Acceptance Criteria from the plan reference.
-For each AC: check if it is met (yes/no) with one-line evidence citing task IDs or commit SHAs.
+  MB=$(git merge-base HEAD origin/main)   # pin the base once; never diff origin/main..HEAD
+  git diff "$MB"..HEAD
+  git status --porcelain                  # work that exists but was never committed
+
+EVIDENCE RULE: evidence is a \`file:line\` you read, a function/behaviour you traced, or a
+command you ran and its output. A task id or a quoted task summary is NOT evidence — it is the
+claim under review, and citing it validates the report against itself. If you cannot point at
+code for an AC, it is NOT MET, even when a task says it did it.
 
 IMPORTANT — TWO-STAGE DURABILITY:
 Write your complete AC validation checklist to: ${artifactPath}
 Use this format per AC item:
   - [ ] AC text — NOT MET: reason
-  - [x] AC text — MET: evidence
+  - [x] AC text — MET: <file:line or traced behaviour>
 
 This file MUST exist before you return. A downstream structurer will read it to emit the verdict.
 Do NOT emit structured output yourself. Do NOT git add/commit/push/stash.`
@@ -896,7 +1393,54 @@ const {
 if (dryRun) {
   phase('Dry run')
   log('dry_run=true — returning parsed graph for inspection, no agents spawned.')
-  return { status: 'dry_run', graph }
+  const dryErrors = validateGraph(waves)
+  if (dryErrors.length > 0) {
+    log(`Graph validation found ${dryErrors.length} error(s):\n  - ${dryErrors.join('\n  - ')}`)
+  }
+  // Surface a repo-target mismatch in the dry run too — the whole point of a dry run is to
+  // learn this BEFORE spending a live wave, and a cross-repo graph is the one error a dry
+  // run would otherwise report as a clean graph.
+  const dryRepoBlock = validateRepoTarget(graph)
+  if (dryRepoBlock) {
+    log(`REPO TARGET MISMATCH (${dryRepoBlock.reason}): ${dryRepoBlock.blockers[0].description}`)
+  }
+  return {
+    status: 'dry_run',
+    graph,
+    graph_errors: dryErrors,
+    repo_target_blocked: dryRepoBlock ? dryRepoBlock.reason : null,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Repo-target guard — runs BEFORE graph validation and before any agent is spawned.
+// A graph can be perfectly well-formed and still be pointed at the wrong repository;
+// that failure is silent by construction, so it is checked first.
+// ---------------------------------------------------------------------------
+const repoBlock = validateRepoTarget(graph)
+if (repoBlock) {
+  log(`HALTING — ${repoBlock.reason}: ${repoBlock.blockers[0].description}`)
+  return repoBlock
+}
+
+// ---------------------------------------------------------------------------
+// Graph validation — runs BEFORE the wave loop, so a malformed graph halts the run
+// instead of dispatching agents with an undefined prompt / undefined agentType.
+// This is the "never dispatch what you could not resolve" half of the batch-member fix.
+// ---------------------------------------------------------------------------
+const graphErrors = validateGraph(waves)
+if (graphErrors.length > 0) {
+  log(`INVALID GRAPH — halting before any agent is spawned. ${graphErrors.length} error(s):\n  - ${graphErrors.join('\n  - ')}`)
+  return {
+    status: 'blocked',
+    reason: 'invalid_graph',
+    graph_errors: graphErrors,
+    report: [],
+    blockers: graphErrors.map(e => ({
+      description: e,
+      resolution_hint: 'Fix the ExecutionGraph in Opus pre-flight: every batch member must be a full task object, or an {id} that matches an entry in the same phase\'s tasks[]. No agents were spawned.',
+    })),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -959,9 +1503,9 @@ for (const wave of waves) {
     }
 
     // Static phases: per-task specialist dispatch via file-ownership batches.
-    const batches = p.batches && p.batches.length > 0
-      ? p.batches
-      : [p.tasks] // Fallback: treat all tasks as one batch if batches not precomputed.
+    // Members may be full task objects or {id} references into p.tasks; resolvedBatches()
+    // normalises both, and validateGraph() has already rejected anything unresolvable.
+    const batches = resolvedBatches(p)
 
     // Partition out human-assigned (HITL) tasks: they are gates, not dispatchable agent work.
     const hitlGates = (p.tasks ?? [])
@@ -977,15 +1521,19 @@ for (const wave of waves) {
       if (dispatchable.length === 0) continue
       const batchOut = await parallel(dispatchable.map(t => async () => {
         // Happy path: task agent emits structured output directly.
-        // Durability footer appended to every task prompt (see DURABILITY_FOOTER).
+        // Durability footer appended to every task prompt (see durabilityFooter()).
         let result
+        // The footer's premise must match reality: only a task actually granted
+        // isolation:'worktree' owns its branch. Everything else shares the tree with the
+        // sibling tasks running alongside it in this very parallel() call.
+        const taskIsolated = (t.isolation ?? p.isolation) === 'worktree'
         try {
-          result = await agent(t.prompt + DURABILITY_FOOTER, {
+          result = await agent(t.prompt + durabilityFooter(taskIsolated), {
             label: `${p.id}:${t.id}`,
             phase: `Wave ${wave.id}`,
             agentType: t.assigned_to,
             model: t.model,
-            isolation: (t.isolation ?? p.isolation) === 'worktree' ? 'worktree' : undefined,
+            isolation: taskIsolated ? 'worktree' : undefined,
             schema: TASK_RESULT_SCHEMA,
           })
         } catch (_schemaErr) {
@@ -1031,8 +1579,52 @@ for (const wave of waves) {
     return phaseResult
   }))
 
+  // A phase whose thunk threw — or whose agent stalled through every retry — resolves to
+  // `null` in waveResults (documented parallel() behaviour). `filter(Boolean)` was doing
+  // double duty: "drop empties" and, accidentally, "discard failures". The nulled phase was
+  // removed from the array BEFORE the escalation check inspected it, so `.some(r =>
+  // r?.escalate)` could not fire for it, and the loop advanced to the next wave as though the
+  // phase had succeeded.
+  //
+  // Observed 2026-08-04 on the final wave of a 3-wave plan: one agent stalled through 6
+  // consecutive 180s no-progress retries, its phase produced no result, the wave's `phases`
+  // array came back EMPTY, and the workflow returned `{status:'complete', report:[{wave:'3',
+  // phases:[]}]}`. The reviewer gate for that milestone never ran at all. The only signal was
+  // an empty array plus a line in the harness's <failures> channel — which a programmatic
+  // caller (cron / unattended lane) never sees, and which an orchestrator trusting
+  // `status:'complete'` has no reason to correlate. 13 commits across 53 files, including a
+  // live id-leak fix, came within one hand-read of merging entirely ungated.
+  //
+  // So: a dropped phase is recorded, named, and escalated — the same loudness contract §8b
+  // already applies to a dead reviewer — and the reason travels in the RETURN VALUE.
+  const droppedPhases = waveResults
+    .map((r, i) => (r ? null : (wave.phases[i]?.id ?? `(unnamed phase at index ${i})`)))
+    .filter(Boolean)
+
   const completedWaveResults = waveResults.filter(Boolean)
-  report.push({ wave: wave.id, phases: completedWaveResults })
+  report.push({
+    wave: wave.id,
+    phases: completedWaveResults,
+    // Recorded on every wave so the terminal invariant below is checkable from the report
+    // alone, by this workflow and by anything downstream that consumes it.
+    phases_expected: wave.phases.length,
+    phases_returned: completedWaveResults.length,
+    dropped_phases: droppedPhases,
+  })
+
+  if (droppedPhases.length > 0) {
+    log(`Wave ${wave.id}: ${droppedPhases.length} phase(s) produced NO result and were dropped: ${droppedPhases.join(', ')}. Their reviewer gates did NOT run. Returning to Opus — this is not a completion.`)
+    return {
+      status: 'needs_opus',
+      reason: 'phase_dropped',
+      dropped_phases: droppedPhases,
+      report,
+      blockers: droppedPhases.map(id => ({
+        description: `Phase ${id} in wave ${wave.id} returned no result — its agent stalled, threw, or was skipped after retries. Its reviewer gate did NOT run.`,
+        resolution_hint: 'Do NOT treat this wave as complete. Inspect the phase\'s worktree state by hand, then either re-dispatch the phase or run the reviewer gate against whatever work actually landed. Any later wave building on this one is building on an unverified predecessor.',
+      })),
+    }
+  }
 
   // Escalate if any phase's fix-loop exhausted without reviewer approval.
   if (completedWaveResults.some(r => r?.escalate)) {
@@ -1053,6 +1645,32 @@ for (const wave of waves) {
 
   // NB: cross-wave worktree merge happens in Opus post-wave (no git in script — constraint 1).
   log(`Wave ${wave.id} complete. Opus: run git merge --squash on worktree branches before next wave.`)
+}
+
+// ---------------------------------------------------------------------------
+// Terminal completeness invariant.
+//
+// The per-wave check above already escalates a dropped phase, so reaching here with a short
+// wave should be impossible. That is exactly why the assertion is worth its three lines: it
+// is cheap, it is the last thing standing between a silently-shortened report and a
+// `status:'complete'` that an unattended caller will believe, and it holds for any FUTURE
+// early-exit path that forgets to account for its own phases. status:'complete' must be
+// unreachable whenever any wave returned fewer phases than it was given.
+// ---------------------------------------------------------------------------
+const shortWaves = report.filter(w => (w.phases?.length ?? 0) !== (w.phases_expected ?? w.phases?.length ?? 0))
+if (shortWaves.length > 0) {
+  const detail = shortWaves.map(w => `wave ${w.wave}: ${w.phases_returned ?? w.phases?.length ?? 0}/${w.phases_expected} phases${(w.dropped_phases ?? []).length ? ` (dropped: ${w.dropped_phases.join(', ')})` : ''}`).join('; ')
+  log(`COMPLETENESS INVARIANT VIOLATED — refusing to report complete. ${detail}`)
+  return {
+    status: 'needs_opus',
+    reason: 'phase_dropped',
+    dropped_phases: shortWaves.flatMap(w => w.dropped_phases ?? []),
+    report,
+    blockers: [{
+      description: `Completeness invariant violated: ${detail}. One or more phases produced no result, so their reviewer gates did not run.`,
+      resolution_hint: 'Do NOT treat this plan as complete. Identify the missing phases from the report, inspect what actually landed, and re-run their reviewer gates before merging.',
+    }],
+  }
 }
 
 return { status: 'complete', report }
