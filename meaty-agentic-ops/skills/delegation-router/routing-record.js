@@ -45,6 +45,20 @@
  *                                                    resolver input and never influences ranking. Distinct from
  *                                                    context_ref, which is a bundle PATH. See the Claude-5 plan
  *                                                    doctrine (agentic_meta_dev planning/references/plan-doctrine.md).
+ * @property {Object|null}     routing_feedback   - Provenance for an EMPIRICAL adjustment that was
+ *                                                    actually applied to this decision, or null.
+ *                                                    14th field (additive, optional; default null).
+ *                                                    Carries the action (`rank_displacement`) AND the
+ *                                                    reason (`combined_signal` + the §2.2 evidence
+ *                                                    block) so an audit can answer "what changed and
+ *                                                    on what basis" from the record alone. FORCED to
+ *                                                    null for MUST-STAY classes — a protected class
+ *                                                    has no adjustable surface, so a non-null value
+ *                                                    there would be a governance breach, not a note.
+ *                                                    Replaces the RETIRED `score_delta` field (see
+ *                                                    routing-feedback-router-merge-handoff.md §2.4.7);
+ *                                                    `score_delta` must never reappear — there is no
+ *                                                    score in the resolver for a delta to apply to.
  */
 
 /**
@@ -65,6 +79,17 @@
  * @type {string[]}
  */
 const CONTEXT_CLASSES = ['C1', 'C2', 'C3', 'C4'];
+
+/**
+ * Maximum rank displacement an empirical adjustment may apply (§2.4.6 of
+ * routing-feedback-router-merge-handoff.md). Declared HERE, on the record schema, rather than only
+ * in routing-feedback.js: the bound is a property of what a valid record may claim, so a record
+ * asserting a larger move is rejected at validation regardless of which producer built it.
+ *
+ * @readonly
+ * @type {number}
+ */
+const MAX_RANK_DISPLACEMENT = 1;
 
 const MUST_STAY_PRIMARY_CLASSES = [
   'orchestration',
@@ -176,6 +201,57 @@ function validateRoutingRecord(record) {
     );
   }
 
+  // routing_feedback is the 14th field: additive + optional, same backward-compatibility posture
+  // as context_ref/context_class. Absent is tolerated; when present it MUST be null or an object
+  // carrying BOTH halves of the provenance contract — the action and the reason. A provenance
+  // block that records a displacement without its combined_signal is unauditable, so the shape is
+  // enforced here rather than trusted.
+  if (record.routing_feedback !== undefined && record.routing_feedback !== null) {
+    const fb = record.routing_feedback;
+    if (typeof fb !== 'object' || Array.isArray(fb)) {
+      throw new Error(
+        `RoutingRecord.routing_feedback must be an object or null; got ${typeof fb}`
+      );
+    }
+    if (!Array.isArray(fb.rank_displacement) || fb.rank_displacement.length === 0) {
+      throw new Error(
+        'RoutingRecord.routing_feedback.rank_displacement must be a non-empty array ' +
+        '(a provenance block with no applied action must be null instead)'
+      );
+    }
+    for (const d of fb.rank_displacement) {
+      if (!d || typeof d.entry !== 'string' || typeof d.from !== 'number' || typeof d.to !== 'number') {
+        throw new Error(
+          `RoutingRecord.routing_feedback.rank_displacement entry must have ` +
+          `{entry: string, from: number, to: number}; got ${JSON.stringify(d)}`
+        );
+      }
+      if (d.to <= d.from) {
+        throw new Error(
+          `RoutingRecord.routing_feedback is demotion-only: to (${d.to}) must be later than ` +
+          `from (${d.from}) for entry '${d.entry}'`
+        );
+      }
+      if ((d.to - d.from) > MAX_RANK_DISPLACEMENT) {
+        throw new Error(
+          `RoutingRecord.routing_feedback rank displacement ${d.to - d.from} exceeds the ` +
+          `bounded maximum of ${MAX_RANK_DISPLACEMENT} position for entry '${d.entry}'`
+        );
+      }
+      // The reason half of the contract. It must be PRESENT (number, or an explicit null when the
+      // producer had no signal) — omitting it yields a displacement nobody can audit, which is the
+      // exact failure §2.4.5.4 exists to prevent, so `undefined` is rejected rather than defaulted.
+      if (!('combined_signal' in d) ||
+          (d.combined_signal !== null && typeof d.combined_signal !== 'number')) {
+        throw new Error(
+          `RoutingRecord.routing_feedback.rank_displacement.combined_signal must be present and ` +
+          `a number or null (an unauditable displacement is not a valid record); ` +
+          `got ${JSON.stringify(d.combined_signal)} for entry '${d.entry}'`
+        );
+      }
+    }
+  }
+
   return record;
 }
 
@@ -201,10 +277,19 @@ function finalizeRoutingRecord(record, taskClass) {
   if (record.context_class === undefined) {
     record.context_class = null;
   }
+  if (record.routing_feedback === undefined) {
+    record.routing_feedback = null;
+  }
   const mustStay = taskClass !== undefined && MUST_STAY_PRIMARY_CLASSES.includes(taskClass);
   const nullProvider = CONTEXT_REF_NULL_PROVIDERS.includes(record.chosen_plugin_id);
   if (mustStay || nullProvider) {
     record.context_ref = null;
+  }
+  // MUST-stay immunity is enforced at the EMITTER, not merely upstream (same posture as
+  // context_ref): a protected class has no adjustable routing surface, so any feedback provenance
+  // on it is stripped here even if some future caller manages to attach one.
+  if (mustStay) {
+    record.routing_feedback = null;
   }
   return validateRoutingRecord(record);
 }
@@ -230,6 +315,7 @@ function createEmptyRecord() {
     reason: '',
     context_ref: null,
     context_class: null,
+    routing_feedback: null,
   };
 }
 
@@ -237,6 +323,7 @@ module.exports = {
   MUST_STAY_PRIMARY_CLASSES,
   CONTEXT_REF_NULL_PROVIDERS,
   CONTEXT_CLASSES,
+  MAX_RANK_DISPLACEMENT,
   AGENT_TYPE_ID_MAP,
   validateRoutingRecord,
   finalizeRoutingRecord,

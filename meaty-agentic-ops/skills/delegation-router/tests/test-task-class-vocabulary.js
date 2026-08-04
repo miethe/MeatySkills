@@ -138,14 +138,17 @@ test('all pinned source rules have a valid canonical or telemetry-only target', 
   const { canonical } = vocabularyIndexes(vocabulary);
   const telemetryOnly = new Set(vocabulary.telemetry_only);
   const rules = producer.source_task_class_rules;
-  assert.equal(Object.keys(rules).length, 17);
+  // Pinned rule count — a hardcoded number on purpose, so silently LOSING a rule fails the suite.
+  // Was 17 at mapping v1.0.0; the v1.1.0 bump (51f8b05) landed 36 rules without updating this
+  // assertion, leaving the suite red. Bump this together with `mapping_version` + `mapping_digest`.
+  assert.equal(Object.keys(rules).length, 36, `mapping ${producer.mapping_version} rule count`);
   for (const [sourceSkillName, taskClass] of Object.entries(rules)) {
     assert.ok(sourceSkillName);
     assert.ok(canonical.has(taskClass) || telemetryOnly.has(taskClass), `${sourceSkillName} -> ${taskClass}`);
   }
 });
 
-test('all 17 pinned source rules are enforced by the join validator', () => {
+test('every pinned source rule is enforced by the join validator', () => {
   const { canonical } = vocabularyIndexes(vocabulary);
   for (const [sourceSkillName, taskClass] of Object.entries(producer.source_task_class_rules)) {
     const result = validateFeedbackJoin(payload({

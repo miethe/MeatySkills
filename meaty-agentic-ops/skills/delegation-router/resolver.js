@@ -48,6 +48,15 @@ const {
   validateRoutingRecord,
 } = require('./routing-record.js');
 
+const {
+  isFeedbackConsumptionEnabled,
+  loadFeedbackState,
+  humanOverriddenTargets,
+  applyChainFeedback,
+  applyRankedFeedback,
+  buildFeedbackProvenance,
+} = require('./routing-feedback.js');
+
 // ---------------------------------------------------------------------------
 // TOML parser (minimal, zero-dependency) — legacy provider-plugins.toml path
 // ---------------------------------------------------------------------------
@@ -727,6 +736,24 @@ function resolveFromRegistry(input) {
     );
   }
 
+  // ----- Empirical routing feedback (DI-1, §2.4 Option C) -----
+  // Read-only, default-deny, and reached ONLY here — after the MUST-stay and determinism early
+  // returns above, so a protected class cannot be touched even by a bug in this block. Two
+  // independent gates must pass (pinned contract `live_consumption` + the AOS_ROUTING_FEEDBACK
+  // kill switch); with neither flipped this is a zero-cost no-op and selection is byte-identical
+  // to pre-DI-1 behavior.
+  const feedbackGate = isFeedbackConsumptionEnabled({
+    env: input._feedbackEnv || process.env,
+    contract: input._feedbackContract,
+  });
+  const feedbackOverrides = feedbackGate.enabled
+    ? loadFeedbackState({ statePath: input._feedbackStatePath, env: input._feedbackEnv, now: input._feedbackNow }).overrides
+    : {};
+  // Human-pinned classes/instances are immune: the operator's routing.local.toml outranks the
+  // machine state file (§2.4.5.1 structural precedence).
+  const humanTargets = humanOverriddenTargets(localOverrides);
+  let feedbackProvenance = null;
+
   // ----- Candidate selection -----
   let chosen = null;
   let selectionReason = '';
@@ -771,12 +798,33 @@ function resolveFromRegistry(input) {
       if (routingPolicy[k]) { policy = routingPolicy[k]; policyKey = k; break; }
     }
     if (policy && policy.enabled !== false && Array.isArray(policy.chain)) {
-      for (const entry of policy.chain) {
+      // 2a. Empirical-feedback re-rank (DI-1 / §2.4.5.2). A pure (chain, feedback) → chain'
+      //     reorder applied BEFORE the position-based walk, so the walk itself is untouched:
+      //     demotion-only, at most one position, nothing ever removed. When feedback is disabled
+      //     or absent this returns the identical array.
+      const fb = applyChainFeedback({
+        taskClass: policyKey,
+        chain: policy.chain,
+        feedbackOverrides,
+        humanTargets,
+        isMustStay: isMustStay(policyKey, registryMustStay),
+      });
+      for (const entry of fb.chain) {
         const cand = resolveChainEntry(registry, entry);
         if (!cand) continue;  // disabled / scaffolded / absent — skip
         if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
         chosen = cand;
-        selectionReason = `routing_policy['${policyKey}'] chain free-first: selected '${entry}'`;
+        selectionReason = fb.applied
+          ? `routing_policy['${policyKey}'] chain free-first (empirical-feedback re-ranked): selected '${entry}'`
+          : `routing_policy['${policyKey}'] chain free-first: selected '${entry}'`;
+        if (fb.applied) {
+          feedbackProvenance = buildFeedbackProvenance({
+            taskClass: policyKey,
+            actuation: 'chain_demotion',
+            displacements: fb.displacements,
+            selectedEntry: entry,
+          });
+        }
         break;
       }
     } else if (policy && policy.enabled === false) {
@@ -798,9 +846,32 @@ function resolveFromRegistry(input) {
         // Then lower priority value.
         return a.priority - b.priority;
       });
-    if (ranked.length > 0) {
-      chosen = ranked[0];
-      selectionReason = `cost/priority ranking for model='${model}' (free-first, then priority)`;
+    // 3a. Secondary feedback path (§2.4.5.2) for a task_class with NO routing_policy chain: the
+    //     SAME one-position demotion, applied to the already-ranked list rather than by mutating
+    //     `priority`. `priority` is a within-model rank that must never be compared across models
+    //     (b0ab62d), so a cross-model demotion cannot be expressed through it without corrupting
+    //     that invariant. Note we never emit priority_overrides — that lever is a proven no-op for
+    //     every chain-routed class and lives in the human channel besides.
+    const fbRanked = applyRankedFeedback(ranked, {
+      taskClass: task_class,
+      feedbackOverrides,
+      humanTargets,
+      isMustStay: isMustStay(task_class, registryMustStay),
+    });
+    const finalRanked = fbRanked.applied ? fbRanked.ranked : ranked;
+    if (finalRanked.length > 0) {
+      chosen = finalRanked[0];
+      selectionReason = fbRanked.applied
+        ? `cost/priority ranking for model='${model}' (free-first, then priority; empirical-feedback re-ranked)`
+        : `cost/priority ranking for model='${model}' (free-first, then priority)`;
+      if (fbRanked.applied) {
+        feedbackProvenance = buildFeedbackProvenance({
+          taskClass: task_class,
+          actuation: 'priority_nudge',
+          displacements: fbRanked.displacements,
+          selectedEntry: `${chosen.providerId}/${chosen.modelId}`,
+        });
+      }
     }
   }
 
@@ -830,6 +901,10 @@ function resolveFromRegistry(input) {
     continuity_mode: continuityMode,
     fallback_chain: fallbackChain,
     reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic),
+    // 14th field (additive, optional). Non-null ONLY when an empirical adjustment was actually
+    // applied, so its presence in the audit log is itself the signal that feedback moved a
+    // decision — `skillmeat routing audit` can filter on it without parsing the reason string.
+    routing_feedback: feedbackProvenance,
   };
 
   return validateRoutingRecord(record);
