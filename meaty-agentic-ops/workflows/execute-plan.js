@@ -34,6 +34,7 @@ export const meta = {
   description: 'Execute a Tier 2/3 implementation plan wave-by-wave with per-task specialists. Opus builds the ExecutionGraph pre-flight and passes it as args. Use when running a multi-wave plan that has wave_plan frontmatter.',
   phases: [
     { title: 'Dry run' },
+    { title: 'Branch guard' },
     { title: 'Wave wave-1' },
     { title: 'Wave wave-2' },
     { title: 'Wave wave-3' },
@@ -63,6 +64,43 @@ const TASK_RESULT_SCHEMA = {
     commit_sha: { type: 'string', pattern: '^[0-9a-f]{7,40}$' },
     summary: { type: 'string' },
   },
+}
+
+// Branch-placement guard (see the guard block before the wave loop). Kept identical in shape to
+// execute-contract.js's copy on purpose: the two engines are dispatched interchangeably by
+// auto-feature, so a placement check that differed between them would make the run's guarantees
+// depend on which engine the tier classifier happened to pick.
+const BRANCH_GUARD_SCHEMA = {
+  type: 'object',
+  required: ['current_branch', 'head_sha'],
+  additionalProperties: false,
+  properties: {
+    current_branch: { type: 'string' },
+    head_sha: { type: 'string' },
+    base_resolves: { type: 'boolean' },
+    detached: { type: 'boolean' },
+  },
+}
+
+function branchGuardPrompt(runBranch, branchBase) {
+  const baseStep = branchBase
+    ? `\n  3. Run: git cat-file -e ${branchBase}^{commit} && echo RESOLVES\n     Set base_resolves true if it printed RESOLVES, false otherwise.`
+    : ''
+  return `Mode: A — Exploration Only
+
+Report the git branch state of the CURRENT working tree. Do not change it.
+
+  1. Run: git rev-parse --abbrev-ref HEAD
+     Set current_branch to that exact value. If it is "HEAD" the tree is detached — set
+     detached true and still report current_branch as "HEAD".
+  2. Run: git rev-parse HEAD
+     Set head_sha to that value.${baseStep}
+
+Report what you observe verbatim. The orchestrator expects branch "${runBranch}"; do NOT switch,
+create, or check out any branch to make that true, and do NOT report the expected value when you
+observed something different — a mismatch is the finding this stage exists to surface.
+
+Do NOT edit any files. Read only. Do NOT git add/commit/push/stash/checkout/switch.`
 }
 
 const VERDICT_SCHEMA = {
@@ -516,14 +554,30 @@ NEVER REWRITE HISTORY: no \`git reset\` (any mode), no \`git rebase\`, no \`git 
 
 Do NOT push, do NOT merge, do NOT stash, do NOT touch other branches.`
 
-function durabilityFooter(isolated) {
-  return isolated
+// Names the assigned branch and makes verifying it a precondition of the first commit. Without it
+// the footer says "do not touch other branches" while never saying which branch is *this* one — so
+// an agent that finds itself on the parent branch has no way to recognise that as the error case.
+// Observed 2026-08-05: commits landed on `main` and were pushed while the run reported success.
+function buildRunBranchClause(runBranch) {
+  if (!runBranch) return ''
+  return `
+
+BRANCH CONTRACT: your commits MUST land on branch \`${runBranch}\`. Before your FIRST commit run \`git rev-parse --abbrev-ref HEAD\`; if it is not exactly \`${runBranch}\`, STOP — do not commit, do not switch or create branches. Report the branch you actually found in your summary and return. Committing elsewhere bypasses the PR and review gates this run's approval depends on.`
+}
+
+// The clause is suppressed for an isolation:'worktree' task on purpose: that task really is on a
+// branch of its own that the harness created, so telling it to verify it is on the run branch would
+// be instructing it to halt on a correct state. Placement for those is asserted at merge time by
+// the orchestrator instead.
+function durabilityFooter(isolated, runBranch) {
+  const branchClause = isolated ? '' : buildRunBranchClause(runBranch)
+  return (isolated
     ? `
 
 DURABILITY: You are on an isolated worktree branch you own. ${DURABILITY_COMMON}`
     : `
 
-DURABILITY: You are on a SHARED working tree and a SHARED branch. Sibling tasks in your batch are running CONCURRENTLY against this same index and HEAD right now — you do NOT own this branch. ${DURABILITY_COMMON}`
+DURABILITY: You are on a SHARED working tree and a SHARED branch. Sibling tasks in your batch are running CONCURRENTLY against this same index and HEAD right now — you do NOT own this branch. ${DURABILITY_COMMON}`) + branchClause
 }
 
 // ---------------------------------------------------------------------------
@@ -661,7 +715,7 @@ Fix the following issues identified by the reviewer for phase ${p.id} — ${p.ti
 Required fixes:
 ${fixList || '(see phase context for issues)'}
 
-Apply all fixes.` + durabilityFooter(p?.isolation === 'worktree')
+Apply all fixes.` + durabilityFooter(p?.isolation === 'worktree', graph?.run_branch)
 }
 
 function trackerPrompt(progressFile, completedTaskIds) {
@@ -716,7 +770,7 @@ Isolation: ${p.isolation ?? 'shared'}
 Known tasks (may be partial):
 ${taskList || '(derive from plan context)'}
 
-Explore the plan, implement the phase tasks with appropriate file-ownership batching.` + buildPhaseOwnerNestingClause(nestingEnabled) + durabilityFooter(p?.isolation === 'worktree')
+Explore the plan, implement the phase tasks with appropriate file-ownership batching.` + buildPhaseOwnerNestingClause(nestingEnabled) + durabilityFooter(p?.isolation === 'worktree', graph?.run_branch)
 }
 
 // ---------------------------------------------------------------------------
@@ -1444,6 +1498,45 @@ if (graphErrors.length > 0) {
 }
 
 // ---------------------------------------------------------------------------
+// Branch-placement guard — fail-closed, BEFORE the first wave can commit anything.
+//
+// Workflow agents run in the session's cwd on whatever branch the session repo is checked out to.
+// There is no per-agent cwd, and background workflow agents ignore EnterWorktree, so an
+// orchestrator that creates a worktree and "passes" it cannot reach these agents. Observed
+// 2026-08-05 in the sibling autopilot lane: the assigned branch received zero commits while the
+// real work landed on `main` and was pushed, skipping the PR and review gates, and the report
+// still read `complete`. Naming the branch and refusing to run anywhere else is the only check
+// that fires before the damage is durable.
+//
+// No-op when graph.run_branch is unset, so un-updated callers behave exactly as before.
+// ---------------------------------------------------------------------------
+if (graph.run_branch) {
+  phase('Branch guard')
+  const guard = await agent(branchGuardPrompt(graph.run_branch, graph.branch_base), {
+    label: 'branch-guard',
+    phase: 'Branch guard',
+    agentType: 'general-purpose',
+    model: 'haiku',
+    schema: BRANCH_GUARD_SCHEMA,
+  })
+
+  if (!guard || guard.current_branch !== graph.run_branch) {
+    const found = guard ? `'${guard.current_branch}'` : 'unverifiable (guard returned nothing)'
+    log(`HALTING — wrong_branch: expected '${graph.run_branch}', found ${found}.`)
+    return {
+      status: 'blocked',
+      reason: 'wrong_branch',
+      report: [],
+      blockers: [{
+        description: `This plan was assigned run branch '${graph.run_branch}' but the session working tree is on ${found}. Task agents commit to the session branch, so every wave would have committed to the wrong branch — bypassing the PR and review gates — while reporting success. No agents were spawned; nothing was committed.`,
+        resolution_hint: `In the session repo run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. Do NOT create a separate worktree and pass its path — background workflow agents run in the session's cwd and ignore EnterWorktree.`,
+      }],
+    }
+  }
+  log(`Branch guard OK: on '${guard.current_branch}' at ${guard.head_sha}.`)
+}
+
+// ---------------------------------------------------------------------------
 // Pattern: waveFanout — sequential waves, parallel phases, file-ownership batches.
 // ---------------------------------------------------------------------------
 
@@ -1528,7 +1621,7 @@ for (const wave of waves) {
         // sibling tasks running alongside it in this very parallel() call.
         const taskIsolated = (t.isolation ?? p.isolation) === 'worktree'
         try {
-          result = await agent(t.prompt + durabilityFooter(taskIsolated), {
+          result = await agent(t.prompt + durabilityFooter(taskIsolated, graph?.run_branch), {
             label: `${p.id}:${t.id}`,
             phase: `Wave ${wave.id}`,
             agentType: t.assigned_to,
