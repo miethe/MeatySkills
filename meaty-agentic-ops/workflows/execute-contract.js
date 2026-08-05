@@ -38,6 +38,24 @@
  *   a Completion Report blocker. Pilot-gated, never auto-promoted. See
  *   .claude/plans/subagent-nesting-orchestration-strategy-v1.md §6 Phase 1.
  *
+ * Branch-placement contract (args.run_branch / args.branch_base / args.parent_branch):
+ *   Workflow agents run in the SESSION's cwd on whatever branch the session repo is checked out
+ *   to. There is no per-agent cwd and background workflow agents ignore EnterWorktree, so an
+ *   orchestrator that creates a separate worktree and "passes" it CANNOT reach these agents —
+ *   they commit to the session branch regardless. Observed 2026-08-05 (run wf_944c5c91-78e):
+ *   autopilot created `.claude/worktrees/<slug>` on `autopilot/<slug>`, that branch received ZERO
+ *   commits, and both real commits landed on `main` — one of them pushed — skipping the PR,
+ *   review, and squash gates silently while the report read `status: complete`.
+ *   The fix is not a path argument; it is to name the branch the orchestrator expects and refuse
+ *   to work anywhere else:
+ *     - run_branch    the branch the session repo MUST be on. When set, a pre-sprint guard
+ *                     verifies it and returns blocked/wrong_branch BEFORE any agent can commit.
+ *     - branch_base   the pre-run checkpoint SHA. Replaces the `HEAD~10` guess in the structurer,
+ *                     which silently computed files_touched against an arbitrary base.
+ *     - parent_branch the PR base, carried through so the report can flag a mid-run parent move.
+ *   All three are optional: unset ⇒ every guard degrades to its previous behaviour, so callers
+ *   that have not been updated are unaffected.
+ *
  * Four-constraints checklist:
  *   [x] No FS/shell access in script body
  *   [x] Mode D triggers early return before sprint spawns
@@ -65,9 +83,16 @@ export const meta = {
 
 // ─── inline schemas ───────────────────────────────────────────────────────────
 
+// `commit_sha` is deliberately NOT required. It used to be, with pattern ^[0-9a-f]{7,40}$, while the
+// structurer prompt instructed `commit_sha: ""` for the no-report case — an unsatisfiable pair that
+// forced the structurer to either fail schema validation repeatedly or invent a plausible SHA. The
+// no-commit case is now expressed by OMITTING the field, which the script tests for directly.
+// `commit_count` / `current_branch` are required because they are the placement evidence: they are
+// what distinguishes "work landed on the branch we assigned" from "work landed somewhere else",
+// and a field the structurer may omit is a field the script cannot gate on.
 const SPRINT_RESULT_SCHEMA = {
   type: 'object',
-  required: ['completion_report_path', 'ac_verdicts', 'commit_sha', 'files_touched'],
+  required: ['completion_report_path', 'ac_verdicts', 'files_touched', 'commit_count', 'current_branch'],
   additionalProperties: false,
   properties: {
     completion_report_path: { type: 'string' },
@@ -85,6 +110,11 @@ const SPRINT_RESULT_SCHEMA = {
       },
     },
     commit_sha: { type: 'string', pattern: '^[0-9a-f]{7,40}$' },
+    commit_count: { type: 'integer', minimum: 0 },
+    current_branch: { type: 'string' },
+    head_sha: { type: 'string' },
+    patch_id: { type: 'string' },
+    parent_tip: { type: 'string' },
     files_touched: { type: 'array', items: { type: 'string' } },
     blockers: {
       type: 'array',
@@ -163,6 +193,93 @@ function reportPathForContract(parsed) {
   return `.claude/worknotes/${slug}/completion-report.md`
 }
 
+// ─── placement facts (pure) ───────────────────────────────────────────────────
+// The provenance block every consumer needs to tell "rebased away" from "never existed" without
+// guessing. A bare commit_sha cannot carry that distinction: `git show <sha>` keeps working locally
+// while the object survives gc, so a stale SHA looks identical to a live one right up until a fresh
+// clone or CI resolves nothing (observed 2026-08-05 — reported 8cd71d1 was an orphan; the real work
+// was 952f379, same message and same diffstat, after main moved mid-run and the commit was rebased).
+// `patch_id` is stable across rebase, so it re-finds the work when the SHA has moved; parent_moved
+// is computed rather than inferred so the post-flight guard can branch on it instead of guessing.
+function placementFacts(parsed, sprintResult) {
+  const facts = {
+    run_branch: parsed.run_branch || null,
+    parent_branch: parsed.parent_branch || null,
+    base_sha: parsed.branch_base || null,
+    current_branch: sprintResult.current_branch || null,
+    commit_count: typeof sprintResult.commit_count === 'number' ? sprintResult.commit_count : null,
+    head_sha: sprintResult.head_sha || null,
+    patch_id: sprintResult.patch_id || null,
+    parent_tip_at_start: parsed.parent_tip_at_start || null,
+    parent_tip_at_report: sprintResult.parent_tip || null,
+  }
+  // Only assert movement when BOTH ends are known. Absent either, the honest value is null —
+  // reporting `false` would claim the parent held still on evidence we do not have.
+  facts.parent_moved =
+    facts.parent_tip_at_start && facts.parent_tip_at_report
+      ? facts.parent_tip_at_start !== facts.parent_tip_at_report
+      : null
+  return facts
+}
+
+// ─── branch-placement guard (pre-sprint, fail-closed) ─────────────────────────
+// Cheap read-only haiku probe. Its whole job is to answer "is the session repo actually on the
+// branch the orchestrator assigned?" BEFORE the sprint executor can make its first commit —
+// because once a commit lands on the parent branch the damage is already durable and, in the one
+// observed case, pushed. Placement was previously checked only after the fact (by the reviewer,
+// which treated the branch it found as neutral context) or not at all.
+const BRANCH_GUARD_SCHEMA = {
+  type: 'object',
+  required: ['current_branch', 'head_sha'],
+  additionalProperties: false,
+  properties: {
+    current_branch: { type: 'string' },
+    head_sha: { type: 'string' },
+    base_resolves: { type: 'boolean' },
+    detached: { type: 'boolean' },
+  },
+}
+
+function branchGuardPrompt(runBranch, branchBase) {
+  const baseStep = branchBase
+    ? `\n  3. Run: git cat-file -e ${branchBase}^{commit} && echo RESOLVES\n     Set base_resolves true if it printed RESOLVES, false otherwise.`
+    : ''
+  return `Mode: A — Exploration Only
+
+Report the git branch state of the CURRENT working tree. Do not change it.
+
+  1. Run: git rev-parse --abbrev-ref HEAD
+     Set current_branch to that exact value. If it is "HEAD" the tree is detached — set
+     detached true and still report current_branch as "HEAD".
+  2. Run: git rev-parse HEAD
+     Set head_sha to that value.${baseStep}
+
+Report what you observe verbatim. The orchestrator expects branch "${runBranch}"; do NOT switch,
+create, or check out any branch to make that true, and do NOT report the expected value when you
+observed something different — a mismatch is the finding this stage exists to surface.
+
+Do NOT edit any files. Read only. Do NOT git add/commit/push/stash/checkout/switch.`
+}
+
+// Names the assigned branch in the executor's own prompt and makes verifying it a precondition of
+// the first commit. The pre-sprint guard above already established the tree is on the right branch;
+// this defends the rest of the sprint, where a `git switch` or `git checkout` mid-run would move the
+// commits off it. Empty string when no run_branch was supplied ⇒ byte-for-byte prior behaviour.
+function buildBranchContractClause(runBranch) {
+  if (!runBranch) return ''
+  return `
+BRANCH CONTRACT — verify BEFORE your first commit, and fail closed:
+  Assigned branch: ${runBranch}
+  Run: git rev-parse --abbrev-ref HEAD
+  If the output is NOT exactly "${runBranch}": STOP. Do not commit, do not switch branches, do not
+  create the branch. Write the Completion Report with a blocker describing the branch you actually
+  found, and return. Committing to a different branch bypasses the PR and review gates that this
+  run's approval depends on, and has already happened once (2026-08-05: work landed on main and was
+  pushed while the run reported success), so this is a hard stop rather than a preference.
+  Every commit you make must be on ${runBranch}. Never \`git switch\`/\`git checkout\` to another
+  branch, never push, never merge.`
+}
+
 /**
  * Build the sprint agent prompt (Stage A — no schema, plain text output).
  * Includes Mode marker, contract path, context paths, budget hint.
@@ -176,6 +293,7 @@ function sprintPrompt(parsed, reportPath, subtaskShardingEnabled) {
     : ''
 
   return `Mode: C — Autonomous Feature Sprint
+${buildBranchContractClause(parsed.run_branch)}
 
 Contract: ${parsed.contract_path}
 Completion Report path (write here BEFORE finishing): ${reportPath}
@@ -185,7 +303,7 @@ Run the full Tier 1 sprint:
   1. Read and internalise the Feature Contract at the path above.
   2. Explore the codebase for relevant patterns (symbols-first, then targeted file reads).
   3. Implement all Acceptance Criteria.
-  4. DURABILITY: commit each logical unit of work to the current worktree branch as you go.
+  4. DURABILITY: commit each logical unit of work to ${parsed.run_branch ? `branch ${parsed.run_branch}` : 'the current branch'} as you go.
      This is REQUIRED so your work survives a mid-run crash and is visible to the reviewer.
      Commit message format: "feat(<slug>): <what was done>". Do NOT push, merge, stash,
      or touch other branches.
@@ -237,31 +355,54 @@ Use sharding for independent mechanical slices only; keep the core implementatio
  * derive commit_sha and files_touched, parses AC verdicts from the report.
  */
 function structurePrompt(parsed, reportPath) {
+  // `HEAD~10` was the old fallback and it is a guess, not a base: it silently computed
+  // files_touched and the commit range against an arbitrary point 10 commits back, which is how a
+  // report came to disagree with reality by 55 files. When the caller supplies branch_base (the
+  // recorded pre-run checkpoint) we use it; the fallback survives only for un-updated callers.
   const branchBase = parsed.branch_base || 'HEAD~10'
+  const parentBranch = parsed.parent_branch
+  const parentStep = parentBranch
+    ? `\n  6. Run: git rev-parse ${parentBranch} 2>/dev/null || git rev-parse origin/${parentBranch}
+     Set parent_tip to that SHA (omit the field if neither resolves). This lets the orchestrator
+     tell "the parent branch moved under us" from "this commit never existed".`
+    : ''
   return `Mode: A — Exploration Only
 
 Read the Completion Report at: ${reportPath}
 
-If the file does not exist, set commit_sha to "" and return a result with:
-  - completion_report_path: "${reportPath}"
-  - ac_verdicts: []
-  - files_touched: []
-  - blockers: [{description: "Completion report not found — sprint may have failed to write it"}]
+ALWAYS report the git facts below, whether or not the report file exists — placement is judged from
+git, never from the report. Report what git actually prints; do not normalise it toward what the
+orchestrator expects, and never guess a SHA.
 
-If the file exists:
-  1. Run: git log --oneline "${branchBase}..HEAD"
-     and: git rev-parse HEAD
-     to get the latest commit SHA. If no new commits exist since the branch base,
-     set a blocker: "No commits found since branch base — sprint work may be uncommitted."
-  2. Run: git diff --name-only "${branchBase}..HEAD"
-     to get files_touched.
-  3. Parse the "### Acceptance Criteria Status" section of the report.
+  1. Run: git rev-parse --abbrev-ref HEAD
+     Set current_branch to that exact value.
+  2. Run: git rev-list --count "${branchBase}..HEAD"
+     Set commit_count to that integer. Run: git rev-parse HEAD → head_sha.
+  3. Run: git log --oneline "${branchBase}..HEAD"
+     If commit_count is 0: OMIT the commit_sha field entirely (do NOT send an empty string, do NOT
+     substitute head_sha) and set a blocker: "No commits since branch base — sprint work is
+     uncommitted or landed on another branch."
+     If commit_count is > 0: set commit_sha to the newest commit in that range.
+  4. Run: git diff --name-only "${branchBase}..HEAD"
+     Set files_touched. If commit_count is 0 this is [].
+  5. Run: git diff "${branchBase}..HEAD" | git patch-id --stable
+     Set patch_id to the FIRST field of the output (omit the field if the command prints nothing).
+     This identity survives a rebase, so a consumer can re-find the work when the SHA has moved.${parentStep}
+
+Then, if the report file exists:
+  a. Parse the "### Acceptance Criteria Status" section.
      For each line starting with "- [x]" set met:true; "- [ ]" set met:false.
      Extract the criterion text after the checkbox.
-  4. Set completion_report_path to the exact path you read.
-  5. Return the structured SprintResult conforming to the schema.
+  b. Set completion_report_path to the exact path you read.
 
-Do NOT edit any files. Read only.`
+If the report file does NOT exist, still return the git facts, plus:
+  - completion_report_path: "${reportPath}"
+  - ac_verdicts: []
+  - blockers: [{description: "Completion report not found — sprint may have failed to write it"}]
+
+Return the structured SprintResult conforming to the schema.
+
+Do NOT edit any files. Read only. Do NOT git add/commit/push/stash/checkout/switch.`
 }
 
 /**
@@ -280,12 +421,20 @@ Do NOT edit any files. Read only.`
 // finding, not a detail to route around.
 function reviewPrompt(parsed, sprintResult) {
   const sha = sprintResult.commit_sha
+  // Reachability is asserted against the ASSIGNED branch, not bare HEAD. `--is-ancestor <sha> HEAD`
+  // passes for a commit sitting on the parent branch whenever HEAD is that parent branch, which is
+  // exactly the bypass case — so the previous check reported the wrong branch as neutral context
+  // and approved. Naming the branch makes placement a reviewable claim.
+  const ref = parsed.run_branch || 'HEAD'
   const shaBlock = sha
     ? `Sprint commit SHA (claimed): ${sha}
+Assigned run branch: ${ref}
 
-FIRST, confirm the claim resolves — a sha that does not exist, or is not on this branch,
-means the report describes work that is not here:
-  git cat-file -e ${sha}^{commit} && git merge-base --is-ancestor ${sha} HEAD && echo "${sha} OK"`
+FIRST, confirm the claim resolves AND sits on the assigned branch. A sha that does not exist, or
+that is reachable from some other branch but not from ${ref}, means the work is not where this
+review is authorised to approve it — that placement failure is itself a required_fix, not a detail:
+  git cat-file -e ${sha}^{commit} && git merge-base --is-ancestor ${sha} ${ref} && echo "${sha} ON ${ref}"
+  git branch -a --contains ${sha}    # if the line above failed, this shows where it really went`
     : `Sprint commit SHA: NONE REPORTED.
 
 The sprint claims to have finished without naming a commit. Establish what actually landed
@@ -578,6 +727,65 @@ log(`Starting Tier 1 sprint for contract: ${parsed.contract_path}`)
 const reportPath = reportPathForContract(parsed)
 log(`Completion report path: ${reportPath}`)
 
+// ── branch-placement guard (before the sprint can commit anything) ────────────
+// Only runs when the caller named a run_branch. Fails CLOSED: an unverifiable branch state halts
+// the run rather than proceeding on the assumption it is fine, because the cost of the two errors
+// is not symmetric — a false halt costs a re-run, while proceeding on the wrong branch has already
+// produced an unreviewed push to a shared remote.
+if (parsed.run_branch) {
+  const guard = await agent(branchGuardPrompt(parsed.run_branch, parsed.branch_base), {
+    label: 'branch-guard',
+    phase: 'Sprint',
+    agentType: 'general-purpose',
+    model: 'haiku',
+    schema: BRANCH_GUARD_SCHEMA,
+  })
+
+  if (!guard) {
+    log(`HALTING — wrong_branch: branch guard returned no verdict; placement on '${parsed.run_branch}' is unverified.`)
+    return {
+      status: 'blocked',
+      reason: 'wrong_branch',
+      blocked_phase: 'sprint',
+      report: [],
+      blockers: [{
+        description: `Could not verify the working tree is on run branch '${parsed.run_branch}' (the guard agent returned nothing). No sprint agent was spawned, so nothing was committed anywhere.`,
+        resolution_hint: `Check out '${parsed.run_branch}' in the session repo and re-run, or re-invoke without run_branch to accept whatever branch the tree is on.`,
+      }],
+    }
+  }
+
+  if (guard.current_branch !== parsed.run_branch) {
+    log(`HALTING — wrong_branch: tree is on '${guard.current_branch}', run branch is '${parsed.run_branch}'.`)
+    return {
+      status: 'blocked',
+      reason: 'wrong_branch',
+      blocked_phase: 'sprint',
+      report: [],
+      blockers: [{
+        description: `The session working tree is on branch '${guard.current_branch}' but this run was assigned '${parsed.run_branch}'. Workflow agents commit to the session branch, so the sprint would have committed to '${guard.current_branch}' — bypassing the PR and review gates — and reported success. No agents were spawned; nothing was committed.`,
+        resolution_hint: `In the session repo run: git switch ${parsed.run_branch} (create it from the parent branch if needed), then re-invoke. Do NOT create a separate worktree and pass its path — background workflow agents run in the session's cwd and ignore EnterWorktree, which is the defect this guard exists to catch.`,
+      }],
+    }
+  }
+
+  if (parsed.branch_base && guard.base_resolves === false) {
+    log(`HALTING — wrong_branch: branch_base '${parsed.branch_base}' does not resolve in this repo.`)
+    return {
+      status: 'blocked',
+      reason: 'wrong_branch',
+      blocked_phase: 'sprint',
+      report: [],
+      blockers: [{
+        description: `branch_base '${parsed.branch_base}' does not resolve as a commit in the session repo, so the run has no usable pre-run checkpoint and every later diff/commit-range would be computed against a guess. No agents were spawned.`,
+        resolution_hint: 'Re-resolve BASE_SHA with `git rev-parse HEAD` in the session repo at run start and pass that, or omit branch_base.',
+      }],
+    }
+  }
+
+  log(`Branch guard OK: on '${guard.current_branch}' at ${guard.head_sha}.`)
+}
+
 // Phase 1 Tier A nesting pilot — DEFAULT FALSE. When false, sprintPrompt is byte-for-byte
 // identical to the pre-pilot behaviour. When true, the sprint executor may shard bounded,
 // mechanical sub-tasks to depth-1 nested helpers (single-committer preserved, Mode-D-at-depth
@@ -625,11 +833,15 @@ try {
 } catch (structureErr) {
   log(`WARNING: Structure stage threw (${structureErr && structureErr.message ? structureErr.message : structureErr}). Falling back to minimal result.`)
   // Fallback: minimal result; Opus can inspect the report on disk.
+  // No commit_sha field at all — the absence IS the signal. The old fallback set `commit_sha: ''`,
+  // which reads downstream as "there is a sha, it's just blank" and let an empty run pass as one
+  // with an unremarkable commit.
   sprintResult = {
     completion_report_path: reportPath,
-    commit_sha: '',
     ac_verdicts: [],
     files_touched: [],
+    commit_count: 0,
+    current_branch: '',
     blockers: [{ description: 'Structure stage failed — inspect completion report on disk.', resolution_hint: 'Run: git log --oneline to find sprint commits; read ' + reportPath }],
   }
 }
@@ -638,10 +850,51 @@ if (!sprintResult) {
   log('Structure stage returned null. Using minimal fallback.')
   sprintResult = {
     completion_report_path: reportPath,
-    commit_sha: '',
     ac_verdicts: [],
     files_touched: [],
+    commit_count: 0,
+    current_branch: '',
     blockers: [{ description: 'Structure stage returned null — inspect completion report on disk.', resolution_hint: 'Read ' + reportPath }],
+  }
+}
+
+// ── post-sprint placement checks ──────────────────────────────────────────────
+// The sprint's own text output already claimed success by this point; these two checks are what
+// stop that claim from becoming the run's verdict. Both were previously absent, which is how a run
+// with ZERO commits on its assigned branch returned `status: complete` with all ACs "met".
+//
+// Ordering matters: check placement BEFORE emptiness. A sprint that committed to the parent branch
+// produces commit_count 0 against the run branch too, and reporting that as "nothing was written"
+// would send the operator looking for lost work that is in fact sitting — reviewed by nobody — on
+// the parent branch.
+if (parsed.run_branch && sprintResult.current_branch && sprintResult.current_branch !== parsed.run_branch) {
+  log(`HALTING — wrong_branch: sprint ended on '${sprintResult.current_branch}', not '${parsed.run_branch}'.`)
+  return {
+    status: 'blocked',
+    reason: 'wrong_branch',
+    blocked_phase: 'sprint',
+    report: [],
+    blockers: [{
+      description: `The sprint started on run branch '${parsed.run_branch}' but the tree ended on '${sprintResult.current_branch}', so any commits it made are not on the branch this run is authorised to merge from. Nothing has been reviewed or merged.`,
+      resolution_hint: `Run \`git branch -a --contains <sha>\` for the sprint's commits to find where they landed, then cherry-pick them onto '${parsed.run_branch}' before opening the PR. Do not merge from '${sprintResult.current_branch}'.`,
+    }],
+    run_placement: placementFacts(parsed, sprintResult),
+  }
+}
+
+if (typeof sprintResult.commit_count === 'number' && sprintResult.commit_count === 0) {
+  const where = parsed.run_branch ? `run branch '${parsed.run_branch}'` : 'the current branch'
+  log(`HALTING — nothing_on_run_branch: zero commits on ${where} since ${parsed.branch_base || 'the branch base'}.`)
+  return {
+    status: 'needs_opus',
+    reason: 'nothing_on_run_branch',
+    blocked_phase: 'sprint',
+    report: [],
+    blockers: [{
+      description: `Zero commits exist on ${where} since ${parsed.branch_base || 'the branch base'}. Whatever the sprint's summary or Completion Report says it built, no durable record of it exists here — do not treat any past-tense claim in ${reportPath} as evidence.`,
+      resolution_hint: `Check \`git status --porcelain\` for uncommitted work worth keeping, and \`git branch -a --contains\` / the reflog for commits that landed elsewhere. Then re-run, or execute interactively.`,
+    }],
+    run_placement: placementFacts(parsed, sprintResult),
   }
 }
 
@@ -840,9 +1093,13 @@ while (verdict && !verdict.approved && cycles < 2 && budget.remaining() > 60_000
 
   // Fix agents commit their changes. Refresh the commit reference so the reviewer
   // diffs the latest commits rather than the original sprint SHA.
+  // Re-resolve the placement identity too, not just the SHA. A fix cycle can move HEAD and — if a
+  // fix agent switched branches — move the tree off the run branch, and the report is assembled from
+  // this refreshed state. Restamping only commit_sha left patch_id and current_branch describing the
+  // pre-fix world.
   const branchBase = parsed.branch_base || 'HEAD~10'
   const refreshedSha = await agent(
-    `Mode: A — Exploration Only\n\nRun: git rev-parse HEAD\nRun: git diff --name-only "${branchBase}..HEAD"\n\nReturn a JSON object: { "commit_sha": "<40-char sha>", "files_touched": ["<path>", ...] }\nDo NOT edit any files. Read only.`,
+    `Mode: A — Exploration Only\n\nRun: git rev-parse HEAD\nRun: git rev-parse --abbrev-ref HEAD\nRun: git diff --name-only "${branchBase}..HEAD"\nRun: git diff "${branchBase}..HEAD" | git patch-id --stable   (take the FIRST field; omit patch_id if it prints nothing)\n\nReturn a JSON object: { "commit_sha": "<40-char sha>", "current_branch": "<branch>", "files_touched": ["<path>", ...], "patch_id": "<id, optional>" }\nReport what git prints; never substitute an expected value.\nDo NOT edit any files. Read only. Do NOT git add/commit/push/stash/checkout/switch.`,
     {
       label: `fix-sha-refresh-${cycleNumber}`,
       phase: `Fix cycle ${cycleNumber}`,
@@ -854,6 +1111,8 @@ while (verdict && !verdict.approved && cycles < 2 && budget.remaining() > 60_000
         additionalProperties: false,
         properties: {
           commit_sha: { type: 'string' },
+          current_branch: { type: 'string' },
+          patch_id: { type: 'string' },
           files_touched: { type: 'array', items: { type: 'string' } },
         },
       },
@@ -866,9 +1125,26 @@ while (verdict && !verdict.approved && cycles < 2 && budget.remaining() > 60_000
     reviewResult = {
       ...sprintResult,
       commit_sha: refreshedSha.commit_sha,
+      head_sha: refreshedSha.commit_sha,
+      current_branch: refreshedSha.current_branch || sprintResult.current_branch,
+      patch_id: refreshedSha.patch_id || sprintResult.patch_id,
       files_touched: refreshedSha.files_touched || sprintResult.files_touched,
     }
     log(`Fix cycle ${cycleNumber}: refreshed reviewer commit reference to ${refreshedSha.commit_sha}.`)
+    if (parsed.run_branch && reviewResult.current_branch && reviewResult.current_branch !== parsed.run_branch) {
+      log(`HALTING — wrong_branch: fix cycle ${cycleNumber} left the tree on '${reviewResult.current_branch}', not '${parsed.run_branch}'.`)
+      return {
+        status: 'blocked',
+        reason: 'wrong_branch',
+        blocked_phase: `fix-cycle-${cycleNumber}`,
+        report: [],
+        blockers: [{
+          description: `Fix cycle ${cycleNumber} ended with the tree on '${reviewResult.current_branch}' instead of run branch '${parsed.run_branch}', so its commits are not on the branch this run may merge from.`,
+          resolution_hint: `Locate the fix commits with \`git branch -a --contains ${refreshedSha.commit_sha}\`, cherry-pick them onto '${parsed.run_branch}', then re-run the reviewer gate.`,
+        }],
+        run_placement: placementFacts(parsed, reviewResult),
+      }
+    }
   } else {
     log(`Fix cycle ${cycleNumber}: WARNING — SHA refresh returned nothing; reviewer will use last known commit reference.`)
   }
@@ -941,5 +1217,12 @@ const report = [
 const result = { status: finalStatus, report }
 if (reason) result.reason = reason
 if (finalStatus === 'needs_opus' && reason === 'mode_d') result.blocked_phase = 'sprint'
+
+// Placement provenance travels with EVERY outcome, including the approved one. A report that only
+// carries provenance when something went wrong is a report whose consumers learn to skip it.
+result.run_placement = placementFacts(parsed, reviewResult || sprintResult)
+if (result.run_placement.parent_moved === true) {
+  log(`NOTE: parent branch '${result.run_placement.parent_branch}' moved during this run (${result.run_placement.parent_tip_at_start} → ${result.run_placement.parent_tip_at_report}). If the run branch is rebased onto the new tip, commit_sha will change; re-find the work by patch_id (${result.run_placement.patch_id || 'unavailable'}), not by the reported SHA.`)
+}
 
 return result

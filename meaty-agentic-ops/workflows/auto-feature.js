@@ -307,6 +307,19 @@ function planTextClaimsArtifact(planText, artifactPath) {
  */
 function verifyPrompt(parsed, plan) {
   const artifact = plan.plan_artifact_path || '(the plan/contract artifact written this run)'
+  // Pin the diff base when the caller recorded one. The merge-base guess below is correct only
+  // while the parent branch holds still; when main moves mid-run it resolves to a phantom range
+  // that mixes this run's work with other people's commits, which is how a skeptic came to review
+  // a diff that was not the run's diff.
+  const baseBlock = parsed.branch_base
+    ? `     - This run's pre-run checkpoint is ${parsed.branch_base}. Use it as the base — do NOT
+       re-derive one from merge-base, which drifts when the parent branch moves mid-run:
+         \`git diff ${parsed.branch_base}..HEAD\`
+     - \`git log --oneline ${parsed.branch_base}..HEAD\` to see exactly this run's commits.`
+    : `     - \`git log --oneline -20\` to see this run's commits.
+     - \`git diff \$(git merge-base HEAD @{upstream} 2>/dev/null || git merge-base HEAD main)..HEAD\`
+       to see the full net diff. If that base resolution fails, diff against the earliest commit that
+       is clearly part of this run (inspect the log). Read the actual changed files as needed.`
   return `Mode: E — Reviewer (read-only adversarial verify; NO edits, NO git writes)
 
 An autopilot run just reported its nested engine COMPLETE with all per-phase validators green. That
@@ -316,11 +329,8 @@ You are that pass. Be adversarial: assume the "green" result is hiding a defect 
 
 STEPS:
 1. Get the finished work via git IN THE CURRENT WORKING TREE (do NOT use EnterWorktree — background
-   workflow agents ignore it):
-     - \`git log --oneline -20\` to see this run's commits.
-     - \`git diff \$(git merge-base HEAD @{upstream} 2>/dev/null || git merge-base HEAD main)..HEAD\`
-       to see the full net diff. If that base resolution fails, diff against the earliest commit that
-       is clearly part of this run (inspect the log). Read the actual changed files as needed.
+   workflow agents ignore it, so switching worktrees would silently review a different tree):
+${baseBlock}
 2. Read the plan/contract artifact at: ${artifact}
    Extract every concrete CLAIM / acceptance criterion it makes about behavior.
 3. Trace each claim to the actual diff. For each, decide: does the code REALLY do what is claimed?
@@ -370,6 +380,22 @@ function nestedBudget(plan) {
   return Math.max(25000, Math.round(pts * 6250))
 }
 
+// The branch-placement fields are threaded VERBATIM from args into every nested engine. They were
+// the missing link in the 2026-08-05 bypass: autopilot's Opus pre-flight created a run branch and
+// recorded a base SHA, then passed neither, so the engines had nothing to check placement against
+// and the structurer fell back to a `HEAD~10` guess for its diff base. Omitted when unset, so an
+// un-updated caller produces exactly the previous envelope.
+function placementArgs(parsed) {
+  const out = {}
+  if (parsed.run_branch) out.run_branch = parsed.run_branch
+  if (parsed.parent_branch) out.parent_branch = parsed.parent_branch
+  if (parsed.branch_base) out.branch_base = parsed.branch_base
+  if (parsed.parent_tip_at_start) out.parent_tip_at_start = parsed.parent_tip_at_start
+  if (parsed.session_repo) out.session_repo = parsed.session_repo
+  if (parsed.target_repo) out.target_repo = parsed.target_repo
+  return out
+}
+
 function contractArgs(parsed, plan) {
   return {
     contract_path: plan.plan_artifact_path,
@@ -379,6 +405,7 @@ function contractArgs(parsed, plan) {
     budget_total: nestedBudget(plan),
     review_intensity: plan.review_intensity || 'standard',
     context_paths: parsed.context_paths || [],
+    ...placementArgs(parsed),
     contract_metadata: {
       slug: plan.slug || '',
       mode: 'C',
@@ -396,6 +423,7 @@ function planExecArgs(parsed, plan) {
     plan_ref: plan.plan_artifact_path,
     timestamp: parsed.timestamp,
     budget_total: nestedBudget(plan),
+    ...placementArgs(parsed),
   }
 }
 
@@ -658,6 +686,23 @@ const result = {
 if (childReport.reason) result.reason = childReport.reason
 if (childReport.blocked_phase) result.blocked_phase = childReport.blocked_phase
 if (childReport.hitl_tasks) result.hitl_tasks = childReport.hitl_tasks
+// Placement provenance is the evidence the §4b post-flight guard reads. Dropping it here would make
+// the outer report weaker than the inner one it wraps — and this is the report Opus acts on.
+if (childReport.run_placement) result.run_placement = childReport.run_placement
+if (childReport.blockers) result.blockers = childReport.blockers
+
+// A nested engine that halted on placement must not be re-interpreted as merely "unfinished".
+// Autopilot's §4b guard exists because the workflow used to report `complete` in exactly this
+// situation; now that the engine detects it, the outer report must carry the reason through
+// verbatim rather than flattening it into a generic escalation.
+if (result.reason === 'wrong_branch' || result.reason === 'nothing_on_run_branch') {
+  const hint = result.reason === 'wrong_branch'
+    ? 'Commits landed off the assigned run branch — locate them with `git branch -a --contains <sha>` and cherry-pick onto the run branch before opening a PR. Do NOT merge from wherever they landed.'
+    : 'Nothing was committed to the run branch — treat every past-tense claim in the nested report as unproven, and check `git status --porcelain` plus the reflog before re-running.'
+  result.autopilot.escalation_recommendation = hint
+  result.autopilot.post_verify = 'not_run_placement_failed'
+  log(`Nested engine halted on placement (${result.reason}). Skipping the verify gate — there is no diff on the run branch to verify.`)
+}
 
 // ── Phase 4: Verify (post-execution adversarial claims-vs-code gate) ─────────
 // Only meaningful when the nested engine reported complete. A non-complete result is already
