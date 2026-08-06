@@ -105,7 +105,9 @@ Do NOT edit any files. Read only. Do NOT git add/commit/push/stash/checkout/swit
 
 const VERDICT_SCHEMA = {
   type: 'object',
-  required: ['approved', 'reviewer_type'],
+  // R3: verification_path is REQUIRED, so a reviewer physically cannot finish without saying
+  // whether it established that the evidence exercises the path production takes.
+  required: ['approved', 'reviewer_type', 'verification_path'],
   additionalProperties: false,
   properties: {
     approved: { type: 'boolean' },
@@ -129,6 +131,35 @@ const VERDICT_SCHEMA = {
     // gate exists to catch, and it is cheaper to notice a missing `evidence` field than to
     // rediscover the defect it waved through.
     evidence: { type: 'string' },
+    // R3 (verification-path evidence gate, 2026-08-06 workflow-v41 retro). `evidence` above
+    // establishes that the reviewer looked at something; this establishes that what it looked at
+    // is on the path production takes. The dominant delegate defect class was a green suite over
+    // a path production does not take, which every `evidence` string in the world reads past.
+    verification_path: {
+      type: 'object',
+      required: ['established', 'kind'],
+      properties: {
+        established: { type: 'boolean' },
+        kind: {
+          type: 'string',
+          enum: [
+            'live-smoke',
+            'path-equivalence',
+            'real-endpoint-field-check',
+            'production-callsite-trace',
+            'not-established',
+          ],
+        },
+        // The entry point production actually takes to reach the changed code.
+        production_entrypoint: { type: 'string' },
+        // The command transcript / file:line pair / response body that proves it.
+        evidence: { type: 'string' },
+      },
+    },
+    // Claims the reviewer had to accept on a leg's own word because no artifact backed them.
+    // Any entry blocks approval: five misreporting findings in seven days came from reading
+    // "I registered the node / wrote the file" as evidence that it happened.
+    self_reported_claims: { type: 'array', items: { type: 'string' } },
     council_artifacts: {
       type: 'object',
       properties: {
@@ -647,6 +678,112 @@ Do NOT edit any files. Read only.`
 // claims that carry no commit at all, pre-computed, because "completed with no commit_sha"
 // is the exact shape of the executor that never committed and is the one thing the reviewer
 // can check cheaply and decisively.
+// ---------------------------------------------------------------------------
+// R3 — the verification-path evidence rules (2026-08-06 workflow-v41 delegate retro).
+//
+// The dominant delegate defect class in that window was NOT scope drift or bad reasoning: it
+// was a mid-tier executor shipping confident code that passed its own green suite while the
+// suite exercised a path production never takes — an offline fake echoing `system` where the
+// live API returns `source_system`, a branch made dead by an earlier comment-stripping step
+// but still unit-tested directly, a dry-run validating preconditions `apply` does not. Five
+// occurrences in one program, 8 delegate-bug findings in 7 days. Second class, 5 findings:
+// legs self-reporting side effects they never performed.
+//
+// Both classes are invisible to a gate that reads reports and green suites, and both produce
+// reports that satisfy every instruction they were given — so the rules are stated in the
+// prompt AND enforced on the verdict. Grounding:
+// docs/project_plans/reports/workflow-v41-delegate-retro-2026-08-06.md (leg B).
+// ---------------------------------------------------------------------------
+
+const EVIDENCE_RULES = `VERIFICATION-PATH RULE — a green suite is evidence about the path THE SUITE takes, never about
+the path production takes. Before you treat any criterion as met on the strength of tests,
+establish which ONE of these you actually saw, and name it in \`verification_path\`:
+  - live-smoke ................. the real entry point run against the real dependency, output shown
+  - path-equivalence ........... the seam the test drives IS the object production calls — name both
+                                 call sites (file:line) and show they resolve to the same thing
+  - real-endpoint-field-check ... every field/key name in a fake checked against a real response or
+                                 schema (observed: a fake echoed \`system\` where the live API
+                                 returns \`source_system\` — all tests green, feature could not work)
+  - production-callsite-trace ... you traced production's entry point to the changed code and it is
+                                 reachable (observed: a branch made dead by an earlier
+                                 comment-stripping step, still covered by its own unit tests)
+If none of the four holds, the criterion is NOT met and the suite is not evidence for it. Check the
+dry-run/apply split too: a dry-run that validates a different precondition set than \`apply\` is the
+same defect wearing a different hat. Set \`verification_path.established\` true ONLY for one of the
+four kinds — withholding it costs nothing, and an approving verdict without it is recorded as a
+gate-integrity failure rather than an approval.
+
+SELF-REPORT RULE — never accept a leg's, a report's, or a summary's statement that a side effect
+happened as evidence that it happened. "I registered the node / wrote the file / updated the row /
+published the artifact" is a claim; the evidence is the artifact itself — the row, the file on
+disk, the response body, the diff hunk. Verify each one yourself, or list it in
+\`self_reported_claims\`, which blocks approval by construction.`
+
+// Only these four are a path. 'not-established' is deliberately absent: it is the reviewer saying
+// it could not do this, which is honest and must never read as satisfaction of the rule.
+const VERIFICATION_KINDS = new Set([
+  'live-smoke',
+  'path-equivalence',
+  'real-endpoint-field-check',
+  'production-callsite-trace',
+])
+
+/** Why an approving verdict fails the verification-path rule, or null when it passes. */
+function verificationGap(verdict) {
+  const vp = verdict.verification_path
+  if (!vp) return 'no verification_path on an approving verdict — the gate cannot tell whether the evidence exercises the path production takes'
+  if (vp.established !== true) return `verification_path.established is ${JSON.stringify(vp.established)} (kind '${vp.kind}') on an approving verdict — the reviewer approved without establishing the production path`
+  if (!VERIFICATION_KINDS.has(vp.kind)) return `verification_path.kind '${vp.kind}' is not one of the four real paths (${[...VERIFICATION_KINDS].join(' | ')}) — established:true is unsupported`
+  return null
+}
+
+/**
+ * Apply the two R3 rules to a reviewer verdict, in the {verdict, integrity_failure} shape
+ * dispatchReview already uses. The two outcomes differ deliberately:
+ *
+ *   - self-reported side effects ⇒ an ordinary REJECTION. The missing artifact is implementer
+ *     work, so the fix loop is the right next action.
+ *   - an unverified approval ⇒ a GATE-INTEGRITY failure. The verdict exists but cannot be
+ *     trusted, and what did not finish is the REVIEWER; a fix cycle would edit blind against a
+ *     finding nobody made. Same handling as a conditional council verdict.
+ */
+function enforceEvidenceRules(verdict, phaseId, reviewerType) {
+  if (!verdict || !verdict.approved) return { verdict, integrity_failure: null }
+
+  const claims = Array.isArray(verdict.self_reported_claims) ? verdict.self_reported_claims.filter(Boolean) : []
+  if (claims.length) {
+    log(`R3 REJECTION on phase ${phaseId}: ${reviewerType} approved with ${claims.length} self-reported claim(s) and no artifact evidence. Downgrading the approval — a report of a side effect is not the side effect.`)
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        downgraded_from_approval: 'self_reported_side_effect',
+        defect_class: verdict.defect_class || 'self-reported-side-effect',
+        required_fixes: [
+          ...(verdict.required_fixes ?? []),
+          ...claims.map(claim => `Produce artifact evidence — the row, the file on disk, the response body, or the diff hunk — for the side effect reported as "${claim}". A leg's own report of it is not evidence that it happened.`),
+        ],
+      },
+      integrity_failure: null,
+    }
+  }
+
+  const gap = verificationGap(verdict)
+  if (!gap) return { verdict, integrity_failure: null }
+
+  return {
+    verdict: {
+      ...verdict,
+      approved: false,
+      verdict_source: 'gate_integrity_failure',
+      required_fixes: [
+        `The reviewer approved phase ${phaseId} without establishing a verification path (${gap}). Re-dispatch ${reviewerType} and require one of live-smoke | path-equivalence | real-endpoint-field-check | production-callsite-trace, or record an explicit operator override. Do NOT run a fix cycle: nothing has been found yet.`,
+      ],
+    },
+    integrity_failure: `approving verdict with no established verification path — ${gap}`,
+  }
+}
+
 function reviewPrompt(p, taskOut) {
   const claimed = taskOut.filter(Boolean)
 
@@ -684,7 +821,9 @@ Also check \`git status --porcelain\`: uncommitted changes in the tree mean the 
 but was never durably committed, which is a required_fix, not a pass.` : ''}
 
 Judge the acceptance criteria against what the diff shows, not against what the summaries
-assert. Where the two disagree, the diff wins and the disagreement itself is a finding.`
+assert. Where the two disagree, the diff wins and the disagreement itself is a finding.
+
+${EVIDENCE_RULES}`
 
   return `Mode: E — Reviewer
 
@@ -702,6 +841,14 @@ the diff yourself, every acceptance criterion is met in the code you read, and n
 remain. Record what you actually inspected in \`evidence\` — an approval with no evidence of
 inspection is the failure mode this gate exists to catch, including when you are the one
 producing it. If approved:false, provide actionable required_fixes.
+
+Also required on every verdict:
+  - verification_path: established / kind / production_entrypoint / evidence, per the
+    VERIFICATION-PATH RULE above. An approving verdict whose path is not established is recorded
+    as a gate-integrity failure, not an approval — so withholding it is the honest move, never a
+    penalty.
+  - self_reported_claims: every claim you had to take on a task agent's word for lack of an
+    artifact. Any entry blocks approval by construction.
 Do NOT git add/commit/push/stash.`
 }
 
@@ -1084,7 +1231,9 @@ async function dispatchReview(p, taskOut, reviewerType) {
     agentType: reviewerType,
     schema: VERDICT_SCHEMA,
   })
-  return { verdict, integrity_failure: null }
+  // R3: the evidence rules run here, at the single funnel every re-review passes through, so a
+  // fix cycle cannot end on an unverified approval either.
+  return enforceEvidenceRules(verdict, p.id, reviewerType)
 }
 
 // Shared shape for "the gate could not be trusted to have run" — used by both the §8b
@@ -1296,6 +1445,17 @@ async function reviewerGate(p, taskOut, tier) {
     }
   }
 
+  // R3: applies to every producer above — the flag-off reviewer, the P5 primary fallback, and
+  // the Stage B structurer. An approving verdict with no established verification path is a
+  // gate-integrity failure (re-dispatch, no fix cycle); self-reported side effects are an
+  // ordinary rejection that falls through to the fix loop below.
+  const enforced = enforceEvidenceRules(verdict, p.id, reviewerType)
+  verdict = enforced.verdict
+  if (enforced.integrity_failure) {
+    log(`GATE INTEGRITY FAILURE on phase ${p.id}: ${enforced.integrity_failure}. Recording as a gate failure, NOT as an approval or a rejection. The fix loop is deliberately skipped.`)
+    return gateIntegrityResult(p, taskOut, reviewerType, verdict, enforced.integrity_failure, 0)
+  }
+
   if (!verdict.approved) {
     return fixLoop(p, taskOut, verdict, reviewerType)
   }
@@ -1380,11 +1540,22 @@ command you ran and its output. A task id or a quoted task summary is NOT eviden
 claim under review, and citing it validates the report against itself. If you cannot point at
 code for an AC, it is NOT MET, even when a task says it did it.
 
+${EVIDENCE_RULES}
+
 IMPORTANT — TWO-STAGE DURABILITY:
 Write your complete AC validation checklist to: ${artifactPath}
 Use this format per AC item:
   - [ ] AC text — NOT MET: reason
-  - [x] AC text — MET: <file:line or traced behaviour>
+  - [x] AC text — MET: <file:line or traced behaviour> | PATH: <live-smoke | path-equivalence |
+        real-endpoint-field-check | production-callsite-trace> — <what you saw>
+
+Every MET line MUST carry a PATH segment naming one of the four kinds. A MET line whose evidence
+is only "the tests pass" has no path and is NOT MET. End the file with one line:
+  VERIFICATION-PATH: <kind> — <production entry point> — <evidence>
+or, when you could not establish one for the phase as a whole:
+  VERIFICATION-PATH: not-established — <why>
+and a line listing anything you had to take on a task agent's word:
+  SELF-REPORTED: <claim>; <claim>    (or "SELF-REPORTED: none")
 
 This file MUST exist before you return. A downstream structurer will read it to emit the verdict.
 Do NOT emit structured output yourself. Do NOT git add/commit/push/stash.`
@@ -1399,14 +1570,22 @@ function codexAcStructurePrompt(p, taskOut, planRef, artifactPath, timestamp, re
 Read the AC validation checklist at: ${artifactPath}
 
 If the file does not exist, return:
-  { "approved": false, "reviewer_type": "${reviewerType}", "required_fixes": ["AC validation artifact not found at ${artifactPath} — codex Stage A may have failed"] }
+  { "approved": false, "reviewer_type": "${reviewerType}", "verification_path": { "established": false, "kind": "not-established", "evidence": "Stage A artifact absent" }, "required_fixes": ["AC validation artifact not found at ${artifactPath} — codex Stage A may have failed"] }
 
 If the file exists:
   1. Count lines starting with "- [x]" (met) and "- [ ]" (not met).
-  2. Set approved:true ONLY if all ACs are marked met (no "- [ ]" lines).
+  2. Set approved:true ONLY if all ACs are marked met (no "- [ ]" lines) AND every "- [x]" line
+     carries a "PATH:" segment. A MET line with no PATH segment counts as NOT met — copy its AC
+     text into required_fixes with the reason "no verification path recorded".
   3. For each unmet AC, add its text to required_fixes with a brief reason from the checklist.
   4. Set reviewer_type to "${reviewerType}".
-  5. Return the VERDICT_SCHEMA object.
+  5. Copy the checklist's trailing "VERIFICATION-PATH:" line into verification_path:
+     established=true and kind=<kind> when the line names one of live-smoke | path-equivalence |
+     real-endpoint-field-check | production-callsite-trace; otherwise established=false with
+     kind="not-established". TRANSCRIBE it — never infer a path the checklist does not state,
+     and never upgrade "not-established" because the ACs look met.
+  6. Copy the "SELF-REPORTED:" line into self_reported_claims (empty array for "none").
+  7. Return the VERDICT_SCHEMA object.
 
 Do NOT write any files. Do NOT git add/commit/push/stash. Read only.`
 }

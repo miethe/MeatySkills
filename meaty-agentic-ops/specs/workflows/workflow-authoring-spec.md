@@ -296,7 +296,7 @@ Fix-loop caps at 2 cycles. If `verdict.approved` is still false after 2 cycles, 
 
 ### §8b — Verdict robustness: a gate that could not run is not a gate that passed
 
-Every reviewer dispatch in every workflow MUST satisfy all four:
+Every reviewer dispatch in every workflow MUST satisfy all five:
 
 1. **The verdict is a validated tool call** — `schema:` on the reviewer `agent()` call, always. Never
    accept a free-text `APPROVED` / `CHANGES_REQUESTED` string and parse it. Without a schema nothing
@@ -314,6 +314,23 @@ Every reviewer dispatch in every workflow MUST satisfy all four:
    agent. A `||` fallback to a non-existent agent is how a "5-lens" council silently reviewed 4
    (2026-08-03 agent-roster-drift AAR); `tests/test_workflow_agent_roster.py` now catches the phantom,
    but the silent-fallback *shape* is what let one name take out two lenses.
+
+5. **An unverified approval is not an approval** (R3, 2026-08-06 workflow-v41 delegate retro).
+   `VERDICT_SCHEMA` MUST require a `verification_path` object (`established`, `kind`,
+   `production_entrypoint`, `evidence`), and the workflow MUST convert an approving verdict whose
+   path is not established — or whose `kind` is not one of `live-smoke`, `path-equivalence`,
+   `real-endpoint-field-check`, `production-callsite-trace` — into a
+   `verdict_source: 'gate_integrity_failure'` with `gate_ran: false`. Its next action matches
+   clause 3's gate failure (re-dispatch or an explicit override, never a fix cycle): the verdict
+   exists but cannot be trusted, and what did not finish is the reviewer. Separately, any entry in
+   `self_reported_claims` MUST downgrade an approval to an ordinary rejection — that one IS
+   fix-loop work, because the missing artifact is the implementer's to produce. Enforcement must sit
+   at **every** point a verdict lands, including each fix-cycle re-review; a gate that enforces only
+   the first pass lets a fix cycle end on an unverified approval. Rationale: in the seven days to
+   2026-08-06 the dominant delegate defect was a green suite exercising a path production does not
+   take (8 findings, five with the same signature in one program) and the second was legs
+   self-reporting side effects they never performed (5 findings). Both classes produce reports that
+   satisfy every instruction they were given, so prompt text alone cannot gate them.
 
 **What this does not provide: a wall-clock timeout.** `agent()` exposes no deadline and a script
 cannot impose one. What the workflow form buys against a slow reviewer is that the wait is
