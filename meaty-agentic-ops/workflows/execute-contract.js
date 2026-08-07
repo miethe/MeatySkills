@@ -678,6 +678,57 @@ const MODE_D_FIX_CLASS_PATTERNS = [
   /drop.table/i,
 ]
 
+// ─── Mode-D SUBJECT MATTER in the brief (node_01KZC1AHEDYZ8FS9TAZSXQTTSB) ──────
+// The three checks below this were all satisfied by the leg that breached Mode-D on
+// 2026-08-06: its declared files contained no crypto path, its class was ordinary
+// implementation, and its prompt issued no destructive command. It was routed to an
+// offload lane on those clean signals and then WROTE its own HMAC signer, minting a
+// key with secrets.token_bytes(32).
+//
+// What the brief *did* contain was the subject matter. These patterns are tight,
+// multi-word/technical forms rather than bare words — `token` alone would trip on
+// "token bucket" and a noisy guard is a disabled guard.
+const MODE_D_INTENT_PATTERNS = [
+  /\b(signing|secret|private|encryption)\s+key\b/i,
+  /\bkey\s*(pair|material)\b/i,
+  /\bhmac\b/i,
+  /\btoken_(bytes|hex|urlsafe)\b/i,
+  /\b(jwt|oauth|bearer\s+token)\b/i,
+  /\bpassword\s+(hash|hashing)\b/i,
+  /\b(sign|verify|re-?sign)\s+(the\s+)?(token|payload|envelope|request)\b/i,
+  /\balembic\b/i,
+  /\bschema\s+migration\b/i,
+]
+
+// ─── the inversion: a Mode-D WARNING is itself a Mode-D signal ────────────────
+// This is the rule that would have prevented the breach, and the reason it is
+// mechanical rather than prose.
+//
+// The dispatch brief said, verbatim: "It must not read, generate, print or
+// reference any signing key. If you find yourself needing a key, STOP and return
+// {status: needs_opus, reason: mode_d}." That sentence was treated as the control.
+// It is better read as EVIDENCE: a brief that has to warn a delegate off minting a
+// signing key is, by construction, a brief about signing keys — i.e. work close
+// enough to the boundary that an author felt the need to fence it.
+//
+// Trusting the fence puts the boundary's enforcement inside the delegate, which is
+// exactly the party the boundary exists to constrain. So the presence of the
+// warning now routes the leg to primary instead of licensing the offload.
+const MODE_D_SELF_WARNING_PATTERNS = [
+  /must\s+not\s+(read|generate|print|reference|mint|create)[^.\n]{0,60}\bkey\b/i,
+  /\bnever\s+(mint|generate|sign)\b/i,
+  /reason:\s*['"]?mode_?d/i,
+  /\bneeds_opus\b[^\n]{0,40}\bmode_?d\b/i,
+  /\bdo\s+not\s+(sign|mint|generate)\b/i,
+]
+
+/**
+ * Routing-time Mode-D eligibility. Returns a reason string when the leg must stay
+ * on claude-primary, or null when an offload lane is permissible.
+ *
+ * Named `fixCycleModeDGuard` for continuity with the P4 call sites; the checks now
+ * cover subject matter and self-warning in addition to the original three.
+ */
 function fixCycleModeDGuard(filesAffected, taskClass, promptText) {
   // 1. files_affected heuristic.
   const files = Array.isArray(filesAffected) ? filesAffected : []
@@ -691,7 +742,7 @@ function fixCycleModeDGuard(filesAffected, taskClass, promptText) {
   for (const pat of MODE_D_FIX_CLASS_PATTERNS) {
     if (pat.test(cls)) return `fix_task_class '${cls}' matches Mode-D class pattern ${pat}`
   }
-  // 3. Prompt scan.
+  // 3. Prompt scan — destructive COMMANDS.
   const text = typeof promptText === 'string' ? promptText : ''
   const PROMPT_DANGER = [
     /git\s+push\s+--force/i,
@@ -703,7 +754,18 @@ function fixCycleModeDGuard(filesAffected, taskClass, promptText) {
   for (const pat of PROMPT_DANGER) {
     if (pat.test(text)) return `fix prompt contains destructive operation matching ${pat}`
   }
-  return null // Safe to dispatch Bob.
+  // 4. Prompt scan — Mode-D SUBJECT MATTER.
+  for (const pat of MODE_D_INTENT_PATTERNS) {
+    if (pat.test(text)) return `brief concerns Mode-D subject matter matching ${pat} — offload lane not eligible`
+  }
+  // 5. Prompt scan — a Mode-D warning in the brief is evidence, not a control.
+  for (const pat of MODE_D_SELF_WARNING_PATTERNS) {
+    if (pat.test(text)) {
+      return `brief contains a Mode-D warning matching ${pat}; a leg that must be `
+        + `warned off the boundary is too close to it to offload (the warning is the signal, not the control)`
+    }
+  }
+  return null // Safe to dispatch to an offload lane.
 }
 
 // ─── workflow body ────────────────────────────────────────────────────────────
