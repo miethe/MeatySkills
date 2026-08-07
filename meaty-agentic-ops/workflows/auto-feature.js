@@ -129,6 +129,56 @@ function hasHighRiskPaths(filesAffected) {
   return filesAffected.some(f => HIGH_RISK_PATTERNS.some(pat => pat.test(f)))
 }
 
+// ─── Mode-D subject matter in the REQUEST (node_01KZC1AHEDYZ8FS9TAZSXQTTSB) ────
+// hasHighRiskPaths above reads DECLARED paths, which the planner produces. The leg
+// that breached Mode-D on 2026-08-06 declared no crypto path and was routed to an
+// offload lane on that clean declaration — then wrote its own HMAC signer, minting
+// a key with secrets.token_bytes(32). The subject matter was in the text all along.
+//
+// Patterns are tight multi-word/technical forms; bare `token` would trip on
+// "token bucket", and a noisy boundary is one that gets routed around.
+// Kept verbatim-identical to the tables in execute-{plan,contract}.js — workflow
+// scripts cannot require() at runtime, so drift shows up as a visible diff.
+const MODE_D_INTENT_PATTERNS = [
+  /\b(signing|secret|private|encryption)\s+key\b/i,
+  /\bkey\s*(pair|material)\b/i,
+  /\bhmac\b/i,
+  /\btoken_(bytes|hex|urlsafe)\b/i,
+  /\b(jwt|oauth|bearer\s+token)\b/i,
+  /\bpassword\s+(hash|hashing)\b/i,
+  /\b(sign|verify|re-?sign)\s+(the\s+)?(token|payload|envelope|request)\b/i,
+  /\balembic\b/i,
+  /\bschema\s+migration\b/i,
+]
+
+// A Mode-D warning in the text is EVIDENCE of proximity to the boundary, not a
+// control over it. A request that has to say "must not mint a signing key" is a
+// request about signing keys.
+const MODE_D_SELF_WARNING_PATTERNS = [
+  /must\s+not\s+(read|generate|print|reference|mint|create)[^.\n]{0,60}\bkey\b/i,
+  /\bnever\s+(mint|generate|sign)\b/i,
+  /reason:\s*['"]?mode_?d/i,
+  /\bneeds_opus\b[^\n]{0,40}\bmode_?d\b/i,
+  /\bdo\s+not\s+(sign|mint|generate)\b/i,
+]
+
+/**
+ * Mode-D subject-matter detector over free text.
+ * @param {string} text
+ * @returns {string|null} the matching pattern's source, or null.
+ */
+function hasModeDIntent(text) {
+  const t = typeof text === 'string' ? text : ''
+  if (!t) return null
+  for (const pat of MODE_D_INTENT_PATTERNS) {
+    if (pat.test(t)) return `subject matter ${pat}`
+  }
+  for (const pat of MODE_D_SELF_WARNING_PATTERNS) {
+    if (pat.test(t)) return `Mode-D warning present ${pat}`
+  }
+  return null
+}
+
 // ─── ceiling resolution (pure) ────────────────────────────────────────────────
 
 function resolveCeiling(parsed) {
@@ -600,8 +650,16 @@ if (!planTextClaimsArtifact(planText, plan.plan_artifact_path)) {
 
 // ── Feasibility gate (deterministic; authoritative over planner self-assessment) ──
 // Order: boundary reasons (mode_d, spike) win over scope; plan_only is evaluated last.
-const modeD = plan.mode_d === true || hasHighRiskPaths(plan.files_affected)
+const modeDIntent = hasModeDIntent(parsed.request) || hasModeDIntent(plan.summary)
+const modeD = plan.mode_d === true || hasHighRiskPaths(plan.files_affected) || Boolean(modeDIntent)
 if (modeD) {
+  if (modeDIntent && plan.mode_d !== true && !hasHighRiskPaths(plan.files_affected)) {
+    // The planner said this was not Mode D and its declared paths looked clean, but
+    // the request itself is about Mode-D subject matter. Prefer the request text:
+    // node_01KZC1AHEDYZ8FS9TAZSXQTTSB is the case where clean declarations licensed
+    // an offload lane that then wrote its own HMAC signer.
+    log(`Mode D detected from the REQUEST TEXT (${modeDIntent}) despite a clean plan self-assessment.`)
+  }
   log('Mode D boundary detected — escalating to interactive Opus before any execution.')
   return {
     status: 'needs_opus',

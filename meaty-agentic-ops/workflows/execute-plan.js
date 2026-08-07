@@ -497,6 +497,33 @@ const MODE_D_CLASS_PATTERNS = [
   /drop.table/i,
 ]
 
+// Mode-D subject matter in a dispatch brief. Inlined rather than shared with
+// execute-contract.js's identical table because workflow scripts cannot require()
+// at runtime (workflow-authoring-spec §"no FS/shell in script"); the two copies are
+// kept verbatim-identical on purpose so a drift is a visible diff.
+// Patterns are deliberately tight multi-word/technical forms — bare `token` would
+// trip on "token bucket", and a noisy guard is a guard that gets switched off.
+const MODE_D_INTENT_PATTERNS = [
+  /\b(signing|secret|private|encryption)\s+key\b/i,
+  /\bkey\s*(pair|material)\b/i,
+  /\bhmac\b/i,
+  /\btoken_(bytes|hex|urlsafe)\b/i,
+  /\b(jwt|oauth|bearer\s+token)\b/i,
+  /\bpassword\s+(hash|hashing)\b/i,
+  /\b(sign|verify|re-?sign)\s+(the\s+)?(token|payload|envelope|request)\b/i,
+  /\balembic\b/i,
+  /\bschema\s+migration\b/i,
+]
+
+// A Mode-D warning present in the brief. See the rationale at check 6 below.
+const MODE_D_SELF_WARNING_PATTERNS = [
+  /must\s+not\s+(read|generate|print|reference|mint|create)[^.\n]{0,60}\bkey\b/i,
+  /\bnever\s+(mint|generate|sign)\b/i,
+  /reason:\s*['"]?mode_?d/i,
+  /\bneeds_opus\b[^\n]{0,40}\bmode_?d\b/i,
+  /\bdo\s+not\s+(sign|mint|generate)\b/i,
+]
+
 /**
  * P4 Mode-D guard for a fix-cycle task before Bob dispatch.
  * Reuses the same HIGH_RISK_PATTERNS from modeBoundary() for files.
@@ -544,7 +571,32 @@ function fixTaskModeDGuard(phase, prompt) {
     }
   }
 
-  return null // Safe to dispatch Bob.
+  // 5. Prompt scan for Mode-D SUBJECT MATTER (node_01KZC1AHEDYZ8FS9TAZSXQTTSB).
+  // Checks 1–4 were ALL satisfied by the leg that breached Mode-D on 2026-08-06:
+  // clean declared files, ordinary class, no destructive command. It was routed to
+  // an offload lane on those clean signals and then wrote its own HMAC signer,
+  // minting a key with secrets.token_bytes(32). What the brief did carry was the
+  // subject matter.
+  for (const pat of MODE_D_INTENT_PATTERNS) {
+    if (pat.test(promptText)) {
+      return `brief concerns Mode-D subject matter matching ${pat} — offload lane not eligible`
+    }
+  }
+
+  // 6. A Mode-D warning in the brief is EVIDENCE of proximity, not a control.
+  // The breaching brief said "must not read, generate, print or reference any
+  // signing key … STOP and return {reason: mode_d}". Treating that as the control
+  // puts enforcement inside the delegate — the very party being constrained. Read
+  // instead as a signal: a leg that has to be warned off the boundary is too close
+  // to it to offload.
+  for (const pat of MODE_D_SELF_WARNING_PATTERNS) {
+    if (pat.test(promptText)) {
+      return `brief contains a Mode-D warning matching ${pat}; a leg that must be `
+        + `warned off the boundary is too close to it to offload (the warning is the signal, not the control)`
+    }
+  }
+
+  return null // Safe to dispatch to an offload lane.
 }
 
 // ---------------------------------------------------------------------------
