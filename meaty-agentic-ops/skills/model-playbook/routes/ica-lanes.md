@@ -19,7 +19,18 @@ rule is what picks the right one there.
   `claude-opus-5[1m]` to `/v1/messages` returns HTTP **403 `team_model_access_denied`** — *"team
   not allowed to access model. This team can only access models=['global-models']"*. That message
   reads like "no access to this model at all," but the real cause is the suffix: drop `[1m]` and
-  the same call succeeds. Applies to every `[1m]` id on a raw transport, not just Opus 5.
+  the same call succeeds. Applies to every `[1m]` id on a raw transport, not just Opus 5
+  (re-confirmed 2026-08-07 for both `claude-sonnet-5[1m]` and `claude-opus-5[1m]`).
+  **Positive proof rather than inference:** `GET /v1/models` lists 22 servable ids and **zero**
+  contain `[1m]` — the suffix exists only in the Claude Code client layer.
+
+  | Emitting for… | Id form | Wrong form costs you |
+  |---|---|---|
+  | `~/ica-claude.sh`, `claude --model`, `ica-settings.json`, Agent-tool subagents | **`[1m]`** | plain → silent 200k cap, no error |
+  | raw `/v1/messages`, `/chat/completions`, SDKs, app adapters | **plain** | `[1m]` → 403 `team_model_access_denied` |
+
+  So the resolver's `[1m]`-preference is correct **only** when the consuming executor is a Claude
+  Code path. A `RoutingRecord` handed to an HTTP/SDK consumer must carry the plain id.
 - ⚠️ **Keep the `claude-` prefix.** Bare `sonnet-5[1m]` **401s** — the gateway strips `[1m]`,
   leaving the un-prefixed `sonnet-5` which is not in the `global-models` group. Always write
   `claude-sonnet-5[1m]`.
@@ -70,6 +81,28 @@ gracefully). Bound with a generous `--max-turns` (15-50 by task complexity) as a
 backstop, never as a cost lever. **Never** cap live infra/DB/migration/deploy work — a kill
 mid-mutation leaves the target system partially mutated (2026-06-08 incident: a capped opus-4.7
 redeploy was killed mid-cutover, leaving a demo box down/crash-looping).
+
+## Never validate a request shape on this lane — the envelope is loosely checked
+
+Same family of hazard as fallback-masking below: an ICA success can be lying to you. The gateway
+is a **LiteLLM proxy over Bedrock** (`msg_bdrk_…` response ids; every `/v1/models` entry reports
+`owned_by:"openai"`, a LiteLLM default and not a vendor claim) — and it **silently discards
+unrecognized top-level request fields** where Anthropic direct returns 400.
+
+Verified 2026-08-07 (`claude-haiku-4-5`, `/v1/messages`): an invented `ccdash_unknown_probe` and,
+more dangerously, **misspelled real fields** — `max_tokenz`, `temperatur`, `tool_choise` — all
+returned **200** and were ignored, so the call silently ran at defaults. **Nested** unknowns are
+strict (`messages[0].bogus_nested` → 400 `Extra inputs are not permitted`), and that partial
+strictness is exactly what makes the envelope laxity easy to miss.
+
+- **ICA-green is not evidence of correctness.** Validate request bodies against Anthropic direct
+  or a local schema check before shipping them to a paid lane.
+- **A param that "had no effect" may never have been sent.** A typo is observationally identical
+  to a genuine gateway strip — so spell-check before recording a new strip finding (genuine strips
+  do exist, e.g. `output_config.format` on Sonnet 5).
+- **Assert the effect, not the status code** — read `usage`, `stop_reason`, `modelUsage.<id>` back.
+- **Enumerate, don't guess:** `GET /v1/models` answers "is X served?" free and instantly. Note
+  `gpt-5.6-sol` is **not** on ICA (only `-terra-dzus`/`-luna-dzus`) — never route a Sol leg here.
 
 ## Fallback-masking gotcha — test with fallback OFF
 

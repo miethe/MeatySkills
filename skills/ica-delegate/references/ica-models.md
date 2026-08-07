@@ -7,6 +7,37 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 
 ---
 
+## What the gateway actually is — a LiteLLM proxy over Bedrock
+
+Not the Anthropic API. Knowing this predicts most of its quirks instead of discovering them one
+403 at a time. Verified 2026-08-07:
+
+| Evidence | Observation | What it explains |
+|---|---|---|
+| Response ids | `msg_bdrk_01Cefyx3ZVQzLomk2j9jFs9Q` | Upstream is **Amazon Bedrock**. Model ids carry no `anthropic.`/`us.anthropic.` prefix, so the proxy normalizes them. |
+| `GET /v1/models` shape | every entry `{"object":"model","owned_by":"openai"}` — including the Claude and Gemini ids | A **LiteLLM**-style proxy with an OpenAI-shaped model registry. `owned_by:"openai"` is a LiteLLM default, **not** a statement about the model's vendor. |
+| `[1m]` absent from the catalog | 0 of 22 ids contain `[1m]` | `[1m]` is a **Claude Code client-side hint**, never a gateway model id → `[1m]` on a raw transport is an *unregistered model group* → 403 `team_model_access_denied`. |
+| Top-level unknown fields | accepted and dropped (see Known Limitations) | Proxy envelope parsing, not Anthropic's strict schema. |
+
+⚠️ **Do not extrapolate a "Bedrock feature mask" without probing.** Reasoning by analogy from
+Bedrock's usual gaps produced two **wrong** predictions here, both corrected by probe:
+
+| Feature | Predicted (from Bedrock) | **Actually observed 2026-08-07** |
+|---|---|---|
+| Explicit prompt caching (`cache_control`) | unavailable | ✅ **Works.** Call 1: `cache_creation_input_tokens=5502`, `cache_read=0`. Call 2 (identical): `cache_creation=0`, **`cache_read=5502`**. Fully honored. |
+| Models API (`GET /v1/models`) | unavailable | ✅ **Works.** Returns the full 22-model catalog. |
+
+Caveat on the caching probe: a *first* attempt showed `cache_creation=0` at 2,409 input tokens —
+that was the **minimum-cacheable-prefix threshold**, not a mask. Below the floor, caching is a
+silent no-op with no error. Re-probing at 5,502 tokens is what distinguished the two. Both a
+too-small prefix and an unsupported feature look identical in one call, so **always probe caching
+with two identical calls above the floor and read `cache_read_input_tokens` back.**
+
+Still genuinely unprobed here (assume nothing): Batches API, Files API, automatic (implicit)
+caching, server-side web search/fetch, code execution. Probe before designing on any of them.
+
+---
+
 ## Full Model Inventory
 
 | Display Name | Model Identifier | Cost Tier | Notes |
@@ -121,7 +152,9 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 | Token budget is shared across all token-limited models | Heavy Opus use depletes budget for Sonnet too | Prefer free tier when acceptable |
 | **Agent tool rejects dated model IDs** | Default subagent model (Haiku) uses `claude-haiku-4-5-20251001` which is NOT in the gateway's `global-models` group → 401 error | Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. Or delegate via `~/ica-claude.sh` Bash calls instead. |
 | **Plain ids silently cap at 200k; `[1m]` unlocks ~1M — and this now covers Gemini** | `claude-opus-5[1m]` (preferred Opus/script default), `claude-opus-4-8[1m]` (fallback), `opus[1m]` (alias → 4.8[1m]), `claude-opus-4-7[1m]`, `claude-sonnet-5[1m]` (preferred Sonnet), `claude-sonnet-4-6[1m]` (older fallback), **`gemini-3.5-flash[1m]`, and `gemini-3.1-pro-preview[1m]`** are accepted by the gateway and provide ~1M context. **Verify only via the JSON `modelUsage.<id>.contextWindow` field** (`--output-format json`). Confirmed **2026-07-31: `claude-opus-5[1m]`=1000000 / plain `claude-opus-5`=200000**. Confirmed 2026-07-08: `claude-sonnet-5[1m]`=1M / plain `claude-sonnet-5`=200k; `gemini-3.5-flash[1m]`=1M / plain=200k; `gemini-3.1-pro-preview[1m]`=1M / plain=200k (Claude Opus 4.x re-confirmed 2026-06-09). The model's *self-report* of its window/identity is unreliable. The bracket-less dash form (`...-1m`) does not route. **The `[1m]` rule is ICA-gateway-specific for Gemini — native gemini-cli is 1M without a suffix.** | On the ICA Claude Code path, use `[1m]` for Claude Opus/Sonnet **and** Gemini. Default Sonnet = `claude-sonnet-5[1m]`; default Opus = `claude-opus-5[1m]` (script default), fallback `claude-opus-4-8[1m]`. |
-| **`[1m]` is a Claude Code CLIENT-SIDE hint, not a gateway model id** | Raw transports (`/v1/messages`, `/chat/completions`) must send the **plain** id. Sending `claude-opus-5[1m]` to `/v1/messages` returns **HTTP 403 `team_model_access_denied`** — "team not allowed to access model. This team can only access models=['global-models']" (observed 2026-07-31). That error reads like "no access to this model at all" when the real cause is just the suffix. | `[1m]` only on `~/ica-claude.sh` / Claude Code; plain `claude-opus-5` (or `claude-sonnet-5`) on raw curl/SDK calls. Before concluding a model is unavailable, retry once with the suffix stripped. |
+| **`[1m]` is a Claude Code CLIENT-SIDE hint, not a gateway model id** | Raw transports (`/v1/messages`, `/chat/completions`) must send the **plain** id. Sending `claude-opus-5[1m]` to `/v1/messages` returns **HTTP 403 `team_model_access_denied`** — "team not allowed to access model. This team can only access models=['global-models']" (observed 2026-07-31, re-confirmed 2026-08-07 for `claude-sonnet-5[1m]` **and** `claude-opus-5[1m]`). That error reads like "no access to this model at all" when the real cause is just the suffix. **Positive proof:** `GET /v1/models` lists 22 ids and **none** contains `[1m]`. | `[1m]` only on `~/ica-claude.sh` / Claude Code; plain `claude-opus-5` (or `claude-sonnet-5`) on raw curl/SDK calls. Before concluding a model is unavailable, retry once with the suffix stripped. |
+| **Unknown TOP-LEVEL request fields are silently dropped — ICA is not a validation lane** | The proxy envelope is loosely validated; Anthropic direct 400s on the same body. Worst case is a **typo in a real field**: `temperatur: 0.9`, `max_tokenz: 5`, `tool_choise: {...}` all returned **200** and were ignored, so the call ran at defaults while looking correct (verified 2026-08-07). A parameter that "had no effect" may simply never have been sent, which is observationally identical to a genuine gateway strip. **Nested** unknowns *are* strict — `messages[0].bogus_nested` → 400 `Extra inputs are not permitted` — and that partial strictness is what makes the envelope laxity easy to miss. | Never treat an ICA 200 as proof of request-shape correctness. Validate bodies against **Anthropic direct** or a local JSON-schema check. Assert the *effect* (`usage`, `stop_reason`, `modelUsage.<id>`), not the status code. Spell-check params before reporting a feature as stripped. |
+| **Response ids are Bedrock-shaped (`msg_bdrk_…`)** | The upstream is Amazon Bedrock behind a LiteLLM proxy. Harmless in itself, but any code that pattern-matches `^msg_[A-Za-z0-9]+$` on ids, or asserts an exact id shape in tests, will behave differently across ICA vs Anthropic direct. | Treat the id as an opaque string. Don't design a future surface on an assumed Bedrock feature mask — probe it (two of those assumptions were already **wrong**; see the proxy section above). |
 
 ---
 
@@ -136,13 +169,55 @@ Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plai
 | `output_config.format` on `claude-sonnet-5` (structured-JSON schema) | ⚠️ **Silently dropped by the gateway** (observed on Sonnet 5) | On the Sonnet 5 lane the gateway forwards `effort` but **not** `format` → you get prose, not schema-constrained JSON. Use a forced **tool-call** for structured output there. **Scope note:** this is not gateway-wide — `claude-opus-5` honors `format` (row above). Treat it as per-model, and probe before relying on `format` for a model not listed here. |
 | Gemini (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) reasoning | ⚠️ Not surfaced as thinking blocks | Reachable via both `/v1/messages` and `/chat/completions` + the CC `[1m]` path; tool use works. Gemini's internal reasoning is not exposed as Anthropic thinking blocks via ICA, and Google-Search grounding is native-key-only (not via ICA). |
 
+## Enumerate what is actually served — `GET /v1/models`
+
+The authoritative, **free**, zero-token answer to "is model X on ICA?". Use it instead of probing
+candidate ids one at a time — per-id probing is how an availability question gets misdiagnosed as
+an access problem (and it burns shared-pool quota).
+
+```bash
+KEY="$(grep -E '^ICA_CLAUDE_CODE_API_KEY=' ~/.dotfiles/ICA_CLAUDE | head -n1 | cut -d= -f2-)"
+curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" \
+  | python3 -c 'import json,sys;[print(m["id"]) for m in json.load(sys.stdin)["data"]]'
+```
+
+**Snapshot 2026-08-07 — 22 ids, none containing `[1m]`** (default `CC1` key):
+
+| Family | Served ids |
+|---|---|
+| Claude | `claude-haiku-4-5`, `claude-sonnet-4-5`, `claude-sonnet-4-6`, `claude-sonnet-5`, `claude-opus-4-6`, `claude-opus-4-7`, `claude-opus-4-8`, `claude-opus-5` |
+| Gemini | `gemini-3.1-pro-preview`, `gemini-3.5-flash`, `gemini-3.6-flash` |
+| GPT | `gpt-4o`, `gpt-5.1-chat-gus`, `gpt-5.4-gus`, `gpt-5.5-gus`, `gpt-5.6-luna-dzus`, `gpt-5.6-terra-dzus` |
+| Open | `ibm/granite-4-h-small`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, + 3 others |
+
+Two things to read off it:
+
+- **`gpt-5.6-sol` is NOT served on ICA.** The frontier GPT tier is Codex-direct only; only
+  `-terra-dzus` and `-luna-dzus` are on the gateway. Don't route a Sol leg here.
+- The catalog is the **transport-layer** truth. It says nothing about Claude Code alias remaps
+  (`opus`, `sonnet`, `[1m]`), which live in `ica-settings.json`. A model in this list is reachable
+  on a raw transport with that exact id; a `[1m]` form is reachable only via Claude Code.
+
+⚠️ **This is the default-key view.** A named `ICA_KEY` block (`CC1`…`CC6`) may be scoped to a
+different model group — re-run the probe under that block before assuming parity.
+
 ## Pending Information
 
-- [ ] Exact rate limits (requests/min, tokens/min per tier)
+- [ ] Exact rate limits (requests/min, tokens/min per tier) — **partial:** two shapes of 429 exist
+      and they are distinct: `"Too many requests, please wait"` (request rate) and `"Too many
+      tokens, please wait"` (token rate). Both were hit on `claude-sonnet-5` within ~2 calls on
+      2026-08-07 while `claude-haiku-4-5` stayed clean, so limits are **per model group**. Shared
+      pool, so an observed 429 can be someone else's consumption — never read it as your own rate.
 - [ ] Whether vision/multimodal works through the gateway
 - [ ] Tool use / function calling support for non-Claude models (GPT, Gemini)
 - [ ] Streaming behavior differences from direct API
 - [ ] Token counting accuracy (does gateway report match actual usage?)
 - [ ] Whether `--output-format json` works reliably for all models
 - [ ] Specific token budget allocation and refresh period for token-limited tier
+- [x] **Models API** — ✅ works (`GET /v1/models`, 22 ids, 2026-08-07). See the section above.
+- [x] **Explicit prompt caching** (`cache_control: ephemeral`) — ✅ honored end-to-end
+      (`cache_read_input_tokens=5502` on the second identical call, 2026-08-07). *Implicit/automatic*
+      caching remains unprobed.
+- [ ] Batches API, Files API, server-side web search/fetch, code execution — **unprobed.** Do not
+      assume present or absent; the Bedrock-analogy prediction was wrong twice already.
 - [ ] Whether the `opus[1m]` short alias now retargets `claude-opus-5[1m]` (last observed routing to `claude-opus-4-8[1m]`; not re-probed 2026-07-31 — use the explicit id meanwhile)

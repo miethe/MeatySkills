@@ -4,9 +4,9 @@ description: >-
   Delegate bounded agentic work to IBM ICA-provisioned Claude instances via ~/ica-claude.sh.
   Use when offloading parallel subtasks, accessing free-tier models for mechanical work,
   or cost-shifting bounded tasks to a secondary subscription.
-version: 2.7
+version: 2.9
 app_version: "2026-06-11"
-updated: 2026-07-09
+updated: 2026-08-07
 spec: ./SPEC.md
 ---
 
@@ -54,6 +54,55 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 | Tasks requiring models unavailable on the gateway | Check model inventory first |
 | Work that needs the primary session's file-edit capabilities | Delegate reads file paths, not edits in the calling workspace |
 
+## Delegation Context Pre-Flight (CF-E — MANDATORY first step)
+
+Before **every** dispatch, resolve the active delegation-context bundle/manifest via the
+Context Fabric §E.2 resolver and thread it into the invocation with
+`--append-system-prompt-file`. The resolver ladder is offline and fail-open — a pure file
+read, never a model/DB/network call: `AOS_MANIFEST_REF` (execution-manifest.yaml; bundle via
+its `context.bundle_ref`) → `AOS_CONTEXT_BUNDLE_PATH` (bundle path directly) → explicit path
+arg → nothing. If nothing resolves, **proceed without it and log the omission to stderr** —
+never block the dispatch. The plan-gate dispatcher that ran `op context pack` is the setter of
+`AOS_MANIFEST_REF`; delegates never re-derive the pack (delegation-context contract).
+
+Executable pre-flight assertion (the CF-E coverage validator greps the `CF-E-PREFLIGHT`
+marker; the resolver itself exits 1 with no output when the resolve-first step was skipped —
+that failing smoke is the §E.5 AC, not an error to suppress). **`--destination external` is
+mandatory on this lane (D4 egress enforcement):** an ICA delegate is an external
+destination, and the resolver REFUSES (exit 1) to hand over any bundle/manifest that was not
+*built* destination-external (an internal build carries the personal persona slice, which
+never egresses). A refusal is handled exactly like "nothing resolved": dispatch without the
+bundle and log the omission — never fall back to `--destination internal` to "make it work".
+
+```bash
+# CF-E-PREFLIGHT — resolve-first (Context Fabric §E.2, D4 external lane); fail-open for the
+# dispatch, fail-CLOSED for egress; ALWAYS log an omission.
+CF_E_RESOLVER="${CF_E_RESOLVER:-$HOME/.claude/hooks/cf_context_resolve.py}"
+CTX_FLAGS=()
+CTX_BUNDLE=""
+if [ -r "$CF_E_RESOLVER" ]; then
+  CTX_BUNDLE="$(python3 "$CF_E_RESOLVER" --print-bundle-path --destination external 2>/dev/null || true)"
+fi
+if [ -n "$CTX_BUNDLE" ]; then
+  CTX_FLAGS=(--append-system-prompt-file "$CTX_BUNDLE")
+else
+  echo "[CF-E-PREFLIGHT] no external-safe delegation context resolved (ref unset/unreadable, or the artifact was built destination-internal and is REFUSED for egress, D4) — dispatching WITHOUT the context bundle" >&2
+fi
+
+~/ica-claude.sh -p "your task" "${CTX_FLAGS[@]}" \
+  --model 'claude-sonnet-5[1m]' --dangerously-skip-permissions --max-turns 20
+```
+
+Composition notes:
+
+- Under `--bare` the bundle competes with the curated root `CLAUDE.md` for the
+  `--append-system-prompt-file` slot — when you need **both**, concatenate them into one temp
+  file and pass that single path (`cat "$CTX_BUNDLE" /path/to/CLAUDE.md > /tmp/ctx.$$.md`).
+- The resolver deploys to `~/.claude/hooks/cf_context_resolve.py` (upstream:
+  `agentic_meta_dev/infra/persona-hooks/cf_context_resolve.py`, installed by that directory's
+  `install.sh`); override the path with `CF_E_RESOLVER`. Spec:
+  `agentic_meta_dev/docs/project_plans/design-specs/context-fabric/CF-E-auto-injection.md`.
+
 ## The Split That Works (orchestrator vs free ICA)
 
 On a taste-sensitive, multi-phase build (the Command Center v3 visual rebuild),
@@ -83,9 +132,31 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 | Free-tier models | `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, `ibm/granite-4-h-small` |
 | Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) — confirmed 2026-06-08 |
 
-## Prefer `[1m]` for Opus, Sonnet, and Gemini — Always
+## Prefer `[1m]` for Opus, Sonnet, and Gemini — Always **on the Claude Code path**
 
-**When delegating to ICA, always use the `[1m]` (1M-context) variant for Claude Opus/Sonnet AND Gemini** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work. The gateway **silently caps the plain id at 200k** even for models that are natively 1M (Sonnet 5, Gemini 3.x); the `[1m]` suffix is what unlocks the full window on the ICA path.
+> ### 🚦 First decide the CALL PATH, then the id form — they are not the same rule
+> `[1m]` is a **Claude Code client-side hint**, not a gateway model id. It is *right* on the
+> wrapper path and *fatal* on a raw transport. Pick the row for how you are calling:
+>
+> | Call path | Id form | Wrong form gives you |
+> |---|---|---|
+> | `~/ica-claude.sh` / `claude --model` / `ica-settings.json` / Agent-tool subagents | **`[1m]`** — `'claude-sonnet-5[1m]'` | plain id → silent 200k cap (no error, truncated context) |
+> | Raw `POST /v1/messages`, `/chat/completions`, Anthropic/OpenAI **SDKs**, any app adapter (e.g. an embedded agent in your own service) | **plain** — `claude-sonnet-5` | `[1m]` → **HTTP 403 `team_model_access_denied`** |
+>
+> The 403 message is *"team not allowed to access model. This team can only access
+> models=['global-models']"*, which reads like the model is unavailable to you entirely. It is
+> not — **drop the suffix and the identical call succeeds.** Before concluding any ICA model is
+> unavailable, retry once with `[1m]` stripped.
+>
+> **Positive proof, not inference:** `GET /v1/models` lists **22** servable ids and **zero** of
+> them contain `[1m]` (verified 2026-08-07). The suffix exists only in the Claude Code client
+> layer — see [Enumerate the catalog](#enumerate-the-catalog-free-authoritative) below and
+> `references/ica-models.md`.
+>
+> ⚠️ **If you are building an app/SDK adapter against ICA, this section's title does not apply
+> to you** — you are on the bottom row. Send bare ids.
+
+**When delegating to ICA *via Claude Code*, always use the `[1m]` (1M-context) variant for Claude Opus/Sonnet AND Gemini** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work. The gateway **silently caps the plain id at 200k** even for models that are natively 1M (Sonnet 5, Gemini 3.x); the `[1m]` suffix is what unlocks the full window on the ICA path.
 
 | Class | Plain (avoid) | Use this `[1m]` variant |
 |-------|---------------|-------------------------|
@@ -123,6 +194,51 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists; and **GPT**, served at its native window. ⚠️ **Gemini on ICA is NOT served at its native 1M** — the plain `gemini-3.5-flash` / `gemini-3.1-pro-preview` ids cap at 200k on the gateway; use the `[1m]` id there. (On the **native gemini-cli** path Gemini 3.x *is* 1M without a suffix — the `[1m]` id is an ICA-gateway artifact only.) The plain 200k Opus/Sonnet/Gemini IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
 
 > The delegation-router enforces the same rule automatically: for ICA-served Opus/Sonnet/Gemini it emits the `[1m]` model_id and keeps the plain 200k ID as a demoted fallback (see `model-registry.yaml` → "ICA 1M-CONTEXT PREFERENCE").
+
+## ICA is NOT a validation lane — a green run here proves nothing about the paid lane
+
+**The gateway silently discards unrecognized top-level request fields.** It is a LiteLLM-style
+proxy, not the Anthropic API, and its outer envelope is loosely validated. Anthropic direct
+returns **400** for the same body. Verified 2026-08-07 (`/v1/messages`, `claude-haiku-4-5`):
+
+| Request body | ICA | Anthropic direct |
+|---|---|---|
+| `"ccdash_unknown_probe": true` (invented field) | **200** — ignored | 400 |
+| `"max_tokenz": 5` (misspelled real field) | **200** — ignored, `max_tokens` default applies | 400 |
+| `"temperatur": 0.9` (misspelled real field) | **200** — ignored, runs at default temperature | 400 |
+| `"tool_choise": {...}` (misspelled real field) | **200** — ignored, no tool forcing | 400 |
+| `messages[0].bogus_nested: 1` (**nested** unknown) | **400** `messages.0.bogus_nested: Extra inputs are not permitted` | 400 |
+
+Read the asymmetry carefully — it is the trap. **Top-level = lax, nested = strict.** So partial
+strictness gives false confidence: your nested content is schema-checked, your envelope is not.
+
+The dangerous case is not the invented field, it is the **typo in a real one**. `temperatur: 0.9`
+is accepted, silently ignored, and your call runs at default temperature — behaving *plausibly*
+while doing something other than what you wrote. Then it 400s on the paid lane, or worse, quietly
+behaves differently there.
+
+**Rules:**
+- **Never treat an ICA 200 as evidence your request shape is correct.** Validate request bodies
+  against **Anthropic direct** (or a local JSON-schema check) — ICA-green means nothing.
+- A parameter that "had no effect" on ICA was very possibly **never sent**. Check spelling before
+  concluding the gateway strips a feature. (Genuine strips do exist — e.g. `output_config.format`
+  on Sonnet 5 — but a typo is indistinguishable from a strip by observation alone.)
+- Assert the effect, not the acceptance: read `usage`, `stop_reason`, `modelUsage.<id>` back.
+
+## Enumerate the catalog — free, authoritative
+
+`GET /v1/models` is the only reliable answer to *"is model X served on ICA?"* — free, instant, no
+tokens, no model call. Prefer it over probing candidate ids one at a time (which is how a plain
+availability question gets misread as an access problem).
+
+```bash
+KEY="$(grep -E '^ICA_CLAUDE_CODE_API_KEY=' ~/.dotfiles/ICA_CLAUDE | head -n1 | cut -d= -f2-)"
+curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" \
+  | python3 -c 'import json,sys;[print(m["id"]) for m in json.load(sys.stdin)["data"]]'
+```
+
+Full 22-id inventory, what it proves about `[1m]`, and the LiteLLM/Bedrock identity of the
+gateway: `references/ica-models.md`.
 
 ## ICA Gateway Model Routing (Agent Tool)
 
