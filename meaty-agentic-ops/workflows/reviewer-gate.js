@@ -396,7 +396,10 @@ async function runLens(args, lens) {
 
 phase('Review')
 
-const gateArgs = args || {}
+// Named-workflow invocations can deliver args as a JSON-encoded string (observed live
+// 2026-08-04: two gate runs returned gate_ran:false "no lenses supplied" on object args);
+// parse defensively so a transport quirk can never read as a scope with no lenses.
+const gateArgs = (typeof args === 'string' ? JSON.parse(args) : args) || {}
 const lenses = asList(gateArgs.lenses)
 
 // Arg validation is itself a loud failure. A gate invoked with no lenses must not return a
