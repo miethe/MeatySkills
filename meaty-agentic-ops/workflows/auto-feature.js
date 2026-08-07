@@ -352,8 +352,12 @@ function planTextClaimsArtifact(planText, artifactPath) {
  * validator rationalizes real bugs a code-tracing adversarial reviewer catches — and two autopilot
  * AARs (cc-item-display-iteration-v2 + the cascade-revert/refresh-gap run) hit that exact miss.
  *
- * Harness note: background Workflow agents IGNORE EnterWorktree — the skeptic reads the finished
- * work through git in the current working tree, never by switching worktrees.
+ * Harness note: the skeptic reads the finished work through git in the CURRENT working tree and
+ * never switches trees itself. Background Workflow agents DO inherit a worktree the session has
+ * entered (measured on Claude Code 2.1.224, 2026-08-07 — an earlier note here claimed they ignore
+ * EnterWorktree, which was wrong), so the current tree is already the run's tree. An agent calling
+ * EnterWorktree mid-review would therefore be moving AWAY from the tree under review — still the
+ * wrong move, but for the opposite reason. Placement is the orchestrator's job, not the reviewer's.
  */
 function verifyPrompt(parsed, plan) {
   const artifact = plan.plan_artifact_path || '(the plan/contract artifact written this run)'
@@ -378,8 +382,8 @@ defects (data-corruption and state-refresh bugs) that only a whole-diff, code-tr
 You are that pass. Be adversarial: assume the "green" result is hiding a defect until you prove otherwise.
 
 STEPS:
-1. Get the finished work via git IN THE CURRENT WORKING TREE (do NOT use EnterWorktree — background
-   workflow agents ignore it, so switching worktrees would silently review a different tree):
+1. Get the finished work via git IN THE CURRENT WORKING TREE (do NOT call EnterWorktree — this tree
+   is already the run's tree, so switching would move you AWAY from the diff under review):
 ${baseBlock}
 2. Read the plan/contract artifact at: ${artifact}
    Extract every concrete CLAIM / acceptance criterion it makes about behavior.
@@ -496,10 +500,13 @@ function autopilotAnnotation(plan, executionTarget, recommendation) {
 const parsed = typeof args === 'string' ? JSON.parse(args) : args
 
 // ── repo-target guard ─────────────────────────────────────────────────────────
-// Workflow agents run in the SESSION's cwd — there is no per-agent cwd, and
-// isolation:'worktree' branches the session repo. So an autopilot request whose work lives in
-// a sibling repo does not fail: every agent runs against the wrong repository and reports
-// success. This is autopilot's own recorded failure (`.claude/worknotes/
+// Workflow agents run in the SESSION's cwd. They DO follow the session into a worktree it has
+// entered (measured, Claude Code 2.1.224) — but only a worktree of the SAME repository, so this
+// guard is unaffected by the worktree lane. An autopilot request whose work lives in a sibling
+// repo still does not fail: every agent runs against the wrong repository and reports success.
+// ⚠️ session_repo must be derived from the SHARED git dir
+// (basename(dirname(git-common-dir))), not from basename(--show-toplevel): inside a worktree the
+// latter is the worktree DIRECTORY name, which would trip this guard against the repo's own name. This is autopilot's own recorded failure (`.claude/worknotes/
 // di294-outcome-consolidation/AAR.md` lesson 5 — "Autopilot's scripted lane cannot target a
 // sibling repo", where an executor committed to `main` ignoring its worktree and still
 // reported `complete`). The script cannot resolve either repo itself (no FS/shell), so Opus
@@ -537,7 +544,7 @@ if (_target && _session && _target !== _session) {
     reason: 'cross_repo_target',
     report: [],
     blockers: [{
-      description: `Request targets repo '${parsed.target_repo}' but this session is in '${parsed.session_repo}'. Autopilot's agents always run in the session's cwd and isolation:'worktree' branches the SESSION repo, so every task would have executed against the wrong repository while reporting success. No agents were spawned.`,
+      description: `Request targets repo '${parsed.target_repo}' but this session is in '${parsed.session_repo}'. Autopilot's agents always run in the session's cwd (or a worktree of that same repo), so every task would have executed against the wrong repository while reporting success. No agents were spawned. If '${parsed.session_repo}' looks like a WORKTREE DIRECTORY name rather than a repo name, the caller derived session_repo from \`basename "$(git rev-parse --show-toplevel)"\` — use \`basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"\` instead and re-invoke.`,
       resolution_hint: `Start a session in the '${parsed.target_repo}' checkout and re-run there, or hand-orchestrate and verify \`git rev-parse --show-toplevel\` + \`git branch --show-current\` + \`git diff\` yourself at each step (.claude/skills/dev-execution/git-worktree-pr-protocol.md).`,
     }],
     autopilot: { execution_target: 'none', escalation_recommendation: `Cross-repo autopilot is not supported. Re-run from the '${parsed.target_repo}' repo, or hand-orchestrate.` },

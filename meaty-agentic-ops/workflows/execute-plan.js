@@ -1731,9 +1731,10 @@ if (graphErrors.length > 0) {
 // ---------------------------------------------------------------------------
 // Branch-placement guard — fail-closed, BEFORE the first wave can commit anything.
 //
-// Workflow agents run in the session's cwd on whatever branch the session repo is checked out to.
-// There is no per-agent cwd, and background workflow agents ignore EnterWorktree, so an
-// orchestrator that creates a worktree and "passes" it cannot reach these agents. Observed
+// Workflow agents run in the session's cwd on whatever branch that tree is checked out to. There is
+// no per-agent cwd. They DO follow the session into a worktree it has ENTERED (measured on Claude
+// Code 2.1.224, 2026-08-07); an orchestrator that merely CREATES a worktree with `git worktree add`
+// and "passes" its path cannot reach these agents at all. Observed
 // 2026-08-05 in the sibling autopilot lane: the assigned branch received zero commits while the
 // real work landed on `main` and was pushed, skipping the PR and review gates, and the report
 // still read `complete`. Naming the branch and refusing to run anywhere else is the only check
@@ -1760,7 +1761,7 @@ if (graph.run_branch) {
       report: [],
       blockers: [{
         description: `This plan was assigned run branch '${graph.run_branch}' but the session working tree is on ${found}. Task agents commit to the session branch, so every wave would have committed to the wrong branch — bypassing the PR and review gates — while reporting success. No agents were spawned; nothing was committed.`,
-        resolution_hint: `In the session repo run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. Do NOT create a separate worktree and pass its path — background workflow agents run in the session's cwd and ignore EnterWorktree.`,
+        resolution_hint: `In the tree this session is standing in, run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. To isolate the run, ENTER a worktree with the EnterWorktree tool first and check the branch out there — agents follow an entered worktree. Do NOT \`git worktree add\` and pass the path without entering it: the session cwd would not move and agents would commit here anyway.`,
       }],
     }
   }

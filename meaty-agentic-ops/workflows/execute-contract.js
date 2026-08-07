@@ -39,15 +39,17 @@
  *   .claude/plans/subagent-nesting-orchestration-strategy-v1.md §6 Phase 1.
  *
  * Branch-placement contract (args.run_branch / args.branch_base / args.parent_branch):
- *   Workflow agents run in the SESSION's cwd on whatever branch the session repo is checked out
- *   to. There is no per-agent cwd and background workflow agents ignore EnterWorktree, so an
- *   orchestrator that creates a separate worktree and "passes" it CANNOT reach these agents —
- *   they commit to the session branch regardless. Observed 2026-08-05 (run wf_944c5c91-78e):
+ *   Workflow agents run in the SESSION's cwd on whatever branch that tree is checked out to. There
+ *   is no per-agent cwd argument. They DO follow the session into a worktree it has ENTERED via the
+ *   EnterWorktree tool (measured on Claude Code 2.1.224, 2026-08-07); what they cannot reach is a
+ *   worktree merely CREATED with `git worktree add` while the session cwd stayed put — then they
+ *   commit to the session branch regardless. Observed 2026-08-05 (run wf_944c5c91-78e):
  *   autopilot created `.claude/worktrees/<slug>` on `autopilot/<slug>`, that branch received ZERO
  *   commits, and both real commits landed on `main` — one of them pushed — skipping the PR,
  *   review, and squash gates silently while the report read `status: complete`.
  *   The fix is not a path argument; it is to name the branch the orchestrator expects and refuse
- *   to work anywhere else:
+ *   to work anywhere else. That holds in BOTH lanes — the branch name is what this guard checks,
+ *   and it is equally valid inside an entered worktree as in the session repo:
  *     - run_branch    the branch the session repo MUST be on. When set, a pre-sprint guard
  *                     verifies it and returns blocked/wrong_branch BEFORE any agent can commit.
  *     - branch_base   the pre-run checkpoint SHA. Replaces the `HEAD~10` guess in the structurer,
@@ -983,7 +985,7 @@ if (parsed.run_branch) {
       report: [],
       blockers: [{
         description: `The session working tree is on branch '${guard.current_branch}' but this run was assigned '${parsed.run_branch}'. Workflow agents commit to the session branch, so the sprint would have committed to '${guard.current_branch}' — bypassing the PR and review gates — and reported success. No agents were spawned; nothing was committed.`,
-        resolution_hint: `In the session repo run: git switch ${parsed.run_branch} (create it from the parent branch if needed), then re-invoke. Do NOT create a separate worktree and pass its path — background workflow agents run in the session's cwd and ignore EnterWorktree, which is the defect this guard exists to catch.`,
+        resolution_hint: `In the tree this session is standing in, run: git switch ${parsed.run_branch} (create it from the parent branch if needed), then re-invoke. To isolate the run, ENTER a worktree with the EnterWorktree tool first and check the branch out there — agents follow an entered worktree. Do NOT \`git worktree add\` a worktree and pass its path without entering it: the session cwd would not move, agents would commit here anyway, and the report would read as isolated. That is the defect this guard exists to catch.`,
       }],
     }
   }
