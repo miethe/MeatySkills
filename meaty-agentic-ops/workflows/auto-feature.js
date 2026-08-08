@@ -600,7 +600,7 @@ if (_target && !_session) {
     report: [],
     blockers: [{
       description: `Request declares target_repo '${parsed.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
-      resolution_hint: 'In Opus pre-flight, resolve `basename "$(git rev-parse --show-toplevel)"` and pass it as session_repo. Do NOT drop target_repo to silence this.',
+      resolution_hint: 'In Opus pre-flight, resolve `basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"` (not `--show-toplevel` — inside a worktree that basename is the worktree directory name, not the repo name) and pass it as session_repo. Do NOT drop target_repo to silence this.',
     }],
     autopilot: { execution_target: 'none', escalation_recommendation: 'Pass session_repo alongside target_repo, or hand-orchestrate in the target repo.' },
   }

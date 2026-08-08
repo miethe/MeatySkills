@@ -454,7 +454,7 @@ function validateRepoTarget(graph) {
       report: [],
       blockers: [{
         description: `Graph declares target_repo '${graph.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
-        resolution_hint: 'In Opus pre-flight, resolve the session repo (`basename "$(git rev-parse --show-toplevel)"`) and pass it as session_repo alongside target_repo. Do NOT drop target_repo to silence this — the guard is what stands between a cross-repo plan and agents editing the wrong tree.',
+        resolution_hint: 'In Opus pre-flight, resolve the session repo (`basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"`, not `--show-toplevel` — inside a worktree that basename is the worktree directory name, not the repo name) and pass it as session_repo alongside target_repo. Do NOT drop target_repo to silence this — the guard is what stands between a cross-repo plan and agents editing the wrong tree.',
       }],
     }
   }
@@ -472,6 +472,27 @@ function validateRepoTarget(graph) {
   }
 
   return null
+}
+
+// ─── placement facts (pure) ───────────────────────────────────────────────────
+// Provenance attached to EVERY terminal return so a consumer can tell "rebased away" from "never
+// existed" without guessing, on the blocked paths as well as the happy one. execute-plan has no
+// single sprint result — it runs many agents across waves — so it reports only what the graph
+// itself asserts: the branch topology and the caller's DESCRIPTIVE placement lane. The script has
+// no FS/shell and cannot verify any of it, so an absent field is null, never a guess and never a
+// default like "branch_in_place"; isolation and worktree_path are echoed independently, neither
+// inferred from the other. Fields execute-contract measures from a post-sprint git probe
+// (commit_count / head_sha / patch_id / parent_tip_at_report / parent_moved) are omitted here
+// rather than faked — this workflow cannot measure them.
+function placementFacts(graph) {
+  return {
+    run_branch: graph?.run_branch || null,
+    parent_branch: graph?.parent_branch || null,
+    base_sha: graph?.branch_base || null,
+    parent_tip_at_start: graph?.parent_tip_at_start || null,
+    isolation: graph?.isolation || null,
+    worktree_path: graph?.worktree_path || null,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1741,6 +1762,7 @@ if (dryRun) {
     graph,
     graph_errors: dryErrors,
     repo_target_blocked: dryRepoBlock ? dryRepoBlock.reason : null,
+    run_placement: placementFacts(graph),
   }
 }
 
@@ -1752,6 +1774,7 @@ if (dryRun) {
 const repoBlock = validateRepoTarget(graph)
 if (repoBlock) {
   log(`HALTING — ${repoBlock.reason}: ${repoBlock.blockers[0].description}`)
+  repoBlock.run_placement = placementFacts(graph)
   return repoBlock
 }
 
@@ -1772,6 +1795,7 @@ if (graphErrors.length > 0) {
       description: e,
       resolution_hint: 'Fix the ExecutionGraph in Opus pre-flight: every batch member must be a full task object, or an {id} that matches an entry in the same phase\'s tasks[]. No agents were spawned.',
     })),
+    run_placement: placementFacts(graph),
   }
 }
 
@@ -1813,6 +1837,7 @@ if (graph.run_branch) {
         description: `This plan was assigned run branch '${graph.run_branch}' but the session working tree is on ${found}. Task agents commit to the session branch, so every wave would have committed to the wrong branch — bypassing the PR and review gates — while reporting success. No agents were spawned; nothing was committed.`,
         resolution_hint: `In the tree this session is standing in, run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. To isolate the run, ENTER a worktree with the EnterWorktree tool first and check the branch out there — agents follow an entered worktree whenever the run's placement probe confirms it (confirmed on 2.1.224 and again on 2.1.226; probed per run, never cached — node_01KZGQE6GVJTGXRSHA57FYKNDQ). Do NOT \`git worktree add\` and pass the path without entering it: the session cwd would not move and agents would commit here anyway.`,
       }],
+      run_placement: placementFacts(graph),
     }
   }
   log(`Branch guard OK: on '${guard.current_branch}' at ${guard.head_sha}.`)
@@ -1840,12 +1865,15 @@ for (const wave of waves) {
   // Pattern: modeBoundary — detect Mode D before spawning any agents for this wave.
   // Mode D phases are NEVER executed inside the workflow (constraint 2).
   const boundary = modeBoundary(wave, report)
-  if (boundary) return boundary
+  if (boundary) {
+    boundary.run_placement = placementFacts(graph)
+    return boundary
+  }
 
   // Budget exhaustion guard before dispatching an entire wave.
   if (budget.remaining() < 60_000) {
     log(`Budget exhausted before Wave ${wave.id} — returning to Opus.`)
-    return { status: 'needs_opus', reason: 'budget_exhausted', report }
+    return { status: 'needs_opus', reason: 'budget_exhausted', report, run_placement: placementFacts(graph) }
   }
 
   // All phases in this wave run concurrently (parallel barrier).
@@ -2042,6 +2070,7 @@ for (const wave of waves) {
         description: `Phase ${id} in wave ${wave.id} returned no result — its agent stalled, threw, or was skipped after retries. Its reviewer gate did NOT run.`,
         resolution_hint: 'Do NOT treat this wave as complete. Inspect the phase\'s worktree state by hand, then either re-dispatch the phase or run the reviewer gate against whatever work actually landed. Any later wave building on this one is building on an unverified predecessor.',
       })),
+      run_placement: placementFacts(graph),
     }
   }
 
@@ -2072,13 +2101,14 @@ for (const wave of waves) {
           ? `Confirm an agent definition named '${d.assigned_to}' exists in this deployment's .claude/agents/ (and in ~/.claude/agents/ for the node). If it does, add it to KNOWN_AGENT_TYPES; if it does not, correct the plan's assigned_to. Then re-dispatch this task — do NOT treat the phase as complete.`
           : `Inspect what the task actually wrote (git diff on the run branch), then re-dispatch it or complete it by hand. Do NOT treat the phase as complete on the reviewer's verdict — it never saw this task.`,
       })),
+      run_placement: placementFacts(graph),
     }
   }
 
   // Escalate if any phase's fix-loop exhausted without reviewer approval.
   if (completedWaveResults.some(r => r?.escalate)) {
     log(`Wave ${wave.id}: reviewer escalation unresolved — returning to Opus.`)
-    return { status: 'needs_opus', reason: 'reviewer_unresolved', report }
+    return { status: 'needs_opus', reason: 'reviewer_unresolved', report, run_placement: placementFacts(graph) }
   }
 
   // HITL gate: if any phase in this wave has pending human-assigned tasks, the wave's
@@ -2089,7 +2119,7 @@ for (const wave of waves) {
   const hitlTasks = completedWaveResults.flatMap(r => r?.hitl_gates ?? [])
   if (hitlTasks.length > 0) {
     log(`Wave ${wave.id}: ${hitlTasks.length} human-assigned task(s) require HITL gating — returning to Opus.`)
-    return { status: 'needs_opus', reason: 'hitl_required', hitl_tasks: hitlTasks, report }
+    return { status: 'needs_opus', reason: 'hitl_required', hitl_tasks: hitlTasks, report, run_placement: placementFacts(graph) }
   }
 
   // NB: cross-wave worktree merge happens in Opus post-wave (no git in script — constraint 1).
@@ -2119,7 +2149,8 @@ if (shortWaves.length > 0) {
       description: `Completeness invariant violated: ${detail}. One or more phases produced no result, so their reviewer gates did not run.`,
       resolution_hint: 'Do NOT treat this plan as complete. Identify the missing phases from the report, inspect what actually landed, and re-run their reviewer gates before merging.',
     }],
+    run_placement: placementFacts(graph),
   }
 }
 
-return { status: 'complete', report }
+return { status: 'complete', report, run_placement: placementFacts(graph) }
