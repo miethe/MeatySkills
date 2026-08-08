@@ -242,6 +242,11 @@ function placementFacts(parsed, sprintResult) {
     patch_id: sprintResult.patch_id || null,
     parent_tip_at_start: parsed.parent_tip_at_start || null,
     parent_tip_at_report: sprintResult.parent_tip || null,
+    // DESCRIPTIVE, not verified: the caller's own statement of which lane ran. The script has
+    // no FS and cannot confirm isolation or worktree_path against reality — echo only, never infer
+    // one from the other and never default an absent value to "branch_in_place".
+    isolation: parsed.isolation || null,
+    worktree_path: parsed.worktree_path || null,
   }
   // Only assert movement when BOTH ends are known. Absent either, the honest value is null —
   // reporting `false` would claim the parent held still on evidence we do not have.
@@ -892,7 +897,7 @@ if (_target && !_session) {
     report: [],
     blockers: [{
       description: `Contract declares target_repo '${parsed.target_repo}' but carries no session_repo, so the workflow cannot confirm it is running in the right repository. No agents were spawned.`,
-      resolution_hint: 'In Opus pre-flight, resolve `basename "$(git rev-parse --show-toplevel)"` and pass it as session_repo. Do NOT drop target_repo to silence this.',
+      resolution_hint: 'In Opus pre-flight, resolve `basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"` (not `--show-toplevel` — inside a worktree that basename is the worktree directory name, not the repo name) and pass it as session_repo. Do NOT drop target_repo to silence this.',
     }],
   }
 }
