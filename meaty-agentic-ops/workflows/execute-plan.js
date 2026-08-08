@@ -250,12 +250,21 @@ function councilEscalation(p, _tier) {
 // against its own agents dir (05c5384); tests/test_workflow_agent_roster.py fails that repo's
 // build if it drifts again.
 //
+// ⚠️ UPDATE 2026-08-08 — NEITHER DIRECTION IS SILENT ANY MORE, so this set is now a DIAGNOSTIC
+// rather than a correctness dependency, and a stale one no longer corrupts a run:
+//   * a phantom name  → the task is dispatched, returns null, and is reported as a DROPPED TASK
+//     (named, escalated, `reason: 'task_dropped'`) instead of vanishing from the wave.
+//   * an omitted real agent → under the default `hitl_routing: 'marker'` it is dispatched with a
+//     warning, not reclassified as a human gate. Only opt-in `'roster'` mode reclassifies.
+// Keeping it accurate is still worthwhile (it is what makes the pre-dispatch warning useful, and
+// what `'roster'` mode depends on), but it is no longer load-bearing. Regenerate it per deployment
+// against that deployment's own `.claude/agents/` when convenient — not urgently.
+//
 // ⚠️ THE SET BELOW IS THE UPSTREAM DEFAULT AND HAS NOT HAD THAT REPAIR. It is the pre-repair
 // legacy value, and it is what every deployment inherits until that deployment regenerates it.
 // `api-librarian`, `telemetry-auditor` and `frontend-developer` are still listed here and exist
-// in no known agents dir — a task assigned to one is dispatched to nothing and silently dropped
-// from the wave. They are left in place rather than removed because presence is per-deployment
-// and cannot be verified from upstream; removing a name that a given deployment DOES have would
+// in no known agents dir. They are left in place rather than removed because presence is
+// per-deployment and cannot be verified from upstream; removing a name that a given deployment DOES have would
 // reclassify a dispatchable task as a human gate. Regenerate this set from the deploying repo's
 // own .claude/agents/ — do not assume the default is correct for you.
 //
@@ -281,8 +290,40 @@ const KNOWN_AGENT_TYPES = new Set([
   'ica-executor', 'codex-executor', 'gemini-executor', 'bob-delegate-executor',
 ])
 
+// ─── HITL routing mode (configurable via args.hitl_routing) ───────────────────
+//
+//   'marker' (DEFAULT) — `t.hitl === true` is the SOLE authority on whether a task is a human
+//                        gate. An assigned_to the roster does not recognize is DISPATCHED, with
+//                        a warning; if it resolves to nothing, the dropped-task check names it.
+//   'roster'           — legacy behaviour: additionally reclassify any assigned_to outside
+//                        KNOWN_AGENT_TYPES as a human gate.
+//
+// Why 'marker' is the default. The roster clause was inference layered on top of an explicit
+// declaration, and it failed in the INVISIBLE direction: a real agent missing from the set was
+// silently reclassified as a human gate, so a perfectly dispatchable task never ran (17 agents
+// were omitted this way at once). Worse, the set cannot verify agent existence at all — workflow
+// scripts have no filesystem access, so it is a hand-maintained mirror that must be regenerated
+// per deployment and rots between regenerations. The phantom half is now caught AFTER dispatch
+// by the dropped-task check below, which is where it is actually observable, and which also
+// catches failures the set never could (an agent that exists but is unloadable, a stalled leg).
+// That makes roster accuracy a DIAGNOSTIC rather than a correctness dependency.
+//
+// 'roster' is kept because the strictness is legitimately wanted where the roster is trustworthy
+// — an enterprise deployment with a curated agent catalog may prefer an unrecognized name held
+// for a human over dispatched. It is opt-in precisely because it is only safe when something
+// actually keeps the set accurate. Tracker: node_01KZ9DBRAH35XHNH7NQA1H5NYT.
+let hitlRouting = 'marker'
+
 function isHitlTask(t) {
-  return t?.hitl === true || (!!t?.assigned_to && !KNOWN_AGENT_TYPES.has(t.assigned_to))
+  if (t?.hitl === true) return true
+  if (hitlRouting === 'roster') return !!t?.assigned_to && !KNOWN_AGENT_TYPES.has(t.assigned_to)
+  return false
+}
+
+// An assigned_to the roster does not recognize. In 'marker' mode this drives a WARNING and an
+// annotation on a dropped task — never a silent reclassification.
+function hasUnknownAgentType(t) {
+  return !!t?.assigned_to && !KNOWN_AGENT_TYPES.has(t.assigned_to)
 }
 
 // ---------------------------------------------------------------------------
@@ -1649,6 +1690,12 @@ Do NOT write any files. Do NOT git add/commit/push/stash. Read only.`
 // Defensive args parsing: the workflow runtime may pass args as a JSON string.
 const graph = typeof args === 'string' ? JSON.parse(args) : args
 
+// Resolve HITL routing before anything calls isHitlTask(). Only the exact string 'roster' opts
+// into the legacy strict mode; every other value (including absent, null, a typo, or `true`)
+// resolves to 'marker'. A misspelled flag must not silently re-enable the behaviour whose
+// failure mode is invisible — the safe direction is the one that dispatches and reports.
+hitlRouting = graph?.hitl_routing === 'roster' ? 'roster' : 'marker'
+
 const {
   waves,
   tier,
@@ -1841,12 +1888,27 @@ for (const wave of waves) {
       .map(t => ({ phase: p.id, id: t.id, assigned_to: t.assigned_to, prompt: t.prompt }))
 
     const taskOut = []
+    // Dispatched tasks that came back with NO result. Recorded, never silently discarded —
+    // see the droppedTasks accounting after the batch loop.
+    const droppedTasks = []
+    let dispatchedCount = 0
 
     for (const batch of batches) {
       // Inner parallel: only tasks with disjoint files_affected are in the same batch.
       // HITL tasks are skipped here — never passed to agent() as an agentType.
       const dispatchable = batch.filter(t => !isHitlTask(t))
       if (dispatchable.length === 0) continue
+      dispatchedCount += dispatchable.length
+
+      // In 'marker' mode an unrecognized agentType is dispatched rather than reclassified, so say
+      // so at dispatch time. The roster cannot prove existence (no FS access here); this warning
+      // plus the dropped-task check below is what replaces the guess it used to make.
+      for (const t of dispatchable.filter(hasUnknownAgentType)) {
+        log(`WARNING ${p.id}:${t.id}: assigned_to='${t.assigned_to}' is not in KNOWN_AGENT_TYPES. ` +
+            `Dispatching anyway (hitl_routing='marker'). If the agentType resolves to nothing the ` +
+            `task is reported as DROPPED, not silently skipped. Pass hitl_routing:'roster' to hold ` +
+            `unrecognized names as human gates instead.`)
+      }
       const batchOut = await parallel(dispatchable.map(t => async () => {
         // Happy path: task agent emits structured output directly.
         // Durability footer appended to every task prompt (see durabilityFooter()).
@@ -1884,7 +1946,31 @@ for (const wave of waves) {
         }
         return result
       }))
-      taskOut.push(...batchOut.filter(Boolean))
+      // `taskOut.push(...batchOut.filter(Boolean))` was the TASK-level instance of exactly the
+      // bug fixed one level up for phases (see the droppedPhases comment below): filter(Boolean)
+      // doing double duty as "drop empties" and, accidentally, "discard failures". A task whose
+      // agentType resolved to nothing — the phantom-roster-entry failure KNOWN_AGENT_TYPES exists
+      // to prevent — returns null here and was removed from the array before anything could
+      // notice, so the phase reported success having never run it. The fix was applied to phases
+      // on 2026-08-04 and never pushed down to tasks. Same loudness contract, same reasoning:
+      // recorded, named, and escalated, with the reason travelling in the RETURN VALUE.
+      batchOut.forEach((r, i) => {
+        if (r) { taskOut.push(r); return }
+        const t = dispatchable[i]
+        droppedTasks.push({
+          id: t?.id ?? `(unnamed task at index ${i})`,
+          assigned_to: t?.assigned_to ?? '(none)',
+          unknown_agent_type: hasUnknownAgentType(t),
+        })
+      })
+    }
+
+    if (droppedTasks.length > 0) {
+      log(`Phase ${p.id}: ${droppedTasks.length} of ${dispatchedCount} dispatched task(s) produced ` +
+          `NO result and were dropped: ` +
+          droppedTasks.map(d => `${d.id} (assigned_to=${d.assigned_to}` +
+            `${d.unknown_agent_type ? ', NOT in KNOWN_AGENT_TYPES — an unresolvable agentType is the likeliest cause' : ''})`).join('; ') +
+          `. This phase is NOT complete.`)
     }
 
     // Reviewer gate + fix-loop (edit-less agentType only — constraint 3).
@@ -1895,6 +1981,11 @@ for (const wave of waves) {
       : { phase: p.id, tasks: [], verdict: { approved: true, reviewer_type: 'none' }, fix_cycles: 0, escalate: false, files_touched: [], blockers: [] }
 
     phaseResult.hitl_gates = hitlGates
+    // Recorded on every phase so the invariant is checkable from the report alone, by this
+    // workflow and by anything downstream — not only when something went wrong.
+    phaseResult.tasks_expected = dispatchedCount
+    phaseResult.tasks_returned = taskOut.length
+    phaseResult.dropped_tasks = droppedTasks
 
     // trackerStep: one per phase (no FS in script — via artifact-tracker agent).
     if (progressFile) {
@@ -1950,6 +2041,36 @@ for (const wave of waves) {
       blockers: droppedPhases.map(id => ({
         description: `Phase ${id} in wave ${wave.id} returned no result — its agent stalled, threw, or was skipped after retries. Its reviewer gate did NOT run.`,
         resolution_hint: 'Do NOT treat this wave as complete. Inspect the phase\'s worktree state by hand, then either re-dispatch the phase or run the reviewer gate against whatever work actually landed. Any later wave building on this one is building on an unverified predecessor.',
+      })),
+    }
+  }
+
+  // Dropped TASKS halt the wave for the same reason dropped phases do, and this check must come
+  // BEFORE the reviewer-escalation check below so the returned `reason` names what actually
+  // happened. The reviewer gate DID run here (on whatever landed), which is deliberate — the work
+  // that exists is still worth reviewing — but an approving verdict over a partial task set must
+  // never let the wave advance. A later wave building on this one builds on missing work.
+  const droppedTaskEntries = completedWaveResults.flatMap(r =>
+    (r?.dropped_tasks ?? []).map(d => ({ phase: r.phase, ...d })))
+  if (droppedTaskEntries.length > 0) {
+    log(`Wave ${wave.id}: ${droppedTaskEntries.length} task(s) produced NO result and were dropped: ` +
+        droppedTaskEntries.map(d => `${d.phase}:${d.id}`).join(', ') +
+        `. Any reviewer approval in this wave covers only the tasks that DID return. Returning to ` +
+        `Opus — this is not a completion.`)
+    return {
+      status: 'needs_opus',
+      reason: 'task_dropped',
+      dropped_tasks: droppedTaskEntries,
+      report,
+      blockers: droppedTaskEntries.map(d => ({
+        description: `Task ${d.phase}:${d.id} (assigned_to=${d.assigned_to}) returned no result — ` +
+          `its agent stalled, threw, or the agentType resolved to nothing.` +
+          (d.unknown_agent_type
+            ? ` '${d.assigned_to}' is NOT in KNOWN_AGENT_TYPES, so an unresolvable agentType is the likeliest cause.`
+            : ''),
+        resolution_hint: d.unknown_agent_type
+          ? `Confirm an agent definition named '${d.assigned_to}' exists in this deployment's .claude/agents/ (and in ~/.claude/agents/ for the node). If it does, add it to KNOWN_AGENT_TYPES; if it does not, correct the plan's assigned_to. Then re-dispatch this task — do NOT treat the phase as complete.`
+          : `Inspect what the task actually wrote (git diff on the run branch), then re-dispatch it or complete it by hand. Do NOT treat the phase as complete on the reviewer's verdict — it never saw this task.`,
       })),
     }
   }
