@@ -390,6 +390,10 @@ function planTextClaimsArtifact(planText, artifactPath) {
  * EnterWorktree, which was wrong), so the current tree is already the run's tree. An agent calling
  * EnterWorktree mid-review would therefore be moving AWAY from the tree under review — still the
  * wrong move, but for the opposite reason. Placement is the orchestrator's job, not the reviewer's.
+ * ⚠️ That inheritance is VERSION-DEPENDENT and did not survive one patch bump: on 2.1.226
+ * (2026-08-08) a background Workflow agent reported the entered worktree as its cwd while
+ * resolving the filesystem AND git to the MAIN checkout on `main` (node_01KZGQE6GVJTGXRSHA57FYKNDQ).
+ * Trust the run's placement probe, never either measurement. Either way, do not switch trees here.
  */
 function verifyPrompt(parsed, plan) {
   const artifact = plan.plan_artifact_path || '(the plan/contract artifact written this run)'
@@ -533,7 +537,8 @@ const parsed = typeof args === 'string' ? JSON.parse(args) : args
 
 // ── repo-target guard ─────────────────────────────────────────────────────────
 // Workflow agents run in the SESSION's cwd. They DO follow the session into a worktree it has
-// entered (measured, Claude Code 2.1.224) — but only a worktree of the SAME repository, so this
+// entered (measured on Claude Code 2.1.224; NOT on 2.1.226 — inheritance is version-dependent,
+// node_01KZGQE6GVJTGXRSHA57FYKNDQ) — but only a worktree of the SAME repository, so this
 // guard is unaffected by the worktree lane. An autopilot request whose work lives in a sibling
 // repo still does not fail: every agent runs against the wrong repository and reports success.
 // ⚠️ session_repo must be derived from the SHARED git dir
