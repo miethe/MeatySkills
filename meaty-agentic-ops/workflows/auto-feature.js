@@ -179,6 +179,34 @@ function hasModeDIntent(text) {
   return null
 }
 
+// ─── file-placement clause (shared, verbatim) ─────────────────────────────────
+//
+// Autopilot commonly runs inside a git WORKTREE the session entered, so the repo root is
+// `.claude/worktrees/autopilot-<slug>/`, not the main checkout. Entering a worktree moves cwd but
+// does NOT sandbox absolute paths: a Write to `/…/<repo>/docs/…` lands in the MAIN checkout even
+// though the agent's cwd is the worktree — with no error and no warning.
+//
+// Measured 2026-08-08 (agentic_meta_dev PR #173): the planner's final Write targeted the absolute
+// main-checkout path for `docs/project_plans/implementation_plans/features/daily-intent-ritual-v1.md`
+// while its cwd was the worktree. The run reported `isolation: worktree` — true for commits, false
+// for that file. Days later `git merge --ff-only origin/main` ABORTED on the untracked stray. Worse
+// shape available from the same defect: an absolute Write over a TRACKED file lands outside the run
+// branch, outside the PR, and outside every gate.
+//
+// The command spec's §3c warning covers the ORCHESTRATOR's git commands; nothing constrained a
+// spawned agent. This clause is that constraint, and it goes in EVERY brief naming an output path.
+const RELATIVE_PATH_CLAUSE = `
+FILE PLACEMENT — mandatory, and not a style preference:
+  - Every path you read or write is REPO-RELATIVE (docs/project_plans/..., src/...). Never an
+    absolute path, never a leading '/Users/...' or '~/...', never a '../' that escapes the repo.
+  - You may be running inside a git worktree whose root is NOT the main checkout. cwd is already
+    the correct repo root; a relative path is therefore always right and an absolute one may
+    silently write to a DIFFERENT checkout of this same repo.
+  - If you genuinely need the root, derive it at runtime: \`git rev-parse --show-toplevel\`. Do not
+    hardcode it, and do not reconstruct it from a path you saw in a brief or in your own context.
+  - Report the path you wrote in repo-relative form — the downstream placement guards compare
+    against relative paths and cannot reason about an absolute one.`
+
 // ─── ceiling resolution (pure) ────────────────────────────────────────────────
 
 function resolveCeiling(parsed) {
@@ -256,7 +284,10 @@ STEPS:
      max_waves ${ceiling.max_waves}, max_phases ${ceiling.max_phases}, max_files ${ceiling.max_files}).
      This is ADVISORY — a deterministic gate re-checks it.
 5. Build each task's prompt fully: first line a Mode marker, then file paths and acceptance
-   detail, ending with "Do NOT git add/commit/push/stash." Assign each task an appropriate
+   detail, ending with "Do NOT git add/commit/push/stash." Every task prompt whose work writes a
+   file MUST also carry the FILE PLACEMENT clause below verbatim, and every path you put in a task
+   prompt or in files_affected MUST be repo-relative — a brief that hands an agent an absolute path
+   is how the stray-write defect propagates. Assign each task an appropriate
    implementation agentType (python-backend-engineer, ui-engineer-enhanced, data-layer-expert,
    refactoring-expert, etc.). Set per-phase review_intensity ('standard' default; 'tier3' for
    core-path/risky phases; 'council' only if cross-domain architecture review is warranted).
@@ -265,6 +296,7 @@ STEPS:
    - Implementation Plan → docs/project_plans/implementation_plans/${category}/<slug>-v1.md
    Use the canonical frontmatter + body for that doc_type (see .claude/skills/planning templates).
    Derive <slug> as a short kebab-case name from the request.
+${RELATIVE_PATH_CLAUSE}
 7. EMBED a fenced \`\`\`json block tagged exactly "autopilot-graph" near the top of the artifact
    body, containing this object (the downstream structurer parses ONLY this block):
    {
