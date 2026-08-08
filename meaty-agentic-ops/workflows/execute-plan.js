@@ -1733,9 +1733,9 @@ if (graphErrors.length > 0) {
 //
 // Workflow agents run in the session's cwd on whatever branch that tree is checked out to. There is
 // no per-agent cwd. They DO follow the session into a worktree it has ENTERED (measured on Claude
-// Code 2.1.224, 2026-08-07 — but VERSION-DEPENDENT: false on 2.1.226, where the agent reported the
-// worktree as its cwd while reading and writing the MAIN checkout on `main`,
-// node_01KZGQE6GVJTGXRSHA57FYKNDQ; verify placement with a probe, never with a measurement); an
+// Code 2.1.224, 2026-08-07, and again on 2.1.226 — a lone 2.1.226 non-inheritance report did NOT
+// reproduce, node_01KZGQE6GVJTGXRSHA57FYKNDQ, and the verdict is deliberately NOT cached:
+// verify placement with the run's probe, never with a recorded measurement); an
 // orchestrator that merely CREATES a worktree with `git worktree add`
 // and "passes" its path cannot reach these agents at all. Observed
 // 2026-08-05 in the sibling autopilot lane: the assigned branch received zero commits while the
@@ -1764,7 +1764,7 @@ if (graph.run_branch) {
       report: [],
       blockers: [{
         description: `This plan was assigned run branch '${graph.run_branch}' but the session working tree is on ${found}. Task agents commit to the session branch, so every wave would have committed to the wrong branch — bypassing the PR and review gates — while reporting success. No agents were spawned; nothing was committed.`,
-        resolution_hint: `In the tree this session is standing in, run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. To isolate the run, ENTER a worktree with the EnterWorktree tool first and check the branch out there — agents follow an entered worktree on harness versions where that is VERIFIED (2.1.224 yes; 2.1.226 no, node_01KZGQE6GVJTGXRSHA57FYKNDQ), so probe placement before trusting it. Do NOT \`git worktree add\` and pass the path without entering it: the session cwd would not move and agents would commit here anyway.`,
+        resolution_hint: `In the tree this session is standing in, run: git switch ${graph.run_branch} (create it from the parent branch if needed), then re-invoke. To isolate the run, ENTER a worktree with the EnterWorktree tool first and check the branch out there — agents follow an entered worktree whenever the run's placement probe confirms it (confirmed on 2.1.224 and again on 2.1.226; probed per run, never cached — node_01KZGQE6GVJTGXRSHA57FYKNDQ). Do NOT \`git worktree add\` and pass the path without entering it: the session cwd would not move and agents would commit here anyway.`,
       }],
     }
   }
