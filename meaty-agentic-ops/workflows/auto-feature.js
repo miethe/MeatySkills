@@ -179,6 +179,30 @@ function hasModeDIntent(text) {
   return null
 }
 
+// ─── implementation-agent roster (domain-grouped) ─────────────────────────────
+// Shown to the planner so it assigns a real, domain-appropriate agentType instead of
+// defaulting every task to the handful of names that used to be hardcoded inline here
+// (python-backend-engineer / ui-engineer-enhanced / data-layer-expert / refactoring-expert),
+// which biased every plan toward Python+UI regardless of the actual domain.
+//
+// Workflow scripts have NO filesystem access, so this roster cannot be globbed at runtime —
+// it is a hand-maintained mirror of .claude/agents/. tests/test_workflow_agent_roster.py
+// fails if it drifts from the real roster, so it cannot silently rot again.
+const IMPLEMENTATION_AGENT_ROSTER = `
+     backend/API     python-backend-engineer, backend-architect, backend-typescript-architect,
+                     openapi-expert, api-documenter
+     data            data-layer-expert
+     frontend/UI     ui-engineer-enhanced, ui-engineer, frontend-architect,
+                     nextjs-architecture-expert, ui-designer
+     quality         refactoring-expert, code-reviewer, senior-code-reviewer
+     AI/agents       ai-engineer, ai-artifacts-engineer, prompt-engineer, agent-expert,
+                     command-creator, symbols-engineer
+     architecture    system-architect, lead-architect, devops-architect
+     docs            documentation-writer, documentation-expert, documentation-complex,
+                     technical-writer, changelog-generator
+     exploration     codebase-explorer, search-specialist
+     fallback        general-purpose (only when no specialist fits)`
+
 // ─── file-placement clause (shared, verbatim) ─────────────────────────────────
 //
 // Autopilot commonly runs inside a git WORKTREE the session entered, so the repo root is
@@ -288,9 +312,14 @@ STEPS:
    file MUST also carry the FILE PLACEMENT clause below verbatim, and every path you put in a task
    prompt or in files_affected MUST be repo-relative — a brief that hands an agent an absolute path
    is how the stray-write defect propagates. Assign each task an appropriate
-   implementation agentType (python-backend-engineer, ui-engineer-enhanced, data-layer-expert,
-   refactoring-expert, etc.). Set per-phase review_intensity ('standard' default; 'tier3' for
-   core-path/risky phases; 'council' only if cross-domain architecture review is warranted).
+   implementation agentType whose domain actually matches the work, chosen from this roster
+   (these are the ONLY valid values — an unlisted name is silently dropped as a human gate, so
+   never invent one):
+${IMPLEMENTATION_AGENT_ROSTER}
+   Match on the task's domain, not on habit: a docs task goes to a docs agent, an agent/skill
+   authoring task to ai-artifacts-engineer, a pure cleanup task to refactoring-expert. Set
+   per-phase review_intensity ('standard' default; 'tier3' for core-path/risky phases;
+   'council' only if cross-domain architecture review is warranted).
 6. WRITE the artifact:
    - Feature Contract → docs/project_plans/feature_contracts/${category}/<slug>.md
    - Implementation Plan → docs/project_plans/implementation_plans/${category}/<slug>-v1.md
