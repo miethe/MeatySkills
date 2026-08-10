@@ -307,13 +307,20 @@ function councilEscalation(p, _tier) {
 // what `'roster'` mode depends on), but it is no longer load-bearing. Regenerate it per deployment
 // against that deployment's own `.claude/agents/` when convenient — not urgently.
 //
-// ⚠️ THE SET BELOW IS THE UPSTREAM DEFAULT AND HAS NOT HAD THAT REPAIR. It is the pre-repair
-// legacy value, and it is what every deployment inherits until that deployment regenerates it.
-// `api-librarian`, `telemetry-auditor` and `frontend-developer` are still listed here and exist
-// in no known agents dir. They are left in place rather than removed because presence is
-// per-deployment and cannot be verified from upstream; removing a name that a given deployment DOES have would
-// reclassify a dispatchable task as a human gate. Regenerate this set from the deploying repo's
-// own .claude/agents/ — do not assume the default is correct for you.
+// ⚠️ THE SET BELOW IS PER-DEPLOYMENT — do not assume the value you are reading came from upstream.
+// Some deployments have regenerated it against their own `.claude/agents/`; others still carry the
+// upstream default, which lists `api-librarian`, `telemetry-auditor` and `frontend-developer` —
+// names that exist in no known agents dir. The default keeps them rather than removing them
+// because presence cannot be verified from upstream, and removing a name a given deployment DOES
+// have would reclassify a dispatchable task as a human gate.
+//
+// Regenerate it from the deploying repo's own `.claude/agents/`. A sync from upstream does NOT
+// clobber a regenerated set: `agentic_meta_dev/scripts/sync_project_workflows.py` treats this
+// block as its one per-deployment exemption and carries the LOCAL value across the write. Two
+// checkers exclude it from their diffs for the same reason (`check_global_artifact_drift.py`, and
+// that script's `roster-only` verdict) — so a green gate is not evidence this list matches
+// upstream. It is not supposed to. This note is deliberately deployment-neutral so that no repo
+// needs a local variant of it; a repo-specific edit here re-opens the drift it warns about.
 //
 // `council-review` is deliberately EXCLUDED: it is a skill, not an agent, in every deployment.
 // Its presence here was the mechanism of a real defect — a phase whose only security signal was
