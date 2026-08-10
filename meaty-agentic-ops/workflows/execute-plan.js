@@ -40,6 +40,11 @@ export const meta = {
     { title: 'Wave wave-3' },
     { title: 'Wave wave-4' },
     { title: 'Wave wave-5' },
+    // Measure runs BEFORE each Review pass: the reviewer's test scope and base→head delta
+    // are inputs to its judgment, not commentary on it. Fires once per phase reviewer gate
+    // and once per fix-cycle re-review, so each verdict lands over the measurement of its
+    // own post-fix HEAD. phase() titles must match these exactly (authoring constraint).
+    { title: 'Measure' },
     { title: 'Review' },
     { title: 'Fix cycle 1' },
     { title: 'Fix cycle 2' },
@@ -160,6 +165,48 @@ const VERDICT_SCHEMA = {
     // Any entry blocks approval: five misreporting findings in seven days came from reading
     // "I registered the node / wrote the file" as evidence that it happened.
     self_reported_claims: { type: 'array', items: { type: 'string' } },
+    // AC-3 (validation-scope hardening). Acceptance criteria the reviewer actually checked,
+    // with their per-AC support. `supporting_tests` lists the tests each criterion rests on
+    // and their measured status — a criterion supported only by red/absent tests is rewritten
+    // to met:false by applyTestStatusRules. See VALIDATION_SCOPE_RULES for the reviewer-side
+    // contract; reviewer-gate.js:118-164 for the identical shape.
+    ac_verdicts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['criterion', 'met'],
+        additionalProperties: false,
+        properties: {
+          criterion: { type: 'string' },
+          met: { type: 'boolean' },
+          evidence: { type: 'string' },
+          not_met_reason: { type: 'string' },
+          supporting_tests: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['nodeid', 'status'],
+              additionalProperties: false,
+              properties: {
+                nodeid: { type: 'string' },
+                status: {
+                  type: 'string',
+                  enum: [
+                    'passed',
+                    'failed',
+                    'xfailed',
+                    'xpassed',
+                    'skipped',
+                    'errored',
+                    'not-run',
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     council_artifacts: {
       type: 'object',
       properties: {
@@ -852,18 +899,37 @@ function verificationGap(verdict) {
 }
 
 /**
- * Apply the two R3 rules to a reviewer verdict, in the {verdict, integrity_failure} shape
- * dispatchReview already uses. The two outcomes differ deliberately:
+ * Apply the R3 evidence rules AND the AC-3/validation-scope rules to a reviewer verdict,
+ * in the {verdict, integrity_failure} shape dispatchReview uses. Chain:
  *
- *   - self-reported side effects ⇒ an ordinary REJECTION. The missing artifact is implementer
- *     work, so the fix loop is the right next action.
- *   - an unverified approval ⇒ a GATE-INTEGRITY failure. The verdict exists but cannot be
- *     trusted, and what did not finish is the REVIEWER; a fix cycle would edit blind against a
- *     finding nobody made. Same handling as a conditional council verdict.
+ *   1. applyTestStatusRules(verdict, measurement) — reconciles claimed test statuses
+ *      against the measurement, rewrites red-backed met:true to met:false with
+ *      defect_class:'ac-backed-by-red-test'. Fires regardless of the incoming approved.
+ *   2. self-reported-side-effect check → ORDINARY REJECTION.
+ *   3. verification-path check → GATE-INTEGRITY failure on an unverified approval.
+ *   4. enforceValidationScopeRules(verdict, phaseId, reviewerType, measurement) →
+ *      GATE-INTEGRITY failure on a still-approving verdict with no/failed measurement or
+ *      a measured regression. Same handling as a conditional council verdict.
+ *
+ * Callers pass `measurement` — the normalizeMeasurement()'d output of the Measure stage.
+ * Passing `null` degrades gracefully to `evidence_present: false` (gate-integrity failure
+ * on an approving verdict), which is deliberate — an unmeasured approval is exactly the
+ * state PR #299 slipped through in.
  */
-function enforceEvidenceRules(verdict, phaseId, reviewerType) {
-  if (!verdict || !verdict.approved) return { verdict, integrity_failure: null }
+function enforceEvidenceRules(verdict, phaseId, reviewerType, measurement) {
+  if (!verdict) return { verdict, integrity_failure: null }
 
+  const _measurement = measurement && typeof measurement === 'object'
+    ? measurement
+    : normalizeMeasurement(null)
+
+  // Step 1: AC-3 + R7 reconciliation. Fires on approving AND rejecting verdicts.
+  verdict = applyTestStatusRules(verdict, _measurement)
+  if (!verdict.approved) {
+    return { verdict, integrity_failure: null }
+  }
+
+  // Step 2: self-reported side effects → ordinary rejection.
   const claims = Array.isArray(verdict.self_reported_claims) ? verdict.self_reported_claims.filter(Boolean) : []
   if (claims.length) {
     log(`R3 REJECTION on phase ${phaseId}: ${reviewerType} approved with ${claims.length} self-reported claim(s) and no artifact evidence. Downgrading the approval — a report of a side effect is not the side effect.`)
@@ -882,23 +948,389 @@ function enforceEvidenceRules(verdict, phaseId, reviewerType) {
     }
   }
 
+  // Step 3: unverified approval → gate-integrity failure.
   const gap = verificationGap(verdict)
-  if (!gap) return { verdict, integrity_failure: null }
+  if (gap) {
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'gate_integrity_failure',
+        required_fixes: [
+          `The reviewer approved phase ${phaseId} without establishing a verification path (${gap}). Re-dispatch ${reviewerType} and require one of live-smoke | path-equivalence | real-endpoint-field-check | production-callsite-trace, or record an explicit operator override. Do NOT run a fix cycle: nothing has been found yet.`,
+        ],
+      },
+      integrity_failure: `approving verdict with no established verification path — ${gap}`,
+    }
+  }
 
-  return {
-    verdict: {
-      ...verdict,
-      approved: false,
-      verdict_source: 'gate_integrity_failure',
-      required_fixes: [
-        `The reviewer approved phase ${phaseId} without establishing a verification path (${gap}). Re-dispatch ${reviewerType} and require one of live-smoke | path-equivalence | real-endpoint-field-check | production-callsite-trace, or record an explicit operator override. Do NOT run a fix cycle: nothing has been found yet.`,
-      ],
-    },
-    integrity_failure: `approving verdict with no established verification path — ${gap}`,
+  // Step 4: still-approving over a missing/failed/regression-carrying measurement
+  //          → gate-integrity failure.
+  return enforceValidationScopeRules(verdict, `phase ${phaseId}`, reviewerType, _measurement)
+}
+
+// ─── validation-scope enforcement (byte-identically duplicated from reviewer-gate.js) ──
+// This block is duplicated between reviewer-gate.js, execute-plan.js, and
+// execute-contract.js by necessity — workflow scripts cannot `require()` at runtime, so a
+// verdict-landing seam that needs the enforcement has to declare it locally. When you edit
+// one, edit the others in the same commit. `tests/test_workflow_gate_integrity.py` §
+// "Defect 10" asserts the shape is present in all three and holds the duplicates together;
+// see reviewer-gate.js:262-302 for the full grounding (skillmeat PR #299) and per-piece
+// rationale (R7 measurement reconciliation, AC-3 red-test rejection, AC-2 baseline delta,
+// measurement-integrity gate).
+
+const VALIDATION_SCOPE_RULES = `TEST-SCOPE RULE — your scope for READING is the changed files above, but your scope for TEST
+SELECTION is the resolved scope below, which is deliberately WIDER. It was computed by
+symbol reference: every test file that names a symbol this diff changed, including files the
+diff never touched. A test file can assert the exact behaviour a change removes without
+appearing in the diff at all — that is the defect this gate exists to catch, and "the files I
+edited" can never see it. Do not narrow the test scope back to the diff.
+
+BASELINE-DELTA RULE — a red test file proves nothing on its own if it was ALREADY red. Judge
+regressions by the measured per-file delta below (base counts vs head counts, and the set of
+node ids failing at head that were not failing at base), never by the absolute red count. A
+file that is 61-red at base and 61-red at head has told you nothing; a file that gained one
+NEW failing node id has told you everything. Conversely: a test that stopped being collected
+at head ran NOWHERE, so it cannot evidence anything, and its absence LOWERS the failure count —
+if the measurement reports a collected-regression or a disappeared node id, treat it as a
+regression, never as an improvement.
+
+RED-TEST-AC RULE — never mark an acceptance criterion met on the strength of a test that is
+failing, xfailing, erroring, skipped, or was never run. List each criterion's real support in
+\`ac_verdicts[].supporting_tests\` as {nodeid, status}, using the measured status below rather
+than your expectation of it. A criterion whose only support is red is NOT met: say so, with
+the node ids and their statuses as the reason. Every status you report is cross-checked against
+the measurement, and a claimed status the measurement contradicts is itself recorded as a
+finding — so report what was measured, not what should have been true.
+
+MEASUREMENT-INTEGRITY RULE — if the measurement below is absent, failed, or reports a
+truncated scope, say so plainly and do NOT compensate by approving on the narrower evidence.
+An unmeasurable scope makes affected criteria \`unverifiable\`, never met.`
+
+// Statuses that cannot support a criterion. `xpassed` is deliberately ABSENT (it passed,
+// however confusingly). `not-run` and `errored` are here because a test that did not run
+// carries no information at all — the most common way this gate got fooled.
+const NON_SUPPORTING_STATUSES = new Set(['failed', 'xfailed', 'errored', 'skipped', 'not-run'])
+
+function asList(value) {
+  if (!value) return []
+  return Array.isArray(value) ? value.filter(v => v != null && v !== '') : [value]
+}
+
+function parseMaybeJson(value) {
+  if (value == null) return null
+  if (typeof value !== 'string') return value
+  try {
+    return JSON.parse(value)
+  } catch (_err) {
+    return null
   }
 }
 
-function reviewPrompt(p, taskOut) {
+/**
+ * Normalize a validation-scope evidence blob (the output of
+ * `.claude/skills/dev-execution/hooks/validation-scope.sh`) into the shape the
+ * enforcement path reads. A malformed or missing blob degrades to
+ * `evidence_present: false`, which the enforcement treats as a gate-integrity failure —
+ * NOT as a clean full-scope run. A missing measurement must never be the cheaper option
+ * than a failing one.
+ */
+function normalizeMeasurement(raw) {
+  const blob = parseMaybeJson(raw)
+  if (!blob || typeof blob !== 'object') {
+    return {
+      evidence_present: false,
+      reason: 'no validation_scope evidence supplied to the gate',
+      files_run: [],
+      scope_truncated: false,
+      scope_status: null,
+      omitted_files: [],
+      test_scope: [],
+      regressions: [],
+      measurement_failures: [],
+      status_by_nodeid: {},
+    }
+  }
+  const scope = blob.scope || blob
+  const measurements = asList(blob.measurements)
+  const filesRun = measurements.map(m => m && m.file).filter(Boolean)
+  const regressions = []
+  const measurementFailures = []
+  const statusByNodeId = {}
+  for (const m of measurements) {
+    if (!m || typeof m !== 'object') continue
+    if (m.measurement_failure) {
+      measurementFailures.push({ file: m.file || '(unnamed)', reason: m.failure_reason || 'unspecified' })
+      continue
+    }
+    for (const nodeid of asList(m.newly_failing_node_ids)) {
+      regressions.push({ file: m.file, nodeid, kind: 'newly-failing' })
+      statusByNodeId[nodeid] = 'failed'
+    }
+    for (const nodeid of asList(m.disappeared_node_ids)) {
+      regressions.push({ file: m.file, nodeid, kind: 'no-longer-collected' })
+      statusByNodeId[nodeid] = 'not-run'
+    }
+    if (m.collected_regression && !asList(m.disappeared_node_ids).length) {
+      regressions.push({ file: m.file, nodeid: null, kind: 'collected-regression' })
+    }
+    const nodeStatuses = (m.head && m.head.node_status) || m.node_status || null
+    if (nodeStatuses && typeof nodeStatuses === 'object') {
+      for (const [nodeid, status] of Object.entries(nodeStatuses)) {
+        if (typeof status === 'string') statusByNodeId[nodeid] = status
+      }
+    }
+  }
+  return {
+    evidence_present: true,
+    reason: null,
+    files_run: filesRun,
+    scope_truncated: Boolean(scope.scope_truncated) || Boolean(scope.budget_exhausted),
+    scope_status: scope.scope_status || null,
+    omitted_files: asList(scope.omitted_files),
+    test_scope: asList(scope.test_scope),
+    regressions,
+    measurement_failures: measurementFailures,
+    status_by_nodeid: statusByNodeId,
+  }
+}
+
+/** The measurement rendered for the reviewer prompt. Never a bare "see attached". */
+function measurementBrief(measurement) {
+  if (!measurement.evidence_present) {
+    return `  (NO MEASUREMENT AVAILABLE — ${measurement.reason}. Treat every criterion resting on tests as \`unverifiable\`; do not approve on the narrower diff-scoped evidence.)`
+  }
+  const lines = []
+  lines.push(`  scope_status: ${measurement.scope_status || 'unknown'}${measurement.scope_truncated ? '  ⚠ TRUNCATED — affected criteria are `unverifiable`, never met' : ''}`)
+  lines.push(`  test files in resolved scope (${measurement.test_scope.length}): ${measurement.test_scope.join(', ') || '(none)'}`)
+  lines.push(`  test files actually measured (${measurement.files_run.length}): ${measurement.files_run.join(', ') || '(none)'}`)
+  if (measurement.omitted_files && measurement.omitted_files.length) {
+    lines.push(`  ⚠ omitted from scope by a bound: ${measurement.omitted_files.join(', ')}`)
+  }
+  if (measurement.measurement_failures.length) {
+    lines.push(`  ⚠ MEASUREMENT FAILED on ${measurement.measurement_failures.length} file(s) — these are not "0 failed":`)
+    for (const f of measurement.measurement_failures) lines.push(`      ${f.file}: ${f.reason}`)
+  }
+  if (measurement.regressions.length) {
+    lines.push(`  ⚠ ${measurement.regressions.length} REGRESSION(S) vs the base commit:`)
+    for (const r of measurement.regressions) {
+      lines.push(`      [${r.kind}] ${r.nodeid || r.file}`)
+    }
+    lines.push('    Each of these is worse-than-base. You may not approve over one without naming it.')
+  } else {
+    lines.push('  no regressions vs base (no new failing node ids, nothing stopped being collected)')
+  }
+  return lines.join('\n')
+}
+
+/** Reconcile a reviewer-claimed test status against the measurement.
+ *  The measurement WINS (risk R7): every rule in the R3 lineage exists because a claim
+ *  got read as evidence. A contradiction is returned as its own flag so it can be
+ *  recorded as a finding rather than silently resolved in the reviewer's favour. */
+function reconcileStatus(claimed, measurement) {
+  const measured = measurement.status_by_nodeid[claimed.nodeid]
+  if (!measured || measured === claimed.status) {
+    return { nodeid: claimed.nodeid, status: claimed.status, contradicted: false }
+  }
+  return { nodeid: claimed.nodeid, status: measured, claimed_status: claimed.status, contradicted: true }
+}
+
+/**
+ * AC-3 rule + the R7 contradiction check, applied to a real verdict. Outcomes differ:
+ *
+ *   - An AC met:true whose supporting_tests are all red/absent → ordinary REJECTION with
+ *     `defect_class: 'ac-backed-by-red-test'`. The missing work is implementer-side (make
+ *     the test pass, or drop the AC), so a fix cycle is the right next action.
+ *   - A contradicted status is recorded on the verdict as `measured_status_contradictions`
+ *     regardless of the verdict's approval state — it is a finding either way.
+ *
+ * `applyTestStatusRules` does NOT itself convert a missing/failed/regression-carrying
+ * measurement into a gate-integrity failure — that is `enforceValidationScopeRules`
+ * below (which fires only on still-APPROVING verdicts, mirroring the R3 branch).
+ */
+function applyTestStatusRules(verdict, measurement) {
+  if (!verdict) return verdict
+  const contradictions = []
+  const acVerdicts = asList(verdict.ac_verdicts).map(ac => {
+    const supporting = asList(ac.supporting_tests).map(t => {
+      const reconciled = reconcileStatus(t, measurement)
+      if (reconciled.contradicted) {
+        contradictions.push(
+          `criterion "${ac.criterion}": reviewer reported ${reconciled.nodeid} as '${reconciled.claimed_status}', the measurement shows '${reconciled.status}'`,
+        )
+      }
+      return reconciled
+    })
+    return { ...ac, supporting_tests: supporting }
+  })
+
+  const redBacked = acVerdicts.filter(ac => {
+    if (!ac.met) return false
+    const supporting = asList(ac.supporting_tests)
+    if (!supporting.length) return false
+    return supporting.every(t => NON_SUPPORTING_STATUSES.has(t.status))
+  })
+
+  let adjusted = { ...verdict, ac_verdicts: acVerdicts }
+  if (contradictions.length) {
+    adjusted = { ...adjusted, measured_status_contradictions: contradictions }
+  }
+
+  if (redBacked.length) {
+    const named = redBacked.map(ac => {
+      const ids = asList(ac.supporting_tests).map(t => `${t.nodeid} (${t.status})`).join(', ')
+      return `Criterion "${ac.criterion}" was reported MET but every supporting test is non-passing: ${ids}. Make the test pass or drop the criterion — a red test is not evidence for the behaviour it fails to demonstrate.`
+    })
+    adjusted = {
+      ...adjusted,
+      approved: false,
+      downgraded_from_approval: verdict.approved ? 'ac_backed_by_red_test' : adjusted.downgraded_from_approval,
+      defect_class: adjusted.defect_class || 'ac-backed-by-red-test',
+      ac_verdicts: acVerdicts.map(ac =>
+        redBacked.includes(ac)
+          ? {
+              ...ac,
+              met: false,
+              not_met_reason: `every supporting test is non-passing: ${asList(ac.supporting_tests).map(t => `${t.nodeid} (${t.status})`).join(', ')}`,
+            }
+          : ac,
+      ),
+      required_fixes: [...asList(adjusted.required_fixes), ...named],
+    }
+  }
+  return adjusted
+}
+
+/**
+ * Missing/failed measurement or an approval standing over a measured regression ⇒
+ * GATE-INTEGRITY failure, mirroring the R3 branch in enforceEvidenceRules. Fires ONLY on
+ * still-APPROVING verdicts: a rejection already carries the right next action, and
+ * downgrading it here would obscure what the reviewer actually said. Returns the same
+ * `{ verdict, integrity_failure }` shape enforceEvidenceRules uses.
+ */
+function enforceValidationScopeRules(verdict, phaseId, reviewerType, measurement) {
+  if (!verdict || !verdict.approved) return { verdict, integrity_failure: null }
+
+  if (!measurement.evidence_present) {
+    const gap = `approved with no validation-scope measurement (${measurement.reason}) — the gate cannot tell which test files the change actually affects, nor whether any of them regressed`
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'gate_integrity_failure',
+        required_fixes: [
+          ...asList(verdict.required_fixes),
+          `The reviewer approved ${phaseId} without a validation-scope measurement (${gap}). Produce the measurement — run \`.claude/skills/dev-execution/hooks/validation-scope.sh\` (or pass \`validation_evidence\`) and re-dispatch ${reviewerType}. Do NOT run a fix cycle: nothing has been found yet.`,
+        ],
+      },
+      integrity_failure: gap,
+    }
+  }
+
+  if (measurement.measurement_failures.length) {
+    const files = measurement.measurement_failures.map(f => f.file).join(', ')
+    const gap = `approved while the measurement FAILED on ${measurement.measurement_failures.length} file(s) (${files}) — a file whose measurement failed is not a file with zero failures`
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'gate_integrity_failure',
+        required_fixes: [
+          ...asList(verdict.required_fixes),
+          `Repair the measurement for ${files} and re-dispatch ${reviewerType}. A measurement_failure is never '0 failed'.`,
+        ],
+      },
+      integrity_failure: gap,
+    }
+  }
+
+  if (measurement.regressions.length) {
+    const named = measurement.regressions.map(r => `[${r.kind}] ${r.nodeid || r.file}`).join(', ')
+    const gap = `approved over ${measurement.regressions.length} measured regression(s) vs the base commit: ${named}`
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'gate_integrity_failure',
+        required_fixes: [
+          ...asList(verdict.required_fixes),
+          `Each regression is worse-than-base and must be fixed or explicitly justified: ${named}. Re-dispatch ${reviewerType} once the delta is clean, or record an explicit operator override.`,
+        ],
+      },
+      integrity_failure: gap,
+    }
+  }
+
+  return { verdict, integrity_failure: null }
+}
+
+/**
+ * The Measure stage. Preferred path is the caller running validation-scope.sh and passing
+ * the blob as `args.validation_evidence`. If absent, dispatch `task-completion-validator`
+ * (already Bash-capable, edit-less) with the sole instruction to run the hook and return
+ * its JSON verbatim. This script cannot run shell itself (authoring constraint 1), which
+ * is the whole reason this is an agent dispatch rather than three lines of code.
+ */
+async function runMeasureStage(args) {
+  const supplied = normalizeMeasurement(args.validation_evidence)
+  if (supplied.evidence_present) {
+    log(`Measure: using caller-supplied validation evidence (${supplied.files_run.length} file(s) measured, ${supplied.regressions.length} regression(s)).`)
+    return supplied
+  }
+  if (args.skip_measure_fallback) {
+    log('Measure: no caller-supplied evidence and skip_measure_fallback set — the gate will treat the measurement as ABSENT, which blocks approval as a gate-integrity failure.')
+    return supplied
+  }
+  const baseRef = args.base_ref || args.base || 'HEAD~1'
+  const repo = args.repo_root || '.'
+  log(`Measure: no caller-supplied evidence — dispatching the fallback runner (base=${baseRef}).`)
+  let blob = null
+  try {
+    blob = await agent(
+      `Run ONE command and return its output. Do not review anything. Do not edit anything.
+
+    cd ${repo} && bash .claude/skills/dev-execution/hooks/validation-scope.sh --json --base-ref ${baseRef}
+
+Return the command's JSON on stdout VERBATIM as your entire answer — no commentary, no
+markdown fence, no summary, no interpretation. If the command fails or the hook is absent,
+return exactly: {"scope_status": "hook_unavailable"}
+
+Do NOT substitute your own judgment for the measurement. Do NOT fabricate counts. This output
+is consumed mechanically as a gate input, and an invented number here defeats the gate.`,
+      {
+        phase: 'Measure',
+        label: 'gate:measure',
+        agentType: 'task-completion-validator',
+        schema: {
+          type: 'object',
+          required: ['scope_status'],
+          properties: {
+            scope_status: { type: 'string' },
+            test_scope: { type: 'array', items: { type: 'string' } },
+            scope_truncated: { type: 'boolean' },
+            budget_exhausted: { type: 'boolean' },
+            omitted_files: { type: 'array', items: { type: 'string' } },
+            measurements: { type: 'array', items: { type: 'object' } },
+          },
+        },
+      },
+    )
+  } catch (err) {
+    log(`Measure: fallback runner threw (${err && err.message ? err.message : err}). Measurement stays ABSENT — the gate blocks rather than approving on unmeasured evidence.`)
+    return supplied
+  }
+  if (!blob || blob.scope_status === 'hook_unavailable') {
+    log('Measure: fallback runner returned no usable measurement (hook unavailable or agent died). Measurement stays ABSENT.')
+    return supplied
+  }
+  const measured = normalizeMeasurement(blob)
+  log(`Measure: fallback produced a measurement — ${measured.files_run.length} file(s), ${measured.regressions.length} regression(s), truncated=${measured.scope_truncated}.`)
+  return measured
+}
+
+// ─── end validation-scope enforcement block ────────────────────────────────────
+
+function reviewPrompt(p, taskOut, measurement) {
   const claimed = taskOut.filter(Boolean)
 
   const taskSummaries = claimed
@@ -937,7 +1369,12 @@ but was never durably committed, which is a required_fix, not a pass.` : ''}
 Judge the acceptance criteria against what the diff shows, not against what the summaries
 assert. Where the two disagree, the diff wins and the disagreement itself is a finding.
 
-${EVIDENCE_RULES}`
+Measured validation scope and base→head delta (your scope for TEST SELECTION, not for READING):
+${measurementBrief(measurement || normalizeMeasurement(null))}
+
+${EVIDENCE_RULES}
+
+${VALIDATION_SCOPE_RULES}`
 
   return `Mode: E — Reviewer
 
@@ -963,6 +1400,11 @@ Also required on every verdict:
     penalty.
   - self_reported_claims: every claim you had to take on a task agent's word for lack of an
     artifact. Any entry blocks approval by construction.
+  - ac_verdicts: one entry per acceptance criterion, {criterion, met, evidence, supporting_tests}.
+    supporting_tests[] is {nodeid, status} using the MEASURED status above rather than your
+    expectation of it. A criterion supported only by red/absent tests must be met:false with the
+    node ids named as the reason — the gate enforces this and will downgrade a met:true that
+    violates it (defect_class: 'ac-backed-by-red-test').
 Do NOT git add/commit/push/stash.`
 }
 
@@ -1058,6 +1500,8 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
   // Set when the loop exits because a re-review produced NO verdict (§8b) rather than a
   // rejection. Kept separate from sameClassRepeat: same exit, different next action.
   let gateFailed = null
+  // Last measurement produced inside the loop, so the return envelope can carry it.
+  let lastMeasurement = null
 
   while (!verdict?.approved && cycles < 2 && budget.remaining() > 60_000) {
     const cycleLabel = `Fix cycle ${cycles + 1}`
@@ -1134,11 +1578,20 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
       })
     }
 
+    // Re-measure BEFORE each re-review: the post-fix HEAD has a different diff (new tests
+    // in scope, potentially new regressions), and a stale measurement here is precisely how
+    // a fix cycle could end on an unverified approval over a regression the previous Measure
+    // never saw. Fires under the 'Measure' phase group.
+    phase('Measure')
+    const cycleMeasurement = await runMeasureStage(args)
+    lastMeasurement = cycleMeasurement
+    phase('Review')
+
     // Route through dispatchReview, never a bare agent(): for a council phase reviewerType
     // is 'council-review', a skill with no agent file. Dispatching it here resolved nothing
     // and returned null, so EVERY council rejection's re-review gate-failed by construction —
     // a fix cycle that could never be re-reviewed on the path it came from.
-    const reReview = await dispatchReview(p, taskOut, reviewerType)
+    const reReview = await dispatchReview(p, taskOut, reviewerType, cycleMeasurement)
     verdict = reReview.verdict
 
     cycles++
@@ -1200,6 +1653,22 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
               resolution_hint: 'Do NOT re-review. Make a design change: render the unsafe state unrepresentable, or route every caller through one choke point, then re-enter the gate against the new shape (budget resets — the scope changed). See dev-execution/references/gate-risk-classes.md §3b.',
             }]
           : [{ description: 'Reviewer did not approve after fix-loop cycles.', resolution_hint: 'Opus adjudication required.' }],
+    // The measurement produced by the LAST re-review, or absent if the fix loop never
+    // ran (`cycles === 0`). Consumers reading the phase result need to be able to tell an
+    // approval over a MEASURED-clean delta from one over no measurement at all — the whole
+    // reason PR #299 slipped through was that the two were indistinguishable.
+    validation_scope: (() => {
+      const _m = lastMeasurement || normalizeMeasurement(null)
+      return {
+        evidence_present: _m.evidence_present,
+        files_run: _m.files_run,
+        scope_truncated: _m.scope_truncated,
+        scope_status: _m.scope_status,
+        omitted_files: _m.omitted_files || [],
+        regressions: _m.regressions,
+        measurement_failures: _m.measurement_failures,
+      }
+    })(),
   }
 }
 
@@ -1336,24 +1805,34 @@ async function runCouncil(p, taskOut) {
 // Single review dispatch point. Routing MUST go through here so that 'council-review' — a
 // SKILL, deliberately absent from KNOWN_AGENT_TYPES — can never land in an agentType position.
 // Returns { verdict, integrity_failure }.
-async function dispatchReview(p, taskOut, reviewerType) {
+//
+// `measurement` is the normalizeMeasurement()'d output of runMeasureStage, threaded through
+// so enforceEvidenceRules can apply AC-3 (red-test-AC rejection), reconcile R7 claimed vs
+// measured statuses, and treat a missing/failed/regression-carrying measurement as a
+// gate-integrity failure — matching how reviewer-gate.js does it. Callers pass null only
+// when a caller-supplied measurement is genuinely unavailable, and that null degrades to
+// `evidence_present: false` (approval blocked as gate-integrity failure) rather than to a
+// silent approve — a missing measurement must never be the cheaper option than a failing one.
+async function dispatchReview(p, taskOut, reviewerType, measurement) {
   if (reviewerType === 'council-review') {
     return assessCouncilVerdict(await runCouncil(p, taskOut), p.id)
   }
-  const verdict = await agent(reviewPrompt(p, taskOut), {
+  const verdict = await agent(reviewPrompt(p, taskOut, measurement), {
     phase: 'Review',
     agentType: reviewerType,
     schema: VERDICT_SCHEMA,
   })
-  // R3: the evidence rules run here, at the single funnel every re-review passes through, so a
-  // fix cycle cannot end on an unverified approval either.
-  return enforceEvidenceRules(verdict, p.id, reviewerType)
+  // R3 + AC-3 + validation-scope: run at the single funnel every re-review passes through,
+  // so a fix cycle cannot end on an unverified approval, a red-backed AC, or an approval
+  // over a measured regression.
+  return enforceEvidenceRules(verdict, p.id, reviewerType, measurement)
 }
 
 // Shared shape for "the gate could not be trusted to have run" — used by both the §8b
 // null-verdict case and the council-integrity case. Their next action is identical:
 // re-dispatch or record an explicit operator override. Never a fix cycle.
-function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles) {
+function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles, measurement) {
+  const _m = measurement && typeof measurement === 'object' ? measurement : normalizeMeasurement(null)
   return {
     phase: p.id,
     reviewer_type: reviewerType,
@@ -1367,6 +1846,19 @@ function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles) 
       description: `Reviewer gate on phase ${p.id} did not produce a trustworthy verdict — ${reason}.`,
       resolution_hint: 'This is NOT an approval and NOT a rejection. Re-dispatch the reviewer against the current state (or invoke the reviewer-gate workflow on the same scope), or record an explicit operator override. Do NOT run a fix cycle — there is no finding to act on.',
     }],
+    // Validation-scope provenance travels with every outcome — including this one.
+    // A phase result that only carries validation_scope when the gate ran cleanly is a
+    // shape that trains consumers to skip it, and the whole reason PR #299 slipped through
+    // was that "approved" and "approved with no measurement" were indistinguishable.
+    validation_scope: {
+      evidence_present: _m.evidence_present,
+      files_run: _m.files_run,
+      scope_truncated: _m.scope_truncated,
+      scope_status: _m.scope_status,
+      omitted_files: _m.omitted_files || [],
+      regressions: _m.regressions,
+      measurement_failures: _m.measurement_failures,
+    },
   }
 }
 
@@ -1380,6 +1872,14 @@ function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles) 
 // ---------------------------------------------------------------------------
 
 async function reviewerGate(p, taskOut, tier) {
+  // Measure BEFORE the reviewer: the test-selection scope and the base→head delta are
+  // inputs to the reviewer's judgment. Fires under the 'Measure' phase group; runs again
+  // inside fixLoop for each re-review (its post-fix HEAD is a different diff). See the
+  // shared block for full rationale.
+  phase('Measure')
+  const measurement = await runMeasureStage(args)
+  phase('Review')
+
   // Resolve the reviewer FIRST, then branch on it.
   //
   // The council branch used to be guarded by `p.review_intensity === 'council'` while the
@@ -1408,7 +1908,7 @@ async function reviewerGate(p, taskOut, tier) {
     // rejection — it is not something a fix cycle can act on.
     if (integrity_failure) {
       log(`GATE INTEGRITY FAILURE on phase ${p.id}: ${integrity_failure}. Recording as a gate failure, NOT as an approval or a rejection. The fix loop is deliberately skipped.`)
-      return gateIntegrityResult(p, taskOut, 'council-review', verdict, integrity_failure, 0)
+      return gateIntegrityResult(p, taskOut, 'council-review', verdict, integrity_failure, 0, measurement)
     }
 
     if (!verdict.approved) {
@@ -1424,6 +1924,15 @@ async function reviewerGate(p, taskOut, tier) {
       escalate: false,
       files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
       blockers: [],
+      validation_scope: {
+        evidence_present: measurement.evidence_present,
+        files_run: measurement.files_run,
+        scope_truncated: measurement.scope_truncated,
+        scope_status: measurement.scope_status,
+        omitted_files: measurement.omitted_files || [],
+        regressions: measurement.regressions,
+        measurement_failures: measurement.measurement_failures,
+      },
     }
   }
 
@@ -1478,7 +1987,7 @@ async function reviewerGate(p, taskOut, tier) {
       // real VERDICT_SCHEMA verdict (not a synthetic not-approved placeholder) and skips the
       // codex Stage B structurer entirely (no artifact was written).
       log(`P5 fallback: actual_provider_used='claude', fallback_applied=true for ${p.id} AC validation.`)
-      verdict = await agent(reviewPrompt(p, taskOut), {
+      verdict = await agent(reviewPrompt(p, taskOut, measurement), {
         label: `${p.id}:ac-validate:primary-fallback`,
         phase: 'Review',
         agentType: reviewerType,
@@ -1530,8 +2039,9 @@ async function reviewerGate(p, taskOut, tier) {
       }
     }
   } else {
-    // Flag off: existing on-primary reviewer with inline VERDICT_SCHEMA (unchanged).
-    verdict = await agent(reviewPrompt(p, taskOut), {
+    // Flag off: existing on-primary reviewer with inline VERDICT_SCHEMA. Measurement is
+    // threaded through so the reviewer sees the resolved test scope and the base→head delta.
+    verdict = await agent(reviewPrompt(p, taskOut, measurement), {
       phase: 'Review',
       agentType: reviewerType,
       schema: VERDICT_SCHEMA,
@@ -1556,18 +2066,28 @@ async function reviewerGate(p, taskOut, tier) {
         description: `Reviewer gate did not run on phase ${p.id} — ${reviewerType} returned no verdict.`,
         resolution_hint: 'Re-dispatch the reviewer for this phase (or invoke the reviewer-gate workflow against the same scope). Do NOT treat the phase as reviewed, and do NOT run a fix cycle: nothing has been found yet.',
       }],
+      validation_scope: {
+        evidence_present: measurement.evidence_present,
+        files_run: measurement.files_run,
+        scope_truncated: measurement.scope_truncated,
+        scope_status: measurement.scope_status,
+        omitted_files: measurement.omitted_files || [],
+        regressions: measurement.regressions,
+        measurement_failures: measurement.measurement_failures,
+      },
     }
   }
 
-  // R3: applies to every producer above — the flag-off reviewer, the P5 primary fallback, and
-  // the Stage B structurer. An approving verdict with no established verification path is a
-  // gate-integrity failure (re-dispatch, no fix cycle); self-reported side effects are an
-  // ordinary rejection that falls through to the fix loop below.
-  const enforced = enforceEvidenceRules(verdict, p.id, reviewerType)
+  // R3 + AC-3 + validation-scope: applies to every producer above — the flag-off reviewer,
+  // the P5 primary fallback, and the Stage B structurer. Chains applyTestStatusRules first
+  // (red-backed AC → ordinary rejection), then self-reported-side-effects (rejection), then
+  // verification-path (integrity failure on unverified approval), then measurement-integrity
+  // (integrity failure on approval over missing/failed/regression-carrying measurement).
+  const enforced = enforceEvidenceRules(verdict, p.id, reviewerType, measurement)
   verdict = enforced.verdict
   if (enforced.integrity_failure) {
     log(`GATE INTEGRITY FAILURE on phase ${p.id}: ${enforced.integrity_failure}. Recording as a gate failure, NOT as an approval or a rejection. The fix loop is deliberately skipped.`)
-    return gateIntegrityResult(p, taskOut, reviewerType, verdict, enforced.integrity_failure, 0)
+    return gateIntegrityResult(p, taskOut, reviewerType, verdict, enforced.integrity_failure, 0, measurement)
   }
 
   if (!verdict.approved) {
@@ -1583,6 +2103,15 @@ async function reviewerGate(p, taskOut, tier) {
     escalate: false,
     files_touched: taskOut.filter(Boolean).flatMap(t => t.files_affected ?? []),
     blockers: [],
+    validation_scope: {
+      evidence_present: measurement.evidence_present,
+      files_run: measurement.files_run,
+      scope_truncated: measurement.scope_truncated,
+      scope_status: measurement.scope_status,
+      omitted_files: measurement.omitted_files || [],
+      regressions: measurement.regressions,
+      measurement_failures: measurement.measurement_failures,
+    },
   }
 }
 
