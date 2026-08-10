@@ -4,12 +4,26 @@
 #
 # Model (see CLAUDE.md "Mirror & sync model" for the full picture):
 #   main      -> origin (github.com/miethe/MeatySkills, PUBLIC)   = canonical source
-#   ibm-main  -> ibm    (github.ibm.com/boxboat-presales/...,     = origin/main +
-#                         agent-artifacts, PRIVATE)                  IBM-private commits
+#   ibm-main  -> ibm    (github.ibm.com/boxboat-presales/...,     = the DEPLOYED branch
+#                         agent-artifacts)                           (also on origin, PUBLIC)
 #
-#   Invariant: ibm-main == origin/main + a small stack of IBM-private commits.
 #   Down  (personal -> IBM): FULL & routine   -> `to-ibm`      (rebase + force-push)
 #   Up    (IBM -> personal): SELECTIVE & manual -> `to-personal <commit>...` (cherry-pick)
+#
+# ⚠️ THE INVARIANT THIS SCRIPT WAS WRITTEN AGAINST IS FALSE. Measured 2026-08-10:
+#   "ibm-main == origin/main + a small stack of IBM-private commits" does not hold.
+#   `git merge-base --is-ancestor origin/main origin/ibm-main` -> FALSE; the branches
+#   have diverged 59/4, which is 510 files and +155k lines, and `meaty-agentic-ops/`
+#   (the engine, router, executors, and the declared upstream for other repos'
+#   deployed workflow copies) exists ONLY on ibm-main. `cmd_status` reports the
+#   divergence honestly as of this commit — see the two headings it prints.
+#
+# ⚠️ `[ibm-only]` IS NOT A PRIVACY BOUNDARY. `ibm-main` is pushed to `origin` too, and
+#   `origin` is PUBLIC: `skills/ica-delegate/SKILL.md` is served from
+#   github.com/miethe/MeatySkills?ref=ibm-main, and PR #12 was merged into that branch
+#   on the public remote. Treat the prefix as "belongs on the deploy branch", never as
+#   "cannot be read by the public" — and do not add a secret to an `[ibm-only]` commit
+#   expecting the branch to contain it. Tracked: node_01KZP5880QKRFEDKWDWNP07ZV5.
 #
 # This file lives on ibm-main ONLY. Never cherry-pick it up to main/origin.
 
@@ -58,14 +72,44 @@ cmd_status() {
   printf '  %-10s  %s\n'   "ibm-main" "vs $IBM_REMOTE/$MAIN_BRANCH (ahead behind):"
   printf '  %-10s  %s\n'   ""         "$(git rev-list --left-right --count "$IBM_BRANCH...$IBM_REMOTE/$MAIN_BRANCH" 2>/dev/null || echo 'n/a')"
 
-  printf '\n  IBM-private commits (on %s, not on %s/%s) — cherry-pick candidates for `to-personal`:\n\n' \
+  # The superset invariant, checked rather than assumed. This heading used to read
+  # "IBM-private commits" over the WHOLE `origin/main..ibm-main` range, so 54 generic
+  # commits were displayed as though they belonged on the private branch — which is
+  # how they came to sit there unshared for weeks. The range is now split by the
+  # `[ibm-only]` marker that `to-personal` actually enforces, so the two categories
+  # can never be read as one again.
+  if git merge-base --is-ancestor "$ORIGIN_REMOTE/$MAIN_BRANCH" "$IBM_BRANCH" 2>/dev/null; then
+    printf '\n  Invariant OK: %s/%s is an ancestor of %s (true superset).\n' \
+      "$ORIGIN_REMOTE" "$MAIN_BRANCH" "$IBM_BRANCH"
+  else
+    printf '\n  \033[1;31m⚠ INVARIANT BROKEN\033[0m: %s/%s is NOT an ancestor of %s — the branches have\n' \
+      "$ORIGIN_REMOTE" "$MAIN_BRANCH" "$IBM_BRANCH"
+    printf '    diverged in BOTH directions, so `to-ibm` cannot fast-forward and generic work\n'
+    printf '    landing on %s does not reach the branch that is deployed from.\n' "$MAIN_BRANCH"
+    printf '    behind (%s/%s not on %s): %s commit(s)\n' \
+      "$ORIGIN_REMOTE" "$MAIN_BRANCH" "$IBM_BRANCH" \
+      "$(git rev-list --count "$IBM_BRANCH..$ORIGIN_REMOTE/$MAIN_BRANCH" 2>/dev/null || echo '?')"
+  fi
+
+  local range="$ORIGIN_REMOTE/$MAIN_BRANCH..$IBM_BRANCH"
+  local ibm_only generic
+  ibm_only="$(git log --oneline --format='%h %s' "$range" | grep -i '\[ibm-only\]' || true)"
+  generic="$(git log --oneline --format='%h %s' "$range" | grep -iv '\[ibm-only\]' || true)"
+
+  printf '\n  \033[1mIBM-private\033[0m — marked `[ibm-only]`, refused by `to-personal` (on %s, not on %s/%s):\n\n' \
     "$IBM_BRANCH" "$ORIGIN_REMOTE" "$MAIN_BRANCH"
-  local ibm_only
-  ibm_only="$(git log --oneline "$ORIGIN_REMOTE/$MAIN_BRANCH..$IBM_BRANCH")"
   if [ -n "$ibm_only" ]; then
     printf '%s\n' "$ibm_only" | sed 's/^/    /'
   else
-    printf '    (none — branches are in sync)\n'
+    printf '    (none)\n'
+  fi
+
+  printf '\n  \033[1mGENERIC and STRANDED\033[0m — %s commit(s) that belong upstream; `to-personal` candidates:\n\n' \
+    "$(printf '%s' "$generic" | grep -c . || true)"
+  if [ -n "$generic" ]; then
+    printf '%s\n' "$generic" | sed 's/^/    /'
+  else
+    printf '    (none — nothing generic is stranded)\n'
   fi
   printf '\n'
 }
@@ -86,8 +130,21 @@ cmd_to_ibm() {
   if ! git rebase "$ORIGIN_REMOTE/$MAIN_BRANCH"; then
     cat >&2 <<'EOF'
 
-  Rebase hit a conflict (origin probably edited the same lines as an
-  IBM-private commit, e.g. README.md). Resolve it, then run:
+  Rebase hit a conflict. DO NOT assume it is "origin edited the same lines as an
+  IBM-private commit" — that hint used to be printed here and it produced a wrong
+  resolution once (2026-08-10). Because the branches have diverged in both
+  directions, the conflict is usually git replaying ibm-main's OWN history against
+  a base that lacks the file entirely, so the "theirs" side is an earlier ibm-main
+  commit, not anything from origin.
+
+  Before resolving, establish which branch each side actually came from:
+
+      git cat-file -e origin/main:<path>   # does the file even exist on main?
+      git log --format='%h %ad %s' --date=short origin/main -- <path>
+      git log --format='%h %ad %s' --date=short ibm-main    -- <path>
+
+  Resolving from conflict markers alone, without that check, is how a live routing
+  decision got reverted to a two-week-stale reading. Then:
 
       git rebase --continue
       git push --force-with-lease ibm ibm-main:main
@@ -139,17 +196,23 @@ usage() {
 sync.sh — manage the origin (public) <-> ibm (private) mirror
 
 USAGE
-  scripts/sync.sh status                 Show divergence + list IBM-private commits
+  scripts/sync.sh status                 Check the superset invariant, then list the
+                                         divergence split into [ibm-only] vs generic-stranded
   scripts/sync.sh to-ibm                 Sync ALL of origin/main down into ibm-main
                                          (rebase IBM-private commits on top + force-push)
   scripts/sync.sh to-personal <commit>... Cherry-pick generic commit(s) up to main/origin
 
 FLOW
   origin (PUBLIC)  = canonical source of truth   (branch: main)
-  ibm    (PRIVATE) = origin/main + IBM-private    (branch: ibm-main)
+  ibm              = the branch deployed from     (branch: ibm-main)
 
   Down  personal -> IBM : full & routine    (to-ibm)
   Up    IBM -> personal : selective & manual (to-personal)
+
+  ⚠️ `ibm-main` is ALSO pushed to `origin`, which is PUBLIC — so `[ibm-only]` means
+     "belongs on the deploy branch", NOT "private". See the header comment.
+  ⚠️ The superset invariant is currently BROKEN; `status` says so explicitly rather
+     than printing the whole divergence as though it were all IBM-private.
 
 See CLAUDE.md for conventions ([ibm-only] commit prefix, conflict handling).
 EOF
