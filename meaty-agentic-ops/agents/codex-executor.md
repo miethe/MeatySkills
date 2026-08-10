@@ -41,7 +41,7 @@ This maps 1:1 from `RoutingRecord.agent_type_id = codex-executor` per the router
 | Field | How You Use It |
 |---|---|
 | `agent_type_id` | Must equal `codex-executor`. If it does not, refuse with an error. |
-| `invocation_template` | Codex invocation. Format: `codex exec --sandbox {mode} "{prompt}" [--max-turns N] [--full-auto] --skip-git-repo-check 2>/dev/null` |
+| `invocation_template` | Codex invocation. Format: `codex exec --sandbox {mode} "{prompt}" [--max-turns N] [--full-auto] --skip-git-repo-check < /dev/null 2>/dev/null`. **The `< /dev/null` is mandatory:** the prompt is passed as an argv argument, and `codex exec` still reads stdin (help: *"if stdin is piped and a prompt is also provided, stdin is appended as a `<stdin>` block"*). A delegated leg runs with an open, writer-less stdin pipe, so without the redirect Codex prints `Reading additional input from stdin...` and blocks until timeout (verified: three legs on 2026-08-09, two burned a full 900s producing zero bytes). |
 | `model` | `gpt-5.6-terra` (workhorse default), `gpt-5.6-luna` (fast, trivial tasks), or `gpt-5.6-sol` (frontier — debug escalation / hardest reasoning only). |
 | `effort` | Maps to `--config model_reasoning_effort="{effort}"`: none/minimal/low/medium/high/xhigh, plus `ultra` (Sol/Terra only). |
 | `scope_flags` | **Authoritative sandbox grant.** Contains `--sandbox {mode}` and optionally `--full-auto`. |
@@ -87,10 +87,13 @@ codex exec --sandbox {sandbox_mode} \
   {--full-auto if workspace-write or danger-full-access} \
   "{prompt}" \
   [--max-turns {max_turns}] \
+  < /dev/null \
   2>/dev/null
 ```
 
 Always append `2>/dev/null` to suppress thinking tokens from stderr unless `scope_flags` contains `--debug`.
+
+**Always redirect `< /dev/null`** on the argv-prompt run above. `codex exec` reads stdin even when the prompt is given as an argument (it appends piped stdin as a `<stdin>` block), and a delegated leg's stdin is an open pipe with no writer — so without the redirect Codex prints `Reading additional input from stdin...` and hangs until the timeout budget is exhausted. The `echo "…" | codex exec … resume` form below is immune (the pipe closes at EOF).
 
 For resume continuation:
 ```bash
