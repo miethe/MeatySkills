@@ -103,7 +103,8 @@ echo '{
 Capture multiple related items in a single document:
 
 ```bash
-cat > /tmp/findings.json <<'EOF'
+FINDINGS=$(mktemp -t mcfindings)     # per-invocation path — NEVER a fixed /tmp name
+cat > "$FINDINGS" <<'EOF'
 {
   "project": "PROJECT_NAME",
   "title": "Security Audit Findings - 2025-12-29",
@@ -144,10 +145,15 @@ cat > /tmp/findings.json <<'EOF'
 }
 EOF
 
-meatycapture log create /tmp/findings.json --json
+meatycapture log create "$FINDINGS" --json
 ```
 
 **Best Practice**: Use batch capture for 3+ related issues (e.g., audit findings, code review notes).
+
+**Why `mktemp`, not a fixed path**: a fixed `/tmp/findings.json` is written and read back across a
+wide window, and batch capture is exactly the operation concurrent agents run at the same time —
+one agent's payload can silently overwrite another's before it's read, filing findings under the
+wrong invocation with no error at all (`node_01KZP27DBV3MAZR9RKCDCTCFSR`).
 
 ---
 
