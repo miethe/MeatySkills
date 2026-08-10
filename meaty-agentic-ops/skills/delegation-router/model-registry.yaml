@@ -66,6 +66,7 @@ routing_policy:
   mechanical:       { chain: ["ica/claude-haiku-4-5", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-4-5"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_second_opinion_routing), see use-case-rankings.yaml, conf 0.6. gpt-5.6-sol = escalation-only (disagreement at terra tier).
   second_opinion:   { chain: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash[1m]", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"], enabled: true }
+  # Grounded 2026-08-09 (execution pilot, n=3; see use-case-rankings.yaml `agentic-coding`, conf 0.5). CHAIN DELIBERATELY UNCHANGED — codex/gpt-5.6-terra shipped 3/3 real legs with zero logic defects but is EXPLICITLY-SELECTABLE ONLY, not an auto leg, on n=3 with no head-to-head arm. Explicit selection already resolves (codex-executor, fallback claude/claude-sonnet-5) and needs no chain edit. ⚠️ Dispatch an implementer leg at effort `high` — sandboxModeFor() maps standard→read-only, so a default-effort codex implementer CANNOT WRITE and fails by producing nothing.
   implementation:   { chain: ["claude/claude-sonnet-5"], enabled: true }   # workhorse default; ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload)
   web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview[1m]"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
   code_review:      { chain: ["codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # codex workhorse = gpt-5.6-terra (successor to gpt-5.5); escalate to gpt-5.6-sol (frontier SOTA) on two failures per the two-failure rule. (An ICA gpt-5.6-terra-dzus lane was attempted 2026-07-20 but reverted — model not reliably servable on the gateway; see ica-codex-responses-shim-v1.md.)
@@ -500,6 +501,19 @@ models:
     descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation]
+    # IMPLEMENTER LANE, measured 2026-08-09 (execution pilot, n=3; use-case-rankings.yaml
+    # `agentic-coding`, conf 0.5). Shipped 3/3 real tracker nodes, 1 fix cycle each, ZERO logic
+    # defects — every gate rejection was a PREMISE failure (unvalidated declared metadata; a
+    # tracker's guess implemented without checking the guarantee already existed; an invented API
+    # payload shape that would have printed a manufactured 0.0). So: eligible for contract-clear,
+    # strict-spec, offload-eligible implementation legs BEHIND A PREMISE-CHECKING REVIEWER GATE —
+    # one that asks "does this already exist / is this declaration actually read / is this contract
+    # verified", not merely "is the code correct". A code-only gate passed all three first drafts.
+    # Explicitly-selectable, NOT an auto leg of the implementation chain.
+    # ⚠️ Dispatch at effort `high` (→ --sandbox workspace-write). At default `standard` the
+    # resolver emits --sandbox read-only and the leg cannot write a file.
+    # ⚠️ Its reported test results must be re-run UNSANDBOXED before being believed — the codex
+    # workspace-write sandbox manufactures false failures (denied loopback binds and sqlite writes).
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra
     tools: []
     related_skills: [codex]
