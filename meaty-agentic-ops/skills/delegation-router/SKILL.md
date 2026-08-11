@@ -128,7 +128,7 @@ const record = resolve({
 
 // Pattern A: hand record.chosen_plugin_id / record.agent_type_id to the platform skill.
 // IN-PROCESS DISPATCH MUST PASS THE MODEL. The agent definition's own `model:` pin wins
-// otherwise, silently, and the record's model never runs (see "Provider vs model" below):
+// otherwise, silently, and the record's model never runs (see the no-op section below):
 //   Agent({ subagent_type: record.agent_type_id, model: record.model, prompt })
 
 // Pattern B (workflows): log the DECISION. Note what is NOT here — `actual_provider_used`.
@@ -155,7 +155,9 @@ of the intent, so the two could never disagree. Measured across the two live log
 **112 of 123 entries (91%) had `actual === chosen`, and 0 of 123 carried any model at all**. The
 executor's own self-report is not a substitute either — `appendRealization` requires
 `realization_evidence` precisely because a leg reporting on itself is not a measurement
-(`node_01KZS5A4S1YEZBPVBRFXWM3RY4`, `.claude/rules/mode-d-enforcement.md`).
+(`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; the never-trust-a-leg's-self-report rule is
+`agentic_meta_dev/.claude/rules/mode-d-enforcement.md`, whose local sibling here is
+`meaty-agentic-ops/rules/delegation-modes.md`).
 
 ### Routing to a provider is a no-op when the session is already that provider
 
