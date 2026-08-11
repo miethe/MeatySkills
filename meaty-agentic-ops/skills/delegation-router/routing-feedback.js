@@ -43,6 +43,10 @@ const {
   loadRoutingFeedbackContract,
   validateFeedbackJoin,
 } = require('./task-class-vocabulary.js');
+const {
+  canonicalizeEntry,
+  canonicalizeEntryString,
+} = require('./entry-key.js');
 
 // ---------------------------------------------------------------------------
 // Parameters
@@ -328,6 +332,18 @@ function evaluateRow(row, envelope, opts = {}) {
 // Merge — rows + prior state → next state
 // ---------------------------------------------------------------------------
 
+/**
+ * Deliberately the RAW producer-reported "provider/model" join — NOT canonicalized here.
+ *
+ * The value returned is what gets persisted into the machine-owned state file
+ * (`overrides[taskClass].demotions[].entry`), so keeping it raw preserves exactly what the
+ * producer reported for audit/debugging. Canonicalization (case-fold provider, resolve model
+ * to its registry alias via entry-key.js) happens at COMPARISON time in `applyChainFeedback`,
+ * which has access to both sides of the join (this entry AND the registry chain entries, which
+ * are themselves per-provider model ids — e.g. `ica/claude-sonnet-4-6[1m]` — not bare aliases)
+ * and can therefore report a precise `unknown_provider` / `unknown_model` / `entry_not_in_chain`
+ * reason (DI-1 §4) instead of this function silently baking in a guess.
+ */
 function chainEntryKey(row) {
   return `${row.provider}/${row.model}`;
 }
@@ -554,10 +570,18 @@ function humanOverriddenTargets(overrides) {
  *     candidate ahead of an equally-bad one is churn with no evidentiary basis.
  *
  * @param {string[]} chain            routing_policy chain, "provider/model_id" entries
- * @param {Iterable<string>} demoted  entries flagged for demotion
+ * @param {Iterable<string>} demoted  entries flagged for demotion — keyed the same way `keyFn`
+ *   keys the chain (i.e. if `keyFn` canonicalizes, `demoted` must hold canonical keys too)
+ * @param {(entry: string) => string} [keyFn]  maps a chain entry to the key compared against
+ *   `demoted`. Defaults to identity, which preserves this function's original raw-string
+ *   signature/behavior exactly. DI-1 callers pass a canonicalizing keyFn (entry-key.js) so a
+ *   chain entry like `ica/claude-sonnet-4-6[1m]` (a per-provider model id, not an alias) can
+ *   still be recognized as a match — but the returned `chain`/`displacements[].entry` values
+ *   are always the ORIGINAL, uncanonicalized chain strings; only the comparison is keyed.
  * @returns {{chain: string[], displacements: Array<{entry: string, from: number, to: number}>}}
  */
-function demoteChain(chain, demoted) {
+function demoteChain(chain, demoted, keyFn) {
+  const key = typeof keyFn === 'function' ? keyFn : (entry) => entry;
   const result = Array.isArray(chain) ? chain.slice() : [];
   const displacements = [];
   if (result.length <= 1) return { chain: result, displacements };  // last-candidate floor
@@ -567,13 +591,15 @@ function demoteChain(chain, demoted) {
 
   for (let i = 0; i < result.length - 1; i++) {
     const entry = result[i];
-    if (!flagged.has(entry)) continue;
-    if (moved.has(entry)) continue;            // max_rank_displacement = 1
+    const entryKey = key(entry);
+    if (!flagged.has(entryKey)) continue;
+    if (moved.has(entryKey)) continue;         // max_rank_displacement = 1
     const next = result[i + 1];
-    if (flagged.has(next)) continue;           // never promote a demoted peer
+    const nextKey = key(next);
+    if (flagged.has(nextKey)) continue;        // never promote a demoted peer
     result[i] = next;
     result[i + 1] = entry;
-    moved.add(entry);
+    moved.add(entryKey);
     displacements.push({ entry, from: i, to: i + 1 });
   }
 
@@ -593,6 +619,9 @@ function demoteChain(chain, demoted) {
  * @param {Object} [args.feedbackOverrides]  loadFeedbackState().overrides
  * @param {{classes: Set, entries: Set}} [args.humanTargets]
  * @param {boolean} [args.isMustStay=false]
+ * @param {Object} [args.registry]  injectable model registry for entry-key.js canonicalization
+ *   (DI-1 §1); defaults to entry-key.js's own file-loaded registry when omitted. Tests should
+ *   always inject this so the join stays offline/deterministic.
  * @returns {{chain: string[], applied: boolean, reason: string, displacements: Array, skipped: Array}}
  */
 function applyChainFeedback(args) {
@@ -613,23 +642,62 @@ function applyChainFeedback(args) {
     return noop('no_feedback_for_class');
   }
 
+  // Canonicalize once per chain entry — resolves a per-provider model id (e.g.
+  // `ica/claude-sonnet-4-6[1m]`), which is NOT itself a registry alias, to its canonical
+  // `provider/alias` key. A chain entry that fails to canonicalize (should not happen for a
+  // registry-sourced chain, but the registry could drift) falls back to its own raw string as
+  // the key — it simply cannot collide with a real canonical key, so it just never matches.
+  const registry = args.registry;
+  const keyFn = (entry) => {
+    const res = canonicalizeEntryString(entry, registry);
+    return res.ok ? res.key : entry;
+  };
+  const chainKeys = chain.map(keyFn);
+
+  // Adversarial-review DEFECT 3 fix: a canonical-key COLLISION inside the chain itself (e.g.
+  // two entries that differ only by provider case, or a per-provider model id alongside its own
+  // alias) breaks the Set-based membership check downstream — demoteChain only swaps the FIRST
+  // matching position, so a duplicate canonical key would demote/promote inconsistently. A
+  // well-formed routing_policy chain never lists the same provider/model twice, so this is a
+  // malformed-input guard, not a real routing scenario: refuse to actuate the whole class rather
+  // than mis-actuate on an ambiguous chain.
+  const keyCounts = new Map();
+  for (const k of chainKeys) keyCounts.set(k, (keyCounts.get(k) || 0) + 1);
+  if ([...keyCounts.values()].some(count => count > 1)) {
+    return { chain, applied: false, reason: 'ambiguous_chain', displacements: [], skipped: [] };
+  }
+
+  const chainCanonicalKeys = new Set(chainKeys);
+
   // Entries the human has ranked by hand are immune individually, not just class-wide.
   const skipped = [];
-  const eligible = new Map();
+  const demotionByCanonicalKey = new Map();
   for (const d of cls.demotions) {
     if (human.entries.has(d.entry)) {
       skipped.push({ entry: d.entry, reason: 'human_override_precedence' });
       continue;
     }
-    if (!chain.includes(d.entry)) {
+    // Canonicalize the DEMOTION side (provider case-fold, model → registry alias, resolving
+    // through observed_ids for dated/versioned slugs). Fails closed with a distinct reason —
+    // never a silent non-match, never a guessed coercion (DI-1 §1).
+    const canon = canonicalizeEntryString(d.entry, registry);
+    if (!canon.ok) {
+      skipped.push({ entry: d.entry, reason: canon.reason });
+      continue;
+    }
+    if (!chainCanonicalKeys.has(canon.key)) {
+      // A genuine post-canonicalization miss: the demotion's model really is not in this
+      // task_class's chain (as opposed to a join failure above).
       skipped.push({ entry: d.entry, reason: 'entry_not_in_chain' });
       continue;
     }
-    eligible.set(d.entry, d);
+    demotionByCanonicalKey.set(canon.key, d);
   }
-  if (eligible.size === 0) return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped };
+  if (demotionByCanonicalKey.size === 0) {
+    return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped };
+  }
 
-  const { chain: reordered, displacements } = demoteChain(chain, new Set(eligible.keys()));
+  const { chain: reordered, displacements } = demoteChain(chain, new Set(demotionByCanonicalKey.keys()), keyFn);
   if (displacements.length === 0) {
     return { chain, applied: false, reason: 'no_displacement_possible', displacements: [], skipped };
   }
@@ -639,7 +707,7 @@ function applyChainFeedback(args) {
     applied: true,
     reason: 'chain_demotion',
     displacements: displacements.map(d => {
-      const rec = eligible.get(d.entry) || {};
+      const rec = demotionByCanonicalKey.get(keyFn(d.entry)) || {};
       return {
         ...d,
         combined_signal: rec.combined_signal ?? null,
@@ -668,7 +736,14 @@ function applyChainFeedback(args) {
  */
 function applyRankedFeedback(ranked, args) {
   const list = Array.isArray(ranked) ? ranked : [];
-  const keyOf = (c) => `${c.providerId}/${c.modelId}`;
+  // Same canonicalizer as the chain path (DI-1 §3): resolve to a `provider/alias` key when
+  // possible, falling back to the raw join only when canonicalization itself fails (so
+  // `byKey` below stays internally consistent either way — `chain` and `byKey` are always
+  // built from the SAME keyOf).
+  const keyOf = (c) => {
+    const res = canonicalizeEntry(c.providerId, c.modelId, args && args.registry);
+    return res.ok ? res.key : `${c.providerId}/${c.modelId}`;
+  };
   const result = applyChainFeedback({ ...args, chain: list.map(keyOf) });
   if (!result.applied) {
     return { ranked: list, applied: false, reason: result.reason, displacements: [], skipped: result.skipped };
@@ -729,4 +804,5 @@ module.exports = {
   applyChainFeedback,
   applyRankedFeedback,
   buildFeedbackProvenance,
+  chainEntryKey,
 };

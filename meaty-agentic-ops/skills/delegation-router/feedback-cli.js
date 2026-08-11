@@ -83,6 +83,10 @@ const {
   mergeFeedback,
   writeFeedbackState,
 } = require('./routing-feedback.js');
+const {
+  loadDefaultRegistry,
+  canonicalizeEntryString,
+} = require('./entry-key.js');
 
 const ROLLUP_PATH = '/api/v1/routing/rollup';
 const DEFAULT_TIMEOUT_SECONDS = 30;
@@ -211,9 +215,13 @@ function parseArgs(argv) {
  * always distinguish "refused", "failed", and "succeeded with nothing to do" from each other —
  * and never has to parse an empty stdout.
  */
-function jsonEnvelope({ decisions, applied, gate_reason, state_written, exitCode, error }) {
+function jsonEnvelope({ decisions, chain_join_summary, applied, gate_reason, state_written, exitCode, error }) {
   const out = {};
   if (decisions !== undefined) out.decisions = decisions;
+  // Present alongside decisions whenever they are (including the empty-decisions success
+  // path) so a --json consumer can see the majority-mismatch verdict without re-deriving it
+  // from the per-row `chain_join` fields itself (DI-1 §5: visible, not buried).
+  if (chain_join_summary !== undefined) out.chain_join_summary = chain_join_summary;
   out.applied = applied;
   out.gate_reason = gate_reason;
   out.state_written = state_written;
@@ -311,15 +319,85 @@ function fmtSignal(value) {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(4) : '—';
 }
 
+/**
+ * DI-1 §5 — the join failure this whole file exists to close was SILENT: mergeFeedback ran
+ * clean, `applied` looked healthy, and the ACTUAL chain join (`entry_not_in_chain`) only
+ * happened later, inside the resolver's `applyChainFeedback`, where merge-time decisions never
+ * see it. `chain_join` re-evaluates that same join here, at merge time, so a decisions table
+ * that "ran fine" can no longer hide a feedback channel that is, in fact, inert.
+ *
+ * Registry chains list PER-PROVIDER MODEL IDS (e.g. `ica/claude-sonnet-4-6[1m]`), not bare
+ * aliases — so both sides of the comparison go through the same entry-key.js canonicalizer.
+ */
+function resolvePolicyChain(taskClass, registry) {
+  const policy = (registry && registry.routing_policy) || {};
+  const keys = [
+    taskClass,
+    String(taskClass).replace(/-/g, '_'),
+    String(taskClass).replace(/_/g, '-'),
+  ];
+  for (const k of keys) {
+    if (policy[k] && Array.isArray(policy[k].chain)) return policy[k].chain;
+  }
+  return null;
+}
+
+/**
+ * @param {Object} decision   one row from mergeFeedback's `decisions[]` (task_class + entry)
+ * @param {Object} registry   loaded model registry (entry-key.js canonicalization source)
+ * @returns {'in_chain'|'entry_not_in_chain'|'unknown_provider'|'unknown_model'|'no_chain_for_class'}
+ */
+function chainJoinStatus(decision, registry) {
+  if (decision.task_class == null || decision.entry == null) return 'no_chain_for_class';
+  const chain = resolvePolicyChain(decision.task_class, registry);
+  if (!chain || chain.length === 0) return 'no_chain_for_class';
+
+  const canon = canonicalizeEntryString(decision.entry, registry);
+  if (!canon.ok) return canon.reason; // 'unknown_provider' | 'unknown_model'
+
+  for (const chainEntry of chain) {
+    const chainCanon = canonicalizeEntryString(chainEntry, registry);
+    if (chainCanon.ok && chainCanon.key === canon.key) return 'in_chain';
+  }
+  return 'entry_not_in_chain';
+}
+
+/** Reasons that mean "this row's feedback cannot possibly reach the routing chain." */
+const CHAIN_JOIN_FAILURE_REASONS = new Set(['entry_not_in_chain', 'unknown_provider', 'unknown_model']);
+
+/**
+ * Summarize `chain_join` across all decisions so a non-`in_chain` majority is a single visible
+ * fact rather than something a reader has to tally from the table themselves.
+ */
+function summarizeChainJoin(decisions) {
+  const counts = {
+    in_chain: 0,
+    entry_not_in_chain: 0,
+    unknown_provider: 0,
+    unknown_model: 0,
+    no_chain_for_class: 0,
+  };
+  for (const d of decisions) {
+    if (Object.prototype.hasOwnProperty.call(counts, d.chain_join)) counts[d.chain_join]++;
+  }
+  const failingCount = [...CHAIN_JOIN_FAILURE_REASONS].reduce((n, r) => n + counts[r], 0);
+  const total = decisions.length;
+  return {
+    counts,
+    majority_mismatch: total > 0 && failingCount * 2 > total,
+  };
+}
+
 /** Render the per-row decisions as a padded text table. */
 function formatDecisionsTable(decisions) {
-  const header = ['TASK_CLASS', 'ENTRY', 'ACTION', 'SIGNAL', 'REASON'];
+  const header = ['TASK_CLASS', 'ENTRY', 'ACTION', 'SIGNAL', 'REASON', 'CHAIN_JOIN'];
   const rows = decisions.map(d => [
     String(d.task_class == null ? '—' : d.task_class),
     String(d.entry == null ? '—' : d.entry),
     String(d.action),
     fmtSignal(d.combined_signal),
     String(d.reason || ''),
+    String(d.chain_join || '—'),
   ]);
 
   const widths = header.map((h, i) =>
@@ -364,13 +442,14 @@ async function run(argv, deps = {}) {
   const finish = (exitCode, opts = {}) => {
     const {
       decisions,
+      chain_join_summary,
       error,
       applied = false,
       gate_reason = null,
       state_written = null,
     } = opts;
     if (wantJson) {
-      stdout.write(jsonEnvelope({ decisions, applied, gate_reason, state_written, exitCode, error }));
+      stdout.write(jsonEnvelope({ decisions, chain_join_summary, applied, gate_reason, state_written, exitCode, error }));
     }
     return { exitCode, applied, gate_reason, state_written };
   };
@@ -454,24 +533,43 @@ async function run(argv, deps = {}) {
     return fail(1, `merge failed — ${err.message}`);
   }
 
+  // DI-1 §5: evaluate the chain join NOW, at merge time — this is the seam the bug lived in.
+  // mergeFeedback ran clean and `applied` looked healthy while the ACTUAL join only happened
+  // later, inside the resolver's applyChainFeedback, where a merge-time decisions table never
+  // saw it. Attaching `chain_join` here means a non-`in_chain` majority can no longer hide
+  // behind a run that otherwise "looks fine".
+  const registry = deps.registry || loadDefaultRegistry();
+  const decisions = result.decisions.map(d => ({ ...d, chain_join: chainJoinStatus(d, registry) }));
+  const chainJoinSummary = summarizeChainJoin(decisions);
+  const maybeWarnChainJoin = () => {
+    if (wantJson || !chainJoinSummary.majority_mismatch) return;
+    stdout.write(
+      `WARNING: chain_join mismatch on a MAJORITY of rows — feedback for these rows cannot ` +
+      `reach the routing chain (entry_not_in_chain / unknown_provider / unknown_model). ` +
+      `counts: ${JSON.stringify(chainJoinSummary.counts)}\n`
+    );
+  };
+
   // Rows arrived but not one of them was measurable — every decision is `skip`. That is the
   // same epistemic state as an empty rollup (no evidence), NOT the state of a healthy route,
   // so it must not write: persisting the resulting empty override map would lift every live
   // demotion at once on the strength of nothing. Note the discriminator is the decisions and
   // never `overrides === {}`; a genuinely NEUTRAL row also produces an empty map and that
   // write must still happen, because it is real evidence that a stale demotion should lift.
-  const actionable = result.decisions.filter(d => ACTIONABLE_ACTIONS.has(d.action));
+  const actionable = decisions.filter(d => ACTIONABLE_ACTIONS.has(d.action));
   if (actionable.length === 0) {
     if (!wantJson) {
-      stdout.write(`${formatDecisionsTable(result.decisions)}\n\n`);
+      stdout.write(`${formatDecisionsTable(decisions)}\n\n`);
       stdout.write(
         `${rows.length} row(s) returned but none were actionable ` +
         `(join-rejected / ineligible) — state left untouched at ${statePath}\n`
       );
       stdout.write(`gate verdict was: ${result.gate_reason}\n`);
+      maybeWarnChainJoin();
     }
     return finish(0, {
-      decisions: result.decisions,
+      decisions,
+      chain_join_summary: chainJoinSummary,
       gate_reason: 'not_actionable:all_rows_skipped',
     });
   }
@@ -481,7 +579,8 @@ async function run(argv, deps = {}) {
   // rather than wondering why a written file changed nothing.
   if (args.apply && result.applied !== true) {
     return fail(3, `refusing to apply: ${result.gate_reason}`, {
-      decisions: result.decisions,
+      decisions,
+      chain_join_summary: chainJoinSummary,
       gate_reason: result.gate_reason,
     });
   }
@@ -492,7 +591,8 @@ async function run(argv, deps = {}) {
       stateWritten = writeFeedbackState(result.state, { statePath });
     } catch (err) {
       return fail(1, `could not write state to ${statePath} — ${err.message}`, {
-        decisions: result.decisions,
+        decisions,
+        chain_join_summary: chainJoinSummary,
         applied: result.applied,
         gate_reason: result.gate_reason,
       });
@@ -500,17 +600,19 @@ async function run(argv, deps = {}) {
   }
 
   if (!wantJson) {
-    stdout.write(`${formatDecisionsTable(result.decisions)}\n\n`);
+    stdout.write(`${formatDecisionsTable(decisions)}\n\n`);
     stdout.write(`applied: ${result.applied}  gate_reason: ${result.gate_reason}\n`);
     if (stateWritten) {
       stdout.write(`state written: ${stateWritten}\n`);
     } else {
       stdout.write(`dry run — nothing written (would write ${statePath}; pass --apply)\n`);
     }
+    maybeWarnChainJoin();
   }
 
   return finish(0, {
-    decisions: result.decisions,
+    decisions,
+    chain_join_summary: chainJoinSummary,
     applied: result.applied,
     gate_reason: result.gate_reason,
     state_written: stateWritten,

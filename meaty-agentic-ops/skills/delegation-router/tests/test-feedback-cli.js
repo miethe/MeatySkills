@@ -162,6 +162,7 @@ function deps(extra = {}) {
     stdout,
     stderr,
     ...(extra.mergeOpts ? { mergeOpts: extra.mergeOpts } : {}),
+    ...(extra.registry ? { registry: extra.registry } : {}),
   };
 }
 
@@ -739,6 +740,90 @@ asyncTest('(k) --json emits an envelope with state_written on the success path',
   assert.strictEqual(parsed.applied, true);
   assert.strictEqual(parsed.state_written, d.statePath);
   assert.strictEqual(parsed.error, undefined, 'a success envelope must carry no error field');
+});
+
+// ---------------------------------------------------------------------------
+// (m) DI-1 §5 — chain_join surfaced per-decision AND as a visible majority-mismatch summary
+// ---------------------------------------------------------------------------
+
+// This repo's own registry — injected via the documented `deps.registry` seam so the test
+// stays offline/deterministic regardless of what (if anything) is at ~/.claude/config on the
+// machine running it.
+const realRegistry = JSON.parse(fs.readFileSync(path.join(skillDir, 'model-registry.generated.json'), 'utf8'));
+
+asyncTest('(m) a case-mismatched, dated-slug row now joins as in_chain (was the silent entry_not_in_chain bug)', async () => {
+  const row = keyRow({
+    task_class: 'mechanical', source_skill_name: 'symbols',
+    provider: 'Claude', model: 'claude-haiku-4-5-20251001',
+  });
+  const d = deps({
+    fetchImpl: mockFetch(rollupData({ keys: [row] })),
+    mergeOpts: { contract: enabledContract },
+    registry: realRegistry,
+  });
+  const res = await run(['--project', 'p1', '--json'], d);
+
+  assert.strictEqual(res.exitCode, 0);
+  const parsed = JSON.parse(d.stdout.text());
+  assert.strictEqual(parsed.decisions.length, 1);
+  assert.strictEqual(parsed.decisions[0].chain_join, 'in_chain');
+  assert.strictEqual(parsed.chain_join_summary.majority_mismatch, false);
+  assert.strictEqual(parsed.chain_join_summary.counts.in_chain, 1);
+});
+
+asyncTest('(m) an out-of-vocabulary provider surfaces chain_join=unknown_provider, distinct from entry_not_in_chain', async () => {
+  const row = keyRow({
+    task_class: 'mechanical', source_skill_name: 'symbols',
+    provider: 'OpenAI', model: 'gpt-5.4',
+  });
+  const d = deps({
+    fetchImpl: mockFetch(rollupData({ keys: [row] })),
+    mergeOpts: { contract: enabledContract },
+    registry: realRegistry,
+  });
+  const res = await run(['--project', 'p1', '--json'], d);
+
+  const parsed = JSON.parse(d.stdout.text());
+  assert.strictEqual(parsed.decisions[0].chain_join, 'unknown_provider');
+  assert.notStrictEqual(parsed.decisions[0].chain_join, 'entry_not_in_chain');
+});
+
+asyncTest('(m) a non-in_chain MAJORITY prints a visible text-mode warning banner (not merely a buried column)', async () => {
+  const rows = [
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: 'OpenAI', model: 'gpt-5.4' }),
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: '<synthetic>', model: '<synthetic>' }),
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: 'claude', model: 'claude-haiku-4-5' }),
+  ];
+  const d = deps({
+    fetchImpl: mockFetch(rollupData({ keys: rows })),
+    mergeOpts: { contract: enabledContract },
+    registry: realRegistry,
+  });
+  const res = await run(['--project', 'p1'], d); // text mode, no --json
+
+  assert.strictEqual(res.exitCode, 0);
+  const out = d.stdout.text();
+  assert.ok(/CHAIN_JOIN/.test(out), 'the decisions table must carry a CHAIN_JOIN column');
+  assert.ok(/WARNING: chain_join mismatch on a MAJORITY/.test(out), `expected a visible majority-mismatch banner, got:\n${out}`);
+});
+
+asyncTest('(m) the same majority-mismatch case carries chain_join_summary.majority_mismatch=true in --json', async () => {
+  const rows = [
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: 'OpenAI', model: 'gpt-5.4' }),
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: '<synthetic>', model: '<synthetic>' }),
+    keyRow({ task_class: 'mechanical', source_skill_name: 'symbols', provider: 'claude', model: 'claude-haiku-4-5' }),
+  ];
+  const d = deps({
+    fetchImpl: mockFetch(rollupData({ keys: rows })),
+    mergeOpts: { contract: enabledContract },
+    registry: realRegistry,
+  });
+  const res = await run(['--project', 'p1', '--json'], d);
+
+  const parsed = JSON.parse(d.stdout.text());
+  assert.strictEqual(parsed.chain_join_summary.majority_mismatch, true);
+  assert.strictEqual(parsed.chain_join_summary.counts.unknown_provider, 2);
+  assert.strictEqual(parsed.chain_join_summary.counts.in_chain, 1);
 });
 
 // ---------------------------------------------------------------------------
