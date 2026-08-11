@@ -218,9 +218,10 @@ A test asserts none of the retired names can reappear in executable code.
 incidentally — it has exactly one provider (`sora/sora-2`), so there is nothing to demote to; it
 needs no decision until a second video provider is registered.
 
-For `implementation`, **do NOT add a chain peer yet, and do NOT weaken the floor; fix the MAPPING
-instead.** Its signal comes entirely from skill `dev-execution`, a dual-role skill loaded by the
-orchestrator (`/dev:execute-phase`, `/dev:execute-plan`) and by the implementer legs it dispatches.
+For `implementation`, the ordering was **fix the MAPPING first, then consider a chain peer** — and
+the mapping fix has now LANDED (mapping `1.2.0`, see below). Its signal comes entirely from skill
+`dev-execution`, a dual-role skill loaded by the orchestrator (`/dev:execute-phase`,
+`/dev:execute-plan`) and by the implementer legs it dispatches.
 
 Live CCDash session data shows parenting subagents is Opus-exclusive: Opus 4.8 (1,804
 `dev-execution` sessions) parents 127, Opus 5 (159) parents 37, and Fable 5 parents 14; Sonnet 5
@@ -234,15 +235,27 @@ alone and structurally cannot see the role distinction. The last-candidate floor
 mapping defect; adding a peer first would convert that latent defect into a live mis-demotion.
 
 The mapping is owned by
-`agentic_meta_dev/docs/agentic-operator/contracts/routing-feedback-task-map.v1.json` (rule:
-`dev-execution -> implementation`) and is digest-pinned. Changing it is a separate cross-repo
-change with digest lockstep, deliberately not done here.
+`agentic_meta_dev/docs/agentic-operator/contracts/routing-feedback-task-map.v1.json` and mirrored
+into CCDash (`backend/application/services/agent_queries/routing_task_map_v1.json`) and this
+contract's `accepted_producers.ccdash` pin, all digest-pinned in lockstep. **Landed (mapping
+`1.1.0` → `1.2.0`, digest `sha256:4d62b43a…`):** the `dev-execution` rule now carries a `roles`
+object (`orchestrator → orchestration`, `implementer → implementation`) governed by a top-level
+`role_discriminator` keyed on `sessions.subagent_parent_id` (orchestrator iff the session parents
+≥1 subagent — the Opus-exclusive predicate above). The CCDash producer resolves the role per row;
+orchestrator-role rows resolve to `orchestration`, which is `PROTECTED_TASK_CLASSES` and therefore
+dropped from the rollup, so only implementer-role rows feed `implementation`. The consumer join is
+unchanged: `source_task_class_rules['dev-execution']` stays `implementation` (the only class the
+producer can emit for that skill into feedback), so no join-shape change was needed here.
+
+**Ordering (recorded per AC3):** the mapping fix landed BEFORE any chain peer was added to
+`implementation`. A chain peer may now be considered; until this landed, adding one would have
+converted the latent mapping defect into a live mis-demotion of the spine model.
 
 `mergeFeedback()` optionally accepts `chains` and `must_stay` to label its decision report and
-override classes with the same immunity classification. This is opt-in and defaults to today's
-unannotated output; no caller is wired yet, so the production state file remains unannotated.
-This is a labelling surface, not a suppression surface: inert demotions remain recorded and are
-explicitly marked inert for consumers that receive the topology.
+override classes with the same immunity classification. As of node `…0J`, `feedback-cli.js` now
+derives that topology from the registry and passes both, so the production state file is
+immunity-annotated. This is a labelling surface, not a suppression surface: inert demotions remain
+recorded and are explicitly marked inert for consumers that receive the topology.
 
 ---
 
