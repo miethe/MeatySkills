@@ -276,5 +276,4 @@ properties:
         maxItems: 200
     description: "Additional context or notes for future agents"
 
-additionalProperties: false
 additionalProperties: true

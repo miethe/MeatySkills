@@ -48,8 +48,8 @@ tags: [human-brief]
 
 One-line pointers. Do not restate content.
 
-- **PRD**: `docs/project_plans/PRDs/[category]/[feature-slug]-v1.md`
-- **Plan**: `docs/project_plans/implementation_plans/[category]/[feature-slug]-v1.md`
+- **PRD**: `docs/project_plans/PRDs/[feature-slug]-v1.md`
+- **Plan**: `docs/project_plans/implementation_plans/[feature-slug]-v1.md`
 - **Design Specs**: _(link or "None")_
 - **SPIKEs**: _(link or "None")_
 - **Related Briefs**: _(link or "None")_

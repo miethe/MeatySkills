@@ -25,7 +25,7 @@ These scripts support the planning skill workflows. They are Node.js scripts (NO
 3. Generate kebab-case filename
 4. Load PRD template
 5. Fill in template sections based on description
-6. Write to `docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
+6. Write to `docs/project_plans/PRDs/[feature-name]-v1.md`
 
 **Output**: Path to created PRD file
 
@@ -49,7 +49,7 @@ These scripts support the planning skill workflows. They are Node.js scripts (NO
 4. Add subagent assignments using `../references/subagent-assignments.md`
 5. Calculate total lines
 6. If >800 lines: Create phase breakout files
-7. Write main plan and phase files to `docs/project_plans/implementation_plans/[category]/`
+7. Write main plan and phase files to `docs/project_plans/implementation_plans/`
 
 **Output**: Path(s) to created implementation plan file(s)
 

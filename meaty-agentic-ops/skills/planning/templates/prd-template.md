@@ -2,11 +2,15 @@
 title: "PRD: Feature Name" # Human-readable PRD title
 schema_version: 2 # CCDash frontmatter schema version
 doc_type: prd # Must remain `prd` for PRD documents
+it_schema: 1 # Plan-frontmatter schema version (.claude/skills/planning/references/plan-frontmatter-schema.md). MUST.
+description: "One-paragraph problem + outcome summary" # MUST by schema §5.1.
 status: draft # draft|approved|in-progress|completed|superseded
 created: YYYY-MM-DD # Initial creation date (YYYY-MM-DD)
 updated: YYYY-MM-DD # Last edit date (YYYY-MM-DD)
 feature_slug: "feature-name" # Kebab-case feature identifier
 feature_version: "v1" # Version label for this feature document set
+tier: 2 # 0|1|2|3 complexity/routing tier. MUST.
+effort_estimate: "TBD" # Rough total effort (refined in the implementation plan). MUST (effort signal).
 prd_ref: null # PRDs are root docs, keep null
 plan_ref: null # Set to implementation plan path when it exists
 related_documents: [] # Related docs (PRDs, plans, ADRs, specs)
@@ -30,6 +34,13 @@ milestone: null # Optional release/milestone marker
 commit_refs: [] # Commit SHAs added during implementation
 pr_refs: [] # Pull request refs (e.g., #123)
 files_affected: [] # Key files expected to change
+# --- Canonical plan-frontmatter schema (it_schema: 1) — structural fields, see plan-frontmatter-schema.md §5.4 ---
+open_questions: [] # SHOULD. List of str or {q, owner, status}. Author as a YAML list, not body prose.
+decisions: [] # SHOULD. List of {decision, rationale, status}.
+success_metrics: [] # SHOULD. Measurable outcomes (mirror the §Success Metrics body section).
+agent_title: null # SHOULD. Short delegation title if the PRD maps directly to a delegatable node.
+agent_summary: null # SHOULD. One-line summary for an agent picking up this work.
+required_artifacts: [] # SHOULD. List of {type, name, skillmeat_ref, status, lifecycle, scope, note}. See plan-frontmatter-schema.md §5.7 + references/required-artifacts-guidance.md.
 ---
 
 # Feature Brief & Metadata
