@@ -6,9 +6,9 @@ description: >-
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
   determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
   platform skill executes it.
-version: "3.3"
+version: "3.4"
 app_version: "2026-06-09"
-updated: 2026-08-04
+updated: 2026-08-11
 scope: repo
 spec: ./SPEC.md
 ---
@@ -44,13 +44,15 @@ Repo-verified surfaces only:
 | Surface | Value |
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
-| Audit writer | `appendEntry({task_id, routing_record, actual_provider_used, fallback_applied})` in `audit-log.js` |
+| Audit writer (decision) | `appendEntry({task_id, routing_record[, intended_model, fallback_applied]})` in `audit-log.js` — realized fields default to **null/unconfirmed**, never to the intent |
+| Audit writer (realization) | `appendRealization({task_id, actual_provider_used, realized_model, realization_evidence})` in `audit-log.js` — evidence required; the only path to `realization_confirmed: true` |
+| Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
 | RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
-| Audit CLI | `skillmeat routing audit [--task-type <class>] [--violations]` |
+| Audit CLI | `skillmeat routing audit [--task-type <class>] [--violations] [--unconfirmed] [--model-substitutions]` |
 
 ## Routing Posture
 
@@ -113,7 +115,7 @@ permanently null), and the flip additionally waits on DI-4f. See SPEC.md § "Emp
 
 ```javascript
 const { resolve } = require('.claude/skills/delegation-router/resolver.js');
-const { appendEntry } = require('.claude/skills/delegation-router/audit-log.js');
+const { appendEntry, appendRealization } = require('.claude/skills/delegation-router/audit-log.js');
 
 const record = resolve({
   model: 'haiku',          // model class (haiku|sonnet|opus|…)
@@ -125,23 +127,77 @@ const record = resolve({
 });
 
 // Pattern A: hand record.chosen_plugin_id / record.agent_type_id to the platform skill.
-// Pattern B (workflows): also log the decision.
+// IN-PROCESS DISPATCH MUST PASS THE MODEL. The agent definition's own `model:` pin wins
+// otherwise, silently, and the record's model never runs (see "Provider vs model" below):
+//   Agent({ subagent_type: record.agent_type_id, model: record.model, prompt })
+
+// Pattern B (workflows): log the DECISION. Note what is NOT here — `actual_provider_used`.
+// Nothing has executed yet, so there is nothing to report; omitted means UNCONFIRMED.
 appendEntry({
   task_id: 'TASK-3.2',
-  routing_record: record,
-  actual_provider_used: record.chosen_plugin_id,
+  routing_record: record,     // chosen_plugin_id + intended_model derive from this
   fallback_applied: false,
 });
+
+// …after the leg runs, log what ACTUALLY ran, with what measured it. This is the only
+// path that yields realization_confirmed: true.
+appendRealization({
+  task_id: 'TASK-3.2',
+  actual_provider_used: 'ica',
+  realized_model: 'claude-haiku-4-5[1m]',
+  realization_evidence: 'ccdash session S-abc123; agent-def pin at ica-executor.md:5',
+});
 ```
+
+⚠️ **Never write `actual_provider_used: record.chosen_plugin_id`.** That was the shipped example
+until 2026-08-11, and it is why the field could not audit anything: it made the realized hop a copy
+of the intent, so the two could never disagree. Measured across the two live logs in this estate,
+**112 of 123 entries (91%) had `actual === chosen`, and 0 of 123 carried any model at all**. The
+executor's own self-report is not a substitute either — `appendRealization` requires
+`realization_evidence` precisely because a leg reporting on itself is not a measurement
+(`node_01KZS5A4S1YEZBPVBRFXWM3RY4`, `.claude/rules/mode-d-enforcement.md`).
+
+### Routing to a provider is a no-op when the session is already that provider
+
+An **in-process** dispatch (the `Agent` tool, a workflow subagent) inherits the session's own
+`ANTHROPIC_BASE_URL`. If the session is already on ICA, then routing a leg "to ICA" changes
+nothing — its tokens were going there regardless — and if the session is on the subscription,
+an in-process `ica-executor` never reaches ICA at all. Either way **the provider dimension is
+decided by the launcher, not by the record.**
+
+What the record does still decide in-process is the **model** — and that is exactly the dimension
+that gets dropped, because the agent definition's `model:` pin wins over the record unless the
+dispatcher passes `model: record.model` explicitly. Measured 2026-08-11: a record naming
+`claude-sonnet-5[1m]` ran on `claude-haiku-4-5` (the `ica-executor` pin), and the Haiku leg shipped
+three real defects on a precision-sensitive bash gate while reporting all ACs met.
+
+So, for an in-process leg: **pass the model, and record provider and model separately.** Only a
+shelled-out `invocation_template` decides the provider itself.
 
 ## Output Guidance
 
 - Emit the full `RoutingRecord` (14 fields; the last three are additive/optional and default null);
   never a partial decision. Schema lives in `routing-record.js`.
 - Always log via `appendEntry` in workflow integration (Pattern B) so `skillmeat routing audit --violations` stays meaningful.
-- On executor fallback, record `actual_provider_used` and `fallback_applied: true` for the realized hop.
+- Log the **decision** and the **realization** as two entries. Leave the realized fields off the
+  decision entry; supply them via `appendRealization` with evidence once something has actually run.
+- On executor fallback, record `actual_provider_used` (+ `realized_model` when known) and
+  `fallback_applied: true` for the realized hop — with the evidence that established it.
+- When dispatching an executor **in-process**, pass `model: record.model` to the `Agent` tool. The
+  agent definition's `model:` pin is a fallback for when no record model is supplied, not a veto over
+  the routing decision.
 
 ## Do Not Say
+
+- Do not say a RoutingRecord's `chosen_plugin_id` determines where an **in-process** leg runs. The
+  session's `ANTHROPIC_BASE_URL` does; routing to a provider the session is already on is a no-op,
+  and routing to one it is not on does not reach that provider at all without a shelled-out
+  `invocation_template`. In-process, the record decides the **model** and nothing else.
+- Do not say an audit entry's `actual_provider_used` is evidence of where a leg ran. Unless the entry
+  carries `realization_confirmed: true` **with** `realization_evidence`, it is an intent or a
+  self-report. Every v1 entry (no `schema_version`) is unconfirmed by definition.
+- Do not say a clean `skillmeat routing audit` means the recorded models actually ran. Check
+  `--unconfirmed`; a v1-shaped log cannot detect a model substitution at all, having no model field.
 
 - Do not say the resolver scores on `cost_tier + sampling` alone — v3 is registry-aware
   (`enabled`, priority, availability, capability match via `model-registry.yaml`). The

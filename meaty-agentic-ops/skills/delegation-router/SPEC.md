@@ -212,6 +212,45 @@ A test asserts none of the retired names can reappear in executable code.
 
 ---
 
+## Audit entry schema v2 (`.claude/logs/routing-decisions.jsonl`)
+
+Two entry kinds, joined on `task_id`. The log stays append-only: a realization never mutates the
+decision it settles.
+
+| Field | Kind | Meaning |
+|---|---|---|
+| `schema_version` | both | `2`. **Absent ⇒ a v1 entry**, which normalizes to an unconfirmed decision |
+| `kind` | both | `decision` (resolve time) \| `realization` (post-execution) |
+| `chosen_plugin_id` | decision | INTENT: provider the resolver selected. Derivable from `routing_record` |
+| `intended_model` | decision | INTENT: model the resolver selected. Derivable from `routing_record.model` |
+| `actual_provider_used` | realization | Provider that ran. **`null` = unconfirmed**, never a copy of the intent |
+| `realized_model` | realization | Model that ran. `null` = unconfirmed |
+| `realization_confirmed` | both | True only when `realization_evidence` accompanies a realized value |
+| `realization_evidence` | realization | What measured it (session id, meter row, transcript path) |
+| `realization_confirmed_claimed` | both | Present when a caller claimed confirmation with no evidence |
+| `model_substituted` | both | `intended !== realized`; **`null` when unknowable** (either side missing) |
+| `fallback_applied` | both | Auto-true only when a *measured* provider differs from the intent |
+
+### Why the separation is structural rather than conventional
+
+v1 required `actual_provider_used`, and the documented Pattern B call satisfied that requirement
+with `record.chosen_plugin_id`. A required field with no way to express "not yet known" does not get
+left blank — it gets filled with the nearest value to hand, which here was the very thing it was
+supposed to audit. Measured across the two live logs in this estate on 2026-08-11: **112 of 123
+entries (91%) had `actual === chosen`, and 0 of 123 carried any model field.**
+
+The model omission is the load-bearing half. In an **in-process** dispatch the provider is fixed by
+the session's `ANTHROPIC_BASE_URL`, so routing to that provider is a no-op and the model is the only
+dimension the record actually decides — and the agent definition's `model:` pin silently overrides it
+unless the dispatcher passes `model: record.model`. A record naming `claude-sonnet-5[1m]` therefore
+ran on `claude-haiku-4-5`, and the log showed a clean entry naming a model that never executed.
+
+Readers: `findUnconfirmedEntries()` (decisions never settled by a confirmed realization — this is
+what `skillmeat routing audit --unconfirmed` surfaces) and `findModelSubstitutions()` (confirmed
+realizations whose model differs from the intent). Both treat v1 entries as unconfirmed.
+
+---
+
 ## 2. Capability Coverage
 
 | Intent | Workflow / Section | Canonical Doc |
@@ -270,6 +309,12 @@ A test asserts none of the retired names can reappear in executable code.
    `.claude/logs/routing-decisions.jsonl` is append-only; `skillmeat routing audit --violations`
    must report zero MUST-stay breaches at the feature-end gate.
    _Source_: `model-registry-router-globalization-v1.md § 4`
+
+7b. **An audit entry separates INTENT from REALIZATION, and PROVIDER from MODEL.** A realized
+   provider/model is never defaulted from the intent, and `realization_confirmed` is true only
+   when the writer supplied `realization_evidence` — an executing leg's self-report does not
+   qualify. See § "Audit entry schema v2" below.
+   _Source_: `node_01KZS5A4S1YEZBPVBRFXWM3RY4` (measured 2026-08-11)
 
 8. **Workflow integration obeys the four hard constraints.** No FS/shell in the workflow
    script's own logic, Mode-D is a workflow boundary (never an internal step), reviewers are
