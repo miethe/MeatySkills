@@ -103,6 +103,13 @@ const ADJUDICATED_FINDINGS_SCHEMA = {
   },
 }
 
+// The scorecard's own judgement of the review — its recommendation, its numeric scores, and
+// how many findings actually survived to the artifact writer — used to live ONLY in
+// scorecard.json / findings.yaml on disk. Because this schema is additionalProperties:false,
+// there was no field those facts could travel in, so a council that recommended
+// "proceed_with_conditions" at overall 45/100, having lost 5 of 8 findings, reached
+// execute-plan as a bare `approved:true` and the wave advanced. Adding the fields is what
+// makes the consuming end (assessCouncilVerdict in execute-plan.js) able to refuse it.
 const COUNCIL_VERDICT_SCHEMA = {
   type: 'object',
   required: ['approved', 'reviewer_type', 'council_artifacts', 'summary'],
@@ -111,6 +118,13 @@ const COUNCIL_VERDICT_SCHEMA = {
     approved: { type: 'boolean' },
     reviewer_type: { type: 'string', const: 'council-review' },
     required_fixes: { type: 'array', items: { type: 'string' } },
+    // Verbatim scorecard recommendation. A conditional value ('proceed_with_conditions')
+    // MUST NOT be collapsed into approved:true by the consumer.
+    recommendation: { type: 'string' },
+    // Scorecard overall (0-100) and per-lens scores (0-10), so the orchestrator can judge
+    // review depth from the envelope instead of opening scorecard.json by hand.
+    overall: { type: 'number' },
+    by_lens: { type: 'object', additionalProperties: { type: 'number' } },
     council_artifacts: {
       type: 'object',
       required: ['run_dir', 'findings_yaml', 'scorecard_json', 'risk_register_yaml', 'decision_record_md', 'validation_plan_md'],
@@ -134,6 +148,13 @@ const COUNCIL_VERDICT_SCHEMA = {
         watchlist: { type: 'number' },
         blocking_count: { type: 'number' },
         arc_validate_passed: { type: 'boolean' },
+        // Count reconciliation at the adjudication → artifact-writer seam. `total_findings`
+        // counts what the writer actually RECEIVED; when adjudication claimed more, the
+        // difference is findings that were lost in transit. Reporting only the survivors made
+        // a run that lost 5 of 8 findings indistinguishable from a clean 3-finding run — the
+        // envelope even asserted watchlist:0 for a run that had 3 watchlist findings.
+        total_findings_claimed: { type: 'number' },
+        findings_not_received: { type: 'number' },
       },
     },
   },
@@ -398,6 +419,20 @@ Return a COUNCIL_VERDICT_SCHEMA object. Set approved:true only if blocking_count
 required_fixes must list the recommendation from each accepted finding with severity >= 'high'.
 council_artifacts must contain the relative paths to all six files.
 Include arc_validate_passed in summary.
+
+REPORT YOUR OWN JUDGEMENT FAITHFULLY — the orchestrator acts on this envelope alone and will
+NOT open your artifacts to discover what you left out:
+- Set \`recommendation\` to the verbatim scorecard recommendation you wrote (e.g. "approve",
+  "proceed_with_conditions", "reject"). If it is conditional, ALSO put every condition in
+  required_fixes. A conditional recommendation with an empty required_fixes is a reporting bug:
+  downstream it becomes an unconditional pass and your conditions are silently discarded.
+- Set \`overall\` and \`by_lens\` to the scores you wrote into scorecard.json.
+- RECONCILE THE COUNTS. \`summary.total_findings\` is how many findings you ACTUALLY RECEIVED.
+  If the adjudication header claimed more than were delivered to you, set
+  \`total_findings_claimed\` to the claimed number and \`findings_not_received\` to the
+  difference. Do NOT fabricate the missing findings, and do NOT report the survivors as though
+  they were the whole population — a lost finding that goes unreported reads downstream as a
+  clean review. If nothing was lost, set findings_not_received to 0.
 Do NOT git add/commit/push/stash.`
 }
 

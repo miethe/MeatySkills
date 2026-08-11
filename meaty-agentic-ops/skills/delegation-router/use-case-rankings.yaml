@@ -41,7 +41,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-07-28
+updated: 2026-08-09   # agentic-coding grounded by execution pilot (n=3, conf 0.5) — the first entry here grounded by RUNNING the work rather than by a web-evidence sweep, so provenance.rf_run_id is deliberately null. Chain unchanged. Prior 2026-07-28: second-opinion + svg-generation re-ranked from rf web-evidence pilots (conf 0.6).
 
 composition_rule:
   form: "effective_rank(model, use_case) = blend(base_scorecard, grounded_rank, confidence, freshness_decay)"
@@ -104,7 +104,51 @@ use_cases:
   agentic-coding:
     description: "Multi-file implementation, refactoring, and bounded drafting/fix-cycle work — writing and modifying code end to end."
     source_task_classes: [implementation]
-    status: unmeasured
+    status: measured
+    confidence: 0.5
+    freshness: 2026-08-09
+    provenance:
+      rf_run_id: null   # NOT an rf run — a direct execution pilot. See method + evidence_refs.
+      method: >-
+        Direct single-lane execution pilot, not a web-evidence sweep: three real IntentTree
+        tracker nodes with pre-existing verbatim acceptance criteria were implemented end to end
+        on codex/gpt-5.6-terra (native metered CLI, --sandbox workspace-write, reasoning effort
+        medium), each behind an orchestrator-run reviewer gate that read the diff rather than the
+        self-report, re-ran the suite OUTSIDE the delegate's sandbox, ran mode-d-scan.sh with
+        MODE_D_SCAN_PROVIDER=codex, and adversarially probed the weakest claim. All three shipped.
+        NO COMPARISON ARM was run — the same legs were not executed on claude-sonnet-5 — so this
+        pass measures one model absolutely and ranks nothing head-to-head.
+      evidence_refs:
+        - agentic_meta_dev/docs/project_plans/reports/codex-terra-implementer-pilot-2026-08-09/README.md
+        - agentic_meta_dev@ff91113   # leg A — contract_lint R7 canary entry-point resolution
+        - agentic_meta_dev@495bbe3   # leg B — op story content_hash dedup at intake
+        - agentic_meta_dev@f7aa4ea   # leg C — AAR ccdash session id join
+        - node_01KZC05SRHJZZ0ETHB6GN42KES   # the pilot's own tracker (R4)
+    ranking:
+      - { model: claude-sonnet-5, rank: 1, score_hint: 8, rationale: "INCUMBENT, NOT DISPLACED — remains chain leg-1. This pass ran no head-to-head, so nothing here is evidence against it; it keeps rank 1 on its existing registry prior rather than on anything measured 2026-08-09. Do not read terra's rank 2 as 'sonnet-5 lost'." }
+      - { model: gpt-5.6-terra, rank: 2, score_hint: 7.5, rationale: "THE ONLY DIRECTLY-MEASURED ENTRY (n=3). Shipped 3/3 real legs with 1 fix cycle each and ZERO logic defects in what it wrote; strict-spec + structured-output adherence held on every dispatch (7/7 schema-valid reports). Every one of the 3 gate rejections was a PREMISE failure, never a coding failure: it implemented unvalidated declared metadata (leg A), implemented a tracker's guess without checking the guarantee already existed (leg B), and implemented an invented API payload shape that would have printed a manufactured join_rate 0.0 (leg C). Reporting honesty was high — truthful exit codes, refused to report a reading it had not taken, returned status:blocked under tool-loss rather than fabricating — but AC self-assessment was OPTIMISTIC (2 of 3 legs marked an AC met when it was not, though the supplied evidence text was specific enough to expose the gap). Rank 2 not 1 because there is no head-to-head, not because it underperformed." }
+      - { model: gpt-5.6-sol, rank: 3, score_hint: 7.3, rationale: "INFERENCE, not measured here — escalation tier above terra per standing org doctrine (two-failure rule). No implementation leg was run on Sol this pass. Reserve for a terra stall, not as a default implementer." }
+      - { model: claude-sonnet-4-6, rank: 4, score_hint: 6.5, rationale: "INFERENCE from registry prior only — previous-gen Sonnet, superseded as the ICA offload default. Not measured this pass." }
+      - { model: gpt-5.6-luna, rank: 5, score_hint: 6, rationale: "INFERENCE, not measured here. Cheapest GPT-line tier; the premise-verification weakness measured on terra is unlikely to improve at a lower tier, and this use case is where that weakness costs the most. Prefer for mechanical edits, not contract-clear implementation, until measured." }
+      - { model: gpt-5.6-terra-dzus, rank: 6, score_hint: 5.5, rationale: "NOT MEASURED, and deliberately not promoted despite being the free-to-us lane for the same weights. Its documented caveat is that reasoning_effort is DROPPED on tool turns, and an implementation leg is all tool turns — so the free lane is precisely where this model's reasoning is least available. Measure before treating it as a cost-free substitute for the metered lane." }
+      - { model: claude-haiku-4-5, rank: 14, score_hint: 3.5, rationale: "NOTABLE EXCLUSION — capability floor is below contract-clear implementation; keep on exploration/mechanical/classification where it already ranks." }
+    chain_applied: ["claude/claude-sonnet-5"]
+    chain_recommendation: >-
+      UNCHANGED default chain. Promote codex/gpt-5.6-terra to an EXPLICITLY-SELECTABLE implementer
+      lane for contract-clear, strict-spec, offload-eligible legs behind a premise-checking
+      reviewer gate — do NOT insert it into the auto implementation chain on n=3. Explicit
+      selection already resolves and needs no registry chain edit (verified 2026-08-09:
+      resolve({provider:'codex', model:'gpt-5.6-terra', task_class:'implementation'}) →
+      agent_type_id 'codex-executor', fallback claude/claude-sonnet-5).
+    caveats:
+      - "DISPATCH EFFORT IS LOAD-BEARING AND NON-OBVIOUS. resolver.js `sandboxModeFor()` maps effort→sandbox for codex: xhigh→danger-full-access, high|extended→workspace-write, everything else→read-only. So an implementer leg dispatched at the default 'standard' effort resolves `--sandbox read-only` and CANNOT WRITE A FILE — it fails by producing nothing, which reads like a capability miss. Dispatch implementer legs at effort `high` (workspace-write); `xhigh` buys reasoning at the price of no sandbox at all."
+      - "THE LANE VALIDATED IS NOT THE LANE THE RESOLVER PRODUCES BY DEFAULT. The pilot invoked codex directly with `--sandbox workspace-write` at reasoning effort `medium`. Dispatching via the resolver at effort `high` yields the same sandbox but MORE reasoning than was measured, so the measurement is a conservative floor for that path — and materially different from a `standard`-effort dispatch, which is read-only."
+      - "n=3, ONE operator, ONE session, ONE repository (agentic_meta_dev), ONE reviewer. All three legs were Python/bash in a repo with an existing strong test suite and CLAUDE.md conventions. This says nothing about a large TypeScript/React surface, a repo with weak tests, or a leg with ambiguous acceptance criteria — and the whole finding is that AMBIGUOUS PREMISES are this model's failure mode, so a weakly-specified repo is exactly where the measurement does not transfer."
+      - "GATE COST IS NOT IN THE COST FIGURE. Total model spend was $2.3885 for 3 features + 3 fix cycles (93.4% input-cache hit rate; 8,070,400 of 8,638,864 input tokens cached). The orchestrator's review time — 3 diff reads, 4 unsandboxed suite runs, 3 fix briefs, 1 adversarial probe — is the larger real cost and is unmeasured. A fix cycle is cheap here BECAUSE the gate is not."
+      - "COST IS TRACKED OUT-OF-BAND BY NECESSITY. CCDash records Codex sessions at observedTokens=0/totalCost=0, so the figures above were recovered from each leg's `codex exec --json` event stream (collect-usage.py in the pilot dir). Any spend claim about this lane that cites CCDash is reading a zero, not a measurement."
+      - "THE DELEGATE'S SANDBOX MANUFACTURES FALSE TEST FAILURES in this repo, and it inflated the apparent failure rate twice: a probe self-test needing a loopback bind, and a test asserting the substring 'model' is absent from a run record, which fails because a sandbox-denied sqlite write persists a SQLAlchemy error naming the column `embedding_model_id`. Both pass unsandboxed. A gate that reads a codex leg's reported test results WITHOUT re-running them unsandboxed will systematically under-rate this lane."
+      - "GATE RULE, from the two optimistic AC self-assessments: read the supplied evidence text against the AC's wording; never accept the `met` boolean. In both misses the evidence field was factually honest while the boolean was wrong — leg A's evidence said the lint 'requires it match the repo path', which is exactly what it did and exactly not what the AC asked for."
+      - "MUST-STAY-PRIMARY IS UNTOUCHED by this entry and was never in question: orchestration, verdict, mode_d, council_review, synthesis, schema_recovery, cross_wave_merge resolve to claude unconditionally, prior to and independent of anything in this file."
 
   web-grounded-research:
     description: "Search-grounded lookups and large-context web research that pull in current external information."
