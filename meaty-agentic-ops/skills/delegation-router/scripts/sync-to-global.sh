@@ -67,7 +67,9 @@ SKILL_FILES=(
   resolver.js
   routing-record.js
   audit-log.js
+  routing-feedback.js
   resolve-cli.js
+  log-cli.js
   task-class-vocabulary.js
   task-class-vocabulary.v1.json
   routing-feedback-contract.v1.json

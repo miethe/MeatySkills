@@ -210,6 +210,40 @@ A test asserts none of the retired names can reappear in executable code.
   (populate `success_rate`), **or** a written decision accepting a cost-only merge that states why a
   dead 0.5-weighted failure term is acceptable.
 
+### Single-entry classes are feedback-immune by construction
+
+`implementation`, `orchestration`, `mode_d`, and `video_generation` currently each have a one-entry
+`routing_policy` chain, so empirical feedback can never actuate on any of them. `mode_d` and
+`orchestration` immunity is correct: both are `must_stay_primary`. `video_generation` is immune only
+incidentally — it has exactly one provider (`sora/sora-2`), so there is nothing to demote to; it
+needs no decision until a second video provider is registered.
+
+For `implementation`, **do NOT add a chain peer yet, and do NOT weaken the floor; fix the MAPPING
+instead.** Its signal comes entirely from skill `dev-execution`, a dual-role skill loaded by the
+orchestrator (`/dev:execute-phase`, `/dev:execute-plan`) and by the implementer legs it dispatches.
+
+Live CCDash session data shows parenting subagents is Opus-exclusive: Opus 4.8 (1,804
+`dev-execution` sessions) parents 127, Opus 5 (159) parents 37, and Fable 5 parents 14; Sonnet 5
+(820) and Haiku (141) parent zero, while 569 of Sonnet's 820 sessions are themselves subagent
+children. By dollar, 164 orchestrator-role Opus `dev-execution` sessions (8.4%) account for 62.4%
+of all Opus `dev-execution` cost (average $178/session versus $9–13 for the other roles).
+
+Therefore the `cost_index` that would demote Opus off `implementation` is majority MUST-stay
+ORCHESTRATION spend mis-attributed into a demotable class. The mapping is keyed on `skill_name`
+alone and structurally cannot see the role distinction. The last-candidate floor has been masking a
+mapping defect; adding a peer first would convert that latent defect into a live mis-demotion.
+
+The mapping is owned by
+`agentic_meta_dev/docs/agentic-operator/contracts/routing-feedback-task-map.v1.json` (rule:
+`dev-execution -> implementation`) and is digest-pinned. Changing it is a separate cross-repo
+change with digest lockstep, deliberately not done here.
+
+`mergeFeedback()` optionally accepts `chains` and `must_stay` to label its decision report and
+override classes with the same immunity classification. This is opt-in and defaults to today's
+unannotated output; no caller is wired yet, so the production state file remains unannotated.
+This is a labelling surface, not a suppression surface: inert demotions remain recorded and are
+explicitly marked inert for consumers that receive the topology.
+
 ---
 
 ## 2. Capability Coverage

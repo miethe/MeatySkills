@@ -381,6 +381,9 @@ function expiryFor(row, nowMs, ttlWindows) {
  * @param {Object} [args.priorState] previously persisted state (for hysteresis + TTL refresh)
  * @param {number} [args.now]        epoch ms (injectable; defaults to Date.now())
  * @param {Object} [args.opts]       theta / theta_restore / ttl_windows / min_cost_coverage / env / contract
+ * @param {Object<string, string[]>} [args.opts.chains]  opt-in task_class → routing_policy chain
+ *   topology for decision-report immunity annotations. Absent means byte-for-byte legacy reports.
+ * @param {Set<string>|string[]} [args.opts.must_stay]  opt-in MUST-stay classes for those annotations
  * @returns {{state: Object, decisions: Object[], applied: boolean, gate_reason: string}}
  */
 function mergeFeedback(args) {
@@ -388,6 +391,18 @@ function mergeFeedback(args) {
   const opts = args.opts || {};
   const nowMs = isFiniteNumber(args.now) ? args.now : Date.now();
   const ttlWindows = isFiniteNumber(opts.ttl_windows) ? opts.ttl_windows : ACTUATION_PARAMS.ttl_windows;
+  // This report annotation is strictly opt-in: callers that do not pass topology retain the exact
+  // decision and state-file shapes they had before DI-1 immunity reporting was introduced.
+  const reportImmunity = opts.chains !== undefined;
+  const chains = opts.chains && typeof opts.chains === 'object' ? opts.chains : {};
+  const mustStay = opts.must_stay instanceof Set
+    ? opts.must_stay
+    : new Set(Array.isArray(opts.must_stay) ? opts.must_stay : []);
+  const immunityFor = (taskClass) => classifyImmunity({
+    taskClass,
+    chain: chains[taskClass],
+    isMustStay: mustStay.has(taskClass),
+  });
 
   const prior = normalizeState(args.priorState);
   const priorDemoted = new Set();
@@ -404,12 +419,17 @@ function mergeFeedback(args) {
       ...opts,
       wasDemoted: priorDemoted.has(`${row.task_class}::${entry}`),
     });
-    decisions.push({ ...decision, entry });
+    const reportedDecision = { ...decision, entry };
+    if (reportImmunity) reportedDecision.immunity = immunityFor(decision.task_class);
+    decisions.push(reportedDecision);
 
     if (decision.action !== 'demote' && decision.action !== 'hold') continue;
 
     const taskClass = decision.task_class;
-    if (!overrides[taskClass]) overrides[taskClass] = { demotions: [] };
+    if (!overrides[taskClass]) {
+      overrides[taskClass] = { demotions: [] };
+      if (reportImmunity) overrides[taskClass].immunity = immunityFor(taskClass);
+    }
     overrides[taskClass].demotions.push({
       entry,
       combined_signal: decision.combined_signal,
@@ -607,6 +627,66 @@ function demoteChain(chain, demoted, keyFn) {
 }
 
 /**
+ * Classify structural immunity before feedback is allowed to consider a chain reorder.
+ *
+ * A MUST-stay classification always wins: its protection is intentional policy, whereas a
+ * single-entry chain is an immutable consequence of there being no candidate to swap with.
+ *
+ * @param {Object} args
+ * @param {string} args.taskClass
+ * @param {string[]} args.chain
+ * @param {boolean} args.isMustStay
+ * @returns {{immune: boolean, kind: 'must_stay'|'single_entry_chain'|null, permanent: boolean, detail: string}}
+ */
+function classifyImmunity({ taskClass, chain, isMustStay }) {
+  if (isMustStay) {
+    return {
+      immune: true,
+      kind: 'must_stay',
+      permanent: true,
+      detail: `${taskClass} is MUST-stay primary and cannot be changed by empirical feedback.`,
+    };
+  }
+  if (!Array.isArray(chain) || chain.length <= 1) {
+    return {
+      immune: true,
+      kind: 'single_entry_chain',
+      permanent: true,
+      detail: 'This single-entry chain is immune by construction: no peer exists to receive a demotion.',
+    };
+  }
+  return { immune: false, kind: null, permanent: false, detail: '' };
+}
+
+/**
+ * Filter state-file demotions against the current chain and human entry overrides.
+ *
+ * Kept in one place so suppressed single-entry signals and live multi-entry actuation use exactly
+ * the same eligibility rules.
+ *
+ * @param {Object[]} demotions
+ * @param {string[]} chain
+ * @param {Set<string>} humanEntries
+ * @returns {{eligible: Map<string, Object>, skipped: Array<{entry: string, reason: string}>}}
+ */
+function eligibleDemotions(demotions, chain, humanEntries) {
+  const skipped = [];
+  const eligible = new Map();
+  for (const d of demotions) {
+    if (humanEntries.has(d.entry)) {
+      skipped.push({ entry: d.entry, reason: 'human_override_precedence' });
+      continue;
+    }
+    if (!chain.includes(d.entry)) {
+      skipped.push({ entry: d.entry, reason: 'entry_not_in_chain' });
+      continue;
+    }
+    eligible.set(d.entry, d);
+  }
+  return { eligible, skipped };
+}
+
+/**
  * Apply feedback to one task_class's routing_policy chain. This is the new resolver stage — a pure
  * function inserted before the position-based chain walk, leaving the three-stage structure intact.
  *
@@ -622,17 +702,25 @@ function demoteChain(chain, demoted, keyFn) {
  * @param {Object} [args.registry]  injectable model registry for entry-key.js canonicalization
  *   (DI-1 §1); defaults to entry-key.js's own file-loaded registry when omitted. Tests should
  *   always inject this so the join stays offline/deterministic.
- * @returns {{chain: string[], applied: boolean, reason: string, displacements: Array, skipped: Array}}
+ * @returns {{chain: string[], applied: boolean, reason: string, displacements: Array, skipped: Array, immunity: Object, suppressed_demotions: Array}}
  */
 function applyChainFeedback(args) {
   const chain = Array.isArray(args.chain) ? args.chain : [];
-  const noop = (reason) => ({ chain, applied: false, reason, displacements: [], skipped: [] });
-
-  if (args.isMustStay) return noop('must_stay_immune');
-  if (chain.length <= 1) return noop('last_candidate_floor');
-
   const overrides = args.feedbackOverrides || {};
   const human = args.humanTargets || { classes: new Set(), entries: new Set() };
+  const immunity = classifyImmunity({ taskClass: args.taskClass, chain, isMustStay: args.isMustStay });
+  const noop = (reason, extra = {}) => ({
+    chain,
+    applied: false,
+    reason,
+    displacements: [],
+    skipped: [],
+    immunity,
+    suppressed_demotions: [],
+    ...extra,
+  });
+
+  if (immunity.kind === 'must_stay') return noop('must_stay_immune');
   if (human.classes.has(args.taskClass)) return noop('human_override_precedence');
 
   const cls = overrides[args.taskClass]
@@ -664,7 +752,7 @@ function applyChainFeedback(args) {
   const keyCounts = new Map();
   for (const k of chainKeys) keyCounts.set(k, (keyCounts.get(k) || 0) + 1);
   if ([...keyCounts.values()].some(count => count > 1)) {
-    return { chain, applied: false, reason: 'ambiguous_chain', displacements: [], skipped: [] };
+    return { chain, applied: false, reason: 'ambiguous_chain', displacements: [], skipped: [], immunity, suppressed_demotions: [] };
   }
 
   const chainCanonicalKeys = new Set(chainKeys);
@@ -693,13 +781,27 @@ function applyChainFeedback(args) {
     }
     demotionByCanonicalKey.set(canon.key, d);
   }
+  // §2.4.5.1 immunity is reported BEFORE the empty-set early return so a single-entry
+  // chain distinguishes 'nothing was eligible' from 'something was eligible and is
+  // permanently suppressed'. The demotion is preserved in suppressed_demotions, never
+  // silently dropped.
+  if (immunity.kind === 'single_entry_chain') {
+    return noop('single_entry_chain', {
+      skipped,
+      suppressed_demotions: Array.from(demotionByCanonicalKey.values()).map(d => ({
+        entry: d.entry,
+        combined_signal: d.combined_signal ?? null,
+        reason: 'single_entry_chain',
+      })),
+    });
+  }
   if (demotionByCanonicalKey.size === 0) {
-    return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped };
+    return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped, immunity, suppressed_demotions: [] };
   }
 
   const { chain: reordered, displacements } = demoteChain(chain, new Set(demotionByCanonicalKey.keys()), keyFn);
   if (displacements.length === 0) {
-    return { chain, applied: false, reason: 'no_displacement_possible', displacements: [], skipped };
+    return { chain, applied: false, reason: 'no_displacement_possible', displacements: [], skipped, immunity, suppressed_demotions: [] };
   }
 
   return {
@@ -716,6 +818,8 @@ function applyChainFeedback(args) {
       };
     }),
     skipped,
+    immunity,
+    suppressed_demotions: [],
   };
 }
 
@@ -732,7 +836,7 @@ function applyChainFeedback(args) {
  *
  * @param {Object[]} ranked  candidates already sorted by the stage-3 comparator
  * @param {Object} args      same shape as applyChainFeedback (minus chain)
- * @returns {{ranked: Object[], applied: boolean, reason: string, displacements: Array, skipped: Array}}
+ * @returns {{ranked: Object[], applied: boolean, reason: string, displacements: Array, skipped: Array, immunity: Object, suppressed_demotions: Array}}
  */
 function applyRankedFeedback(ranked, args) {
   const list = Array.isArray(ranked) ? ranked : [];
@@ -746,7 +850,15 @@ function applyRankedFeedback(ranked, args) {
   };
   const result = applyChainFeedback({ ...args, chain: list.map(keyOf) });
   if (!result.applied) {
-    return { ranked: list, applied: false, reason: result.reason, displacements: [], skipped: result.skipped };
+    return {
+      ranked: list,
+      applied: false,
+      reason: result.reason,
+      displacements: [],
+      skipped: result.skipped,
+      immunity: result.immunity,
+      suppressed_demotions: result.suppressed_demotions,
+    };
   }
   const byKey = new Map(list.map(c => [keyOf(c), c]));
   return {
@@ -755,6 +867,8 @@ function applyRankedFeedback(ranked, args) {
     reason: 'priority_nudge',
     displacements: result.displacements,
     skipped: result.skipped,
+    immunity: result.immunity,
+    suppressed_demotions: result.suppressed_demotions,
   };
 }
 
@@ -801,6 +915,7 @@ module.exports = {
   writeFeedbackState,
   humanOverriddenTargets,
   demoteChain,
+  classifyImmunity,
   applyChainFeedback,
   applyRankedFeedback,
   buildFeedbackProvenance,
