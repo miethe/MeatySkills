@@ -60,6 +60,7 @@ const {
   writeFeedbackState,
   humanOverriddenTargets,
   demoteChain,
+  classifyImmunity,
   applyChainFeedback,
   applyRankedFeedback,
   buildFeedbackProvenance,
@@ -327,6 +328,12 @@ describe('C. §2.4.5.3 actuation — demotion-only, max 1 position, nothing remo
     assert.equal(out.displacements.length, 0);
   });
 
+  test('last-candidate floor remains a hard no-op for a generic single entry', () => {
+    const out = demoteChain(['x'], ['x']);
+    assert.deepEqual(out.chain, ['x']);
+    assert.equal(out.displacements.length, 0);
+  });
+
   test('a demoted entry is never swapped past another demoted entry (no peer promotion)', () => {
     const out = demoteChain(['a', 'b', 'c'], ['a', 'b']);
     // `a` stays put: its only move would promote `b`, an equally-demoted peer, which has no
@@ -366,6 +373,88 @@ describe('D. §2.4.5.1 structural precedence + MUST-stay immunity', () => {
     assert.equal(out.applied, false);
     assert.equal(out.reason, 'must_stay_immune');
     assert.deepEqual(out.chain, ['claude/claude-opus-5', 'claude/claude-sonnet-5']);
+  });
+
+  test('a single-entry chain reports eligible feedback as permanently suppressed', () => {
+    const chain = ['claude/claude-sonnet-5'];
+    const out = applyChainFeedback({
+      taskClass: 'implementation',
+      chain,
+      feedbackOverrides: { implementation: { demotions: [{ entry: chain[0], combined_signal: 0.45 }] } },
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.immune, true);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.chain, chain);
+    assert.deepEqual(out.suppressed_demotions, [{
+      entry: 'claude/claude-sonnet-5', combined_signal: 0.45, reason: 'single_entry_chain',
+    }]);
+  });
+
+  test('a single-entry chain distinguishes absent feedback from suppressed feedback', () => {
+    const out = applyChainFeedback({ taskClass: 'implementation', chain: ['claude/claude-sonnet-5'] });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a human-pinned single-entry class reports human precedence, not chain immunity, as the reason', () => {
+    const out = applyChainFeedback({
+      taskClass: 'implementation',
+      chain: ['claude/claude-sonnet-5'],
+      feedbackOverrides: { implementation: { demotions: [{ entry: 'claude/claude-sonnet-5', combined_signal: 0.45 }] } },
+      humanTargets: humanOverriddenTargets({ routing_policy_overrides: { implementation: {} } }),
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.reason, 'human_override_precedence');
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a MUST-stay single-entry chain reports MUST-stay immunity first', () => {
+    const out = applyChainFeedback({
+      taskClass: 'mode_d',
+      chain: ['claude/claude-opus-5'],
+      feedbackOverrides: { mode_d: { demotions: [{ entry: 'claude/claude-opus-5', combined_signal: 0.45 }] } },
+      isMustStay: true,
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.kind, 'must_stay');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a multi-entry chain remains eligible to actuate with no immunity', () => {
+    const out = applyChainFeedback({
+      taskClass: 'exploration',
+      chain: ['ica/claude-haiku-4-5', 'claude/claude-haiku-4-5'],
+      feedbackOverrides: overridesFor('ica/claude-haiku-4-5'),
+    });
+    assert.equal(out.applied, true);
+    assert.deepEqual(out.chain, ['claude/claude-haiku-4-5', 'ica/claude-haiku-4-5']);
+    assert.deepEqual(out.immunity, { immune: false, kind: null, permanent: false, detail: '' });
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('the pure classifier gives MUST-stay precedence over a single-entry chain', () => {
+    const out = classifyImmunity({ taskClass: 'mode_d', chain: ['claude/claude-opus-5'], isMustStay: true });
+    assert.equal(out.kind, 'must_stay');
+  });
+
+  test('ranked feedback preserves immunity and suppressed demotions unchanged', () => {
+    const ranked = [{ providerId: 'claude', modelId: 'claude-sonnet-5' }];
+    const out = applyRankedFeedback(ranked, {
+      taskClass: 'implementation',
+      feedbackOverrides: { implementation: { demotions: [{ entry: 'claude/claude-sonnet-5', combined_signal: 0.45 }] } },
+    });
+    assert.equal(out.applied, false);
+    assert.deepEqual(out.ranked, ranked);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.deepEqual(out.suppressed_demotions, [{
+      entry: 'claude/claude-sonnet-5', combined_signal: 0.45, reason: 'single_entry_chain',
+    }]);
   });
 
   test('human routing_policy_overrides for a class blocks ALL machine feedback on it', () => {
@@ -545,6 +634,105 @@ describe('E. §2.4.6 discrete guardrails', () => {
     assert.equal(merged.applied, false);
     assert.equal(merged.gate_reason, 'live_consumption_disabled');
     assert.ok(merged.state.overrides.implementation, 'state is still computed for inspection');
+  });
+
+  test('mergeFeedback without chains preserves the legacy decision and override shapes exactly', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: { contract: enabledContract, env: ENABLED_ENV },
+    });
+    assert.deepEqual(merged.decisions, [{
+      task_class: 'implementation',
+      model: 'claude-sonnet-5',
+      provider: 'claude',
+      source_skill_name: 'dev-execution',
+      combined_signal: 0.6,
+      evidence: {
+        success_rate: null,
+        cost_index: 3.0,
+        cost_coverage_fraction: 1.0,
+        regression_rate: null,
+        sample_count: 50,
+        confidence: 0.9,
+        terms: { failure: 0, cost: 2, regression: 0 },
+        terms_live: ['cost'],
+        window_start: '2026-07-27T00:00:00Z',
+        window_end: '2026-08-03T00:00:00Z',
+      },
+      action: 'demote',
+      reason: 'combined_signal 0.6000 >= theta 0.15',
+      entry: 'claude/claude-sonnet-5',
+    }]);
+    assert.deepEqual(merged.state.overrides, {
+      implementation: {
+        demotions: [{
+          entry: 'claude/claude-sonnet-5',
+          combined_signal: 0.6,
+          evidence: merged.decisions[0].evidence,
+          action: 'demote',
+          confirmed_at: '2026-08-03T00:00:00.000Z',
+          expires_at: '2026-08-10T00:00:00.000Z',
+          source: FEEDBACK_SOURCE,
+        }],
+      },
+    });
+    assert.ok(!('immunity' in merged.decisions[0]));
+    assert.ok(!('immunity' in merged.state.overrides.implementation));
+  });
+
+  test('mergeFeedback labels a single-entry decision report as inert without dropping its demotion', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { implementation: ['claude/claude-sonnet-5'] },
+      },
+    });
+    const expected = {
+      immune: true,
+      kind: 'single_entry_chain',
+      permanent: true,
+      detail: 'This single-entry chain is immune by construction: no peer exists to receive a demotion.',
+    };
+    assert.deepEqual(merged.decisions[0].immunity, expected);
+    assert.deepEqual(merged.state.overrides.implementation.immunity, expected);
+    assert.equal(merged.decisions[0].action, 'demote');
+    assert.equal(merged.state.overrides.implementation.demotions.length, 1);
+    assert.equal(merged.state.overrides.implementation.demotions[0].entry, 'claude/claude-sonnet-5');
+  });
+
+  test('mergeFeedback labels a multi-entry decision report as not immune', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(),
+      rows: [row({
+        source_skill_name: 'firecrawl', task_class: 'web_research',
+        model: 'claude-haiku-4-5', provider: 'ica', cost_index: 3.0,
+      })],
+      now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { web_research: ['ica/claude-haiku-4-5', 'claude/claude-haiku-4-5'] },
+      },
+    });
+    const expected = { immune: false, kind: null, permanent: false, detail: '' };
+    assert.deepEqual(merged.decisions[0].immunity, expected);
+    assert.deepEqual(merged.state.overrides.web_research.immunity, expected);
+  });
+
+  test('mergeFeedback honours optional must_stay when labelling a decision report', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { implementation: ['claude/claude-sonnet-5'] },
+        must_stay: new Set(['implementation']),
+      },
+    });
+    assert.equal(merged.decisions[0].immunity.kind, 'must_stay');
+    assert.equal(merged.state.overrides.implementation.immunity.kind, 'must_stay');
   });
 
   test('a missing / malformed / future-schema state file degrades to no overrides, never throws', () => {
