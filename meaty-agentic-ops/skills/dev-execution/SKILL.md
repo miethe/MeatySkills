@@ -1,11 +1,21 @@
 ---
 name: dev-execution
-description: "Unified execution engine for all development workflows. Progressive disclosure for phase execution, quick features, story completion, and scaffolding. Integrates with artifact-tracking and meatycapture-capture. Use when running /dev:execute-phase, /dev:quick-feature, /dev:implement-story, /dev:complete-user-story, or /dev:create-feature commands."
+description: "Unified execution engine for all development workflows. Progressive disclosure for phase execution, quick features, story completion, scaffolding, and plan optimization (risk-classed reviewer-gate selection at the plan/execute boundary). Integrates with artifact-tracking and meatycapture-capture. Use when running /dev:execute-phase, /dev:quick-feature, /dev:implement-story, /dev:complete-user-story, or /dev:create-feature commands."
+version: 1.6
+app_version: "2026-08-10"
+updated: 2026-08-10
 ---
 
 # Dev Execution Skill
 
 Unified guidance for executing development workflows with token-efficient progressive disclosure.
+
+> **Execution doctrine (Claude-5 generation)**: gate budgets, delta-context dispatch,
+> continue-vs-redispatch, the context tripwire, **dispatch-time leg contracts + leg scoping**, and
+> implementation-notes-over-halt are governed by
+> [`references/execution-doctrine.md`](./references/execution-doctrine.md) — cited throughout this
+> file, not restated. Applies to runs of new doctrine plans; in-flight plans finish under their own
+> rules.
 
 ## Quick Start
 
@@ -18,6 +28,38 @@ Unified guidance for executing development workflows with token-efficient progre
 | Story | User story with existing plan | `/dev:implement-story` |
 | Full Story | Complete story end-to-end | `/dev:complete-user-story` |
 | Scaffold | New feature structure | `/dev:create-feature` |
+
+## Git Workflow (worktree → PR → squash-merge)
+
+**All orchestrated execution runs in a git worktree, commits per phase, opens a PR to the parent
+branch, and squash-merges on approval (or an in-prompt override).** This is the standard for every
+mode below — not opt-in. Canonical spec: [`./git-worktree-pr-protocol.md`](./git-worktree-pr-protocol.md).
+
+- Set up `.claude/worktrees/<slug>` at run start; record the **parent branch** (where HEAD was) as
+  the PR base and squash-merge target. Don't just `git checkout -b` in place.
+- Commit per phase / logical unit. **Single committer** = the orchestrator/phase-owner; offloaded
+  executors and nested helpers never touch git.
+- Open the PR to the **parent branch** (usually `main`, but the feature branch for stacked work).
+- **Squash-merge is approval-gated** — open the PR and stop, unless the originating prompt overrode it
+  ("auto-merge", "merge when done", "land it", …). Then merge and delete as **two steps** —
+  `gh pr merge --squash`, confirm `MERGED` via `gh pr view --json state,mergeCommit`, then
+  `git push origin --delete "$BRANCH"` — and record `merge_commit`/`merge_branch`. Never
+  `--delete-branch`: it aborts before the delete when the parent is checked out in the primary
+  checkout, orphaning the remote branch and printing a `fatal:` that reads like a failed merge
+  ([`git-worktree-pr-protocol.md`](git-worktree-pr-protocol.md) §6).
+
+## Model Routing
+
+Model × provider × effort is governed by [`MODEL-ROUTING.md`](../../../docs/agentic-operator/MODEL-ROUTING.md).
+For execution: **Opus 5** (`claude-opus-5`) = spine/architecture/adjudication (flagship as of 2026-07-24; Opus 4.8 now legacy); **Sonnet 5** (`claude-sonnet-5`) =
+default subscription implementation tier (`xhigh` effort for the hardest coding/agentic work);
+**Haiku 4.5** = mechanical/classify. **Offload by default when feasible** — bounded, contract-clear
+waves go to **ICA Sonnet 5** (`claude-sonnet-5[1m]`, free-to-us shared pool — ICA now serves Sonnet 5
+since 2026-07-08; 4.6 = older fallback) behind the reviewer gate, or to **Codex `gpt-5.6-terra`** (or
+`gpt-5.6-sol` for the hardest, `gpt-5.6-luna` for cheap) for AC-validation/review — but **never** offload
+MUST-stay-primary / Mode-D / Claude-Code-native-orchestration work. Set per-phase `model`/`effort` in
+`wave_plan.phases[]`; the subscription-side default when unset is Sonnet 5. Model IDs use the
+registry short form (`opus-5`, `sonnet-5`, `fable-5`).
 
 ## Execution Model Routing
 
@@ -43,7 +85,7 @@ The execution model for full Tier 2/3 plans is **workflow** (`.claude/workflows/
 
 The `adaptive` path's `phase-owner` agentType MAY nest its own implementers via the `Agent` tool,
 gated by the opt-in, default-OFF `phase_owner_nesting_enabled` args flag on the `execute-plan`
-workflow. This is a pilot capability (strategy plan §4 Tier B); it is not auto-promoted.
+workflow. This is a pilot capability; it is not auto-promoted.
 
 **Nesting is for decomposition, not throughput.** A single nested `Agent` call blocks until the
 child returns; batched nested spawns get ungoverned concurrency (no `parallel()` cap+queue). Keep
@@ -55,11 +97,11 @@ slice.
 
 | Rule | Summary |
 |---|---|
-| Depth cap | Max 1 level of nesting below the phase-owner (i.e. phase-owner → helper; no deeper). |
+| Depth cap | Max 1 level of nesting below the phase-owner (phase-owner → helper; no deeper). |
 | Bounded helpers | Nested helpers must be bounded — < ~40 tool uses per level. |
-| Single committer | The phase-owner is the **only** committer. Children never `git add/commit/push/stash`. |
+| Single committer | Nested children never commit. Batch task agents within a phase MAY commit their own assigned files by explicit pathspec (no `git add -A` / `git add .`) and may never rewrite history (no `git reset`, `rebase`, `commit --amend`, `push --force`). The orchestrator/phase-owner orchestrates all commits. |
 | Mode-D at depth | Nested agents are prohibited from auth/payments/migrations/deletion/force-push/secret-rotation. On hitting Mode-D territory: STOP and bubble `{needs_opus, mode_d}` up the chain unchanged until Opus handles it interactively. |
-| Claude-primary only | Nesting runs on the primary subscription only. Router-offloaded executors (`codex-executor`, `gemini-executor`) never nest. |
+| Claude-primary only | Nesting runs on the primary subscription only. Router-offloaded executors (`ica-executor`, `codex-executor`, `gemini-executor`) never nest. |
 
 **Durability caveat.** The workflow caches the phase-owner's FINAL result only. A mid-nest blow-up
 re-runs the entire phase — there is no partial-subtree resume. Keep nests shallow.
@@ -78,6 +120,7 @@ Load only the mode-specific content you need:
 | [Quick Execution](./modes/quick-execution.md) | Simple single-session features (~1-3 files) |
 | [Story Execution](./modes/story-execution.md) | User story implementation with plan |
 | [Scaffold Execution](./modes/scaffold-execution.md) | New feature structure creation |
+| [Plan Optimization](./modes/plan-optimization.md) | **Pre-dispatch** pass at the plan/execute boundary — risk-classes each phase and emits a per-phase reviewer-gate plan (`gate_lens`/`gate_shared_with`), duplicate-lens report, defect checklist, pre-gate sweep, and cost/inversion projection before the first implementer runs |
 
 ## Tier 1 Autonomous Sprint
 
@@ -87,7 +130,7 @@ Use this mode when a Feature Contract has been approved for a Tier 1 feature (3�
 
 ### When to Use
 
-- A Feature Contract (`doc_type: feature_contract`) exists at `docs/project_plans/feature_contracts/[category]/[slug].md`.
+- A Feature Contract (`doc_type: feature_contract`) exists at `docs/project_plans/feature_contracts/[slug].md`.
 - Contract status is `approved`.
 - Estimated points are in the 3–8 range.
 - Feature does not touch auth, payments, production migrations, or multi-tenant data boundaries (those require Mode D; escalate to Opus).
@@ -111,7 +154,7 @@ Do NOT use for Tier 0 (use `/dev:quick-feature`) or Tier 2/3 (use Phase Executio
 ```
 1. Opus delegates the full contract to feature-sprint-executor
    Task("feature-sprint-executor", "Mode C: Autonomous Feature Sprint.
-        Contract: docs/project_plans/feature_contracts/[category]/[slug].md
+        Contract: docs/project_plans/feature_contracts/[slug].md
         Budget: ~50K tokens
         Context paths: [relevant files]")
 
@@ -122,21 +165,32 @@ Do NOT use for Tier 0 (use `/dev:quick-feature`) or Tier 2/3 (use Phase Executio
    Task("task-completion-validator", "Mode E: Reviewer.
         Review sprint output against Feature Contract AC.
         Contract: [path]  Diff: [branch or commit range]
-        Completion Report: [path or 'appended to contract'")
+        Completion Report: appended to contract")
 
 4. If reviewer approves → Opus commits and closes contract.
-   If reviewer finds issues → feature-sprint-executor fixes (preserves session context).
-   If 2+ fix cycles fail → escalate to Opus for intervention (OQ-5).
+   If reviewer finds issues → feature-sprint-executor fixes in the SAME session (continue, don't
+   re-dispatch — cache-warm, context-live). Gate budget: max 2 re-passes on this scope x lens; the
+   3rd failure auto-escalates to re-scope/redesign, not to "Opus looks at it" (execution-doctrine.md
+   rule 1). Re-passes count per scope x lens, not per dispatch — re-spawning the executor does not
+   reset the budget. The reviewer pass itself stays fresh-context per re-pass (rule 3) — it is the
+   executor's session that continues, never the verifier's.
 ```
 
 ### Exit Criteria
+
+> **This Completion Report is a different artifact from the retired plan-level one.** Tier 2/3
+> execution's plan-level Completion Report (`.claude/worknotes/<slug>/completion-report.md`) is
+> **retired** — the reviewer verdict + `commit_refs` is the record (execution-doctrine.md, Bookkeeping
+> demotions). The Tier 1 sprint's **contract-appended** Completion Report below **survives**: Tier 1
+> has no wave/phase record to fall back on, so the AC-by-AC narrative stays appended to the contract
+> file itself, not in a separate worknotes file.
 
 All of the following must hold before Opus commits:
 
 - [ ] All contract Acceptance Criteria marked met in Completion Report.
 - [ ] `task-completion-validator` review passes (no required fixes outstanding).
 - [ ] All validation commands run and pass (pytest / pnpm test + type-check + lint as applicable).
-- [ ] Completion Report appended to contract file (or written to `.claude/worknotes/[slug]/completion-report.md`).
+- [ ] Completion Report appended to contract file (the sole location — the separate `.claude/worknotes/[slug]/completion-report.md` plan-level pattern is retired).
 - [ ] Contract frontmatter updated: `status: completed`, `files_affected`, `commit_refs` (work-history SHAs, appended after each commit).
 - [ ] After merge to destination branch: `merge_commit` set to the post-squash SHA and `merge_branch` set (typically `main`). This is the canonical landing pointer — required for direct squash-merges (no PR) so the orphaned branch SHAs in `commit_refs` remain resolvable in retrospect.
 
@@ -146,14 +200,14 @@ All of the following must hold before Opus commits:
 # Step 1: Delegate sprint
 Task("feature-sprint-executor",
      "Mode C: Autonomous Feature Sprint.\n"
-     "Contract: docs/project_plans/feature_contracts/features/artifact-tag-bulk-edit.md\n"
+     "Contract: docs/project_plans/feature_contracts/artifact-tag-bulk-edit.md\n"
      "Budget: ~50K tokens\n"
      "Context: skillmeat/api/routers/artifacts.py, skillmeat/web/components/entity/artifact-card.tsx")
 
 # Step 2 (after sprint): Mandatory reviewer
 Task("task-completion-validator",
      "Mode E: Reviewer.\n"
-     "Contract: docs/project_plans/feature_contracts/features/artifact-tag-bulk-edit.md\n"
+     "Contract: docs/project_plans/feature_contracts/artifact-tag-bulk-edit.md\n"
      "Completion Report: appended to contract\n"
      "Review the diff on branch feat/artifact-tag-bulk-edit against all Acceptance Criteria.")
 
@@ -187,26 +241,149 @@ Token efficiency is a first-order constraint across all execution modes. These r
 | Per execution phase (Tier 2/3) | ~25–30K |
 | Tier 1 sprint total (all in) | ≤80K |
 
+### Context tripwire
+
+Above **150% context utilization in one session**, split or summarize-forward **before continuing**
+— this is a live execution signal an executor watches for during the run, not a post-hoc AAR
+observation (execution-doctrine.md rule 4). Carrying on past the tripwire is how a fix loop becomes a
+retry storm. Honesty check: the live CCDash `context_ballooning` signal is a **follow-up**, not
+today's mechanism — today this is an executor-observed check the agent applies to itself, not an
+automated gate.
+
+### AAR telemetry join (required when authoring a new AAR)
+
+New AARs must carry this machine-readable YAML-frontmatter field. Do not reuse the legacy
+free-text `session:` field for it.
+
+```yaml
+ccdash_session_id: "S-<uuid>"
+```
+
+For a Claude Code-authored AAR, obtain the bare UUID from the live session-registry file whose
+`cwd` matches the repository: `~/.claude/sessions/<pid>.json` → `sessionId`. Prefix that value
+with `S-` before writing `ccdash_session_id`; CCDash session ids use the `S-<uuid>` form. If no
+matching live registry record is available, leave the field absent and say the AAR is unjoined —
+never guess or backfill an id. `op story capture` preserves the legacy `session` value and copies
+this typed field into its pointer for downstream joins.
+
 ---
 
 ## Mandatory Reviewer Gates
 
-Reviewer passes are non-optional at tier-appropriate checkpoints. A phase, sprint, or feature is **not complete** until the applicable reviewer approves.
+Reviewer passes are non-optional at tier-appropriate checkpoints. A phase, sprint, or feature is **not complete** until the applicable reviewer approves. **What is mandatory is that a gate fires — not that a fixed set of lenses fires at it.** The lens count is risk-tiered.
 
-**Full gate matrix (tier × checkpoint × reviewer)**: `./validation/completion-criteria.md`
+**Full gate matrix (base gate + the three second-lens triggers)**: `./validation/completion-criteria.md`
 
-Summary:
+Summary — the base gate, **one lens, every tier**:
 
 | Tier | Gate | Reviewer |
 |------|------|----------|
+| 0 | End of the change | `task-completion-validator` |
 | 1 | End of sprint | `task-completion-validator` |
 | 2 | End of each phase | `task-completion-validator` |
-| 2 | End of feature | `karen` |
+| 2 | End of feature | `karen` (final tree, once) |
 | 3 | End of each phase | `task-completion-validator` |
-| 3 | Mid-feature milestones | `karen` |
-| 3 | End of feature | `karen` |
+| 3 | End of feature | `karen` (final tree, once) |
+| 3 | Plan-milestone boundary — **`context_class` C3/C4 only** | `karen` |
 
-Do not commit or mark a phase/feature complete without a passing reviewer verdict. If the reviewer finds required fixes, the original executor addresses them (context is preserved); escalate to Opus only after 2+ failed fix cycles.
+**The ordinary shape is: implement → tests → one review → ship.** For CRUD, UI, reporting, read paths
+and mechanical refactors, that table is the *entire* gate structure — no pre-gate, no second lens, no
+per-phase `karen`.
+
+A **second** lens (`security`, via `council-review`) is added to a phase only when it matches one of
+three triggers: the surface **parses untrusted input**, **is an authorization/identity boundary**, or
+its effect is **irreversible or leaves the system**. Nothing else adds a lens — **tier does not**, and
+neither do the reviewers themselves (`karen` and `task-completion-validator` return verdicts; they do
+not dispatch follow-on reviewers). Recorded per phase as `gate_lens` + `gate_lens_reason`; a two-lens
+phase with no named trigger is a classification error. Once a trigger assigns the `security` lens it is
+**never removable**. Ruleset: `references/gate-risk-classes.md` §2.
+
+### How a gate is dispatched — a schema'd workflow stage, never a bare `Task()`
+
+**Every reviewer gate runs as a workflow stage whose verdict is a validated tool call.** Inside
+`/dev:execute-plan` and `/dev:execute-contract` that already happens (their reviewer `agent()` calls
+carry `schema: VERDICT_SCHEMA`). Every **other** gate — the Tier 0 close, the scaffold close, the
+plan-level whole-tree pass, a milestone gate, a fresh-context re-pass — invokes the
+[`reviewer-gate`](../../workflows/reviewer-gate.js) workflow:
+
+```
+Workflow({ name: 'reviewer-gate', args: {
+  scope:               { id, title, kind: 'tier0-change'|'scaffold'|'plan'|'milestone', tier },
+  lenses:              ['validator'],        // per references/gate-risk-classes.md §2
+  gate_lens_reason:    null,                 // required when lenses.length > 1
+  acceptance_criteria: [...],
+  files_changed:       [...],
+  failure_summary:     null,                 // re-pass only — the delta, never the full plan
+  evidence_refs:       [...],
+  timestamp:           '<ISO-8601>',
+}})
+```
+
+**Why not a bare `Task("task-completion-validator", "... Verdict: APPROVED or CHANGES_REQUESTED")`.**
+That was the documented form here until 2026-08-03, and it fails three ways — all three observed:
+
+1. **The orchestrator blocks in-line.** A bare Agent call is awaited by the main loop, so a slow or
+   silent reviewer stalls the session, and a stalled gate looks exactly like a gate that is thinking.
+2. **The verdict is unparsed prose.** Nothing forces a decision to exist; the reviewer can ramble,
+   run out of turns, or stop mid-thought, and approval gets inferred from tone.
+3. **A dead reviewer reads like a quiet one.** "No verdict" and "rejected, unhelpfully" are the same
+   observable, so a gate that never ran passes for a gate that passed.
+
+The workflow form fixes all three: `schema:` makes the verdict a validated `StructuredOutput` call the
+reviewer cannot finish without emitting; a null return (reviewer died after retries, or was skipped)
+becomes an explicit `verdict_source: 'gate_failure'` verdict, logged, never absorbed into an approval;
+and the wait is **observable and out-of-line** — a stalled lens sits in `/workflows` progress instead
+of freezing the main loop.
+
+**It does not add a timeout.** `agent()` exposes no deadline and a workflow cannot impose one. The fix
+is that a slow reviewer is *visible* and a dead one is *loud* — not that either is bounded. Don't read
+or restate it as "the reviewer is killed after N seconds."
+
+**`approved: false` has two meanings, and they are different next actions.** Read `gate_ran`:
+
+| Envelope | Meaning | Next action |
+|---|---|---|
+| `approved: true` | every lens approved and every lens ran | proceed / commit |
+| `approved: false`, `gate_ran: true` | a lens rejected | fix, then re-invoke with `failure_summary` — counts against the gate budget |
+| `approved: false`, `gate_ran: false` | the gate **did not run** | re-dispatch the lens, or record an explicit operator override. **Do not run a fix cycle** — there is no finding, so a cycle edits blind and then re-reviews unchanged code. Does **not** count against the gate budget |
+
+Do not commit or mark a phase/feature complete without a passing reviewer verdict. **Gate budget: max
+2 re-passes per scope x lens.** The original executor addresses required fixes by continuing its
+existing session — not a fresh re-dispatch, so the fix-relevant context stays cache-warm (see
+"Continue, don't re-dispatch" below). The 3rd failure against the same lens does **not** escalate to
+"a human/Opus looks at it" — it **auto-escalates to re-scope/redesign**: three failures is evidence
+the scope is wrong, not that the fix was sloppy. Re-passes count per **scope x lens**, not per
+dispatch — re-spawning the executor never resets the budget.
+
+**Same-class stop rule (hard).** Two consecutive rounds surfacing the **same defect class** ⇒ the next
+action is a **design change, not a third review** — even with a re-pass left. Label each round's defect
+class as you go, or you cannot apply this. What the design change is:
+`references/gate-risk-classes.md` §3b. Full rationale for both rules:
+`references/execution-doctrine.md` rule 1.
+
+**Continue, don't re-dispatch; reserve fresh context for verification.** Fix loops continue the
+existing executor session — it is cache-warm and already holds the context the fix depends on. Fresh
+context belongs on the **verifier**: a fresh-context reviewer outperforms self-critique, and an
+inherited-context validator rubber-stamps. Today's default in most of this engine is the exact
+inverse (implementers get re-spawned per fix cycle, validators inherit stale context across
+re-passes) — invert it: keep the implementer's session alive across fix cycles, and dispatch each
+reviewer re-pass with fresh context on the delta below. Doctrine: `references/execution-doctrine.md`
+rule 3.
+
+**Delta context, not the full stack.** A gate dispatch — including every re-pass — carries the
+**delta**: the failure summary, the touched files, and the acceptance criterion actually in question.
+It never carries the full plan, the cumulative diff, or the progress file. A reviewer that needs the
+whole plan to judge one AC is a signal the AC itself is under-specified — fix the AC, don't widen the
+packet. Doctrine: `references/execution-doctrine.md` rule 2.
+
+**Which lens(es) per phase — the plan-optimization pass.** The table above is the tier-default *floor*.
+For a Tier 2/3 plan with a `wave_plan`, run the [Plan Optimization](./modes/plan-optimization.md) pass
+once at the plan/execute boundary (before the graph is built) to choose per-phase reviewer lenses by
+**risk class** rather than uniformly — it writes advisory `gate_lens`/`gate_shared_with` keys onto each
+phase, front-loads a defect checklist into implementer prompts, inserts a cheap pre-gate before each
+expensive security lens, and flags any phase whose projected review cost exceeds its implementation
+cost. It **never** removes the only lens a phase's risk class requires — it collapses *duplicate*
+coverage, never *distinct* coverage. Ruleset: [`references/gate-risk-classes.md`](./references/gate-risk-classes.md).
 
 ---
 
@@ -235,6 +412,24 @@ pnpm test && pnpm typecheck && pnpm lint
 ```
 
 Detailed gate requirements: [./validation/quality-gates.md]
+
+### 4. Implementation Notes Over Halt-and-Gate
+
+Executors **log deviations and keep going**, rather than stopping the run to ask. A conservative
+choice, an assumption, or a discovered constraint gets a dated entry (choice + rationale) in
+`.claude/worknotes/<slug>/implementation-notes.md`; these are reviewed at the **milestone boundary**,
+not chased mid-run. Mid-milestone halts are reserved for exactly three cases:
+
+1. a **destructive** action (deletion, force-push, migration, secret rotation),
+2. a **real scope change** (the work is not what the plan describes), or
+3. **input only the operator has**.
+
+Everything else is a note, not a stop. **Mode-D boundaries are unchanged and non-negotiable** — auth,
+payments, billing, schema migrations, data deletion, secret rotation, infrastructure still halt and
+bubble to Opus exactly as today (see the Nesting "Mode-D at depth" rule above and "When NOT To Use"
+below). This section governs judgment-call deviations inside an already-authorized scope; it does not
+loosen Mode-D in any way. Doctrine: `references/execution-doctrine.md` "Implementation notes over
+halt-and-gate".
 
 ## Agent Assignment Quick Reference
 
@@ -279,6 +474,178 @@ For phase execution, use artifact-tracking skill for:
 - ORCHESTRATE batch delegation
 
 Integration patterns: [./integrations/artifact-tracking.md]
+
+### IntentTree SDLC Sync (AWPR v2 — FR-11) — ON BY DEFAULT
+
+The execution flow re-runs `itt sync import <file> --apply --tree <tree>` at status hook points to
+propagate task/phase status to bound IntentTree nodes. **This is on by default** (AOS
+integration-remediation P1.2 — integration must be automatic, not opt-in prose that decays). It is
+disabled only when `INTENTTREE_SDLC_SYNC` is explicitly falsy (`0`/`false`/`no`/`off`), and is a
+**silent no-op when there is no binding** (no `ITT_NODE_ID`/`INTENTTREE_TREE` and no `intenttree_tree`
+frontmatter) — so default-on never becomes noise in repos with no IntentTree presence. Targets the
+node under the standing `aos-target set node` default. Gate + env resolution are defined once in
+**`.claude/rules/intenttree-integration.md`**.
+
+**Demoted frequency (execution-doctrine.md, Bookkeeping demotions):** the task-start lookup/claim/
+status-sync 3-step was measured as pure overhead at task granularity; it now fires **once per
+milestone** rather than at every task start. Task-done and phase-done syncs are real value at their
+existing granularity and stay unchanged.
+
+| Hook point | Location | What syncs |
+|---|---|---|
+| Milestone start | phase-execution.md §2.3a | progress file → task node lookup/claim/status-sync, **once per plan milestone** (demoted from every task start) |
+| Task done | phase-execution.md §2.5a | progress file → task node set to `completed` |
+| Phase done | phase-execution.md §5.2a | progress file → phase node set to `completed` |
+| Inter-wave merge | plan-execution.md §3c-sync | all wave progress files; plan file at end |
+| **Post-merge (evidence)** | git-worktree-pr-protocol.md §6, right after the landing pointer | plan frontmatter `commit_refs`/`pr_refs` + the merge SHA → typed `ExternalLink(github)` + `CompletionEvidence(delivery_class=shipped)` rows on the bound node — `hooks/post-merge-evidence.sh`, env `AOS_POST_MERGE_EVIDENCE` |
+
+**Non-fatal contract**: offline / CLI-missing / no-binding / non-zero exit → log warning and continue.
+Never blocks execution. All sync calls are idempotent (re-running unchanged source is a no-op).
+
+**Thin hook script**: `.claude/skills/dev-execution/hooks/sdlc-sync.sh` — owns the default-on gate,
+the binding check, and the non-fatal contract (always exits 0). Set `INTENTTREE_TREE=<tree-id>` or
+let the CLI infer from artifact frontmatter.
+
+**References**:
+- Contract: `docs/project_plans/implementation_plans/awpr-v2-task-node-contract.md`
+- CLI: `client/src/intenttree_client/cli/commands/sync_cmd.py`
+- P0 contract task: TASK-6.2 (FR-11)
+- Planning skill pattern: `.claude/skills/planning/SKILL.md` §10 (analogous planning-time sync)
+
+### Detection-Time Finding Capture — file the node when you find it
+
+The sync above only propagates **status for work already in the graph**: `itt sync import` reads a
+plan or progress file, so anything that was never in the plan is invisible to it. A mid-run discovery
+— a deferral, a bug, a gap, a decision not taken — has no path into the tracker at all unless the
+agent puts it there.
+
+So it does, itself, at the moment of detection:
+
+**Any agent that detects a deferral / bug / gap files an IntentTree node for it immediately —
+straight into the target tree, without being asked and without a confirmation gate.** Resolve the
+tree from the finding's *target repo*, not your cwd. Never attach it under the plan node you are
+executing. Meet the detail floor (`file:line`, concrete consequence, suggested shape, `--ac`,
+`repo`, tags, provenance) so a future agent without this session's context can act on it.
+
+**This is not a gated writeback class.** The writeback gate covers MeatyWiki and SkillMeat
+mutations. A tracker node is cheap, additive, and reversible — gating it is what loses findings.
+
+| Reinforcement | Where |
+|---|---|
+| The rule (routing, tree resolution, detail floor, dedup) | **`.claude/rules/finding-capture.md`** |
+| Lifecycle Step 0 + the quality-gate checkboxes | `planning/references/deferred-items-and-findings.md` §2 |
+| Blocking validation — a `deferred`/`finding` handoff needs a real tracker | `delivery-report/references/handoff-contract.md` rule 7, enforced in `scripts/delivery_report.py` |
+| Next Actions row requirement | `references/next-actions-table.md` |
+| Close-time reconciliation backstop (non-fatal, exit 0) | `hooks/finding-sweep.sh` — phase-execution.md §5.2c, plan-execution.md §9 |
+
+The sweep is a **safety net for** the behavior, not a substitute: a finding first surfacing there
+means the rule was already missed.
+
+### SkillMeat Look-First (executor/phase-owner contract) — instruct-only, not gated here
+
+**Before building a new skill/agent/context/workflow artifact**, the executor/phase-owner MUST
+check for an existing SkillMeat entry (`skillmeat list --type <type>` / `skillmeat show <name>`
+against the enterprise endpoint) and **reuse or extend it rather than duplicate it**. This is
+**look-first (D2: instruct-only, never mechanically gated)** — an agent judgment call the executor
+makes before spending build effort, exactly the same posture as the MeatyWiki/SkillMeat checks in
+`.claude/skills/planning/SKILL.md`'s "Before You Scope" section (the planning-time analog).
+
+This instruction is **not the enforced check**. The **save-after** side — did the new artifact
+actually land in SkillMeat enterprise — is a real reviewer gate: see the "AOS Writeback DoD"
+(SkillMeat row) in [`./validation/completion-criteria.md`](./validation/completion-criteria.md) and
+the [`verify-skillmeat-writeback.sh`](./hooks/verify-skillmeat-writeback.sh) hook it runs. Do not
+duplicate that gate here — this section is instruction only; the DoD is where it's enforced.
+
+### Pre-Execution Artifact Provisioning — ON BY DEFAULT, mechanically gated
+
+Complementary to look-first above, but the opposite direction: **look-first is reuse-before-BUILD**
+(an instruct-only judgment call the executor makes before spending build effort on a *new*
+artifact); **provisioning is present-before-RUN** (a mechanically enforced gate that makes sure
+every artifact a plan/phase *already declares it needs* is actually deployed into the repo before
+execution starts). Look-first stops duplicate builds; provisioning stops a wave from discovering
+mid-run that a skill/agent/command/context/MCP/workflow it depends on was never deployed.
+
+The gate runs `provision-artifacts.sh` **before the execution graph or task list is built** — i.e.
+before Opus pre-flight assembles the `ExecutionGraph` (execute-plan) or the wave/batch loop starts
+(phase-execution, plan-execution). It is **on by default** (mirrors `INTENTTREE_SDLC_SYNC`'s
+default-on posture) and resolves two sources of need: the per-project manifest
+(`.claude/aos-artifacts.yaml`) and the plan's own `required_artifacts` frontmatter. It composes only
+existing SkillMeat CLI primitives (`show`/`deploy`/`undeploy`) — no new provisioning intelligence.
+
+```bash
+PROVISION_PLAN_FILE="<plan-path>" PROVISION_SCOPE="plan:<slug>" \
+    .claude/skills/dev-execution/hooks/provision-artifacts.sh
+```
+
+**Contract** (mirrors `sdlc-sync.sh`'s non-fatal discipline, with one deliberate exception):
+
+- **Default-on**: only an explicit falsy `AOS_ARTIFACT_PROVISION` (`0`/`false`/`no`/`off`) disables it.
+- **Silent no-op with no binding**: no manifest AND no plan `required_artifacts` → exit 0, zero calls.
+- **Non-fatal on infra**: CLI missing, SkillMeat unreachable, engine crash → logged warning, exit 0.
+  A provisioning-infra failure never blocks a run — same posture as the IntentTree sync hooks.
+- **Correctness hard-gate (the one exception)**: a NEEDED artifact that is unsatisfiable anywhere
+  (not in the manifest, not in the SkillMeat catalog) — or any gap surfaced under `sign-off`/`off`
+  mode or `PROVISION_CHECK=1` — is a real halt: the engine exits 2 and the orchestrator stops before
+  spending execution budget on a run it cannot complete.
+
+At end-of-plan/feature, run the same gate in **teardown** mode to undeploy plan-scoped ephemerals
+(artifacts marked `lifecycle: ephemeral` and `scope: plan:<slug>` in the manifest, unless also
+referenced elsewhere as `permanent`):
+
+```bash
+PROVISION_TEARDOWN=1 PROVISION_SCOPE="plan:<slug>" \
+    .claude/skills/dev-execution/hooks/provision-artifacts.sh
+```
+
+**Wiring**: see phase-execution.md and plan-execution.md pre-flight sub-steps, and the
+provisioning-gate row in the three `/dev:execute-*` command pre-flight sections. **Manifest schema +
+rule**: `.claude/rules/artifact-provisioning.md` (mirrors `intenttree-integration.md`'s
+gate/env/non-fatal structure); canonical manifest exemplar `templates/aos-artifacts.yaml.tmpl`;
+`required_artifacts` frontmatter field: `.claude/skills/planning/references/plan-frontmatter-schema.md` §5.7.
+
+### Bundle drift check (warn-only, ON BY DEFAULT)
+
+Provisioning answers *"is the artifact deployed?"*. It does not answer *"is the deployed copy the
+same as its upstream?"* — and a per-project copy is a **derived** copy that goes stale silently.
+`bundle-drift-check.sh` closes that gap. Run it alongside the provisioning gate at the same
+pre-flight moment:
+
+```bash
+DRIFT_PROJECT="." DRIFT_REGISTRY="<launchpad>/docs/ARTIFACT-UPSTREAM-REGISTRY.md" \
+DRIFT_SCOPE="plan:<slug>" \
+    .claude/skills/dev-execution/hooks/bundle-drift-check.sh
+```
+
+**Contract**: default-on (`AOS_BUNDLE_DRIFT_CHECK`, only an explicit falsy value disables);
+**always exits 0** — it never blocks a run; resolves each deployed skill to its canonical upstream
+via the registry table and reports `IN-SYNC | DRIFTED | MISSING-UPSTREAM | UNMAPPED`.
+
+The column that matters most is **`global-resolution`**: `SYMLINK (always-current)` vs
+`COPY (can drift)` vs `ABSENT`. The hazard this hook exists for is not staleness but *split-brain
+resolution* — one session resolving `dev-execution` through an always-current global symlink while
+`artifact-tracking` resolves to a stale project-local copy, invisible unless a human reads the
+"Base directory for this skill" line each skill prints on load.
+
+Policy + decision record: `docs/bundle-currency-policy.md`. `.claude/bundle-manifest.toml` is
+**provenance of the last full deploy, not truth** — this hook is the live signal.
+
+### Plan status-hygiene hooks (DI-135) — opt-in
+
+The IntentTree plan-lens reads `status`/`planning_maturity` from **plan-file frontmatter** (markdown
+is canonical). When a phase or feature ships, keep that frontmatter current so the lens does not show
+stale `not_started`/`in_progress` on completed work. Two opt-in, comment-preserving, dry-run-by-default
+hooks live in `.claude/skills/dev-execution/scripts/`:
+
+| Hook | What it does | Invocation |
+|---|---|---|
+| `complete-phase.py` | Rewrites plan `status` → `completed` and `planning_maturity` → `shipped` (idempotent no-op if already current) | `python .claude/skills/dev-execution/scripts/complete-phase.py <plan.md> [--apply]` |
+| `complete-task.py` | Updates one task's `status` inside a frontmatter `tasks:` list (preserves indentation/comments) | `python .claude/skills/dev-execution/scripts/complete-task.py <file> --task <id> --status completed [--apply]` |
+
+**Contract**: opt-in (no silent background mutation — dry-run is the default; you must pass `--apply`).
+For `.claude/progress/*` task completion, `update-status.py` (artifact-tracking) remains canonical —
+it enforces the completion gate (timestamps/evidence); `complete-task.py` is the lighter companion for
+keeping a plan-file `tasks[]` status current. After `--apply`, re-running `intenttree_capture.py
+--apply` propagates the new status to the bound node with no agent involvement (DI-135 closed at source).
 
 ### meatycapture-capture
 
@@ -347,6 +714,11 @@ meatycapture log item update REQ-*.md REQ-ITEM --status done
 
 ## Error Recovery
 
+This section is for genuine blockers — the run cannot proceed at all. A conservative choice or an
+assumption that does *not* block progress is an implementation note, not a blocker: see "Core
+Principles → 4. Implementation Notes Over Halt-and-Gate" above; only destructive actions, real scope
+changes, or operator-only input warrant a mid-run stop.
+
 When blocked on any task:
 
 1. **Document** the blocker in progress tracker
@@ -404,8 +776,71 @@ A phase is **ONLY** complete when:
 4. Quality gates passed (types, lint, build)
 5. Progress tracker updated to `status: completed`
 6. All commits pushed
+7. **AOS writeback DoD passed** (audit P3.9) — when the run is bound to IntentTree, the reviewer's
+   `verify-writeback.sh` gate confirms the node is `completed` + AAR/story captured + decisions
+   ingested. A FAIL blocks completion. No-op (N/A) when there is no AOS binding. **Alongside it**,
+   when the phase built/updated an AI artifact, the reviewer's `verify-skillmeat-writeback.sh` gate
+   confirms it is checked-for-reuse + saved/updated in SkillMeat enterprise — same FAIL/N-A/WARN
+   semantics, own row in the same DoD section. See
+   `validation/completion-criteria.md` § "AOS Writeback Definition-of-Done".
+8. **End-of-feature rich report DoD passed** — dev-execution Tier 2/3 features require a validated
+   `delivery-report` (route `feature`) manifest + self-contained HTML artifact; substantial Tier 1
+   features are recommended. The reviewer runs `hooks/verify-delivery-report.sh` and withholds
+   approval on a required missing/invalid report. Phase-only completion does not duplicate the parent
+   feature report.
 
 **Never mark phase complete if any criterion is unmet.**
+
+## Forward-Looking Status Reports (`delivery-report` `program` / `phase` routes)
+
+The `feature` route above answers *"what did we finish, and how do we know?"* at end-of-feature (a
+**required** gate). Its three sibling routes answer the **forward-looking** questions that come up
+*during* a plan — and each maps to a lifecycle moment in this engine. These are **recommended /
+on-request, never blocking** (a point-in-time snapshot is not a completion gate — a missing forward
+report never withholds `APPROVED`). Author on request or at the milestone; skip for a quick
+conversational "what's the status?".
+
+| Route | Lifecycle moment | When to reach for it |
+|---|---|---|
+| `program` | End of a full plan / epic (`/dev:execute-plan` post-run; `plan-status` full report) | A shareable, evidence-backed "where is this whole effort" snapshot — every open item carries a copyable agent handoff |
+| `phase` | End of a wave / phase (`/dev:execute-phase`) | A wave recap: what landed, what's next, what's blocked |
+| `readiness` | A go/no-go decision (feeds from `/plan:explore`; see the planning skill) | Should we invest further — go or no-go |
+
+Invoke the skill (`Skill("delivery-report")`) and pick the route; the skill owns the manifest
+authoring, render, and validate CLI — do not restate it here. Full route policy + section matrix:
+`delivery-report/references/route-policy.md`. Forward routes are recommended in the reviewer DoD, not
+enforced — see `./validation/completion-criteria.md` § "Forward Status Reports (recommended)".
+
+### The living dossier (`delivery-report` route `dossier`) — hooks, not authoring
+
+This engine hosts both hooks of the dossier lifecycle. Neither one authors narrative, neither one
+gates, and both always exit 0:
+
+| Hook | Fires | What it does |
+|---|---|---|
+| `hooks/seed-dossier.sh` | **Plan time**, called by the `planning` skill (Workflow 2 step 10) | Deterministically creates the manifest from the plan — stage spine from its phases, OQs/decisions from its frontmatter. Tier 2/3 auto; Tier 0/1 via `DOSSIER_SEED_FORCE=1`. |
+| `hooks/update-dossier.sh` | **End of plan** (demoted from every phase boundary + every wave — `execution-doctrine.md` Bookkeeping demotions; see `modes/phase-execution.md` §5.2b, `modes/plan-execution.md` §3c-dossier / §7 for the wiring) | Re-renders + re-validates the manifest against the stage(s) the closing agent wrote. |
+| `hooks/publish-report.sh` (PF-3 M3) | **Plan/phase close, after the route's HTML is already rendered** — wired at `modes/plan-execution.md` §8 (after §7's dossier render, route `dossier`) and `modes/phase-execution.md` §5.2a (route `phase`, gated on `$PHASE_REPORT_MANIFEST`) | Composes `delivery-report`'s `export --target atlas` with `scripts/publish_report.py` (atlas ingest → IntentTree scope resolution → the R1 misattribution guardrail → `itt link report`). Default-on (`AOS_DELIVERY_REPORT_PUBLISH`), binding-gated (a rendered manifest AND an IntentTree binding), non-fatal, always exits 0 — mirrors `seed-dossier.sh`/`update-dossier.sh` exactly. **`dossier` is the only route that fires this automatically today**; `phase` is armed but a true no-op until a per-phase report manifest exists (none is produced anywhere in this repo yet); `feature`/`program`/`readiness` have no close-hook wiring at all. Recommended/non-blocking — never a completion gate. Design contract: `.claude/worknotes/delivery-report-hosting-and-linking/implementation-notes.md` (D1–D5). |
+
+Your job at a phase close is still the **stage delta** — write this phase's `narrative` / `outcome` /
+`decisions` / `evidence` into the manifest as you write the completion note (a decision point, so no
+model call sits on the render path); those writes accumulate across phases. What changed is *when the
+hook renders*: `update-dossier.sh` now fires once at end of plan, not after every phase/wave, so the
+render+validate itself is a single end-of-plan pass over the accumulated stage deltas. If no manifest
+exists the hooks no-op silently: the feature was planned without a seed, which is not an error to
+chase mid-run. Spec: `docs/skill-development/delivery-dossier/spec.md`.
+
+## Next Actions Table (the standard close — every completion output)
+
+Every execution response ends with a **Next Actions table** — the compact, copy-pasteable map of
+what to do next (target command · path/ITT node/project · what it achieves · gates/blockers ·
+recommended model · priority order). It is the flat-markdown projection of the `delivery-report`
+handoff vocabulary, always emitted inline (no HTML render required), with a one-line empty state
+when nothing follows. When a `delivery-report` is *also* produced, the table stays **front-and-center
+in the response** as a brief callout and the report path is listed as an artifact — the table is not
+absorbed into the HTML. This is a standing requirement, not a per-command opt-in.
+
+Full format, per-command row semantics, and the callout rule: **`references/next-actions-table.md`**.
 
 ## Output Format
 
@@ -428,6 +863,59 @@ Recent Commits:
 
 Progress: 60% (6/10 tasks)
 ```
+
+---
+
+## When NOT To Use
+
+Do NOT use this skill for:
+
+- **Authoring plans, PRDs, or tier classification** — that is `planning` / `plan:plan-feature`. This
+  engine *executes* an existing plan; the plan-optimization mode *consumes* a `wave_plan`, it never
+  authors one or decides tier.
+- **Content-quality / safety review of a skill or agent you just wrote** — use `asdlc-skill-review-board`.
+  For authoring/validating a skill itself, use `skill-dev`.
+- **SkillMeat packaging, enterprise registration, or deploy mechanics** — use `skillmeat-cli`.
+- **Mode-D work** (auth, payments, production migrations, data deletion, secret rotation, multi-tenant
+  boundaries) — those are resolved interactively by Opus under Mode-D discipline, never dispatched
+  autonomously through these modes.
+- **Tier 0 trivia** (1–3 pts, single trivial file) — `/dev:quick-feature` overhead is lower.
+
+## Deferred / Do Not Say
+
+The following are **not yet implemented** or are **weaker than they may sound**. Do NOT tell users
+these work:
+
+| Feature | Status | What NOT to say |
+|---|---|---|
+| `workflow` execute-plan model as the hard default | Pilot-gated (A/B not yet passed) | "execute-plan runs on the workflow engine by default" — `sequential`/`adaptive` remain supported until the Phase-1 pilot passes. |
+| `phase_owner_nesting_enabled` | Opt-in, default-OFF pilot | "phase-owners nest implementers" — only under the explicit flag, depth-1, Claude-primary only. |
+| plan-optimization risk classifier | Calibrated at **n=1** (RF Operator MCP P1) | "the gate classifier is validated" — it is a strong first-pass default an orchestrator reviews, not an authority; it has not been validated against a plan whose actual review outcome diverged from its prediction. |
+| plan-optimization pre-gate budget | Fixed ~30k first-pass default | "the pre-gate budget is tuned per phase" — per-phase sizing is deferred to the cost model once more retros exist. |
+| 150% context tripwire | Executor-observed instruction, not automated | "the context tripwire fires automatically" — there is no CCDash-fed enforcement wired to this engine yet; the live CCDash `context_ballooning` signal is a **follow-up**, not today's mechanism. An executor watches its own utilization and acts; nothing else checks it for them. |
+| Gate budget (2 re-passes → re-scope) | Instruction, not a mechanism | "the gate budget is enforced" — there is no counter hook that tracks re-passes per scope x lens and blocks a 3rd. The orchestrator/reviewer is trusted to count and honor the budget; nothing currently rejects a 3rd re-pass programmatically. |
+
+**Known gaps:**
+
+- The plan-optimization pass is authored (mode + reference); a mechanical hook that auto-runs it at
+  the plan/execute boundary (alongside `provision-artifacts.sh` / `seed-dossier.sh`) is not yet wired —
+  today it is an orchestrator-invoked procedure, not a default-on gate.
+- The risk classifier accumulates evidence only as fast as retros are captured via `op story capture`;
+  at n=1 its cost model and rule thresholds are starting points, not settled values.
+- The gate-budget count (2 re-passes per scope x lens) and the 150% context tripwire are both
+  execution-doctrine.md rules with no enforcing hook — they rely on the orchestrator/executor applying
+  them honestly each run.
+
+## Key References
+
+All paths below are absolute and resolve on disk:
+
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/skills/dev-execution/references/execution-doctrine.md — the Claude-5-generation execution doctrine (gate budget, delta context, continue-vs-redispatch, context tripwire, implementation notes, bookkeeping demotions)
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/skills/dev-execution/modes/plan-optimization.md — the plan-optimization procedure
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/skills/dev-execution/references/gate-risk-classes.md — risk-class → lens ruleset, defect checklist, cost calibration
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/skills/dev-execution/git-worktree-pr-protocol.md — the worktree → PR → squash-merge protocol
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/skills/dev-execution/validation/completion-criteria.md — the enforced reviewer/writeback DoD
+- /Users/miethe/dev/homelab/development/agentic_meta_dev/docs/agentic-operator/MODEL-ROUTING.md — model × provider × effort policy
 
 ---
 

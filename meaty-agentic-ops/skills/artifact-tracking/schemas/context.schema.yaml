@@ -89,11 +89,6 @@ properties:
     format: "date"
     description: "Creation date in YYYY-MM-DD format"
 
-  updated:
-    type: string
-    format: "date"
-    description: "Last update date in YYYY-MM-DD format"
-
   # Quick reference metrics for token-efficient queries
   critical_notes_count:
     type: integer
@@ -319,7 +314,6 @@ properties:
           type: string
           description: "Integration status"
           default: "in-progress"
-          description: "Integration status"
 
         notes:
           type: string

@@ -70,12 +70,12 @@ Update context strategically to avoid information bloat:
 
 ## Project-Level Skill Updates
 
-Custom skills under `.claude/skills/` are project-specific capability packages (e.g., `skillmeat-cli`, `artifact-tracking`, `dev-execution`, `debug`, `meatycapture-capture`, `planning`). They are formally specified via SPEC.md (see `.claude/specs/artifact-structures/skill-spec-convention.md`) and indexed in `.claude/specs/skills-index.md`.
+Custom skills under `.claude/skills/` are project-specific capability packages (e.g., `skillmeat-cli`, `artifact-tracking`, `dev-execution`, `debug`, `meatycapture-capture`, `planning`). Which spec convention governs them depends on the repo (see `skill-dev/references/conventions-map.md`): in the `skillmeat` repo, SPEC.md per `.claude/specs/artifact-structures/skill-spec-convention.md` + registration in `.claude/specs/skills-index.md`; in AOS repos, the `skill-dev` contract (`skill-dev/SPEC.md`, validated by `validate_skill.py`) with upstream rows in `docs/ARTIFACT-UPSTREAM-REGISTRY.md`.
 
 **When to update**: Any time the plan changes CLI surface, agent-facing capabilities, workflow patterns, or integration points that a custom skill documents.
 
 **How to evaluate** (checklist during planning):
-1. Cross-reference affected areas against `.claude/specs/skills-index.md` — which skills claim this domain?
+1. Cross-reference affected areas against the repo's skill roster (`.claude/specs/skills-index.md` in skillmeat; the skills dir + `docs/ARTIFACT-UPSTREAM-REGISTRY.md` in AOS repos) — which skills claim this domain?
 2. For each matching skill, check its SPEC.md `Capability Coverage` matrix — is the new capability present? Is an existing row now stale?
 3. Check its workflow files for route accuracy (do example commands still match?).
 4. If yes to any of the above, add a dedicated task in Phase 7 (Documentation Finalization).
@@ -89,7 +89,7 @@ Custom skills under `.claude/skills/` are project-specific capability packages (
 - SPEC.md `Changelog` — append a version bump entry
 - SPEC.md frontmatter `updated` date
 - Relevant workflow file(s) — add new route entries, update stale examples
-- `.claude/specs/skills-index.md` — bump version if SPEC.md version changed
+- `.claude/specs/skills-index.md` (skillmeat repo only) — bump version if SPEC.md version changed
 
 **Skip when**: Changes are internal refactors with no agent-facing surface, or when the change already lives in a location the skill points to (e.g., user docs) and the skill's SPEC.md explicitly defers there.
 

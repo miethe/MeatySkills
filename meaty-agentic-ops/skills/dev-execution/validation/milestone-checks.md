@@ -1,5 +1,12 @@
 # Milestone Checks
 
+> **Terminology note:** this file predates the Claude-5 doctrine's **plan milestone** — a reviewable
+> state of the system, the coarse unit *above* phases (`references/execution-doctrine.md`,
+> "Terminology"). Everywhere below, "milestone" in a header or template label means the older,
+> narrower sense this file was written for: a **batch checkpoint** — a batch boundary *inside* a
+> phase. Read "milestone" in this file as "batch checkpoint" unless a passage explicitly says
+> "plan milestone".
+
 Criteria for phase and batch completion validation.
 
 ## Batch Completion Criteria
@@ -16,7 +23,7 @@ A batch is complete when:
 ```
 @task-completion-validator
 
-Phase ${phase_num} Milestone: Batch {batch_num} Complete
+Phase ${phase_num} Batch Checkpoint {batch_num} Complete
 
 Completed tasks:
 - {task_id_1}: {brief description}
@@ -97,22 +104,36 @@ echo "✅ All quality gates passed"
 
 ### Final Validation with Subagent
 
+**Delta context, not the full stack** (`references/execution-doctrine.md` rule 2). Pass the AC in
+question and the touched files — **never** `Plan: ${plan_path}` or `Progress: ${progress_file}` in
+full. Inline the AC text; do not hand over a path to a document the reviewer will read end to end.
+
 ```
 @task-completion-validator
 
 Phase ${phase_num} FINAL VALIDATION
 
-Plan: ${plan_path}
-Progress: ${progress_file}
+Acceptance criteria in question (inline, this phase only):
+${phase_ac_list}
+
+Files touched this phase:
+${files_affected}
+
+Failure summary (ONLY on a re-pass — omit entirely on the first pass):
+${failure_summary}
 
 Comprehensive validation required:
-1. All tasks in plan completed
-2. All success criteria met
-3. All tests passing
-4. No critical issues
-5. Documentation complete
-6. Ready for next phase
+1. Every AC above met
+2. All tests passing
+3. No critical issues
+4. Documentation for the touched surface complete
+5. Ready for next phase
 ```
+
+> A reviewer that needs the whole plan to judge one AC is a signal the **AC is under-specified** — fix
+> the AC, do not widen the packet. Previously this template passed the full plan and progress file,
+> contradicting the delta-context rule stated in `completion-criteria.md`; corrected 2026-07-31
+> (gate-tiering v4.1).
 
 ## Success Criteria Review
 
@@ -145,6 +166,15 @@ Task("artifact-tracker", "Finalize ${PRD_NAME} phase ${phase_num}:
 - Update completion to 100%
 - Generate phase completion summary")
 ```
+
+**Demotion (execution-doctrine.md, Bookkeeping demotions).** Judgment call: the Phase Completion
+Summary below is **kept**, not deleted — unlike the retired plan-level Completion Report and the
+deleted mandatory-every-phase Phase Summary prose table, it is per-phase and cheap (a status block
+inside the progress tracker's own file, not a fresh document to assemble). What changes is its
+**cadence**: it demotes from *generated every phase* to **generated at plan-milestone boundaries** —
+the doctrine's coarse reviewable-state unit above phases, not the batch-checkpoint sense used
+elsewhere in this file. Skip the `Task("artifact-tracker", ...)` call above on a phase that closes
+mid-milestone; run it on the phase that closes a plan milestone.
 
 ### Expected Final State
 

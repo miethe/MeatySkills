@@ -32,7 +32,7 @@ python scripts/generate-planning-board.py \
 ### From Implementation Plan Path
 ```bash
 python scripts/generate-planning-board.py \
-  --plan docs/project_plans/implementation_plans/features/<plan>.md \
+  --plan docs/project_plans/implementation_plans/<plan>.md \
   --output planning-review-board.html
 ```
 

@@ -2,6 +2,18 @@
 
 Guidance for implementing user stories with existing plans or creating plans on-the-fly.
 
+> **Git workflow:** this mode follows the canonical worktree → PR-to-parent → squash-merge-on-approval
+> protocol in [`../git-worktree-pr-protocol.md`](../git-worktree-pr-protocol.md). Set up a run worktree
+> at the start (don't `git checkout -b` in place), commit per logical unit inside it, and PR to the
+> **parent branch** (not hard-coded `main`). Nested helpers and offloaded executors never touch git;
+> batch task agents commit only their own assigned files by explicit pathspec and never rewrite
+> history. The orchestrator/phase-owner orchestrates all commits.
+>
+> **Model selection** follows [`MODEL-ROUTING.md`](../../../../docs/agentic-operator/MODEL-ROUTING.md):
+> subscription default **Sonnet 5** (`claude-sonnet-5`) for implementation, **Opus 5** for spine,
+> `xhigh` effort for the hardest work; bounded waves offload to **ICA Sonnet 5**
+> (`claude-sonnet-5[1m]`, free-to-us; 4.6[1m]/Haiku for cheap fan-out) behind the reviewer gate.
+
 ## When to Use
 
 - User story implementation (from request-log or description)
@@ -233,21 +245,27 @@ meatycapture log note add DOC ${story_id} -c "Completed: {summary}"
 
 ### 5.2 Create Pull Request
 
+Per [`../git-worktree-pr-protocol.md`](../git-worktree-pr-protocol.md), the story runs in a worktree
+created at the start (do **not** `git checkout -b` in place), and the PR targets the **parent branch**
+captured when the run began — not a hard-coded `main`. Squash-merge happens on approval or an in-prompt
+override.
+
 ```bash
-current_branch=$(git branch --show-current)
-
-# Ensure not on main
-if [ "$current_branch" = "main" ]; then
-  git checkout -b "feat/${story_id}"
-fi
-
-# Push and create PR
-git push -u origin "$current_branch"
+# PARENT_BRANCH was recorded at run start (the branch HEAD was on when the worktree was created);
+# the story work lives on its own worktree branch ($BRANCH).
+git push -u origin "$BRANCH"
 gh pr create \
-  --base main \
+  --base "$PARENT_BRANCH" \          # parent branch, NOT hard-coded main
+  --head "$BRANCH" \
   --title "feat(${story_id}): ${feature_description}" \
   --body-file .claude/pr-body.md \
   --draft
+
+# On approval / in-prompt override only. Two steps — never --delete-branch (it aborts before the
+# delete when the parent is checked out elsewhere, orphaning the remote branch):
+gh pr merge "$BRANCH" --squash
+gh pr view "$BRANCH" --json state,mergeCommit -q '.state'   # expect MERGED before deleting
+git push origin --delete "$BRANCH"
 ```
 
 ## Error Recovery

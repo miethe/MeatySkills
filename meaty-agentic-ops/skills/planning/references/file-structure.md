@@ -4,7 +4,7 @@
 
 ### PRDs (Product Requirements Documents)
 
-**Location**: `docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
+**Location**: `docs/project_plans/PRDs/[feature-name]-v1.md`
 
 **Categories**:
 - `harden-polish/` - Bug fixes, polish, hardening
@@ -38,7 +38,7 @@ docs/project_plans/PRDs/
 
 ### Implementation Plans
 
-**Location**: `docs/project_plans/implementation_plans/[category]/[feature-name]-v1.md`
+**Location**: `docs/project_plans/implementation_plans/[feature-name]-v1.md`
 
 **Category**: Matches PRD category
 
@@ -48,7 +48,7 @@ docs/project_plans/PRDs/
 
 **Phase Breakouts**: When plan >800 lines, create subdirectory
 
-**Location**: `docs/project_plans/implementation_plans/[category]/[feature-name]-v1/`
+**Location**: `docs/project_plans/implementation_plans/[feature-name]-v1/`
 
 **Phase File Naming**:
 - Single phase: `phase-[N]-[name].md`
@@ -155,7 +155,7 @@ Rules:
 ```markdown
 ## Implementation
 
-See implementation plan: `docs/project_plans/implementation_plans/[category]/[feature-name]-v1.md`
+See implementation plan: `docs/project_plans/implementation_plans/[feature-name]-v1.md`
 ```
 
 ### From PRD to Progress Tracking
@@ -217,7 +217,7 @@ updated: YYYY-MM-DD
 category: "product-planning"
 status: draft|in-progress|published
 related:
-  - /docs/project_plans/PRDs/[category]/[feature-name]-v1.md
+  - /docs/project_plans/PRDs/[feature-name]-v1.md
 ---
 ```
 
