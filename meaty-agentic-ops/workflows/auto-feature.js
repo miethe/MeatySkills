@@ -822,16 +822,22 @@ if (childReport.hitl_tasks) result.hitl_tasks = childReport.hitl_tasks
 // Placement provenance is the evidence the §4b post-flight guard reads. Dropping it here would make
 // the outer report weaker than the inner one it wraps — and this is the report Opus acts on.
 if (childReport.run_placement) result.run_placement = childReport.run_placement
+if (childReport.artifact_tracking) result.artifact_tracking = childReport.artifact_tracking
 if (childReport.blockers) result.blockers = childReport.blockers
 
 // A nested engine that halted on placement must not be re-interpreted as merely "unfinished".
 // Autopilot's §4b guard exists because the workflow used to report `complete` in exactly this
 // situation; now that the engine detects it, the outer report must carry the reason through
 // verbatim rather than flattening it into a generic escalation.
-if (result.reason === 'wrong_branch' || result.reason === 'nothing_on_run_branch') {
+if (result.reason === 'wrong_branch' || result.reason === 'nothing_on_run_branch' || result.reason === 'artifact_untracked') {
   const hint = result.reason === 'wrong_branch'
     ? 'Commits landed off the assigned run branch — locate them with `git branch -a --contains <sha>` and cherry-pick onto the run branch before opening a PR. Do NOT merge from wherever they landed.'
-    : 'Nothing was committed to the run branch — treat every past-tense claim in the nested report as unproven, and check `git status --porcelain` plus the reflog before re-running.'
+    : result.reason === 'nothing_on_run_branch'
+      ? 'Nothing was committed to the run branch — treat every past-tense claim in the nested report as unproven, and check `git status --porcelain` plus the reflog before re-running.'
+      // artifact_untracked: the code itself may be fine — check childReport.artifact_tracking / blockers[]
+      // to see which of the contract file / Completion Report was left uncommitted, then `git add` +
+      // commit it on the run branch before re-running (or resuming) the nested engine.
+      : 'The run\'s own Feature Contract and/or Completion Report were written to disk but never committed on the run branch — see artifact_tracking and blockers[] for which one(s). `git add` + commit them on the run branch, then re-run (or resume) the nested engine; do not treat this as a code defect.'
   result.autopilot.escalation_recommendation = hint
   result.autopilot.post_verify = 'not_run_placement_failed'
   log(`Nested engine halted on placement (${result.reason}). Skipping the verify gate — there is no diff on the run branch to verify.`)

@@ -100,12 +100,24 @@ export const meta = {
 // `commit_count` / `current_branch` are required because they are the placement evidence: they are
 // what distinguishes "work landed on the branch we assigned" from "work landed somewhere else",
 // and a field the structurer may omit is a field the script cannot gate on.
+// contract_artifact_state / report_artifact_state: tracked/committed state of the run's own
+// Feature Contract and Completion Report, per the tri-state (four-value) classification rule in
+// structurePrompt() below. Required — a field the structurer may omit is a field the post-sprint
+// guard cannot gate on, exactly the same rationale as commit_count/current_branch above.
 const SPRINT_RESULT_SCHEMA = {
   type: 'object',
-  required: ['completion_report_path', 'ac_verdicts', 'files_touched', 'commit_count', 'current_branch'],
+  required: ['completion_report_path', 'ac_verdicts', 'files_touched', 'commit_count', 'current_branch', 'contract_artifact_state', 'report_artifact_state'],
   additionalProperties: false,
   properties: {
     completion_report_path: { type: 'string' },
+    contract_artifact_state: {
+      type: 'string',
+      enum: ['not_written', 'written_untracked', 'committed', 'not_applicable'],
+    },
+    report_artifact_state: {
+      type: 'string',
+      enum: ['not_written', 'written_untracked', 'committed', 'not_applicable'],
+    },
     ac_verdicts: {
       type: 'array',
       items: {
@@ -274,6 +286,20 @@ function reportPathForContract(parsed) {
   return `.claude/worknotes/${slug}/completion-report.md`
 }
 
+// ─── artifact tracking facts (pure) ───────────────────────────────────────────
+// Maps the structurer's internal SPRINT_RESULT_SCHEMA field names (contract_artifact_state,
+// report_artifact_state) onto the ExecutionReport's externally-facing artifact_tracking shape
+// (contract_artifact_state, completion_report_artifact_state — the longer name matches the
+// Completion Report vocabulary used throughout the rest of the schema). Defaults to
+// 'not_applicable' only when the structurer genuinely never populated the field (e.g. the
+// catch-block / null fallbacks), never as a substitute for a real classification.
+function artifactTrackingFacts(sprintResult) {
+  return {
+    contract_artifact_state: sprintResult.contract_artifact_state || 'not_applicable',
+    completion_report_artifact_state: sprintResult.report_artifact_state || 'not_applicable',
+  }
+}
+
 // ─── placement facts (pure) ───────────────────────────────────────────────────
 // The provenance block every consumer needs to tell "rebased away" from "never existed" without
 // guessing. A bare commit_sha cannot carry that distinction: `git show <sha>` keeps working locally
@@ -398,7 +424,21 @@ Run the full Tier 1 sprint:
      The report MUST be written to disk before you return. Use the standard template from
      your agent definition (Summary, Files Changed, AC Status, Validation Run, Deviations,
      Risks, Follow-Up, Memory Candidates).
-  7. Your final message is a human-readable summary of what was done and what AC passed/failed.
+  7. CLOSING COMMIT — REQUIRED, in this EXACT order (do not skip or reorder):
+     a. Confirm all code commits from step 4 are done — this must be your LAST code commit.
+     b. Run: git rev-parse HEAD
+        This is your final code commit SHA. Use it verbatim in the next step.
+     c. Edit the Feature Contract's YAML frontmatter at ${parsed.contract_path} with a targeted
+        edit (do NOT rewrite the whole file) — set:
+          status: completed
+          commit_refs: ["<the SHA from step b>"]
+     d. Run: git add ${parsed.contract_path} ${reportPath}
+     e. Commit this as your closing commit, e.g.:
+          git commit -m "docs(<slug>): close out contract with commit_refs"
+     This step is NOT optional. A run whose contract file or Completion Report is written to disk
+     but left uncommitted is halted (status: needs_opus, reason: artifact_untracked) instead of
+     being reported complete — no matter how correct the code itself is.
+  8. Your final message is a human-readable summary of what was done and what AC passed/failed.
      A downstream structurer agent will read the report file and git log to emit the
      machine-readable SprintResult — you do NOT need to emit structured output yourself.
 ${buildSubtaskShardingClause(subtaskShardingEnabled)}
@@ -446,6 +486,7 @@ function structurePrompt(parsed, reportPath) {
   // report came to disagree with reality by 55 files. When the caller supplies branch_base (the
   // recorded pre-run checkpoint) we use it; the fallback survives only for un-updated callers.
   const branchBase = parsed.branch_base || 'HEAD~10'
+  const contractPath = parsed.contract_path || ''
   const parentBranch = parsed.parent_branch
   const parentStep = parentBranch
     ? `\n  6. Run: git rev-parse ${parentBranch} 2>/dev/null || git rev-parse origin/${parentBranch}
@@ -485,6 +526,27 @@ If the report file does NOT exist, still return the git facts, plus:
   - completion_report_path: "${reportPath}"
   - ac_verdicts: []
   - blockers: [{description: "Completion report not found — sprint may have failed to write it"}]
+
+ARTIFACT TRACKING STATE (contract_artifact_state, report_artifact_state) — classify BOTH of the
+sprint's own artifacts using this exact rule; do not use judgement, only the literal outputs below.
+${contractPath
+  ? `  Contract file: "${contractPath}"
+  c1. Run: git status --porcelain -- "${contractPath}"
+  c2. Run: test -f "${contractPath}" && echo EXISTS || echo MISSING
+  Classify contract_artifact_state from c1's output and c2's result:
+    - c1 printed nothing AND c2 printed MISSING  → "not_written"
+    - c1 printed nothing AND c2 printed EXISTS   → "committed"
+    - c1 printed ANY line (e.g. "?? ", "A  ", "M  ") → "written_untracked" (this is true even if
+      the change is only staged, not yet committed — staged-but-uncommitted counts as untracked
+      for this purpose)`
+  : `  No contract_path was supplied to this run. Set contract_artifact_state to "not_applicable"
+  and do not run any git probe for it.`}
+
+  Completion report file: "${reportPath}"
+  r1. Run: git status --porcelain -- "${reportPath}"
+  r2. Run: test -f "${reportPath}" && echo EXISTS || echo MISSING
+  Classify report_artifact_state from r1's output and r2's result using the SAME rule as above
+  (nothing+MISSING → not_written; nothing+EXISTS → committed; any line → written_untracked).
 
 Return the structured SprintResult conforming to the schema.
 
@@ -1524,6 +1586,11 @@ try {
     files_touched: [],
     commit_count: 0,
     current_branch: '',
+    // Honest "we don't know" default — the structurer never ran, so there is no git-probe
+    // evidence for either artifact. not_applicable here means "unevaluated", not "no artifact
+    // was expected"; the fallback's own blocker below is what surfaces that to Opus.
+    contract_artifact_state: 'not_applicable',
+    report_artifact_state: 'not_applicable',
     blockers: [{ description: 'Structure stage failed — inspect completion report on disk.', resolution_hint: 'Run: git log --oneline to find sprint commits; read ' + reportPath }],
   }
 }
@@ -1536,6 +1603,8 @@ if (!sprintResult) {
     files_touched: [],
     commit_count: 0,
     current_branch: '',
+    contract_artifact_state: 'not_applicable',
+    report_artifact_state: 'not_applicable',
     blockers: [{ description: 'Structure stage returned null — inspect completion report on disk.', resolution_hint: 'Read ' + reportPath }],
   }
 }
@@ -1561,6 +1630,7 @@ if (parsed.run_branch && sprintResult.current_branch && sprintResult.current_bra
       resolution_hint: `Run \`git branch -a --contains <sha>\` for the sprint's commits to find where they landed, then cherry-pick them onto '${parsed.run_branch}' before opening the PR. Do not merge from '${sprintResult.current_branch}'.`,
     }],
     run_placement: placementFacts(parsed, sprintResult),
+    artifact_tracking: artifactTrackingFacts(sprintResult),
   }
 }
 
@@ -1577,6 +1647,45 @@ if (typeof sprintResult.commit_count === 'number' && sprintResult.commit_count =
       resolution_hint: `Check \`git status --porcelain\` for uncommitted work worth keeping, and \`git branch -a --contains\` / the reflog for commits that landed elsewhere. Then re-run, or execute interactively.`,
     }],
     run_placement: placementFacts(parsed, sprintResult),
+    artifact_tracking: artifactTrackingFacts(sprintResult),
+  }
+}
+
+// ── artifact-tracking guard (contract file + completion report must be COMMITTED) ─────────────
+// Additive coverage, not a duplicate of nothing_on_run_branch above: a sprint that commits code
+// but forgets its own contract/report still has commit_count > 0, so the check above does not
+// catch it. This guard is what makes AC3 of auto-feature-untracked-artifacts real: it must run
+// BEFORE the reviewer/fix-loop path can ever set finalStatus = 'complete'. `written_untracked` on
+// EITHER artifact is sufficient to halt — the run is not durable until both are part of the
+// commit series, and the two states are read directly off Stage B's git-probe classification
+// (never collapsed into a single boolean).
+{
+  const tracking = artifactTrackingFacts(sprintResult)
+  const untracked = []
+  if (tracking.contract_artifact_state === 'written_untracked') {
+    untracked.push(`Feature Contract (${parsed.contract_path || '(path unknown)'})`)
+  }
+  if (tracking.completion_report_artifact_state === 'written_untracked') {
+    untracked.push(`Completion Report (${reportPath})`)
+  }
+  if (untracked.length > 0) {
+    log(`HALTING — artifact_untracked: ${untracked.join(' and ')} written to disk but never committed on the run branch.`)
+    const addPaths = [
+      tracking.contract_artifact_state === 'written_untracked' ? parsed.contract_path : null,
+      tracking.completion_report_artifact_state === 'written_untracked' ? reportPath : null,
+    ].filter(Boolean).join(' ')
+    return {
+      status: 'needs_opus',
+      reason: 'artifact_untracked',
+      blocked_phase: 'sprint',
+      report: [],
+      blockers: [{
+        description: `${untracked.join(' and ')} were written during the sprint but left uncommitted on ${parsed.run_branch ? `run branch '${parsed.run_branch}'` : 'the current branch'}. A sprint is not durable until its own plan artifact and Completion Report are part of the commit series — an uncommitted file vanishes on a fresh clone and is invisible to anything that reads the merged history, even though the code commits themselves may be fine.`,
+        resolution_hint: `git add ${addPaths} && git commit on ${parsed.run_branch || 'the current branch'}, then re-run the structure stage (or the whole workflow) so the guard re-evaluates against the committed state.`,
+      }],
+      run_placement: placementFacts(parsed, sprintResult),
+      artifact_tracking: tracking,
+    }
   }
 }
 
@@ -1852,6 +1961,7 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
           resolution_hint: `Locate the fix commits with \`git branch -a --contains ${refreshedSha.commit_sha}\`, cherry-pick them onto '${parsed.run_branch}', then re-run the reviewer gate.`,
         }],
         run_placement: placementFacts(parsed, reviewResult),
+        artifact_tracking: artifactTrackingFacts(reviewResult),
       }
     }
   } else {
@@ -1968,6 +2078,11 @@ if (finalStatus === 'needs_opus' && reason === 'mode_d') result.blocked_phase = 
 // Placement provenance travels with EVERY outcome, including the approved one. A report that only
 // carries provenance when something went wrong is a report whose consumers learn to skip it.
 result.run_placement = placementFacts(parsed, reviewResult || sprintResult)
+// Same rule for artifact tracking (AC1): a run that reached here already passed the
+// artifact_untracked guard above, so both states are expected to read 'committed' — but they
+// travel on every outcome, not only the guard-failure path, so a consumer never has to guess
+// whether the field's absence means "clean" or "never checked".
+result.artifact_tracking = artifactTrackingFacts(reviewResult || sprintResult)
 if (result.run_placement.parent_moved === true) {
   log(`NOTE: parent branch '${result.run_placement.parent_branch}' moved during this run (${result.run_placement.parent_tip_at_start} → ${result.run_placement.parent_tip_at_report}). If the run branch is rebased onto the new tip, commit_sha will change; re-find the work by patch_id (${result.run_placement.patch_id || 'unavailable'}), not by the reported SHA.`)
 }

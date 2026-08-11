@@ -112,7 +112,7 @@ const ADJUDICATED_FINDINGS_SCHEMA = {
 // makes the consuming end (assessCouncilVerdict in execute-plan.js) able to refuse it.
 const COUNCIL_VERDICT_SCHEMA = {
   type: 'object',
-  required: ['approved', 'reviewer_type', 'council_artifacts', 'summary'],
+  required: ['approved', 'reviewer_type', 'council_artifacts', 'summary', 'evidence', 'checked_count'],
   additionalProperties: false,
   properties: {
     approved: { type: 'boolean' },
@@ -125,6 +125,24 @@ const COUNCIL_VERDICT_SCHEMA = {
     // review depth from the envelope instead of opening scorecard.json by hand.
     overall: { type: 'number' },
     by_lens: { type: 'object', additionalProperties: { type: 'number' } },
+    // M2 gate-evidence-chain: a verdict cannot be approved on a bare narrative claim.
+    // evidence is the structured record of what was actually checked and observed;
+    // gateApproved() below requires a non-empty array (plus checked_count > 0) before
+    // treating approved:true as a real gate pass.
+    evidence: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['claim', 'command', 'observed'],
+        additionalProperties: false,
+        properties: {
+          claim: { type: 'string' },
+          command: { type: 'string' },
+          observed: { type: 'string' },
+        },
+      },
+    },
+    checked_count: { type: 'integer' },
     council_artifacts: {
       type: 'object',
       required: ['run_dir', 'findings_yaml', 'scorecard_json', 'risk_register_yaml', 'decision_record_md', 'validation_plan_md'],
@@ -158,6 +176,26 @@ const COUNCIL_VERDICT_SCHEMA = {
       },
     },
   },
+}
+
+// Gate predicate — approved AND evidence present AND checked-count > 0, where every evidence
+// item is a real {claim, command, observed} triple (non-empty after trim — D3: forging an
+// approval must cost more than "one evidence object with empty strings") and checked_count is
+// anchored to evidence.length, not self-reported (D3: a caller cannot claim checked_count:99
+// while emitting one evidence item).
+// Pure function, no model call, mutation-testable. Kept textually identical across
+// execute-contract.js, execute-plan.js, review-council.js — see M2 plan (autopilot-gate-evidence-chain).
+function gateApproved(verdict) {
+  return verdict?.approved === true &&
+    Array.isArray(verdict?.evidence) && verdict.evidence.length > 0 &&
+    Number.isInteger(verdict?.checked_count) && verdict.checked_count > 0 &&
+    verdict.checked_count === verdict.evidence.length &&
+    verdict.evidence.every(e =>
+      e && typeof e === 'object' &&
+      String(e.claim ?? '').trim() !== '' &&
+      String(e.command ?? '').trim() !== '' &&
+      String(e.observed ?? '').trim() !== ''
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -433,6 +471,12 @@ NOT open your artifacts to discover what you left out:
   difference. Do NOT fabricate the missing findings, and do NOT report the survivors as though
   they were the whole population — a lost finding that goes unreported reads downstream as a
   clean review. If nothing was lost, set findings_not_received to 0.
+Include evidence: an array of {claim, command, observed} — one entry per finding you actually
+assessed during adjudication (accepted, rejected, disputed, or watchlist). claim: the finding's
+title/claim. command: how you verified it (e.g. "adjudication of reviewer findings" or the
+validation_method from the finding). observed: what you actually found/concluded. Do NOT set
+approved:true without at least one evidence entry. Include checked_count: the total number of
+findings you assessed (accepted + rejected + disputed + watchlist) — must be > 0 to approve.
 Do NOT git add/commit/push/stash.`
 }
 
@@ -840,6 +884,15 @@ if (!verdict) {
       approved: blockingCount === 0,
       reviewer_type: 'council-review',
       required_fixes: requiredFixes,
+      // Grounded in the real adjudicated findings (not a narrative claim): one evidence
+      // entry per accepted finding actually assessed during adjudication.
+      evidence: allAccepted.map(f => ({
+        claim: f.title || f.claim || f.id || 'accepted finding',
+        command: 'ARC adjudication (accepted findings review)',
+        observed: f.recommendation || f.claim || '(no recommendation recorded)',
+      })),
+      checked_count: allAccepted.length + (adjudicatedFindings.rejected || []).length +
+        (adjudicatedFindings.disputed || []).length + (adjudicatedFindings.watchlist || []).length,
       council_artifacts: { run_dir: runDir },
       summary: {
         total_findings: (allAccepted.length + (adjudicatedFindings.rejected || []).length +
@@ -856,14 +909,28 @@ if (!verdict) {
   }
 }
 
-log(`review-council complete. approved=${verdict.approved} blocking=${verdict.summary?.blocking_count ?? '?'} runDir=${runDir}`)
+const councilGateApproved = gateApproved(verdict)
+log(`review-council complete. approved=${verdict.approved} gate=${councilGateApproved} blocking=${verdict.summary?.blocking_count ?? '?'} runDir=${runDir}`)
 
 // Return the CouncilVerdict as both the workflow return value and an ExecutionReport-compatible
 // shape so execute-plan's reviewerGate can consume it directly.
+// D2 (autopilot-gate-evidence-chain M2): `status` must reflect the gate, not be hardcoded to
+// 'complete'. Embedded consumption (execute-plan.js reviewerGate) already checks
+// gateApproved(verdict) directly and is unaffected by this — but a STANDALONE consumer (e.g.
+// /review:code-review) reads `status`, and a rejected verdict must not read as 'complete'.
+// Reuses this file's existing 'needs_opus' vocabulary rather than inventing a new status.
 return {
-  status: 'complete',
   // CouncilVerdict — consumed by execute-plan reviewerGate / fixLoop
   ...verdict,
+  status: councilGateApproved ? 'complete' : 'needs_opus',
+  ...(councilGateApproved ? {} : { reason: 'council_not_approved' }),
+  // F2 (autopilot-gate-evidence-chain M3): the spread above carries the reviewer's raw
+  // self-reported `verdict.approved`, which can be true even when the gate rejects (e.g. empty
+  // evidence). A standalone consumer reading top-level `approved` must see the GATE's verdict,
+  // not the reviewer's self-report — override it here, after the spread. The raw self-report is
+  // preserved under a clearly non-authoritative key for audit, never silently discarded.
+  approved: councilGateApproved,
+  reported_approved: verdict.approved,
   // ExecutionReport envelope (for Opus post-run when invoked standalone)
   report: [{
     wave: 'council',
@@ -871,9 +938,9 @@ return {
       phase: phaseId || target.ref,
       verdict: verdict,
       fix_cycles: 0,
-      escalate: !verdict.approved,
+      escalate: !gateApproved(verdict),
       files_touched: [],
-      blockers: verdict.approved
+      blockers: gateApproved(verdict)
         ? []
         : (verdict.required_fixes || []).map(f => ({ description: f, resolution_hint: 'See decision_record.md' })),
     }],
