@@ -74,7 +74,7 @@ The script handles `args` arriving as a JSON string or object (`typeof args === 
 | `plan_ref` | string | no | Path to the source plan file, passed to reviewers for acceptance-criteria context. |
 | `phase_id` | string | no | Phase identifier for embedded mode (used in run slug and artifact paths). |
 | `task_summaries` | string | no | Serialized task results from `execute-plan` for embedded mode context. |
-| `run_dir_prefix` | string | no | Prefix for the run directory (default: `runs/`). |
+| `run_dir_prefix` | string | no | Prefix for the run directory (default: `.claude/council-runs/` — was `runs/` prior to 2026-08-11, which was untracked at every caller's repo root with no `.gitignore` entry anywhere). |
 | `timestamp` | string | yes | ISO 8601 timestamp — set by Opus pre-flight. Never `Date.now()` in script. |
 | `dry_run` | boolean | no | If `true`, return parsed args without spawning agents. |
 
@@ -301,8 +301,8 @@ Pass `intensity: 'deep'` to activate the extended lens set (up to 6 lenses) or p
 
 ### Custom run directory
 
-Pass `run_dir_prefix` to write artifacts under a non-default location (e.g.,
-`'.claude/reviews/'` for ad-hoc reviews separate from skill runs).
+Default is `.claude/council-runs/`. Pass `run_dir_prefix` to write artifacts under a different
+location (e.g., `'.claude/reviews/'` for ad-hoc reviews separate from skill runs).
 
 ---
 
