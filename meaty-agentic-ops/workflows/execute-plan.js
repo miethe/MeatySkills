@@ -1742,7 +1742,16 @@ function assessCouncilVerdict(raw, phaseId) {
 
   // The council bailed before writing its decision record. It carries a fallback_verdict, but
   // the previous spread produced an object with no `approved` key at all — falsy by accident.
+  //
+  // council_payload_incomplete (2026-08-11 fix) is a distinct sub-case of 'needs_opus': the
+  // id-roster check inside review-council.js caught a truncated findings payload BEFORE this
+  // consumer ever saw it. It must route here (gateIntegrityResult), never fixLoop — there is
+  // no finding to fix, only a re-dispatch. missing_finding_ids travels through so the operator
+  // sees exactly what was lost without opening the sub-workflow's artifacts.
   if (raw.status === 'needs_opus' || raw.status === 'blocked') {
+    const missingIdsNote = raw.reason === 'council_payload_incomplete' && Array.isArray(raw.missing_finding_ids) && raw.missing_finding_ids.length > 0
+      ? ` — missing finding ids: ${raw.missing_finding_ids.join(', ')}`
+      : ''
     return {
       verdict: {
         ...(raw.fallback_verdict ?? {}),
@@ -1751,7 +1760,7 @@ function assessCouncilVerdict(raw, phaseId) {
         council_status: raw.status,
         council_reason: raw.reason ?? null,
       },
-      integrity_failure: `the review-council sub-workflow did not complete (status '${raw.status}'${raw.reason ? `, reason '${raw.reason}'` : ''})`,
+      integrity_failure: `the review-council sub-workflow did not complete (status '${raw.status}'${raw.reason ? `, reason '${raw.reason}'` : ''})${missingIdsNote}`,
     }
   }
 
@@ -1776,6 +1785,18 @@ function assessCouncilVerdict(raw, phaseId) {
     integrityReasons.push(`${notReceived} adjudicated finding(s) never reached the artifact writer (findings_not_received=${notReceived})`)
   } else if (typeof claimed === 'number' && typeof delivered === 'number' && claimed > delivered) {
     integrityReasons.push(`the council claimed ${claimed} findings but only ${delivered} were delivered — ${claimed - delivered} lost at the adjudication/artifact seam`)
+  }
+
+  // Belt-and-braces id-roster check (2026-08-11 fix), independent of raw.status: a stale
+  // deployed review-council.js that hasn't received this fix yet could still report
+  // status:'complete' with a truncated payload. The sub-workflow's own gate is the primary
+  // defense (above); this catches the case where that gate is absent or bypassed.
+  if (Array.isArray(summary.expected_finding_ids) && Array.isArray(summary.delivered_finding_ids)) {
+    const deliveredSet = new Set(summary.delivered_finding_ids)
+    const missingIds = summary.expected_finding_ids.filter(id => !deliveredSet.has(id))
+    if (missingIds.length > 0) {
+      integrityReasons.push(`the id roster shows ${missingIds.length} finding(s) never reached the artifact writer (missing: ${missingIds.join(', ')})`)
+    }
   }
   if (summary.arc_validate_passed === false) {
     integrityReasons.push('the council\'s own `arc validate` did not pass (arc_validate_passed=false)')
