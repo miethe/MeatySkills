@@ -180,6 +180,41 @@ Run all gates:
 pnpm test && pnpm typecheck && pnpm lint
 ```
 
+### 5.1 Reviewer Gate — one lens (mandatory)
+
+A scaffold writes real product code across every layer, so it gets the same one-lens floor as
+everything else (`references/gate-risk-classes.md` §2, step 1 — *implement → tests → one review →
+ship*):
+
+```
+Workflow({ name: 'reviewer-gate', args: {
+  scope:               { id: '${feature}', title: 'Scaffold: ${feature}', kind: 'scaffold' },
+  lenses:              ['validator'],
+  acceptance_criteria: [
+    'Each layer is actually WIRED to the next, not merely present',
+    'The API is reachable from the real entry point',
+    'The tests exercise the slice end to end rather than asserting the scaffold\'s shape',
+  ],
+  files_changed:       ${files_changed},
+  notes:               'Layers scaffolded: schema/DTO, repository, service, API, frontend, tests.',
+  timestamp:           '${ISO-8601}',
+}})
+```
+
+The reviewer runs edit-less (constraint 3). The verdict is a **validated tool call**, not prose — and
+`approved: false` splits on `gate_ran`: `true` is a rejection to fix, `false` means the gate did not
+run and must be re-dispatched (never "fixed"). Rationale for the form:
+`../SKILL.md` § "How a gate is dispatched".
+
+**Why this mode needed one.** Until 2026-07-31 this mode shipped a full vertical slice with **no
+reviewer pass whatsoever** — only `test && typecheck && lint`. That is exactly the gap the standing
+early-e2e requirement exists for: a scaffold's layers can each pass their own tests while nothing is
+connected end to end (`validation/completion-criteria.md`, test-rigor `R3`/`R2`).
+
+**No second lens here.** If the scaffold's API surface parses untrusted input or is an authorization
+boundary, that milestone earns a `security` lens under the normal triggers — plan it there, not as a
+blanket addition to scaffolding.
+
 ## Phase 6: Commit
 
 Create atomic commit with clear message:

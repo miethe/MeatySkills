@@ -4,9 +4,9 @@ description: >-
   Delegate bounded agentic work to IBM ICA-provisioned Claude instances via ~/ica-claude.sh.
   Use when offloading parallel subtasks, accessing free-tier models for mechanical work,
   or cost-shifting bounded tasks to a secondary subscription.
-version: 2.9
+version: 2.10
 app_version: "2026-06-11"
-updated: 2026-08-07
+updated: 2026-08-09
 spec: ./SPEC.md
 ---
 
@@ -239,6 +239,13 @@ curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" 
 
 Full 22-id inventory, what it proves about `[1m]`, and the LiteLLM/Bedrock identity of the
 gateway: `references/ica-models.md`.
+
+**Reasoning *about* the gateway rather than delegating through it?** `references/ica-platform-facts.md`
+carries the measured platform facts: the four-party data path (Cloudflare → IBM Go gateway → a
+**forked** LiteLLM → Bedrock in IBM's account, Instana-traced), what it can capture and act on,
+`x-litellm-key-spend` as a free zero-token spend read, and — most easily missed — **how to tell
+whether your own session is ICA-routed**, since a local subagent inherits the gateway from its
+launcher and "local" is not a synonym for "stays on this machine".
 
 ## ICA Gateway Model Routing (Agent Tool)
 
@@ -740,3 +747,4 @@ ica-key exhausted --rotate && ~/ica-claude.sh -p "retry prompt" ...
 | Key rotation CLI | `/Users/miethe/.local/bin/ica-key` |
 | Capability contract | `/Users/miethe/.claude/skills/ica-delegate/SPEC.md` |
 | Model inventory and selection heuristics | `/Users/miethe/.claude/skills/ica-delegate/references/ica-models.md` |
+| **Platform facts** — data path, what the gateway captures, free spend read, self-detection | `/Users/miethe/.claude/skills/ica-delegate/references/ica-platform-facts.md` |

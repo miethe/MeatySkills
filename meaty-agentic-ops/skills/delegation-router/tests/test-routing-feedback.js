@@ -60,11 +60,15 @@ const {
   writeFeedbackState,
   humanOverriddenTargets,
   demoteChain,
+  classifyImmunity,
   applyChainFeedback,
+  applyRankedFeedback,
   buildFeedbackProvenance,
+  chainEntryKey,
 } = require(path.join(skillDir, 'routing-feedback.js'));
 
 const { resolve } = require(path.join(skillDir, 'resolver.js'));
+const { canonicalizeEntry: canonEntry } = require(path.join(skillDir, 'entry-key.js'));
 const {
   validateRoutingRecord,
   finalizeRoutingRecord,
@@ -324,6 +328,12 @@ describe('C. §2.4.5.3 actuation — demotion-only, max 1 position, nothing remo
     assert.equal(out.displacements.length, 0);
   });
 
+  test('last-candidate floor remains a hard no-op for a generic single entry', () => {
+    const out = demoteChain(['x'], ['x']);
+    assert.deepEqual(out.chain, ['x']);
+    assert.equal(out.displacements.length, 0);
+  });
+
   test('a demoted entry is never swapped past another demoted entry (no peer promotion)', () => {
     const out = demoteChain(['a', 'b', 'c'], ['a', 'b']);
     // `a` stays put: its only move would promote `b`, an equally-demoted peer, which has no
@@ -363,6 +373,88 @@ describe('D. §2.4.5.1 structural precedence + MUST-stay immunity', () => {
     assert.equal(out.applied, false);
     assert.equal(out.reason, 'must_stay_immune');
     assert.deepEqual(out.chain, ['claude/claude-opus-5', 'claude/claude-sonnet-5']);
+  });
+
+  test('a single-entry chain reports eligible feedback as permanently suppressed', () => {
+    const chain = ['claude/claude-sonnet-5'];
+    const out = applyChainFeedback({
+      taskClass: 'implementation',
+      chain,
+      feedbackOverrides: { implementation: { demotions: [{ entry: chain[0], combined_signal: 0.45 }] } },
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.immune, true);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.chain, chain);
+    assert.deepEqual(out.suppressed_demotions, [{
+      entry: 'claude/claude-sonnet-5', combined_signal: 0.45, reason: 'single_entry_chain',
+    }]);
+  });
+
+  test('a single-entry chain distinguishes absent feedback from suppressed feedback', () => {
+    const out = applyChainFeedback({ taskClass: 'implementation', chain: ['claude/claude-sonnet-5'] });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a human-pinned single-entry class reports human precedence, not chain immunity, as the reason', () => {
+    const out = applyChainFeedback({
+      taskClass: 'implementation',
+      chain: ['claude/claude-sonnet-5'],
+      feedbackOverrides: { implementation: { demotions: [{ entry: 'claude/claude-sonnet-5', combined_signal: 0.45 }] } },
+      humanTargets: humanOverriddenTargets({ routing_policy_overrides: { implementation: {} } }),
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.reason, 'human_override_precedence');
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a MUST-stay single-entry chain reports MUST-stay immunity first', () => {
+    const out = applyChainFeedback({
+      taskClass: 'mode_d',
+      chain: ['claude/claude-opus-5'],
+      feedbackOverrides: { mode_d: { demotions: [{ entry: 'claude/claude-opus-5', combined_signal: 0.45 }] } },
+      isMustStay: true,
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.immunity.kind, 'must_stay');
+    assert.equal(out.immunity.permanent, true);
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('a multi-entry chain remains eligible to actuate with no immunity', () => {
+    const out = applyChainFeedback({
+      taskClass: 'exploration',
+      chain: ['ica/claude-haiku-4-5', 'claude/claude-haiku-4-5'],
+      feedbackOverrides: overridesFor('ica/claude-haiku-4-5'),
+    });
+    assert.equal(out.applied, true);
+    assert.deepEqual(out.chain, ['claude/claude-haiku-4-5', 'ica/claude-haiku-4-5']);
+    assert.deepEqual(out.immunity, { immune: false, kind: null, permanent: false, detail: '' });
+    assert.deepEqual(out.suppressed_demotions, []);
+  });
+
+  test('the pure classifier gives MUST-stay precedence over a single-entry chain', () => {
+    const out = classifyImmunity({ taskClass: 'mode_d', chain: ['claude/claude-opus-5'], isMustStay: true });
+    assert.equal(out.kind, 'must_stay');
+  });
+
+  test('ranked feedback preserves immunity and suppressed demotions unchanged', () => {
+    const ranked = [{ providerId: 'claude', modelId: 'claude-sonnet-5' }];
+    const out = applyRankedFeedback(ranked, {
+      taskClass: 'implementation',
+      feedbackOverrides: { implementation: { demotions: [{ entry: 'claude/claude-sonnet-5', combined_signal: 0.45 }] } },
+    });
+    assert.equal(out.applied, false);
+    assert.deepEqual(out.ranked, ranked);
+    assert.equal(out.immunity.kind, 'single_entry_chain');
+    assert.deepEqual(out.suppressed_demotions, [{
+      entry: 'claude/claude-sonnet-5', combined_signal: 0.45, reason: 'single_entry_chain',
+    }]);
   });
 
   test('human routing_policy_overrides for a class blocks ALL machine feedback on it', () => {
@@ -542,6 +634,105 @@ describe('E. §2.4.6 discrete guardrails', () => {
     assert.equal(merged.applied, false);
     assert.equal(merged.gate_reason, 'live_consumption_disabled');
     assert.ok(merged.state.overrides.implementation, 'state is still computed for inspection');
+  });
+
+  test('mergeFeedback without chains preserves the legacy decision and override shapes exactly', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: { contract: enabledContract, env: ENABLED_ENV },
+    });
+    assert.deepEqual(merged.decisions, [{
+      task_class: 'implementation',
+      model: 'claude-sonnet-5',
+      provider: 'claude',
+      source_skill_name: 'dev-execution',
+      combined_signal: 0.6,
+      evidence: {
+        success_rate: null,
+        cost_index: 3.0,
+        cost_coverage_fraction: 1.0,
+        regression_rate: null,
+        sample_count: 50,
+        confidence: 0.9,
+        terms: { failure: 0, cost: 2, regression: 0 },
+        terms_live: ['cost'],
+        window_start: '2026-07-27T00:00:00Z',
+        window_end: '2026-08-03T00:00:00Z',
+      },
+      action: 'demote',
+      reason: 'combined_signal 0.6000 >= theta 0.15',
+      entry: 'claude/claude-sonnet-5',
+    }]);
+    assert.deepEqual(merged.state.overrides, {
+      implementation: {
+        demotions: [{
+          entry: 'claude/claude-sonnet-5',
+          combined_signal: 0.6,
+          evidence: merged.decisions[0].evidence,
+          action: 'demote',
+          confirmed_at: '2026-08-03T00:00:00.000Z',
+          expires_at: '2026-08-10T00:00:00.000Z',
+          source: FEEDBACK_SOURCE,
+        }],
+      },
+    });
+    assert.ok(!('immunity' in merged.decisions[0]));
+    assert.ok(!('immunity' in merged.state.overrides.implementation));
+  });
+
+  test('mergeFeedback labels a single-entry decision report as inert without dropping its demotion', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { implementation: ['claude/claude-sonnet-5'] },
+      },
+    });
+    const expected = {
+      immune: true,
+      kind: 'single_entry_chain',
+      permanent: true,
+      detail: 'This single-entry chain is immune by construction: no peer exists to receive a demotion.',
+    };
+    assert.deepEqual(merged.decisions[0].immunity, expected);
+    assert.deepEqual(merged.state.overrides.implementation.immunity, expected);
+    assert.equal(merged.decisions[0].action, 'demote');
+    assert.equal(merged.state.overrides.implementation.demotions.length, 1);
+    assert.equal(merged.state.overrides.implementation.demotions[0].entry, 'claude/claude-sonnet-5');
+  });
+
+  test('mergeFeedback labels a multi-entry decision report as not immune', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(),
+      rows: [row({
+        source_skill_name: 'firecrawl', task_class: 'web_research',
+        model: 'claude-haiku-4-5', provider: 'ica', cost_index: 3.0,
+      })],
+      now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { web_research: ['ica/claude-haiku-4-5', 'claude/claude-haiku-4-5'] },
+      },
+    });
+    const expected = { immune: false, kind: null, permanent: false, detail: '' };
+    assert.deepEqual(merged.decisions[0].immunity, expected);
+    assert.deepEqual(merged.state.overrides.web_research.immunity, expected);
+  });
+
+  test('mergeFeedback honours optional must_stay when labelling a decision report', () => {
+    const merged = mergeFeedback({
+      envelope: envelope(), rows: [row({ cost_index: 3.0 })], now: NOW,
+      opts: {
+        contract: enabledContract,
+        env: ENABLED_ENV,
+        chains: { implementation: ['claude/claude-sonnet-5'] },
+        must_stay: new Set(['implementation']),
+      },
+    });
+    assert.equal(merged.decisions[0].immunity.kind, 'must_stay');
+    assert.equal(merged.state.overrides.implementation.immunity.kind, 'must_stay');
   });
 
   test('a missing / malformed / future-schema state file degrades to no overrides, never throws', () => {
@@ -877,6 +1068,280 @@ describe('H. end-to-end — feedback actually changes a resolver decision', () =
       fs.unlinkSync(regPath);
       fs.unlinkSync(statePath);
     }
+  });
+});
+
+// ===========================================================================
+describe('I. DI-1 §1/§3/§4 — chain-join canonicalization (case-fold + dated-slug via entry-key.js)', () => {
+// ===========================================================================
+
+  // The REAL registry (this repo's own model-registry.generated.json) and the live fixture (56
+  // rows captured verbatim from the CCDash node rollup on 2026-08-11) — see
+  // tests/test-entry-key.js for the canonicalizer's own unit coverage. This block exercises the
+  // SAME facts through routing-feedback.js's public surface: chainEntryKey, demoteChain's keyFn,
+  // and applyChainFeedback's skip-reason discrimination.
+  const realRegistry = JSON.parse(fs.readFileSync(path.join(skillDir, 'model-registry.generated.json'), 'utf8'));
+  const liveFixture = JSON.parse(
+    fs.readFileSync(path.join(skillDir, 'tests', 'fixtures', 'ccdash-routing-rollup.live.json'), 'utf8')
+  );
+  const liveRows = liveFixture.rows;
+  const findLiveRow = (pred) => {
+    const found = liveRows.find(pred);
+    assert.ok(found, 'expected live-fixture row not found — has the fixture changed shape?');
+    return found;
+  };
+  test('AC4 — the registry declares exactly the observed_ids the live rollup measured', () => {
+    assert.deepEqual(realRegistry.models['claude-haiku-4-5'].observed_ids, ['claude-haiku-4-5-20251001']);
+    assert.deepEqual(realRegistry.models['claude-sonnet-4-5'].observed_ids, ['claude-sonnet-4-5-20250929']);
+  });
+
+  test('chainEntryKey stays RAW — it does not canonicalize the producer-reported join', () => {
+    const row = findLiveRow(r => r.provider === 'Claude' && r.model === 'claude-haiku-4-5-20251001' && r.task_class === 'mechanical');
+    assert.equal(chainEntryKey(row), 'Claude/claude-haiku-4-5-20251001');
+  });
+
+  test('AC2 — chainEntryKey\'s raw join from the live row still joins the real mechanical chain (via applyChainFeedback)', () => {
+    // The live row's own measured combined_signal is well below theta (it is a HEALTHY row,
+    // 0.019 < 0.15) — mergeFeedback correctly calls it `neutral`, not `demote`. That is orthogonal
+    // to DI-1: the bug this contract closes is the JOIN, not the signal math (§2.2, unchanged).
+    // So this asserts the join directly, the same way mergeFeedback would build a demotion entry
+    // (chainEntryKey(row)) IF the signal had crossed theta — no hand-written row, still no
+    // hand-written entry string.
+    const row = findLiveRow(r => r.provider === 'Claude' && r.model === 'claude-haiku-4-5-20251001' && r.task_class === 'mechanical');
+    const rawEntry = chainEntryKey(row);
+    assert.equal(rawEntry, 'Claude/claude-haiku-4-5-20251001');
+
+    // The REAL registry's mechanical chain: ['ica/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5'].
+    const chain = realRegistry.routing_policy.mechanical.chain;
+    const out = applyChainFeedback({
+      taskClass: 'mechanical',
+      chain,
+      feedbackOverrides: { mechanical: { demotions: [{ entry: rawEntry, combined_signal: 0.9 }] } },
+      registry: realRegistry,
+    });
+    assert.equal(out.skipped.length, 0, `expected a clean join, got: ${JSON.stringify(out.skipped)}`);
+    // 'claude/claude-haiku-4-5' is the LAST entry in the real chain — the floor holds, so there
+    // is nothing to displace. That is still proof the join succeeded (skipped is empty): a
+    // pre-fix run would have hit entry_not_in_chain here, not no_displacement_possible.
+    assert.equal(out.reason, 'no_displacement_possible');
+  });
+
+  test('AC3 — the fixture\'s three out-of-vocabulary providers (OpenAI / <synthetic> / "") never actuate, with distinct reasons', () => {
+    for (const provider of ['OpenAI', '<synthetic>', '']) {
+      const row = findLiveRow(r => r.provider === provider);
+      const merged = mergeFeedback({
+        envelope: envelope({ producer: row.producer }),
+        rows: [{ ...row, task_class: 'mechanical', source_skill_name: 'symbols', eligible_for_adjustment: true, confidence: 0.9 }],
+        now: Date.parse('2026-08-11T00:00:00Z'),
+        opts: { contract: enabledContract, env: ENABLED_ENV },
+      });
+      const overrides = merged.applied ? merged.state.overrides : {};
+      const cls = overrides.mechanical || { demotions: [] };
+      const out = applyChainFeedback({
+        taskClass: 'mechanical',
+        chain: realRegistry.routing_policy.mechanical.chain,
+        feedbackOverrides: { mechanical: cls },
+        registry: realRegistry,
+      });
+      if (cls.demotions.length > 0) {
+        assert.equal(out.applied, false, `provider '${provider}' must not actuate`);
+        assert.equal(out.skipped[0].reason, 'unknown_provider', `provider '${provider}'`);
+        assert.notEqual(out.skipped[0].reason, 'entry_not_in_chain');
+      }
+    }
+  });
+
+  test('demoteChain: a canonicalizing keyFn matches a chain entry that is a per-provider model id, not an alias', () => {
+    // 'ica/claude-sonnet-4-6[1m]' is a real registry providers[*].model_id, NOT a `models` key —
+    // the default identity keyFn (old behavior) would never match a canonical-key Set against
+    // it; the injected keyFn must.
+    const chain = ['ica/claude-sonnet-4-6[1m]', 'claude/claude-haiku-4-5'];
+    const keyFn = (entry) => {
+      const idx = entry.indexOf('/');
+      if (idx <= 0) return entry;
+      const res = canonEntry(entry.slice(0, idx), entry.slice(idx + 1), realRegistry);
+      return res.ok ? res.key : entry;
+    };
+    const out = demoteChain(chain, new Set(['ica/claude-sonnet-4-6']), keyFn);
+    assert.deepEqual(out.chain, ['claude/claude-haiku-4-5', 'ica/claude-sonnet-4-6[1m]']);
+    assert.deepEqual(out.displacements, [{ entry: 'ica/claude-sonnet-4-6[1m]', from: 0, to: 1 }]);
+  });
+
+  test('demoteChain: omitting keyFn preserves the EXACT original identity behavior (backward compatible)', () => {
+    const out = demoteChain(['a', 'b', 'c'], ['a']);
+    assert.deepEqual(out.chain, ['b', 'a', 'c']);
+    assert.deepEqual(out.displacements, [{ entry: 'a', from: 0, to: 1 }]);
+  });
+});
+
+// ===========================================================================
+describe('J. Adversarial-review (Codex gpt-5.6, high) regression fixes — DEFECT 1/2/3', () => {
+// ===========================================================================
+
+  // ---------------------------------------------------------------------------------------
+  // DEFECT 1 — resolver.js resolved `registry` but never passed it into applyChainFeedback /
+  // applyRankedFeedback, so entry-key.js silently fell back to loadDefaultRegistry() (the
+  // global/co-located file) instead of the resolver's own `_registryPath`-injected registry.
+  // Fix: resolver.js now threads its already-in-memory `registry` into both calls (no new
+  // fs/network — AC7 purity holds, verified separately by test-resolver.js staying 33/33).
+  // ---------------------------------------------------------------------------------------
+  test('DEFECT 1 repro: an injected custom registry with its own observed_ids is honored by the resolver feedback path', () => {
+    const customRegistry = {
+      version: 1,
+      routing_policy: {
+        exploration: { chain: ['claude/custom', 'claude/fallback'], enabled: true },
+      },
+      must_stay_primary: [],
+      models: {
+        custom: {
+          family: 'claude', class: 'custom', sampling: 'deterministic', status: 'active',
+          // The registry-declared telemetry slug this repro depends on — absent from the
+          // GLOBAL/default registry by construction, so this only resolves if resolver.js
+          // actually forwards ITS OWN registry object into the feedback join.
+          observed_ids: ['custom-20260101'],
+          providers: [{ provider: 'claude', model_id: 'custom', cost_tier: 'standard', allowance: 'billed', enabled: true, priority: 1 }],
+        },
+        fallback: {
+          family: 'claude', class: 'fallback', sampling: 'deterministic', status: 'active',
+          providers: [{ provider: 'claude', model_id: 'fallback', cost_tier: 'standard', allowance: 'billed', enabled: true, priority: 1 }],
+        },
+      },
+    };
+    const demotionState = {
+      schema_version: 1,
+      source: FEEDBACK_SOURCE,
+      overrides: {
+        exploration: {
+          demotions: [{
+            entry: 'Claude/custom-20260101', // case-mismatched provider + dated slug, exactly like the live CCDash bug
+            combined_signal: 0.9,
+            expires_at: '2099-01-01T00:00:00Z',
+            source: FEEDBACK_SOURCE,
+          }],
+        },
+      },
+    };
+
+    const regPath = path.join(os.tmpdir(), `rf-defect1-reg-${process.pid}.json`);
+    const statePath = path.join(os.tmpdir(), `rf-defect1-st-${process.pid}.json`);
+    const noLocal = path.join(os.tmpdir(), `rf-defect1-nolocal-${process.pid}.toml`);
+    fs.writeFileSync(regPath, JSON.stringify(customRegistry), 'utf8');
+    fs.writeFileSync(statePath, JSON.stringify(demotionState), 'utf8');
+    try {
+      const rec = resolve({
+        model: 'custom', task_class: 'exploration',
+        _registryPath: regPath, _localConfigPath: noLocal,
+        _feedbackContract: enabledContract, _feedbackEnv: ENABLED_ENV, _feedbackStatePath: statePath,
+      });
+      // Pre-fix: entry-key.js fell back to the GLOBAL registry, which has no 'custom' model —
+      // canonicalization failed unknown_model, the join was a no-op, and 'claude/custom'
+      // (chain head) would have been chosen with routing_feedback === null.
+      assert.equal(rec.chosen_plugin_id, 'claude');
+      assert.equal(rec.model, 'fallback', 'the demotion must actually displace claude/custom — the injected registry, not the default, must be consulted');
+      assert.ok(rec.routing_feedback, 'a demotion occurred, so provenance must be attached');
+      assert.equal(rec.routing_feedback.rank_displacement[0].entry, 'claude/custom');
+    } finally {
+      fs.unlinkSync(regPath);
+      fs.unlinkSync(statePath);
+    }
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // DEFECT 2 — buildModelIndex interleaved model_id/observed_ids with first-writer-wins in
+  // declaration order, so (a) a later model's model_id could never win over an earlier model's
+  // observed_ids, and (b) two aliases claiming the same id resolved silently by order. Fix:
+  // every id is claimed by whichever alias(es) list it (model_id OR observed_ids, uniformly);
+  // >=2 distinct claimants on one id is a registry-data contradiction and fails closed.
+  // ---------------------------------------------------------------------------------------
+  test('DEFECT 2 repro (a): observed_id declared BEFORE a later model_id collides on the same alias → still resolves (not a real collision)', () => {
+    // Same alias claims its own id via BOTH observed_ids and model_id — not a collision.
+    const registry = {
+      models: {
+        alpha: {
+          providers: [{ provider: 'claude', model_id: 'alpha-canonical' }],
+          observed_ids: ['telemetry-id'],
+        },
+      },
+    };
+    assert.deepEqual(canonEntry('claude', 'telemetry-id', registry), { ok: true, key: 'claude/alpha' });
+  });
+
+  test('DEFECT 2 repro (a): a genuine cross-alias, cross-kind collision (observed_id vs model_id) fails closed as unknown_model', () => {
+    // alpha claims 'telemetry-id' via observed_ids; beta claims the SAME raw id via model_id.
+    // Declaration order is alpha-first (observed_id) then beta (model_id) — under the OLD
+    // first-writer-wins-by-declaration-order code this silently picked alpha. The safer
+    // contract (per adversarial review) is to fail closed on ANY cross-alias claim, regardless
+    // of which kind (model_id/observed_id) or which order declared it.
+    const registry = {
+      models: {
+        alpha: { providers: [{ provider: 'claude', model_id: 'alpha-canonical' }], observed_ids: ['telemetry-id'] },
+        beta: { providers: [{ provider: 'claude', model_id: 'telemetry-id' }] },
+      },
+    };
+    assert.deepEqual(canonEntry('claude', 'telemetry-id', registry), { ok: false, reason: 'unknown_model' });
+  });
+
+  test('DEFECT 2 repro (b): two DIFFERENT aliases both listing the same observed_id fails closed as unknown_model', () => {
+    const registry = {
+      models: {
+        alpha: { providers: [{ provider: 'claude', model_id: 'alpha-canonical' }], observed_ids: ['dup-id'] },
+        beta: { providers: [{ provider: 'claude', model_id: 'beta-canonical' }], observed_ids: ['dup-id'] },
+      },
+    };
+    assert.deepEqual(canonEntry('claude', 'dup-id', registry), { ok: false, reason: 'unknown_model' });
+    // Each model's OWN canonical id is unaffected by the other's collision.
+    assert.deepEqual(canonEntry('claude', 'alpha-canonical', registry), { ok: true, key: 'claude/alpha' });
+    assert.deepEqual(canonEntry('claude', 'beta-canonical', registry), { ok: true, key: 'claude/beta' });
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // DEFECT 3 — a canonical-key collision INSIDE a single chain (e.g. two entries that
+  // canonicalize identically) broke demoteChain's Set-based matching and applyRankedFeedback's
+  // byKey Map, which could duplicate or drop a candidate. Fix: detect the collision up front and
+  // refuse to actuate that class (`ambiguous_chain`), returning the original chain unchanged.
+  // ---------------------------------------------------------------------------------------
+  test('DEFECT 3 repro: a chain with a canonical-key collision (case-only difference) refuses to actuate', () => {
+    const registry = {
+      models: {
+        a: { providers: [{ provider: 'claude', model_id: 'a' }] },
+        b: { providers: [{ provider: 'claude', model_id: 'b' }] },
+      },
+    };
+    const chain = ['claude/a', 'Claude/a', 'claude/b'];
+    const out = applyChainFeedback({
+      taskClass: 'mechanical',
+      chain,
+      feedbackOverrides: { mechanical: { demotions: [{ entry: 'claude/a', combined_signal: 0.9 }] } },
+      registry,
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.reason, 'ambiguous_chain');
+    assert.deepEqual(out.chain, chain, 'the original (unactuated) chain must be returned unchanged');
+    assert.deepEqual(out.displacements, []);
+    assert.deepEqual(out.skipped, []);
+  });
+
+  test('DEFECT 3 repro: applyRankedFeedback never duplicates or drops a candidate when two canonicalize identically', () => {
+    const registry = {
+      models: {
+        a: { providers: [{ provider: 'claude', model_id: 'a' }] },
+        b: { providers: [{ provider: 'claude', model_id: 'b' }] },
+      },
+    };
+    const ranked = [
+      { providerId: 'claude', modelId: 'a' },
+      { providerId: 'Claude', modelId: 'a' }, // canonicalizes identically to the entry above
+      { providerId: 'claude', modelId: 'b' },
+    ];
+    const out = applyRankedFeedback(ranked, {
+      taskClass: 'mechanical',
+      feedbackOverrides: { mechanical: { demotions: [{ entry: 'claude/a', combined_signal: 0.9 }] } },
+      registry,
+    });
+    assert.equal(out.applied, false);
+    assert.equal(out.reason, 'ambiguous_chain');
+    assert.equal(out.ranked.length, 3, 'no candidate may be dropped');
+    assert.deepEqual(out.ranked, ranked, 'no candidate may be duplicated or reordered — the original list comes back intact');
   });
 });
 

@@ -1,14 +1,19 @@
 ---
 schema_version: 1
 doc_type: decisions_block
+it_schema: 1 # Plan-frontmatter schema version (.claude/skills/planning/references/plan-frontmatter-schema.md).
 title: "Decisions Block: [Feature Name]"
-description: "High-level planning scaffold for feature estimation, phase boundaries, risk mapping, and model routing. Expand this via implementation-planner (sonnet) into a full PRD+Plan pair."
+description: "High-level planning scaffold for feature estimation, phase boundaries, risk mapping, and routing constraints. Expand this via implementation-planner (sonnet) into a full PRD+Plan pair."
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 feature_slug: "[kebab-case-slug]"
 estimated_points: "[N (8–13 for Tier 2; 13+ for Tier 3)]"
 tier: "[2 or 3]"
 related_feature_prd: "[path-to-prd-if-exists]"
+# Canonical decisions list (§5.4). Author resolved design decisions here as a YAML list; the
+# `## Decisions` body table below is a derived/equivalent source that capture link-follow (DI-140)
+# extracts when frontmatter omits the list. Keep the two in sync.
+decisions: [] # List of {decision, rationale, status}. e.g. {decision: "...", rationale: "...", status: locked}
 ---
 
 # Decisions Block: [Feature Name]
@@ -23,6 +28,22 @@ related_feature_prd: "[path-to-prd-if-exists]"
 **Feature Goal**: [One-sentence goal statement, e.g., "Enable users to deploy artifacts via CLI with validation and rollback support."]
 
 **This Decisions Block** captures phase boundaries, agent routing, risk hotspots, estimation anchors, and model routing to guide expansion into a full Implementation Plan. Opus authors this; sonnet `implementation-planner` expands it into the detailed plan template.
+
+---
+
+## Decisions
+
+<!-- CANONICAL DECISIONS TABLE — the IntentTree capture pipeline (link-follow, DI-140) parses the
+     first GFM table under a heading containing "decision". Columns MUST be `Decision | Rationale |
+     Status` (case-insensitive); each data row becomes one {decision, rationale, status} entry in the
+     plan-lens. Mirror these rows into the frontmatter `decisions:` list above. Status ∈
+     locked|pending|superseded. -->
+
+| Decision | Rationale | Status |
+|----------|-----------|--------|
+| [D1: the design decision made] | [why this choice over alternatives] | locked |
+| [D2: the design decision made] | [why this choice over alternatives] | locked |
+| [D3: a still-open decision] | [the tradeoff being weighed] | pending |
 
 ---
 
@@ -139,27 +160,29 @@ graph LR
 
 ---
 
-## 6. Model Routing
+## 6. Routing Constraints
 
-<!-- OPUS FILLS: Model + effort (thinking budget) decisions per phase per agent role.
-     Reference .claude/config/multi-model.toml and model-selection-guide.
-     Format: phase + agent role → model / effort.
-     Examples:
-       - "P1 backend-architect: opus / low (no thinking needed; scope is clear)"
-       - "P2 python-backend-engineer: sonnet / medium (moderate reasoning for edge cases)"
-       - "P3 ui-engineer-enhanced: sonnet / low (straightforward component wiring)"
+<!-- OPUS FILLS: Constraints, never model ids (plan-doctrine.md rule 3 — no plan-time model or
+     agent pins). This section records WHICH CLASSES of work must stay claude-primary, WHAT is
+     offload-eligible, and the CAPABILITY BAR per phase. The orchestrator resolves the actual
+     provider/model at dispatch time via `delegation-router` against the live registry — a plan
+     that names a model id here is obsolete within days of authoring.
+     Format: phase → constraint. Examples:
+       - "P1 (schema/migrations): MUST stay claude-primary — merge-path correctness"
+       - "P2 (mechanical CRUD scaffolding): offload-eligible"
+       - "P3 (UI wireframing): capability bar = design/multimodal; no MUST-stay constraint"
 -->
 
-| Phase | Agent | Model | Effort | Rationale |
-|-------|-------|-------|--------|-----------|
-| P1 | [agent] | [opus\|sonnet\|haiku] | [none/low/medium/high] | [Why this model + effort] |
-| P2 | [agent] | [opus\|sonnet\|haiku] | [none/low/medium/high] | [Why this model + effort] |
-| P3 | [agent] | [opus\|sonnet\|haiku] | [none/low/medium/high] | [Why this model + effort] |
-| ... | ... | ... | ... | ... |
+| Phase | Routing Constraint | Rationale |
+|-------|--------------------|-----------|
+| P1 | [MUST-stay-claude-primary \| offload-eligible \| capability bar: <bar>] | [Why this constraint applies] |
+| P2 | [MUST-stay-claude-primary \| offload-eligible \| capability bar: <bar>] | [Why this constraint applies] |
+| P3 | [MUST-stay-claude-primary \| offload-eligible \| capability bar: <bar>] | [Why this constraint applies] |
+| ... | ... | ... |
 
-**Model Routing Notes**:
-- [Any cross-phase model fallbacks (if primary unavailable)]
-- [Any external model callouts (GPT, Gemini, etc.) and why]
+**Routing Constraint Notes**:
+- [Any phase whose constraint is contractual — "never offload merge-path correctness" — phrased as a constraint, never as a model id]
+- [Any cross-phase capability-bar escalation (e.g., a phase needs frontier-only reasoning) and why]
 
 ---
 
@@ -200,5 +223,5 @@ This decisions block expands into a full **Implementation Plan** using the templ
 - **Section 3 (Risks)**: Expand into monitoring/validation strategies per risk (tests, code review, staging validation, etc.).
 - **Section 4 (Estimation)**: Expand into detailed task list with points, dependencies, and critical-path analysis.
 - **Section 5 (Dependency Map)**: Expand into batch definitions and parallelization strategy per file-ownership rules.
-- **Section 6 (Model Routing)**: Propagate into task-level model/effort decisions in the plan's task table.
+- **Section 6 (Routing Constraints)**: Propagate into the plan's `routing_constraints` frontmatter list (constraints only — never model ids). Provider/model per leg is resolved at dispatch time by `delegation-router`, not authored here.
 - **Section 7 (OQs)**: Incorporate resolutions into architecture or design decisions sections of the plan.

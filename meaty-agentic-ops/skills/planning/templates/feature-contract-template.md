@@ -2,17 +2,30 @@
 title: "Feature Contract: [Feature Name]"
 schema_version: 2
 doc_type: feature_contract
+it_schema: 1 # Plan-frontmatter schema version (.claude/skills/planning/references/plan-frontmatter-schema.md). MUST.
+description: "One-sentence feature outcome" # MUST by schema §5.1.
 status: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 feature_slug: "feature-name"
 category: "features"
-estimated_points: 5
+estimated_points: 5 # MUST (effort signal alias).
 tier: 1
 owner: null
 priority: medium
 risk_level: low
 changelog_required: false
+# --- Canonical plan-frontmatter schema (it_schema: 1) — task-level fields, see plan-frontmatter-schema.md §5.5/§5.6 ---
+node_type: work_package # work_package|atomic_task|side_quest|milestone|... MUST at task level (advisory in v1).
+acceptance_criteria: [] # SHOULD. Exit conditions for agentic self-verification.
+definition_of_done: null # SHOULD. Prose DoD, separate from the AC list.
+execution_mode: unassigned # human|agent|hybrid|autonomous|system|unassigned. SHOULD.
+agent_title: null # SHOULD. Delegation title.
+agent_summary: null # SHOULD. One-line summary for the executing agent.
+agent_context: null # SHOULD (md). Context the executing agent needs.
+open_questions: [] # SHOULD. List of str or {q, owner, status}.
+decisions: [] # SHOULD. List of {decision, rationale, status}.
+scores: {} # SHOULD (seed). Scoring bag; M2 engine owns runtime recompute.
 related_documents: []
 spike_ref: null
 prd_ref: null
@@ -24,7 +37,7 @@ files_affected: []
 
 # How To Use This Template
 
-This template is for **Tier 1 features (3–8 points)**. Copy this file to `docs/project_plans/feature_contracts/[category]/[slug].md`, fill in each section, then:
+This template is for **Tier 1 features (3–8 points)**. Copy this file to `docs/project_plans/feature_contracts/[slug].md`, fill in each section, then:
 
 1. Submit for review (Opus design block + brief sanity pass).
 2. Once approved, delegate the entire contract to a single `feature-sprint-executor` agent for autonomous implementation.

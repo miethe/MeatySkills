@@ -37,6 +37,8 @@ files_affected: [] # Key files expected to change
 
 # Phase [N]: [Phase Name]
 
+> **Model policy:** [`docs/agentic-operator/MODEL-ROUTING.md`](../../../../docs/agentic-operator/MODEL-ROUTING.md) (§1.5 scorecard) is canonical. Model/effort tables in this file are derived convenience copies — when they disagree, MODEL-ROUTING wins; update it first, then re-derive here. Resolve provider/model per leg via the `delegation-router` skill; the platform skills (`ica-delegate`, `codex`, `gemini-cli`) only execute the decision.
+
 **Parent Plan**: [Link to parent implementation plan]
 **Duration**: [X] days
 **Effort**: [X] story points
@@ -77,7 +79,7 @@ This phase implements the [layer name] following MeatyPrompts architecture:
 **Model Selection Guidance**: Refer to `.claude/config/multi-model.toml` for valid model values and effort policies:
 - **Sonnet** (default implementation): Complex features, multi-file changes, moderate reasoning
 - **Haiku** (default docs/extraction): Documentation, mechanical search, simple queries
-- **External models**: Use as specified in task (e.g., `nano-banana-pro` for images, `gemini-3.1-pro-preview` for web research)
+- **External models**: Use as specified in task (e.g., `nano-banana-pro` for images, `gemini-3.5-flash` for web research)
 
 **Effort Policy** (see `.claude/config/multi-model.toml`):
 - **adaptive**: Default reasoning for most tasks; model uses graduated thinking as needed

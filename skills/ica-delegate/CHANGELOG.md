@@ -1,5 +1,40 @@
 # Changelog — ica-delegate
 
+## v2.10 — 2026-08-09
+
+### Added
+- **`references/ica-platform-facts.md`** — a new reference for reasoning *about* the gateway rather
+  than delegating through it. Everything in it was measured from response headers or a probe, dated,
+  with unprobed items marked unknown rather than assumed.
+  - **The data path has four parties, not one.** `client → Cloudflare (TLS terminates OUTSIDE IBM,
+    so a reverse proxy sees plaintext) → an IBM Go gateway (only `/v1/*` exposed; LiteLLM admin
+    routes 404 with Go's plain-text default) → a **FORKED** LiteLLM 1.89.4 → AWS Bedrock in **IBM's**
+    account`, with **IBM Instana** tracing the whole path (`x-instana-*`, `traceparent`).
+  - **The fork is load-bearing:** `x-litellm-response-cost-margin-percent` and siblings are not stock
+    headers, so documented LiteLLM defaults — privacy *or* behaviour — describe something this
+    deployment is not.
+  - **Anthropic never sees these calls**, so its retention terms are not the operative ones; IBM's
+    Bedrock configuration is. Per-provider posture table added for the Azure/WatsonX/Gemini routes
+    (Azure's default abuse monitoring is the highest human-review exposure in the set).
+  - Whether content is logged, which callbacks are wired, and whether guardrails are active are
+    **unknown, not clean** — the admin surface that would answer it is unreachable from a client key.
+    Exposure class is therefore **retention + human review + attribution, not training**.
+- **`x-litellm-key-spend` is a free, zero-token cumulative spend read** — present on *every*
+  response, so read it off a call you were making anyway instead of scraping the gateway meter.
+  Cautions: per-key (a rotation resets it) and cumulative for the key's life, so only a delta
+  attributes spend to a run.
+- **Self-detection: your own session may be ICA-routed.** `ica-delegate` is framed around sending
+  work *out*, which makes it easy to assume the caller is on the subscription — often it is not.
+  ⚠️ **The trust boundary is inherited from the launcher, not the process tree**: a *local* subagent
+  of an ICA session inherits `ANTHROPIC_BASE_URL`, so "local subagent" is not a synonym for "stays on
+  this machine". Any policy or guard keyed on actor role (interactive vs delegated) is keyed on the
+  wrong axis. Discovered 2026-08-09 when a guard refused its own authoring session
+  (`agentic_meta_dev node_01KZKX3MW165WB21VEW2MRKDB7`).
+
+### Changed
+- `SKILL.md` — version 2.9 → 2.10, plus a pointer to the new reference from the model-inventory
+  section and a row in **Key References**. No behavioural guidance changed.
+
 ## v2.7 — 2026-07-20
 
 ### Changed

@@ -1,9 +1,9 @@
 {
-  "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/.claude/worktrees/model-grounding/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
+  "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/.worktrees/di1-chain-entry-key/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "a9f9a64b466bf2276261c8cdb0f612a1ef454f6d287b167cb2858b14526e1fbf",
+  "_yaml_sha256": "fe28b05680af64f935a07883d7455c9e6f8ef47faace610e702174c16c01a8d5",
   "version": 1,
-  "updated": "2026-07-28",
+  "updated": "2026-07-31",
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -101,7 +101,7 @@
     "claude-opus-5": {
       "family": "claude",
       "class": "opus",
-      "descriptor": "Claude Opus 5 (released 2026-07-24). The current flagship Opus and the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA availability not yet confirmed (added scaffolded/disabled below); the ICA spine-offload lane stays on claude-opus-4-8[1m] until Opus 5 is probed on the gateway.",
+      "descriptor": "Claude Opus 5 (released 2026-07-24). The current flagship Opus and the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA: SERVABLE + VERIFIED 2026-07-31 — claude-opus-5[1m] is now the ICA spine-offload lane (claude-opus-4-8[1m] = fallback). On the ICA lane: 1M ctx via the [1m] id (plain id caps at 200k), maxOutputTokens reported 64,000 (ICA-side cap, below the 128K first-party ceiling), tool_use + adaptive thinking (output_config.effort) + legacy thinking.type:enabled + output_config.format (structured JSON) ALL work — Opus 5 has no structured-output gap on ICA, unlike Sonnet 5.",
       "scores": {
         "cost": 3,
         "intelligence": 9,
@@ -142,20 +142,21 @@
           "model_id": "claude-opus-5[1m]",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": false,
+          "enabled": true,
           "priority": 2,
           "cost_score": 8,
           "tools": [
             "one_million_context"
           ],
-          "max_context": 1000000
+          "max_context": 1000000,
+          "max_output": 64000
         }
       ]
     },
     "claude-opus-4-8": {
       "family": "claude",
       "class": "opus",
-      "descriptor": "Claude Opus 4.8 — LEGACY as of 2026-07-24 (superseded by claude-opus-5 as the spine; Anthropic moved it to the legacy model list). Still selectable and still the ICA [1m] spine-offload fallback until Opus 5 is confirmed on the ICA gateway. Deep reasoning, orchestration, architecture. $5/$25 per M, 1M context, 128K max output.",
+      "descriptor": "Claude Opus 4.8 — LEGACY as of 2026-07-24 (superseded by claude-opus-5 as the spine; Anthropic moved it to the legacy model list). Still selectable, and still an ICA [1m] lane — but as of 2026-07-31 it is the spine-offload FALLBACK, not the primary: ICA now serves claude-opus-5[1m] (verified), which takes the lane. Deep reasoning, orchestration, architecture. $5/$25 per M, 1M context, 128K max output.",
       "scores": {
         "cost": 3,
         "intelligence": 9,
@@ -431,6 +432,7 @@
         "taste": 6,
         "speed": 6
       },
+      "auto_select": false,
       "when_to_use": [
         "free-offload",
         "exploration",
@@ -444,6 +446,9 @@
       "max_context": 200000,
       "sampling": "deterministic",
       "status": "active",
+      "observed_ids": [
+        "claude-sonnet-4-5-20250929"
+      ],
       "providers": [
         {
           "provider": "ica",
@@ -491,6 +496,9 @@
       "max_context": 200000,
       "sampling": "stochastic",
       "status": "active",
+      "observed_ids": [
+        "claude-haiku-4-5-20251001"
+      ],
       "providers": [
         {
           "provider": "ica",
@@ -1088,7 +1096,7 @@
     "gpt-5.6-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` is listed but DEAD on every route (retested 2026-07-21, both keys, cache-busted): /chat/completions + /messages → `LLM Provider NOT provided` (unconditional — missing provider prefix in the deployment), /responses → Azure api-version gate. Unlike luna-dzus, terra-dzus fails even the base chat call, so the strip-reasoning_effort trick can't rescue it. Do NOT route to the ICA dzus lane — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. RE-CONFIRMED DEAD 2026-07-27 (both keys): /responses → Azure api-version 400; still no dispatchable ICA lane, so no ICA provider row is carried (matches the deliberate 2026-07-20 revert).",
+      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 4,
         "intelligence": 8,
@@ -1124,7 +1132,7 @@
     "gpt-5.6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` is PARTIALLY servable (retested 2026-07-21) — it completes tool calls ONLY via the CODEX key on /chat/completions when `reasoning_effort` is OMITTED; adding `reasoning_effort` → `LLM Provider NOT provided`, the CC key fails it entirely, and /responses/messages are api-version/prefix-gated. This CONFIRMS the strip-the-reasoning-control-param hypothesis, but the working path (CODEX key + chat + no-effort) isn't reachable by either real executor (ica-claude.sh uses /messages+CC key; codex needs /responses). A Responses→ChatCompletions shim that strips reasoning_effort + uses the CODEX key would serve it — see docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. RE-CONFIRMED 2026-07-27: /responses → Azure api-version 400 (both keys); the only working path (CODEX key + raw /chat/completions, no effort) is still not reachable by any wired executor → no ICA provider row carried (retry trigger unchanged).",
+      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). The free ICA lane now has its OWN routable entry `gpt-5.6-luna-dzus` (routes via `~/ica-codex.sh`); this metered `codex/gpt-5.6-luna` entry is unchanged. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 6,
         "intelligence": 7,
@@ -1152,6 +1160,78 @@
           "model_id": "gpt-5.6-luna",
           "cost_tier": "standard",
           "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-terra-dzus": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Terra via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "agentic-coding",
+        "code-review",
+        "ac-validation",
+        "implementation",
+        "second-opinion"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-terra-dzus",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.6-terra-dzus",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-luna-dzus": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Luna via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — the cheaper/faster dzus tier. Same routing as gpt-5.6-terra-dzus (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 6
+      },
+      "when_to_use": [
+        "code-review",
+        "ac-validation",
+        "mechanical-tasks",
+        "second-opinion",
+        "exploration"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-luna-dzus",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.6-luna-dzus",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
           "enabled": true,
           "priority": 1
         }

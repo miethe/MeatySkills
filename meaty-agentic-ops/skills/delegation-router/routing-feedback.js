@@ -43,6 +43,10 @@ const {
   loadRoutingFeedbackContract,
   validateFeedbackJoin,
 } = require('./task-class-vocabulary.js');
+const {
+  canonicalizeEntry,
+  canonicalizeEntryString,
+} = require('./entry-key.js');
 
 // ---------------------------------------------------------------------------
 // Parameters
@@ -328,6 +332,18 @@ function evaluateRow(row, envelope, opts = {}) {
 // Merge — rows + prior state → next state
 // ---------------------------------------------------------------------------
 
+/**
+ * Deliberately the RAW producer-reported "provider/model" join — NOT canonicalized here.
+ *
+ * The value returned is what gets persisted into the machine-owned state file
+ * (`overrides[taskClass].demotions[].entry`), so keeping it raw preserves exactly what the
+ * producer reported for audit/debugging. Canonicalization (case-fold provider, resolve model
+ * to its registry alias via entry-key.js) happens at COMPARISON time in `applyChainFeedback`,
+ * which has access to both sides of the join (this entry AND the registry chain entries, which
+ * are themselves per-provider model ids — e.g. `ica/claude-sonnet-4-6[1m]` — not bare aliases)
+ * and can therefore report a precise `unknown_provider` / `unknown_model` / `entry_not_in_chain`
+ * reason (DI-1 §4) instead of this function silently baking in a guess.
+ */
 function chainEntryKey(row) {
   return `${row.provider}/${row.model}`;
 }
@@ -365,6 +381,9 @@ function expiryFor(row, nowMs, ttlWindows) {
  * @param {Object} [args.priorState] previously persisted state (for hysteresis + TTL refresh)
  * @param {number} [args.now]        epoch ms (injectable; defaults to Date.now())
  * @param {Object} [args.opts]       theta / theta_restore / ttl_windows / min_cost_coverage / env / contract
+ * @param {Object<string, string[]>} [args.opts.chains]  opt-in task_class → routing_policy chain
+ *   topology for decision-report immunity annotations. Absent means byte-for-byte legacy reports.
+ * @param {Set<string>|string[]} [args.opts.must_stay]  opt-in MUST-stay classes for those annotations
  * @returns {{state: Object, decisions: Object[], applied: boolean, gate_reason: string}}
  */
 function mergeFeedback(args) {
@@ -372,6 +391,18 @@ function mergeFeedback(args) {
   const opts = args.opts || {};
   const nowMs = isFiniteNumber(args.now) ? args.now : Date.now();
   const ttlWindows = isFiniteNumber(opts.ttl_windows) ? opts.ttl_windows : ACTUATION_PARAMS.ttl_windows;
+  // This report annotation is strictly opt-in: callers that do not pass topology retain the exact
+  // decision and state-file shapes they had before DI-1 immunity reporting was introduced.
+  const reportImmunity = opts.chains !== undefined;
+  const chains = opts.chains && typeof opts.chains === 'object' ? opts.chains : {};
+  const mustStay = opts.must_stay instanceof Set
+    ? opts.must_stay
+    : new Set(Array.isArray(opts.must_stay) ? opts.must_stay : []);
+  const immunityFor = (taskClass) => classifyImmunity({
+    taskClass,
+    chain: chains[taskClass],
+    isMustStay: mustStay.has(taskClass),
+  });
 
   const prior = normalizeState(args.priorState);
   const priorDemoted = new Set();
@@ -388,12 +419,17 @@ function mergeFeedback(args) {
       ...opts,
       wasDemoted: priorDemoted.has(`${row.task_class}::${entry}`),
     });
-    decisions.push({ ...decision, entry });
+    const reportedDecision = { ...decision, entry };
+    if (reportImmunity) reportedDecision.immunity = immunityFor(decision.task_class);
+    decisions.push(reportedDecision);
 
     if (decision.action !== 'demote' && decision.action !== 'hold') continue;
 
     const taskClass = decision.task_class;
-    if (!overrides[taskClass]) overrides[taskClass] = { demotions: [] };
+    if (!overrides[taskClass]) {
+      overrides[taskClass] = { demotions: [] };
+      if (reportImmunity) overrides[taskClass].immunity = immunityFor(taskClass);
+    }
     overrides[taskClass].demotions.push({
       entry,
       combined_signal: decision.combined_signal,
@@ -554,10 +590,18 @@ function humanOverriddenTargets(overrides) {
  *     candidate ahead of an equally-bad one is churn with no evidentiary basis.
  *
  * @param {string[]} chain            routing_policy chain, "provider/model_id" entries
- * @param {Iterable<string>} demoted  entries flagged for demotion
+ * @param {Iterable<string>} demoted  entries flagged for demotion — keyed the same way `keyFn`
+ *   keys the chain (i.e. if `keyFn` canonicalizes, `demoted` must hold canonical keys too)
+ * @param {(entry: string) => string} [keyFn]  maps a chain entry to the key compared against
+ *   `demoted`. Defaults to identity, which preserves this function's original raw-string
+ *   signature/behavior exactly. DI-1 callers pass a canonicalizing keyFn (entry-key.js) so a
+ *   chain entry like `ica/claude-sonnet-4-6[1m]` (a per-provider model id, not an alias) can
+ *   still be recognized as a match — but the returned `chain`/`displacements[].entry` values
+ *   are always the ORIGINAL, uncanonicalized chain strings; only the comparison is keyed.
  * @returns {{chain: string[], displacements: Array<{entry: string, from: number, to: number}>}}
  */
-function demoteChain(chain, demoted) {
+function demoteChain(chain, demoted, keyFn) {
+  const key = typeof keyFn === 'function' ? keyFn : (entry) => entry;
   const result = Array.isArray(chain) ? chain.slice() : [];
   const displacements = [];
   if (result.length <= 1) return { chain: result, displacements };  // last-candidate floor
@@ -567,17 +611,79 @@ function demoteChain(chain, demoted) {
 
   for (let i = 0; i < result.length - 1; i++) {
     const entry = result[i];
-    if (!flagged.has(entry)) continue;
-    if (moved.has(entry)) continue;            // max_rank_displacement = 1
+    const entryKey = key(entry);
+    if (!flagged.has(entryKey)) continue;
+    if (moved.has(entryKey)) continue;         // max_rank_displacement = 1
     const next = result[i + 1];
-    if (flagged.has(next)) continue;           // never promote a demoted peer
+    const nextKey = key(next);
+    if (flagged.has(nextKey)) continue;        // never promote a demoted peer
     result[i] = next;
     result[i + 1] = entry;
-    moved.add(entry);
+    moved.add(entryKey);
     displacements.push({ entry, from: i, to: i + 1 });
   }
 
   return { chain: result, displacements };
+}
+
+/**
+ * Classify structural immunity before feedback is allowed to consider a chain reorder.
+ *
+ * A MUST-stay classification always wins: its protection is intentional policy, whereas a
+ * single-entry chain is an immutable consequence of there being no candidate to swap with.
+ *
+ * @param {Object} args
+ * @param {string} args.taskClass
+ * @param {string[]} args.chain
+ * @param {boolean} args.isMustStay
+ * @returns {{immune: boolean, kind: 'must_stay'|'single_entry_chain'|null, permanent: boolean, detail: string}}
+ */
+function classifyImmunity({ taskClass, chain, isMustStay }) {
+  if (isMustStay) {
+    return {
+      immune: true,
+      kind: 'must_stay',
+      permanent: true,
+      detail: `${taskClass} is MUST-stay primary and cannot be changed by empirical feedback.`,
+    };
+  }
+  if (!Array.isArray(chain) || chain.length <= 1) {
+    return {
+      immune: true,
+      kind: 'single_entry_chain',
+      permanent: true,
+      detail: 'This single-entry chain is immune by construction: no peer exists to receive a demotion.',
+    };
+  }
+  return { immune: false, kind: null, permanent: false, detail: '' };
+}
+
+/**
+ * Filter state-file demotions against the current chain and human entry overrides.
+ *
+ * Kept in one place so suppressed single-entry signals and live multi-entry actuation use exactly
+ * the same eligibility rules.
+ *
+ * @param {Object[]} demotions
+ * @param {string[]} chain
+ * @param {Set<string>} humanEntries
+ * @returns {{eligible: Map<string, Object>, skipped: Array<{entry: string, reason: string}>}}
+ */
+function eligibleDemotions(demotions, chain, humanEntries) {
+  const skipped = [];
+  const eligible = new Map();
+  for (const d of demotions) {
+    if (humanEntries.has(d.entry)) {
+      skipped.push({ entry: d.entry, reason: 'human_override_precedence' });
+      continue;
+    }
+    if (!chain.includes(d.entry)) {
+      skipped.push({ entry: d.entry, reason: 'entry_not_in_chain' });
+      continue;
+    }
+    eligible.set(d.entry, d);
+  }
+  return { eligible, skipped };
 }
 
 /**
@@ -593,17 +699,28 @@ function demoteChain(chain, demoted) {
  * @param {Object} [args.feedbackOverrides]  loadFeedbackState().overrides
  * @param {{classes: Set, entries: Set}} [args.humanTargets]
  * @param {boolean} [args.isMustStay=false]
- * @returns {{chain: string[], applied: boolean, reason: string, displacements: Array, skipped: Array}}
+ * @param {Object} [args.registry]  injectable model registry for entry-key.js canonicalization
+ *   (DI-1 §1); defaults to entry-key.js's own file-loaded registry when omitted. Tests should
+ *   always inject this so the join stays offline/deterministic.
+ * @returns {{chain: string[], applied: boolean, reason: string, displacements: Array, skipped: Array, immunity: Object, suppressed_demotions: Array}}
  */
 function applyChainFeedback(args) {
   const chain = Array.isArray(args.chain) ? args.chain : [];
-  const noop = (reason) => ({ chain, applied: false, reason, displacements: [], skipped: [] });
-
-  if (args.isMustStay) return noop('must_stay_immune');
-  if (chain.length <= 1) return noop('last_candidate_floor');
-
   const overrides = args.feedbackOverrides || {};
   const human = args.humanTargets || { classes: new Set(), entries: new Set() };
+  const immunity = classifyImmunity({ taskClass: args.taskClass, chain, isMustStay: args.isMustStay });
+  const noop = (reason, extra = {}) => ({
+    chain,
+    applied: false,
+    reason,
+    displacements: [],
+    skipped: [],
+    immunity,
+    suppressed_demotions: [],
+    ...extra,
+  });
+
+  if (immunity.kind === 'must_stay') return noop('must_stay_immune');
   if (human.classes.has(args.taskClass)) return noop('human_override_precedence');
 
   const cls = overrides[args.taskClass]
@@ -613,25 +730,78 @@ function applyChainFeedback(args) {
     return noop('no_feedback_for_class');
   }
 
+  // Canonicalize once per chain entry — resolves a per-provider model id (e.g.
+  // `ica/claude-sonnet-4-6[1m]`), which is NOT itself a registry alias, to its canonical
+  // `provider/alias` key. A chain entry that fails to canonicalize (should not happen for a
+  // registry-sourced chain, but the registry could drift) falls back to its own raw string as
+  // the key — it simply cannot collide with a real canonical key, so it just never matches.
+  const registry = args.registry;
+  const keyFn = (entry) => {
+    const res = canonicalizeEntryString(entry, registry);
+    return res.ok ? res.key : entry;
+  };
+  const chainKeys = chain.map(keyFn);
+
+  // Adversarial-review DEFECT 3 fix: a canonical-key COLLISION inside the chain itself (e.g.
+  // two entries that differ only by provider case, or a per-provider model id alongside its own
+  // alias) breaks the Set-based membership check downstream — demoteChain only swaps the FIRST
+  // matching position, so a duplicate canonical key would demote/promote inconsistently. A
+  // well-formed routing_policy chain never lists the same provider/model twice, so this is a
+  // malformed-input guard, not a real routing scenario: refuse to actuate the whole class rather
+  // than mis-actuate on an ambiguous chain.
+  const keyCounts = new Map();
+  for (const k of chainKeys) keyCounts.set(k, (keyCounts.get(k) || 0) + 1);
+  if ([...keyCounts.values()].some(count => count > 1)) {
+    return { chain, applied: false, reason: 'ambiguous_chain', displacements: [], skipped: [], immunity, suppressed_demotions: [] };
+  }
+
+  const chainCanonicalKeys = new Set(chainKeys);
+
   // Entries the human has ranked by hand are immune individually, not just class-wide.
   const skipped = [];
-  const eligible = new Map();
+  const demotionByCanonicalKey = new Map();
   for (const d of cls.demotions) {
     if (human.entries.has(d.entry)) {
       skipped.push({ entry: d.entry, reason: 'human_override_precedence' });
       continue;
     }
-    if (!chain.includes(d.entry)) {
+    // Canonicalize the DEMOTION side (provider case-fold, model → registry alias, resolving
+    // through observed_ids for dated/versioned slugs). Fails closed with a distinct reason —
+    // never a silent non-match, never a guessed coercion (DI-1 §1).
+    const canon = canonicalizeEntryString(d.entry, registry);
+    if (!canon.ok) {
+      skipped.push({ entry: d.entry, reason: canon.reason });
+      continue;
+    }
+    if (!chainCanonicalKeys.has(canon.key)) {
+      // A genuine post-canonicalization miss: the demotion's model really is not in this
+      // task_class's chain (as opposed to a join failure above).
       skipped.push({ entry: d.entry, reason: 'entry_not_in_chain' });
       continue;
     }
-    eligible.set(d.entry, d);
+    demotionByCanonicalKey.set(canon.key, d);
   }
-  if (eligible.size === 0) return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped };
+  // §2.4.5.1 immunity is reported BEFORE the empty-set early return so a single-entry
+  // chain distinguishes 'nothing was eligible' from 'something was eligible and is
+  // permanently suppressed'. The demotion is preserved in suppressed_demotions, never
+  // silently dropped.
+  if (immunity.kind === 'single_entry_chain') {
+    return noop('single_entry_chain', {
+      skipped,
+      suppressed_demotions: Array.from(demotionByCanonicalKey.values()).map(d => ({
+        entry: d.entry,
+        combined_signal: d.combined_signal ?? null,
+        reason: 'single_entry_chain',
+      })),
+    });
+  }
+  if (demotionByCanonicalKey.size === 0) {
+    return { chain, applied: false, reason: 'no_eligible_demotions', displacements: [], skipped, immunity, suppressed_demotions: [] };
+  }
 
-  const { chain: reordered, displacements } = demoteChain(chain, new Set(eligible.keys()));
+  const { chain: reordered, displacements } = demoteChain(chain, new Set(demotionByCanonicalKey.keys()), keyFn);
   if (displacements.length === 0) {
-    return { chain, applied: false, reason: 'no_displacement_possible', displacements: [], skipped };
+    return { chain, applied: false, reason: 'no_displacement_possible', displacements: [], skipped, immunity, suppressed_demotions: [] };
   }
 
   return {
@@ -639,7 +809,7 @@ function applyChainFeedback(args) {
     applied: true,
     reason: 'chain_demotion',
     displacements: displacements.map(d => {
-      const rec = eligible.get(d.entry) || {};
+      const rec = demotionByCanonicalKey.get(keyFn(d.entry)) || {};
       return {
         ...d,
         combined_signal: rec.combined_signal ?? null,
@@ -648,6 +818,8 @@ function applyChainFeedback(args) {
       };
     }),
     skipped,
+    immunity,
+    suppressed_demotions: [],
   };
 }
 
@@ -664,14 +836,29 @@ function applyChainFeedback(args) {
  *
  * @param {Object[]} ranked  candidates already sorted by the stage-3 comparator
  * @param {Object} args      same shape as applyChainFeedback (minus chain)
- * @returns {{ranked: Object[], applied: boolean, reason: string, displacements: Array, skipped: Array}}
+ * @returns {{ranked: Object[], applied: boolean, reason: string, displacements: Array, skipped: Array, immunity: Object, suppressed_demotions: Array}}
  */
 function applyRankedFeedback(ranked, args) {
   const list = Array.isArray(ranked) ? ranked : [];
-  const keyOf = (c) => `${c.providerId}/${c.modelId}`;
+  // Same canonicalizer as the chain path (DI-1 §3): resolve to a `provider/alias` key when
+  // possible, falling back to the raw join only when canonicalization itself fails (so
+  // `byKey` below stays internally consistent either way — `chain` and `byKey` are always
+  // built from the SAME keyOf).
+  const keyOf = (c) => {
+    const res = canonicalizeEntry(c.providerId, c.modelId, args && args.registry);
+    return res.ok ? res.key : `${c.providerId}/${c.modelId}`;
+  };
   const result = applyChainFeedback({ ...args, chain: list.map(keyOf) });
   if (!result.applied) {
-    return { ranked: list, applied: false, reason: result.reason, displacements: [], skipped: result.skipped };
+    return {
+      ranked: list,
+      applied: false,
+      reason: result.reason,
+      displacements: [],
+      skipped: result.skipped,
+      immunity: result.immunity,
+      suppressed_demotions: result.suppressed_demotions,
+    };
   }
   const byKey = new Map(list.map(c => [keyOf(c), c]));
   return {
@@ -680,6 +867,8 @@ function applyRankedFeedback(ranked, args) {
     reason: 'priority_nudge',
     displacements: result.displacements,
     skipped: result.skipped,
+    immunity: result.immunity,
+    suppressed_demotions: result.suppressed_demotions,
   };
 }
 
@@ -726,7 +915,9 @@ module.exports = {
   writeFeedbackState,
   humanOverriddenTargets,
   demoteChain,
+  classifyImmunity,
   applyChainFeedback,
   applyRankedFeedback,
   buildFeedbackProvenance,
+  chainEntryKey,
 };

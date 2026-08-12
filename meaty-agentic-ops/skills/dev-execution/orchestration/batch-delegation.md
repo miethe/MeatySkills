@@ -39,12 +39,39 @@ Task("ui-engineer-enhanced", "TASK-1.3: Implement Form component...")
 
 ## Task Delegation Template
 
+Every delegated implementation leg carries the five **leg-contract** fields — file-ownership
+boundary, interface names, real endpoint/field names, verification path, budget + exit — plus the
+missing-name escape. They are not optional garnish on the description; a leg dispatched without them
+is an unspecified leg, and the measured failure it produces is a *green suite over a path production
+never takes*, not a wrong feature. Governing rule and rationale:
+[`../references/execution-doctrine.md`](../references/execution-doctrine.md) rule 6.
+
 ```
 @{agent-from-assigned_to}
 
 Phase ${phase_num}, {task_id}: {task_title}
 
 {task_description}
+
+Files you own (write here; everything else is read-only):
+- {exact paths — ONE ownership boundary per leg}
+
+Interfaces to call or implement (verbatim names from the tree):
+- {module.symbol / class / function}
+
+Real wire names (verbatim — routes, request/response fields, env vars, CLI flags):
+- {name: type — where it is defined}
+
+Verification path — test through the path production takes:
+- Run: {the exact command or entry point that exercises the production path}
+- Does NOT count as evidence: an offline fake, a dry-run that skips what apply requires,
+  or a code path reachable only from tests.
+
+Budget: ~{N}k tokens / ~{M} tool uses. On reaching it, stop and write a packet file
+({path}) with the remaining delta — do not continue past ~150k.
+
+If a name above does not exist in the tree, STOP and report it. Do not substitute a
+nearby one.
 
 Project Patterns to Follow:
 - Layered architecture: routers → services → repositories → DB

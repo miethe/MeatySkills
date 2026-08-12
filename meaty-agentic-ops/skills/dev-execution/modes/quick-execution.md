@@ -2,6 +2,18 @@
 
 Streamlined planning and execution for simple, single-session features.
 
+> **Git workflow:** multi-step / multi-file quick features follow the canonical worktree →
+> PR-to-parent → squash-merge-on-approval protocol in
+> [`../git-worktree-pr-protocol.md`](../git-worktree-pr-protocol.md); a **true single-file,
+> single-commit change** may commit in place on a short-lived branch (the protocol's trivial
+> exception). The orchestrator is the only committer, and any PR targets the **parent branch**, not
+> hard-coded `main`.
+>
+> **Model selection** follows [`MODEL-ROUTING.md`](../../../../docs/agentic-operator/MODEL-ROUTING.md):
+> subscription default **Sonnet 5** (`claude-sonnet-5`) for implementation, **Opus 5** for spine,
+> `xhigh` effort for the hardest work; bounded waves offload to **ICA Sonnet 5**
+> (`claude-sonnet-5[1m]`, free-to-us; 4.6[1m]/Haiku for cheap fan-out) behind the reviewer gate.
+
 ## When to Use
 
 - Single-session implementation (~1-3 hours)
@@ -142,6 +154,43 @@ All gates must pass before completion:
 | Build | `pnpm build` |
 
 If any fail, fix before proceeding.
+
+### 3.1 Reviewer Gate — one lens (mandatory)
+
+Tier 0 gets **one** reviewer pass. Cheap, and it is the whole gate:
+
+```
+Workflow({ name: 'reviewer-gate', args: {
+  scope:               { id: '${feature-slug}', title: '${description}', kind: 'tier0-change', tier: 0 },
+  lenses:              ['validator'],
+  acceptance_criteria: ${ac_list},
+  files_changed:       ${files_changed},
+  evidence_refs:       ['${test_command_transcript_path}'],
+  timestamp:           '${ISO-8601}',
+}})
+```
+
+The reviewer runs edit-less (constraint 3, enforced by the agent definition). The verdict is a
+**validated tool call**, not prose — see `../SKILL.md` § "How a gate is dispatched" for why a bare
+`Task("task-completion-validator", "… Verdict: APPROVED or CHANGES_REQUESTED")` (the form this section
+used until 2026-08-03) is not acceptable: it blocks the main loop, forces nothing to be decided, and
+makes a dead reviewer indistinguishable from a passing one.
+
+Read the envelope, not the prose:
+
+- `approved: true` → commit.
+- `approved: false`, `gate_ran: true` → a real rejection. Fix and re-invoke with `failure_summary`.
+- `approved: false`, `gate_ran: false` → **the gate did not run.** Re-dispatch it. Do not commit, and
+  do not "fix" anything — nothing was found.
+
+**Why Tier 0 has a gate at all.** The ordinary shape everywhere in this engine is *implement → tests →
+**one review** → ship* (`references/gate-risk-classes.md` §2, step 1). Tier 0 previously had a green
+suite and nothing else — and a green suite is not evidence: it can sit over a defect on a path nobody
+tested. One cheap lens is the floor, not an escalation.
+
+**No second lens, no pre-gate — with one exception.** If a Tier 0 change touches a second-lens trigger
+surface (parses untrusted input · authorization/identity boundary · irreversible or outward-facing
+effect), **it is not Tier 0.** Re-tier it rather than bolting a security lens onto the fast path.
 
 ## Phase 4: Completion
 

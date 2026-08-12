@@ -29,7 +29,7 @@ Plan status indicates where a plan is in its lifecycle—from initial draft thro
 
 ```bash
 python .claude/skills/artifact-tracking/scripts/query_artifacts.py \
-  --file docs/project_plans/PRDs/features/auth-v1.md \
+  --file docs/project_plans/PRDs/auth-v1.md \
   --format yaml
 ```
 
@@ -40,14 +40,14 @@ Extracts the YAML frontmatter and displays the `status` field.
 **Direct Edit (Small Changes)**:
 ```bash
 # Edit the status field directly in frontmatter
-vim docs/project_plans/implementation_plans/features/auth-v1.md
+vim docs/project_plans/implementation_plans/auth-v1.md
 # Change: status: draft → status: approved
 # Save and commit
 ```
 
 **Batch Check Status**:
 ```bash
-for f in docs/project_plans/PRDs/features/*.md; do
+for f in docs/project_plans/PRDs/*.md; do
   status=$(grep "^status:" "$f" | cut -d: -f2 | xargs)
   echo "$(basename "$f"): $status"
 done
@@ -152,7 +152,7 @@ When replaced by newer version or approach.
 
 ### PRDs (Product Requirements Documents)
 
-**Location**: `docs/project_plans/PRDs/[domain]/`
+**Location**: `docs/project_plans/PRDs/`
 
 **Naming**: `[feature-name]-v[N].md` (e.g., `auth-system-v2.md`)
 
@@ -168,13 +168,13 @@ updated: 2025-02-07
 category: "product-planning"
 status: draft  # ← Update this
 related:
-  - /docs/project_plans/implementation_plans/features/auth-system-v2.md
+  - /docs/project_plans/implementation_plans/auth-system-v2.md
 ---
 ```
 
 ### Implementation Plans
 
-**Location**: `docs/project_plans/implementation_plans/[type]/` (features, bugs, enhancements, etc.)
+**Location**: `docs/project_plans/implementation_plans/` (type-only layout; the old features/enhancements/infrastructure sublayer is now the `classification:` frontmatter field)
 
 **Naming**: `[feature-name]-v[N].md` (e.g., `auth-system-v2.md`)
 
@@ -190,7 +190,7 @@ updated: 2025-02-07
 category: "product-planning"
 status: draft  # ← Update this
 related:
-  - /docs/project_plans/PRDs/features/auth-system-v2.md
+  - /docs/project_plans/PRDs/auth-system-v2.md
 ---
 ```
 
@@ -244,7 +244,7 @@ When all work is finished and deployed:
 
 3. **Commit changes**:
    ```bash
-   git add docs/project_plans/implementation_plans/features/auth-v2.md
+   git add docs/project_plans/implementation_plans/auth-v2.md
    git commit -m "Mark auth-v2 implementation complete"
    ```
 
@@ -257,7 +257,7 @@ When a plan is replaced by a newer version:
    status: superseded
    updated: 2025-02-15
    related:
-     - /docs/project_plans/PRDs/features/auth-v3.md
+     - /docs/project_plans/PRDs/auth-v3.md
    ```
 
 2. **Create new plan** for replacement version:
@@ -377,7 +377,7 @@ status: in-progress
 title: "PRD: Authentication v2"
 status: superseded
 related:
-  - /docs/project_plans/PRDs/features/authentication-v3.md
+  - /docs/project_plans/PRDs/authentication-v3.md
 ```
 
 **Create New Plan**:
@@ -385,7 +385,7 @@ related:
 title: "PRD: Authentication v3"
 status: draft
 related:
-  - /docs/project_plans/PRDs/features/authentication-v2.md
+  - /docs/project_plans/PRDs/authentication-v2.md
 ```
 
 ## Best Practices
@@ -422,7 +422,7 @@ related:
 
 **Check file format**:
 ```bash
-head -20 docs/project_plans/PRDs/features/auth-v1.md
+head -20 docs/project_plans/PRDs/auth-v1.md
 # Should show YAML frontmatter with status field
 ```
 
@@ -438,7 +438,7 @@ grep -r "^status:" docs/project_plans/ | cut -d: -f3 | sort | uniq -c
 2. **Verify YAML syntax** - status must be on its own line: `status: approved`
 3. **Run validation**:
    ```bash
-   python -c "import yaml; yaml.safe_load(open('docs/project_plans/PRDs/features/auth-v1.md'))"
+   python -c "import yaml; yaml.safe_load(open('docs/project_plans/PRDs/auth-v1.md'))"
    # No output = valid YAML
    ```
 

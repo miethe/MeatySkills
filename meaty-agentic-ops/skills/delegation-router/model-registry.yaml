@@ -211,6 +211,13 @@ models:
     max_context: 200000
     sampling: deterministic
     status: active
+    # observed_ids (DI-1, §2): dated/versioned model slugs telemetry producers (e.g. CCDash)
+    # have actually been SEEN reporting for this model, beyond the alias key above and the
+    # providers[*].model_id values below. entry-key.js reverse-indexes this list so a producer's
+    # raw model string can canonicalize to this alias without any prefix match or regex
+    # date-stripping. Only list ids actually observed on the wire — never invent a dated slug
+    # speculatively.
+    observed_ids: ["claude-sonnet-4-5-20250929"]
     providers:
       # ICA-only lane (no subscription entry — sonnet-5 is the subscription default). 1m preferred over plain 200k.
       - { provider: ica, model_id: "claude-sonnet-4-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
@@ -228,6 +235,10 @@ models:
     max_context: 200000
     sampling: stochastic
     status: active
+    # observed_ids (DI-1, §2): see the claude-sonnet-4-5 comment above — same mechanism. This
+    # covers the specific mismatch measured on the live 2026-08-11 CCDash rollup: 8/50 eligible
+    # rows carried the dated `claude-haiku-4-5-20251001`.
+    observed_ids: ["claude-haiku-4-5-20251001"]
     providers:
       - { provider: ica,    model_id: "claude-haiku-4-5", cost_tier: free,   allowance: unlimited, enabled: true, priority: 1 }
       - { provider: claude, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }

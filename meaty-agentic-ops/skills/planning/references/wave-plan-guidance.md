@@ -1,5 +1,7 @@
 # Wave-Plan Guidance
 
+> **Model policy:** [`docs/agentic-operator/MODEL-ROUTING.md`](../../../../docs/agentic-operator/MODEL-ROUTING.md) (§1.5 scorecard) is canonical. Model/effort tables in this file are derived convenience copies — when they disagree, MODEL-ROUTING wins; update it first, then re-derive here. Resolve provider/model per leg via the `delegation-router` skill; the platform skills (`ica-delegate`, `codex`, `gemini-cli`) only execute the decision.
+
 ## What Is `wave_plan` and When to Populate It
 
 `wave_plan` is a YAML block in an implementation plan's frontmatter that encodes the phase dependency graph and file-ownership constraints for a feature. It tells `/dev:execute-plan` which phases can run concurrently, which files act as serialization barriers, and which phases require worktree isolation.
@@ -10,10 +12,32 @@ Per **D2** (spec §4.1), `wave_plan` lives in the implementation plan frontmatte
 
 ---
 
+## Routing constraints (what replaces the pins)
+
+Per `plan-doctrine.md` rule 3 (no plan-time model or agent pins), `wave_plan` still encodes the
+**dependency and isolation graph** — that structure is orthogonal to routing and is unaffected by
+this doctrine. What changes is the model/provider/profile fields below: a plan states a
+**constraint**, never an identity, and `delegation-router` resolves provider + model at dispatch
+time against the live registry.
+
+A routing constraint is a short prose statement attached to a phase or milestone, e.g.:
+
+- "This phase's merge-path correctness MUST stay claude-primary."
+- "This phase is a mechanical sweep — offload-eligible."
+- "Capability bar: needs frontier-level architectural judgment; do not route to an economy model."
+
+Never write a model id, provider name, or profile as that constraint. The fields documented in
+the schema below (`model`, `orchestrator_model`, `provider`, `profile`) are the pre-doctrine
+mechanism — kept parsing for in-flight plans, deprecated for new ones.
+
+---
+
 ## Schema Reference
 
 ```yaml
 wave_plan:
+  # DELETED (Claude-5 doctrine) — `orchestrator_model` was advisory prose the orchestration loop
+  # never read (it cannot switch its own main-loop model mid-run). See plan-doctrine.md rule 3.
   serialization_barriers:     # Optional list; omit if no shared files exist
     - CLAUDE.md               # Files that force serialization when touched by >1 phase
     - skillmeat/api/openapi.json
@@ -28,8 +52,13 @@ wave_plan:
       files_affected:         # Recommended. Paths the phase writes; used for barrier intersection check
         - skillmeat/cache/models/foo.py
         - skillmeat/cache/migrations/202605_xx_add_foo.py
+      # DELETED (Claude-5 doctrine) — `orchestrator_model` (phase-level override) removed; see plan-doctrine.md rule 3.
+      # DEPRECATED (Claude-5 doctrine) — plan-time model pins are obsolete; plans carry a routing
+      # constraint instead (see "Routing constraints" above) and `delegation-router` resolves the
+      # model at dispatch time. Legacy plans authored before this doctrine may still carry `model:`
+      # and it still parses/executes. See plan-doctrine.md rule 3.
       model: sonnet           # Optional. Default model for this phase's implementer dispatches.
-                              #   Values: opus | sonnet | haiku | gpt-5.6-terra | gemini-3.1-pro-preview | gemini-3.1-flash-lite | nano-banana-pro
+                              #   Values: opus | sonnet | haiku | gpt-5.6-terra | gemini-3.5-flash | gemini-3.1-pro-preview | nano-banana-pro
                               #   Per-task `Model` column overrides this default.
       effort: adaptive        # Optional. Default thinking budget for this phase's implementers.
                               #   Valid values depend on the chosen model — see Effort Vocabulary section below.
@@ -69,25 +98,11 @@ wave_plan:
 | `phases[].parallelizable` | `bool` | Optional | `true` | Set to `false` to force a phase into its own solo wave even when its deps are satisfied alongside siblings. Use for phases with known but unmodeled coupling. |
 | `phases[].owner_skills` | `string[]` | Optional | `[]` | Skills injected into the `phase-owner` agent at spawn via the `skills:` preload mechanism. Full SKILL.md is injected at startup — audit token size before adding. |
 | `phases[].files_affected` | `string[]` | Recommended | `[]` | Files the phase is expected to write. Used by the decomposition algorithm to detect barrier intersections. Glob patterns are permitted but discourage overly broad entries. |
-| `phases[].model` | `string` | Optional | — | Default model for this phase's implementer dispatches. Values: `opus` \| `sonnet` \| `haiku` \| `gpt-5.6-terra` \| `gemini-3.1-pro-preview` \| `gemini-3.1-flash-lite` \| `nano-banana-pro`. Per-task `Model` column overrides this default. |
+| `phases[].model` | `string` | Optional | — | **DEPRECATED (Claude-5 doctrine)** — plan-time model pin; obsolete within days of authoring (`plan-doctrine.md` rule 3). Legacy plans may still carry it and it still parses/executes. New plans express a routing constraint instead (see "Routing constraints" above). Values: `opus` \| `sonnet` \| `haiku` \| `gpt-5.6-terra` \| `gemini-3.5-flash` \| `gemini-3.1-pro-preview` \| `nano-banana-pro`. Per-task `Model` column overrides this default. |
 | `phases[].effort` | `string` | Optional | — | Default thinking budget for this phase's implementers. Valid values depend on the chosen model — see Effort Vocabulary section below. Per-task `Effort` column overrides this default. |
-| `phases[].provider` | `string` | Optional | — | Default provider for this phase's tasks. Values: `claude` \| `ica` \| `codex` \| `bob` \| `gemini`. Per-task `Provider` column overrides. See `.claude/specs/provider-routing-spec.md §2` for defaults. |
-| `phases[].profile` | `string` | Optional | — | Default profile for the provider in this phase. Examples: `free-tier`, `sandbox=read-only` (Codex), `web-search=on` (Gemini). Per-task `Profile` column overrides. |
+| `phases[].provider` | `string` | Optional | — | **DEPRECATED (Claude-5 doctrine)** — plan-time provider pin; `delegation-router` resolves provider at dispatch time (`plan-doctrine.md` rule 3). Legacy plans may still carry it. Values: `claude` \| `ica` \| `codex` \| `gemini`. Per-task `Provider` column overrides. Defaults resolve via the global model registry (`~/.claude/config/model-registry.yaml`) + the global `delegation-router` skill (`~/.claude/skills/delegation-router/`) — R2 policy: Opus/Sonnet/Haiku default to `claude`; ICA/Codex/Gemini are explicit opt-ins, never defaults. |
+| `phases[].profile` | `string` | Optional | — | **DEPRECATED (Claude-5 doctrine)** — plan-time profile pin; same rationale as `phases[].provider` above (`plan-doctrine.md` rule 3). Legacy plans may still carry it. Examples: `free-tier` (ICA), `sandbox=read-only` (Codex), `web-search=on` (Gemini). Per-task `Profile` column overrides. See the global `delegation-router` skill (`~/.claude/skills/delegation-router/references/model-registry.md`). |
 | `waves` | `string[][]` | Derived | — | Computed output of the two-pass algorithm. Include explicitly in the plan so orchestrators and human reviewers can verify correctness without running the algorithm. |
-
----
-
-## Provider / Profile Precedence
-
-Provider and Profile assignments follow an inheritance cascade from global defaults to per-task overrides:
-
-1. **Global default**: Model class default from `.claude/config/multi-model.toml [models.providers]` (e.g., Sonnet defaults to `claude`, Haiku defaults to `ica`)
-2. **Phase level** (`wave_plan.phases[].provider` / `.profile`): Applies to all tasks in the phase unless overridden
-3. **Task level** (`Model` / `Provider` / `Profile` columns in the phase task table): Overrides phase defaults
-
-**Example**: A phase with `provider: ica, profile: free-tier` can have individual tasks with `provider: claude` (explicit cost-shift back to primary).
-
-For the authoritative assignment procedure and cost policy, see `.claude/specs/provider-routing-spec.md §3`.
 
 ---
 
@@ -345,11 +360,26 @@ Source of truth: `.claude/config/multi-model.toml` § `[models.effort_levels]`
 |---|---|---|---|
 | claude | opus, sonnet, haiku | `adaptive`, `extended` | `adaptive` |
 | codex | gpt-5.6-terra | `none`, `low`, `medium`, `high`, `xhigh` | `medium` |
-| gemini | gemini-3.1-pro-preview, gemini-3.1-flash-lite | `none`, `low`, `medium`, `high` | `medium` |
+| gemini | gemini-3.5-flash, gemini-3.1-pro-preview | `none`, `low`, `medium`, `high` | `medium` |
 | nano_banana | nano-banana-pro | `standard`, `quality` | `standard` |
 
 **Critical rule**: Effort is a model-keyed reasoning budget, NOT a size estimate. Story points or hours belong in the per-task `Estimate` column. Putting `"3pts"` or `"2h"` in the `Effort` column is a common mistake — those values should be in `Estimate`.
 
-**Override precedence**: Per-task `Effort` values in phase task tables override per-phase `wave_plan.phases[].effort` defaults. Both are optional; absence means "use the model's own default."
+**Override precedence (legacy plans only)**: for plans authored before the Claude-5 doctrine that
+still carry per-phase `model`/`effort` defaults and per-task `Model`/`Effort` columns, the per-task
+value overrides the per-phase default. Both remain optional; absence means "use the model's own
+default." New plans don't set either — they carry a routing constraint (see "Routing constraints"
+above) and effort is resolved at dispatch time.
 
-**Setting phase-level defaults**: Planners SHOULD set `model` and `effort` on each `wave_plan.phases[]` entry as a phase-wide default for that phase's implementer dispatches. This avoids repeating the same model/effort on every row in the task table when an entire phase shares a single model.
+**DEPRECATED (Claude-5 doctrine) — plan-time model/effort phase defaults**: the prior guidance
+here told planners to set `model` and `effort` on each `wave_plan.phases[]` entry as a phase-wide
+default. Per `plan-doctrine.md` rule 3, planners SHOULD NOT set model, provider, or profile at
+plan time — they declare the routing constraint and capability bar for the phase/milestone, and
+`delegation-router` resolves provider + model at dispatch time against the live registry. Effort
+may still be set as a capability-bar hint, but treat it as advisory, not a pin.
+
+**DEPRECATED (Claude-5 doctrine) — provider / profile cascade**: the previous inheritance cascade
+(global default → `wave_plan.phases[].provider`/`.profile` → per-task `Provider`/`Profile`
+columns) was a plan-time pinning mechanism. Legacy plans may still carry these fields and they
+still parse/execute; new plans omit them. For the current assignment procedure and cost policy,
+see the global `delegation-router` skill (`~/.claude/skills/delegation-router/SPEC.md`).

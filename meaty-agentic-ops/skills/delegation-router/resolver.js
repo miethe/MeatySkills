@@ -808,6 +808,7 @@ function resolveFromRegistry(input) {
         feedbackOverrides,
         humanTargets,
         isMustStay: isMustStay(policyKey, registryMustStay),
+        registry,
       });
       for (const entry of fb.chain) {
         const cand = resolveChainEntry(registry, entry);
@@ -857,6 +858,7 @@ function resolveFromRegistry(input) {
       feedbackOverrides,
       humanTargets,
       isMustStay: isMustStay(task_class, registryMustStay),
+      registry,
     });
     const finalRanked = fbRanked.applied ? fbRanked.ranked : ranked;
     if (finalRanked.length > 0) {
