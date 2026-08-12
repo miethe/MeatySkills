@@ -40,9 +40,21 @@ name = "delegation-router-global-config"
 description = "Place the tracked model registry + use-case rankings where resolver.js reads them."
 
 # --- The config directory the resolver reads (Tier 3 / global canonical) ---
+#
+# `version` is REQUIRED, not decorative: WorkspaceDirOp._get_version() raises
+# OpExecutionError('missing required payload key version') when absent, and plan() calls it.
+# Because RecipeApplier.apply() is all-or-nothing and runs ops in order, omitting it aborted
+# this recipe on op1 and the three FILE_COPY ops below NEVER ran — i.e. the bootstrap-on-install
+# this file exists to perform did not happen (node_01KZVRAF16P674E6868284654C).
+#
+# The value is a stamp written into the directory's .skillmeat-recipe.toml marker and compared
+# on re-apply: a CHANGED value marks the directory stale and refreshes the marker. Track the
+# skill's own `version` from SKILL.md so a config-layout change re-stamps.
 [[ops]]
 op_class = 3                       # WORKSPACE_DIR
 target = ".claude/config"
+version = "3.4"
+description = "Global config dir read by resolver.js (model registry + use-case rankings)."
 
 # --- Registry source of truth (YAML) ---
 [[ops]]
