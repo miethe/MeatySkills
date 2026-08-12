@@ -237,9 +237,75 @@
       "items": {
         "type": "string"
       }
+    },
+    "routing_log": {
+      "type": "array",
+      "description": "Routing decisions and measured realizations accumulated during the run, in call order. This is the WIRE between a workflow and .claude/logs/routing-decisions.jsonl: a workflow script cannot require() or write files (constraint 1), so it accumulates entries and returns them here, and the post-run caller drains them with `node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <id>`. Present (possibly empty) on every exit of a routing-aware workflow; an empty array means nothing was routed, NOT that routing went unrecorded. Entries omit task_id — the workflow does not know it; the caller supplies it at ingest.",
+      "items": {
+        "$ref": "#/$defs/RoutingLogEntry"
+      }
     }
   },
   "$defs": {
+    "RoutingLogEntry": {
+      "type": "object",
+      "description": "One routing audit entry, matching audit-log.js schema v2. A `decision` records the INTENT at resolve time and deliberately omits the realized fields, because omitted means UNCONFIRMED — copying the intent into actual_provider_used is what made v1 unable to audit anything. A `realization` records a MEASURED hop and must name what measured it: an executing leg's self-report is not a measurement.",
+      "required": [
+        "kind",
+        "chosen_plugin_id",
+        "task_ref"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "task_ref": {
+          "type": "string",
+          "description": "Stable per-leg discriminator (the dispatch site's own label, e.g. 'P2:ac-validate', 'fix-cycle-2', 'evidence-scribe:stage-a'). A decision and the realization that MEASURES it must share a task_ref so they join; different legs must differ so they never cross-settle. At ingest this composes the stored task_id as `<batch task_id>::<task_ref>`. REQUIRED because the alternative — one task_id for a whole run — makes a single leg's evidence confirm every other decision in that run, and `routing audit --unconfirmed` then reads clean over decisions nothing measured."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "decision",
+            "realization"
+          ]
+        },
+        "chosen_plugin_id": {
+          "type": "string",
+          "description": "Provider the resolver selected (the INTENT)."
+        },
+        "intended_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Model the resolver selected. null when the call pinned none — unknowable, never guessed."
+        },
+        "actual_provider_used": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Provider that actually ran, IF MEASURED. Never set on a decision entry."
+        },
+        "realized_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Model that actually ran, IF MEASURED."
+        },
+        "realization_evidence": {
+          "type": "string",
+          "description": "What established the realized hop — required on a realization, and the only thing that can make it confirmed."
+        },
+        "fallback_applied": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Routing rationale. Also where a rejected provider is named when a guard overrode the intent before dispatch."
+        }
+      }
+    },
     "WaveResult": {
       "type": "object",
       "required": [

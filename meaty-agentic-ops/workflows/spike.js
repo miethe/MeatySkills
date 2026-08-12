@@ -50,6 +50,34 @@ export const meta = {
 }
 
 // ---------------------------------------------------------------------------
+// Routing audit accumulator — the wire out of this script
+// ---------------------------------------------------------------------------
+// A plain array and two pure helpers. Pushing to an array is neither an FS write nor a
+// require(), so this stays inside the four constraints (§5) — which is the whole reason the
+// PREVIOUS shape existed and the whole reason it failed: routing payloads were handed to
+// agent() as a `_routing_log` opts key, and `_routing_log` is not in the opts allowlist (§1),
+// so the runtime discarded every one of them. 14 payloads across 5 workflows were written and
+// never read, which made `skillmeat routing audit` over a workflow run empty BY CONSTRUCTION
+// rather than clean — and empty reads exactly like clean. Measured 2026-08-12,
+// node_01KZVV9R3EK13DJXS44VCQ8E9C.
+//
+// Entries ride out on the report as `routing_log` (§6). The post-run caller drains them:
+//   node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <id>
+// so the write lands on claude-primary, where it belongs, and this script stays pure.
+//
+// `withRouting()` wraps EVERY workflow exit reachable after a routeLog() call. No judgement
+// about which exits "matter": the ones that matter most are the mid-run bail-outs that happen
+// immediately after a fallback fired, and those are exactly the ones a reachability argument
+// talks itself out of.
+const __routingLog = []
+const routeLog = entry => {
+  __routingLog.push(entry)
+  return entry
+}
+const withRouting = result => ({ ...result, routing_log: __routingLog })
+
+
+// ---------------------------------------------------------------------------
 // args is the structured envelope built by Opus pre-flight.
 // The script never reads the charter file itself (constraint 1 — no FS access).
 // Shape: see explore-spike-workflow-spec.md §2.
@@ -98,43 +126,43 @@ const {
 // ---------------------------------------------------------------------------
 if (dry_run) {
   log('Dry-run mode: returning parsed args without spawning agents.')
-  return {
+  return withRouting({
     status: 'dry_run',
     workflow_type: 'spike',
     parsed_args: parsedArgs,
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
 // Validate legs (1–4 required).
 // ---------------------------------------------------------------------------
 if (!legs || legs.length === 0) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'invalid_args',
     message: 'args.legs must contain at least one leg.',
     workflow_type: 'spike',
-  }
+  })
 }
 
 if (legs.length > 4) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'invalid_args',
     message: 'args.legs must contain at most 4 legs.',
     workflow_type: 'spike',
-  }
+  })
 }
 
 // Defensive Mode D guard: research/SPIKE workflows should never carry Mode D legs.
 const modeDLeg = legs.find(l => l.mode === 'D')
 if (modeDLeg) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'mode_d',
     message: `Leg '${modeDLeg.id}' is marked Mode D. SPIKE legs must not be Mode D. Remove or reclassify.`,
     workflow_type: 'spike',
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -206,19 +234,20 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
   // from the offload leg would not be a measurement; this is the orchestrator's own observation.
   let failureMode = null
   try {
+    routeLog({
+      task_ref: label,
+      kind: 'decision',
+      chosen_plugin_id: chosenPluginId,
+      intended_model: model || null,
+      fallback_applied: false,
+      reason: `offload ${label} to ${offloadAgentType}`,
+    })
     result = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, {
       label,
       phase,
       agentType: offloadAgentType,
       model,
       schema,
-      _routing_log: {
-        kind: 'decision',
-        chosen_plugin_id: chosenPluginId,
-        intended_model: model || null,
-        fallback_applied: false,
-        reason: `offload ${label} to ${offloadAgentType}`,
-      },
     })
     if (!result) {
       failed = true
@@ -232,23 +261,24 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
   }
   if (failed) {
     log(`P5 fallback: actual_provider_used='claude', fallback_applied=true for ${label}.`)
+    routeLog({
+      task_ref: label,
+      kind: 'realization',
+      chosen_plugin_id: chosenPluginId,
+      intended_model: model || null,
+      actual_provider_used: 'claude',
+      // null when no model was pinned for this stage — unknowable, never guessed.
+      realized_model: model || null,
+      fallback_applied: true,
+      realization_evidence: `orchestrator-observed: ${offloadAgentType} ${failureMode} for ${label}; this call is the workflow's own in-process re-dispatch to ${primaryAgentType} on claude-primary`,
+      reason: `${offloadAgentType} failed (rate-limit / timeout / binary absent / structuring error); escalated to primary claude immediately (no retry)`,
+    })
     result = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, {
       label: `${label}-fallback`,
       phase,
       agentType: primaryAgentType,
       model,
       schema,
-      _routing_log: {
-        kind: 'realization',
-        chosen_plugin_id: chosenPluginId,
-        intended_model: model || null,
-        actual_provider_used: 'claude',
-        // null when no model was pinned for this stage — unknowable, never guessed.
-        realized_model: model || null,
-        fallback_applied: true,
-        realization_evidence: `orchestrator-observed: ${offloadAgentType} ${failureMode} for ${label}; this call is the workflow's own in-process re-dispatch to ${primaryAgentType} on claude-primary`,
-        reason: `${offloadAgentType} failed (rate-limit / timeout / binary absent / structuring error); escalated to primary claude immediately (no retry)`,
-      },
     })
   }
   return result
@@ -294,12 +324,12 @@ const validLegResults = legResults.filter(Boolean)
 const legsPartial = legs.length - validLegResults.length
 
 if (validLegResults.length === 0) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'all_legs_failed',
     message: 'All research legs returned null. Check leg agentType registrations and prompts.',
     workflow_type: 'spike',
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -324,12 +354,12 @@ const deepResults = await pipeline(
 const validDeepResults = deepResults.filter(Boolean)
 
 if (validDeepResults.length === 0) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'deep_read_failed',
     message: 'All deep-read stages returned null.',
     workflow_type: 'spike',
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -469,12 +499,12 @@ const synthesis = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSli
 })
 
 if (!synthesis) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'synthesis_failed',
     message: 'Synthesis agent returned null. Review leg findings and retry.',
     workflow_type: 'spike',
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -542,7 +572,7 @@ ${JSON.stringify(synthesis, null, 2)}`,
 // ---------------------------------------------------------------------------
 log('Spike workflow complete. Returning to Opus for verdict sign-off.')
 
-return {
+return withRouting({
   status: 'needs_opus',
   reason: 'verdict_signoff',
   workflow_type: 'spike',
@@ -554,7 +584,7 @@ return {
   legs_partial: legsPartial,
   verified_findings_count: survivingFindings.length,
   budget_remaining: budget.remaining(),
-}
+})
 
 // ---------------------------------------------------------------------------
 // Prompt builders — pure functions, no FS/shell access, no Date.now().

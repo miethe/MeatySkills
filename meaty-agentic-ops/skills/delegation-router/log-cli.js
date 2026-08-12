@@ -46,7 +46,7 @@
 
 const fs = require('fs');
 
-const { appendEntry, appendRealization } = require('./audit-log.js');
+const { appendEntry, appendRealization, ingestRoutingLog, DEFAULT_LOG_PATH } = require('./audit-log.js');
 
 function printHelp(stream) {
   stream.write(
@@ -89,11 +89,25 @@ function printHelp(stream) {
       '  --log-path <path>     Override the audit log file path (test/debug only).',
       '  --help, -h            Show this help and exit 0.',
       '',
+      'Batch mode — draining a workflow run:',
+      '  --ingest <json|->     Path to a workflow ExecutionReport (or a bare array) whose',
+      '                        `routing_log` entries are written in one pass. This is the',
+      '                        wire between a Dynamic Workflow and this log: workflow',
+      '                        scripts cannot require() or touch the FS, so they accumulate',
+      '                        entries and RETURN them, and the post-run caller ingests',
+      '                        them here — on claude-primary, where the write belongs.',
+      '                        Each entry carries its own kind/provider/evidence; --task-id',
+      '                        supplies the task for any entry lacking one (a workflow does',
+      '                        not know its node id, the caller does). Other single-entry',
+      '                        flags are ignored in this mode.',
+      '  --dry-run             With --ingest: validate every entry, write nothing.',
+      '',
       'Examples:',
       '  node log-cli.js --task-id P2-006 --chosen ica --intended-model "claude-sonnet-5[1m]" \\',
       '    --reason "free-tier offload"',
       '  node log-cli.js --realization --task-id P2-006 --actual ica \\',
       '    --realized-model "claude-haiku-4-5[1m]" --evidence "ccdash session S-abc123"',
+      '  node log-cli.js --ingest report.json --task-id node_01KZVV9R3EK13DJXS44VCQ8E9C',
       '',
     ].join('\n')
   );
@@ -112,6 +126,8 @@ function parseArgs(argv) {
     reason: undefined,
     record: undefined,
     log_path: undefined,
+    ingest: undefined,
+    dry_run: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -149,6 +165,12 @@ function parseArgs(argv) {
         break;
       case '--log-path':
         args.log_path = argv[++i];
+        break;
+      case '--ingest':
+        args.ingest = argv[++i];
+        break;
+      case '--dry-run':
+        args.dry_run = true;
         break;
       default:
         throw new Error(`unrecognized argument '${flag}' (see --help)`);
@@ -275,6 +297,86 @@ function main() {
   } catch (err) {
     process.stderr.write(`log-cli: ${err.message}\n`);
     process.exit(2);
+    return;
+  }
+
+  // --ingest is a BATCH mode and returns before the single-entry path below: it takes a
+  // whole workflow's `routing_log` array at once, which is the shape the wire between a
+  // workflow run and this log actually has. The single-entry flags do not apply to it.
+  if (args.ingest !== undefined) {
+    if (args.ingest === undefined || args.ingest === null || args.ingest === '') {
+      process.stderr.write('log-cli: --ingest needs a path to a report/array JSON file (or - for stdin)\n');
+      process.exit(2);
+      return;
+    }
+
+    let text;
+    try {
+      text = args.ingest === '-' ? fs.readFileSync(0, 'utf8') : fs.readFileSync(args.ingest, 'utf8');
+    } catch (err) {
+      process.stderr.write(`log-cli: cannot read ${args.ingest} — ${err.message}\n`);
+      process.exit(2);
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (err) {
+      process.stderr.write(`log-cli: ${args.ingest} is not valid JSON — ${err.message}\n`);
+      process.exit(2);
+      return;
+    }
+
+    let result;
+    try {
+      result = ingestRoutingLog({
+        entries: parsed,
+        task_id: args.task_id,
+        log_path: args.log_path,
+        dry_run: args.dry_run,
+      });
+    } catch (err) {
+      process.stderr.write(`log-cli: could not ingest routing_log — ${err.message}\n`);
+      process.exit(2);
+      return;
+    }
+
+    const total = result.counts.decision + result.counts.realization;
+    process.stdout.write(
+      JSON.stringify(
+        {
+          ingested: total,
+          decisions: result.counts.decision,
+          realizations: result.counts.realization,
+          defaulted_kind: result.counts.defaulted_kind,
+          no_task_ref: result.counts.no_task_ref,
+          skipped: result.skipped,
+          dry_run: result.dry_run,
+          log_path: args.log_path || DEFAULT_LOG_PATH,
+        },
+        null,
+        2
+      ) + '\n'
+    );
+
+    // Two or more entries with no task_ref collapse onto one task_id, and
+    // findUnconfirmedEntries() settles decisions by joining on task_id — so one leg's
+    // realization would mark the others confirmed on evidence about something else.
+    // Warn rather than fail: a legitimate single-leg batch is indistinguishable at this
+    // layer, and the caller is the one who knows. Silence is how the original bug survived.
+    if (result.counts.no_task_ref > 1) {
+      process.stderr.write(
+        `WARNING: ${result.counts.no_task_ref} entries carried no task_ref, so they share the task_id ` +
+          `'${args.task_id}'. A confirmed realization among them will mark the others CONFIRMED too — ` +
+          `audit --unconfirmed would read clean on decisions nothing measured. Give each leg a task_ref ` +
+          `(see audit-log.js "WHY task_ref EXISTS").\n`
+      );
+    }
+
+    // A skipped entry exits non-zero even though the rest were written. Reporting a
+    // partial ingest as success is the same false assurance an empty audit log gave.
+    process.exit(result.skipped.length > 0 ? 1 : 0);
     return;
   }
 

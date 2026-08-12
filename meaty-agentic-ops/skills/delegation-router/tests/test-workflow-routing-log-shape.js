@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * test-workflow-routing-log-shape.js — the SHIPPED `_routing_log` literals, run for real.
+ * test-workflow-routing-log-shape.js — the SHIPPED routing-log literals, run for real.
  *
  * Run: `node tests/test-workflow-routing-log-shape.js` (zero deps; exits non-zero on failure).
  *
  * Why this shape of test. The defect this guards (node_01KZSAN7QA6FQVT49DF29BS9Z6) was that 13
- * `_routing_log` blocks across 5 workflows copied the routing INTENT into `actual_provider_used`
+ * routing-log blocks across 5 workflows copied the routing INTENT into `actual_provider_used`
  * at decision time and carried no model in either direction — so every entry was born
  * unconfirmed-but-looking-confirmed and model-blind. A test asserting "the correct pattern appears
  * somewhere in the file" would have passed against the defect. So this test EXTRACTS each shipped
@@ -13,12 +13,21 @@
  * Same reasoning as `tests/test_workflow_mode_d_routing.py` in the launchpad, which runs the
  * shipped regex literals rather than asserting the table is present.
  *
- * ⚠️ Scope boundary, stated so this test is not misread as proving more than it does: nothing in
- * this estate CONSUMES `_routing_log` — it is an unrecognized key on the `agent()` opts bag and is
- * not in the documented opts allowlist (`specs/workflows/workflow-authoring-spec.md`). These
- * payloads therefore never reach `.claude/logs/routing-decisions.jsonl` today. This test proves the
- * payloads are SCHEMA-CORRECT and would audit correctly the moment a consumer exists. It does not
- * prove any workflow run writes an audit entry, because none does.
+ * SCOPE, updated 2026-08-12 (node_01KZVV9R3EK13DJXS44VCQ8E9C). This header used to end with a
+ * boundary saying nothing in this estate consumed these payloads: they were handed to `agent()`
+ * as a `_routing_log` opts key, `_routing_log` was not in the documented opts allowlist, and the
+ * runtime discarded all 14. That is FIXED — the payloads now go to a `routeLog()` accumulator and
+ * ride out on the report as `routing_log`, which `log-cli.js --ingest` drains into
+ * `.claude/logs/routing-decisions.jsonl` after the run.
+ *
+ * What this file still does and does not prove, stated precisely:
+ *   - CASES 1–3 prove the shipped literals are SCHEMA-CORRECT and audit correctly. They read
+ *     source text; they do not run a workflow.
+ *   - CASE 4 proves the WIRE is intact in the shipped source: the dead opts key is gone, every
+ *     payload reaches an accumulator, and every workflow exit carries `routing_log` — so a future
+ *     exit added without the wrapper fails here rather than silently dropping a run's audit trail.
+ *   - Neither proves a live workflow run writes an entry. That is
+ *     `test-routing-log-run-drain.js`, which ingests a RECORDED report from a real run.
  */
 
 'use strict';
@@ -47,13 +56,17 @@ function tmpLog() {
 }
 
 /**
- * Pull every `_routing_log` object literal out of a workflow source, by brace-matching from the
+ * Pull every routing-log object literal out of a workflow source, by brace-matching from the
  * opening `{` so nested objects and braces inside template literals do not truncate the capture.
- * Also catches the one payload passed as a positional argument (review-council's fallback).
+ *
+ * Two call shapes carry a literal: the 13 direct `routeLog({...})` accumulator calls, and the one
+ * payload passed as a positional argument (review-council's fallback, which hands it to
+ * `collectEvidenceOnPrimary` and is accumulated inside). `routeLog(routingLog)` — the pass-through
+ * inside that function — takes an identifier, not a literal, so it is deliberately not matched here.
  */
 function extractLiterals(src, file) {
   const out = [];
-  const re = /(?:_routing_log:\s*|collectEvidenceOnPrimary\([^)]*?,\s*)\{/g;
+  const re = /(?:routeLog\(\s*|collectEvidenceOnPrimary\([^)]*?,\s*)\{/g;
   let m;
   while ((m = re.exec(src)) !== null) {
     const start = src.indexOf('{', m.index + m[0].length - 1);
@@ -157,7 +170,19 @@ for (const f of FILES) {
   }
 }
 
-check(all.length === 14, `expected 14 _routing_log payloads across the 5 workflows, found ${all.length}`);
+check(all.length === 14, `expected 14 routing-log payloads across the 5 workflows, found ${all.length}`);
+
+// Every payload must carry a per-leg task_ref. Without it the whole run collapses onto one
+// task_id, and because findUnconfirmedEntries() settles by joining on task_id, ONE leg's
+// realization would mark every other decision in the run CONFIRMED — `audit --unconfirmed`
+// reading clean over decisions nothing measured. Measured 2026-08-12 while proving this wire
+// end-to-end: the first version of the ingest did exactly that.
+for (const e of all) {
+  check(
+    typeof e.obj.task_ref === 'string' && e.obj.task_ref.length > 0,
+    `${e.file}:${e.line} payload has no task_ref — its entries would share the run's task_id and cross-settle`
+  );
+}
 
 // Global invariant, stated independently of `kind` so it holds even if a payload is mis-tagged or
 // untagged: the ONLY payloads allowed to name a realized provider are the measured fallback hops.
@@ -263,8 +288,67 @@ if (!realizations.length) {
 }
 console.log('  substitution detected with evidence attached');
 
+// ---------------------------------------------------------------------------
+// CASE 4 — THE WIRE IS INTACT IN THE SHIPPED SOURCE.
+//
+// CASES 1–3 prove the payloads are well-shaped. That is exactly what was already true on
+// 2026-08-12 while NOT ONE of them reached the log, because they were handed to `agent()` on an
+// opts key the runtime discards. Well-shaped and connected are different properties, and only
+// the first had a test. This case tests the second:
+//
+//   4a. No `_routing_log:` opts key survives anywhere. That key is inert by construction; its
+//       reappearance means someone restored the dead pattern from an old copy.
+//   4b. Every workflow declares the accumulator and returns it.
+//   4c. Every workflow EXIT is wrapped. An exit is a `return {...}` whose object carries a
+//       `status:`; the wrapper is `withRouting(`. A new exit added without it drops the whole
+//       run's audit trail on that path — silently, and most likely on a bail-out right after a
+//       fallback fired, which is the path whose routing you most wanted to see.
+// ---------------------------------------------------------------------------
+console.log('CASE 4: the wire is intact — no dead opts key, and every workflow exit carries routing_log');
+for (const f of FILES) {
+  const src = fs.readFileSync(path.join(WORKFLOWS, f), 'utf8');
+  const lines = src.split('\n');
+
+  // 4a — the dead key, as a KEY (a mention in a comment is history, not a wire).
+  lines.forEach((l, i) => {
+    check(
+      !/^\s*_routing_log:/.test(l),
+      `${f}:${i + 1} restored the dead \`_routing_log\` opts key — the runtime discards it (see this file's header)`
+    );
+  });
+
+  // 4b — the accumulator exists and leaves the script.
+  check(/const __routingLog = \[\]/.test(src), `${f} declares no __routingLog accumulator`);
+  check(/routing_log: __routingLog/.test(src), `${f} never returns routing_log — entries cannot leave the script`);
+
+  // 4c — every exit is wrapped.
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(\s*)return (withRouting\()?\{/.exec(lines[i]);
+    if (!m) continue;
+    const indent = m[1];
+    let body;
+    if (lines[i].trimEnd().endsWith('}') || lines[i].trimEnd().endsWith('})')) {
+      body = [lines[i]];
+    } else {
+      let close = -1;
+      for (let j = i; j < lines.length; j++) {
+        if (lines[j] === `${indent}}` || lines[j] === `${indent}})`) { close = j; break; }
+      }
+      if (close === -1) continue;
+      body = lines.slice(i, close + 1);
+    }
+    const isExit = body.some(b => /^\s*status: /.test(b)) || /\{ status: /.test(lines[i]);
+    if (!isExit) continue;
+    check(
+      Boolean(m[2]),
+      `${f}:${i + 1} is a workflow exit that is NOT wrapped in withRouting() — this run's routing_log would be dropped on that path`
+    );
+  }
+}
+console.log('  no dead opts key; accumulator declared, returned, and every exit wrapped');
+
 if (failures) {
   console.error(`\n${failures} check(s) FAILED`);
   process.exit(1);
 }
-console.log('\nAll checks passed (3 cases).');
+console.log('\nAll checks passed (4 cases).');

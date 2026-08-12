@@ -470,9 +470,194 @@ function findModelSubstitutions(log_path) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// INGEST — the wire between a workflow run and this log
+// ---------------------------------------------------------------------------
+/**
+ * WHY THIS EXISTS (read before removing it as a thin wrapper)
+ * ----------------------------------------------------------
+ * Workflow scripts cannot `require()` this module or touch the filesystem —
+ * that is constraint 1 of the workflow-authoring contract. So for a year they
+ * expressed their routing decisions as a `_routing_log` key on the `agent()`
+ * opts bag, which nothing has ever read: it is not in the documented opts
+ * allowlist, so the runtime discards it. 14 payloads across 5 workflows were
+ * written and dropped, which made `skillmeat routing audit` over a workflow run
+ * empty BY CONSTRUCTION — and an empty audit log reads exactly like a clean one.
+ * Measured 2026-08-12 (node_01KZVV9R3EK13DJXS44VCQ8E9C).
+ *
+ * The wire is therefore: the workflow ACCUMULATES its entries in a plain array
+ * and returns them as `routing_log` on its ExecutionReport (no FS, no require —
+ * an array push is neither), and the post-run caller — Opus, on claude-primary,
+ * where the write belongs — hands that array to this function.
+ *
+ * Two properties this function must keep:
+ *   - VALIDATE-THEN-WRITE, in two passes. The log is append-only, so a throw
+ *     halfway through a 14-entry batch leaves 6 entries and no way to retract
+ *     them. Nothing is written until every entry is known to be writable.
+ *   - SKIPS ARE LOUD. A rejected entry is returned in `skipped` and makes the
+ *     CLI exit non-zero. Dropping one silently would rebuild the failure this
+ *     whole function exists to end, one layer further in.
+ *   - PER-LEG TASK IDENTITY, not one id for the whole run. See below — this one
+ *     is subtle and getting it wrong reintroduces false confirmation.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY `task_ref` EXISTS (measured 2026-08-12, before it shipped)
+ * ---------------------------------------------------------------------------
+ * `findUnconfirmedEntries()` settles a decision by JOINING ON task_id: any entry
+ * with `realization_confirmed: true` marks every decision sharing that task_id as
+ * confirmed. That is correct for one leg — the realization is the measurement of
+ * that decision.
+ *
+ * It is catastrophic if a whole run shares one task_id. A run with five routing
+ * decisions and one measured fallback would report ALL FIVE as confirmed, on the
+ * strength of evidence about a different leg entirely. `routing audit --unconfirmed`
+ * would return clean while four decisions had never been measured at all — the same
+ * false-assurance shape as the empty audit log this wire was built to fix, one layer in.
+ *
+ * So each entry carries a `task_ref`: a stable per-leg discriminator (the site's own
+ * label — `${p.id}:ac-validate`, `fix-cycle-2`, `evidence-scribe:stage-a`). A
+ * decision and the realization that measures it use the SAME ref, so they join;
+ * different legs get different refs, so they never cross-settle. The batch
+ * `task_id` remains the run's identity and is composed as `<task_id>::<task_ref>`,
+ * keeping every entry traceable to the run it came from.
+ *
+ * An entry with NO task_ref falls back to the bare batch id. That is accepted (a
+ * single-leg workflow is legitimate) but it is counted and returned in
+ * `counts.no_task_ref`, because two or more such entries in one batch are exactly
+ * the cross-settle hazard above.
+ *
+ * @param {Object}   params
+ * @param {Array<Object>|Object} params.entries - The workflow's `routing_log` array, or the
+ *                                    whole report object (its `.routing_log` is used).
+ * @param {string}   [params.task_id] - Batch-level task id (a node id, run id, or plan id).
+ *                                    Composed with each entry's `task_ref` as
+ *                                    `<task_id>::<task_ref>`. Workflow scripts do not know
+ *                                    this; the caller does.
+ * @param {string}   [params.log_path] - Override log file path (used in tests)
+ * @param {boolean}  [params.dry_run]  - Validate only; write nothing.
+ * @returns {{written: AuditEntry[], skipped: Array<{index: number, reason: string}>,
+ *            counts: {decision: number, realization: number, defaulted_kind: number},
+ *            dry_run: boolean}}
+ */
+function ingestRoutingLog(params) {
+  const { task_id: batch_task_id, log_path, dry_run = false } = params || {};
+
+  const raw = Array.isArray(params && params.entries)
+    ? params.entries
+    : params && params.entries && Array.isArray(params.entries.routing_log)
+      ? params.entries.routing_log
+      : null;
+
+  if (raw === null) {
+    throw new Error(
+      'audit-log.ingestRoutingLog: entries must be an array, or an object carrying a routing_log array'
+    );
+  }
+
+  const skipped = [];
+  const planned = [];
+  let defaulted_kind = 0;
+  let no_task_ref = 0;
+
+  // ---- pass 1: validate everything, write nothing ----
+  raw.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      skipped.push({ index, reason: 'not a JSON object' });
+      return;
+    }
+
+    // Per-leg identity — see "WHY task_ref EXISTS" above. An explicit task_id on the
+    // entry always wins; otherwise the batch id is scoped by the leg's own ref.
+    let task;
+    if (isPresent(entry.task_id)) {
+      task = entry.task_id;
+    } else if (isPresent(batch_task_id) && isPresent(entry.task_ref)) {
+      task = `${batch_task_id}::${entry.task_ref}`;
+    } else if (isPresent(entry.task_ref)) {
+      task = entry.task_ref;
+    } else {
+      task = batch_task_id;
+      if (isPresent(task)) no_task_ref += 1;
+    }
+    if (!isPresent(task)) {
+      skipped.push({
+        index,
+        reason: 'no task_id or task_ref on the entry and none supplied for the batch',
+      });
+      return;
+    }
+
+    // A missing `kind` normalizes to 'decision', matching normalizeEntry()'s rule
+    // for a v1 entry. Counted so the caller can see it was inferred, not stated.
+    let kind = entry.kind;
+    if (!isPresent(kind)) {
+      kind = 'decision';
+      defaulted_kind += 1;
+    }
+    if (kind !== 'decision' && kind !== 'realization') {
+      skipped.push({ index, reason: `unknown kind '${entry.kind}'` });
+      return;
+    }
+
+    if (kind === 'decision') {
+      const chosen =
+        entry.chosen_plugin_id || (entry.routing_record && entry.routing_record.chosen_plugin_id);
+      if (!isPresent(chosen)) {
+        skipped.push({ index, reason: 'decision entry has no chosen_plugin_id' });
+        return;
+      }
+    } else {
+      if (!isPresent(entry.realization_evidence)) {
+        skipped.push({
+          index,
+          reason:
+            'realization entry has no realization_evidence — a self-report is not a measurement',
+        });
+        return;
+      }
+      if (!isPresent(entry.actual_provider_used) && !isPresent(entry.realized_model)) {
+        skipped.push({
+          index,
+          reason: 'realization entry names neither actual_provider_used nor realized_model',
+        });
+        return;
+      }
+    }
+
+    // task_ref is addressing metadata, not part of the audit entry shape; the composed
+    // task_id already carries it. Strip it so it cannot look like a logged field.
+    const { task_ref: _task_ref, ...entryFields } = entry;
+    planned.push({ kind, params: { ...entryFields, task_id: task, log_path } });
+  });
+
+  const counts = {
+    decision: planned.filter(p => p.kind === 'decision').length,
+    realization: planned.filter(p => p.kind === 'realization').length,
+    defaulted_kind,
+    no_task_ref,
+  };
+
+  if (dry_run) {
+    return { written: [], skipped, counts, dry_run: true };
+  }
+
+  // ---- pass 2: write ----
+  const written = planned.map(p =>
+    p.kind === 'decision' ? appendEntry(p.params) : appendRealization(p.params)
+  );
+
+  return { written, skipped, counts, dry_run: false };
+}
+
+// The CLI for this lives in log-cli.js (`--ingest`), which is this estate's single
+// headless entry point over the writer. A second `require.main` block here would
+// split that surface in two, and the copy people found first would be the one that
+// did not grow the next flag.
+
 module.exports = {
   appendEntry,
   appendRealization,
+  ingestRoutingLog,
   readEntries,
   readNormalizedEntries,
   normalizeEntry,

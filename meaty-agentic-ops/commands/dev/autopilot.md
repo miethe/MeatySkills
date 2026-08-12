@@ -273,6 +273,21 @@ The workflow returns a standard `ExecutionReport` plus an `autopilot` annotation
 }
 ```
 
+**Before branching — drain the routing log, on every outcome.** `auto-feature` nests
+`execute-contract` / `execute-plan`, so a routing decision or a measured fallback hop can happen on any
+branch below, including the ones that end in `needs_opus`. The workflow cannot write the audit log
+itself (no FS access, constraint 1); this hop is the whole wire, and without it
+`skillmeat routing audit` reports *nothing*, which reads identically to *clean*
+(`node_01KZVV9R3EK13DJXS44VCQ8E9C`, 2026-08-12).
+
+```bash
+# Write the returned report (or just its routing_log array) to a file, then:
+node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id "${ITT_NODE_ID:-<slug>}"
+skillmeat routing audit --unconfirmed      # decisions unconfirmed, fallback hops confirmed
+```
+
+An absent or empty `routing_log` is a fine outcome — report it as "nothing routed", never as silence.
+
 Handle each status/reason branch:
 
 ---

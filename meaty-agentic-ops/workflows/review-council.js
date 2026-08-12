@@ -43,6 +43,34 @@ export const meta = {
 }
 
 // ---------------------------------------------------------------------------
+// Routing audit accumulator — the wire out of this script
+// ---------------------------------------------------------------------------
+// A plain array and two pure helpers. Pushing to an array is neither an FS write nor a
+// require(), so this stays inside the four constraints (§5) — which is the whole reason the
+// PREVIOUS shape existed and the whole reason it failed: routing payloads were handed to
+// agent() as a `_routing_log` opts key, and `_routing_log` is not in the opts allowlist (§1),
+// so the runtime discarded every one of them. 14 payloads across 5 workflows were written and
+// never read, which made `skillmeat routing audit` over a workflow run empty BY CONSTRUCTION
+// rather than clean — and empty reads exactly like clean. Measured 2026-08-12,
+// node_01KZVV9R3EK13DJXS44VCQ8E9C.
+//
+// Entries ride out on the report as `routing_log` (§6). The post-run caller drains them:
+//   node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <id>
+// so the write lands on claude-primary, where it belongs, and this script stays pure.
+//
+// `withRouting()` wraps EVERY workflow exit reachable after a routeLog() call. No judgement
+// about which exits "matter": the ones that matter most are the mid-run bail-outs that happen
+// immediately after a fallback fired, and those are exactly the ones a reachability argument
+// talks itself out of.
+const __routingLog = []
+const routeLog = entry => {
+  __routingLog.push(entry)
+  return entry
+}
+const withRouting = result => ({ ...result, routing_log: __routingLog })
+
+
+// ---------------------------------------------------------------------------
 // JSON Schemas for structured agent output (inline — script cannot read files, constraint 1).
 // ---------------------------------------------------------------------------
 
@@ -653,6 +681,11 @@ Do NOT write any files. Do NOT git add/commit/push/stash. Read only.`
 // to the pre-change call. The P5 fallback caller supplies a schema-v2 `realization` — that path is
 // the one place this workflow genuinely measures a provider change, so it must be recorded.
 function collectEvidenceOnPrimary(target, taskSummaries, planRef, routingLog) {
+  // The optional payload is ACCUMULATED, not handed to agent(). That makes the opts bag
+  // byte-identical for BOTH callers — the flag-off caller, which supplies no payload and
+  // still records nothing, and the P5 fallback caller, whose measured hop now actually
+  // reaches the audit log instead of being dropped on an unrecognized opts key.
+  if (routingLog) routeLog(routingLog)
   return agent(
     evidenceCollectionPrompt(target, taskSummaries, planRef),
     {
@@ -661,7 +694,6 @@ function collectEvidenceOnPrimary(target, taskSummaries, planRef, routingLog) {
       agentType: 'code-reviewer',
       model: 'sonnet',
       schema: EVIDENCE_PACK_SCHEMA,
-      ...(routingLog ? { _routing_log: routingLog } : {}),
     }
   )
 }
@@ -703,7 +735,7 @@ const {
 if (dryRun) {
   phase('Dry run')
   log('dry_run=true — returning parsed graph for inspection, no agents spawned.')
-  return { status: 'dry_run', graph }
+  return withRouting({ status: 'dry_run', graph })
 }
 
 const activeLensSet = lensSetArg
@@ -749,6 +781,18 @@ if (provider_routing_enabled) {
   // What the workflow actually OBSERVED, for the realization evidence on the fallback below.
   let stageAFailureMode = null
   try {
+    routeLog({
+      // Same task_ref as the fallback realization below, so that realization settles THIS
+      // decision and no other leg's (audit-log.js "WHY task_ref EXISTS").
+      task_ref: 'evidence-scribe:stage-a',
+      // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED. Copying
+      // the intent into the realized field is what made the field unable to audit anything.
+      kind: 'decision',
+      chosen_plugin_id: 'codex',
+      intended_model: 'sonnet',
+      fallback_applied: false,
+      reason: 'offload evidence-scribe Stage A to codex-executor',
+    })
     stageAText = await agent(
       codexEvidenceScribePrompt(target, taskSummaries, planRef, evidArtifactPath),
       {
@@ -757,15 +801,6 @@ if (provider_routing_enabled) {
         agentType: 'codex-executor',
         model: 'sonnet',
         // No schema: heavy external agent must not carry terminal StructuredOutput call.
-        _routing_log: {
-          // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED. Copying
-          // the intent into the realized field is what made the field unable to audit anything.
-          kind: 'decision',
-          chosen_plugin_id: 'codex',
-          intended_model: 'sonnet',
-          fallback_applied: false,
-          reason: 'offload evidence-scribe Stage A to codex-executor',
-        },
       }
     )
     if (!stageAText) {
@@ -784,6 +819,9 @@ if (provider_routing_enabled) {
     // write scribe prompt to a write-locked agent. Produces the pack directly (no Stage B).
     log("P5 fallback: actual_provider_used='claude', fallback_applied=true for evidence-scribe Stage A. Running in-memory code-reviewer collection (no artifact write, no Stage B).")
     evidencePack = await collectEvidenceOnPrimary(target, taskSummaries, planRef, {
+      // Matches the Stage A decision's task_ref so this measurement settles that decision and
+      // only that one — a run-wide task_id would let it confirm every other leg too.
+      task_ref: 'evidence-scribe:stage-a',
       // Measured hop: the workflow observed codex fail and ran the on-primary scribe itself.
       // This branch recorded nothing at all before, so the realized hop was invisible.
       kind: 'realization',
@@ -798,12 +836,12 @@ if (provider_routing_enabled) {
 
     if (!evidencePack) {
       log('In-memory primary fallback returned null — evidence collection failed.')
-      return {
+      return withRouting({
         status: 'needs_opus',
         reason: 'evidence_collection_failed',
         report: [],
         run_dir: runDir,
-      }
+      })
     }
   } else {
     // Stage A succeeded on codex: run the two-stage path (Stage B haiku structurer).
@@ -854,12 +892,12 @@ if (provider_routing_enabled) {
   evidencePack = await collectEvidenceOnPrimary(target, taskSummaries, planRef)
 
   if (!evidencePack) {
-    return {
+    return withRouting({
       status: 'needs_opus',
       reason: 'evidence_collection_failed',
       report: [],
       run_dir: runDir,
-    }
+    })
   }
 }
 
@@ -906,12 +944,12 @@ const allReviewerOutputs = await parallel([...lensThunks, adversarialThunk])
 const validOutputs = allReviewerOutputs.filter(Boolean)
 
 if (validOutputs.length === 0) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'all_reviewers_failed',
     report: [],
     run_dir: runDir,
-  }
+  })
 }
 
 log(`Reviewer fan-out complete: ${validOutputs.length}/${activeLensSet.length + 1} reviewers returned findings.`)
@@ -919,13 +957,13 @@ log(`Reviewer fan-out complete: ${validOutputs.length}/${activeLensSet.length + 
 // Budget guard before adjudication — adjudication + decision-record are two more agents.
 if (budget.remaining() < 80_000) {
   log('Budget near floor before adjudication — returning partial results to Opus.')
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'budget_exhausted',
     partial_reviewer_outputs: validOutputs,
     run_dir: runDir,
     report: [],
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -949,13 +987,13 @@ const adjudicatedFindings = await agent(
 )
 
 if (!adjudicatedFindings) {
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'adjudication_failed',
     partial_reviewer_outputs: validOutputs,
     run_dir: runDir,
     report: [],
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -994,7 +1032,7 @@ if (!verdict) {
     .filter(f => f.severity === 'critical' || f.severity === 'high')
     .map(f => f.recommendation)
 
-  return {
+  return withRouting({
     status: 'needs_opus',
     reason: 'decision_record_write_failed',
     fallback_verdict: {
@@ -1023,7 +1061,7 @@ if (!verdict) {
     },
     run_dir: runDir,
     report: [],
-  }
+  })
 }
 
 // Payload-integrity check (2026-08-11 fix): distinct from gateApproved() — a verdict can be
@@ -1050,7 +1088,7 @@ log(`review-council complete. approved=${verdict.approved} gate=${gatePassed} pa
 // different operator actions. A genuine rejection goes to the fix loop — there is a finding to
 // act on. An incomplete payload has nothing to fix; it must be RE-DISPATCHED. Checked first so
 // a truncated-but-otherwise-clean-looking verdict is never reported as a substantive rejection.
-return {
+return withRouting({
   // CouncilVerdict — consumed by execute-plan reviewerGate / fixLoop
   ...verdict,
   status: councilGateApproved ? 'complete' : 'needs_opus',
@@ -1082,4 +1120,4 @@ return {
           : (verdict.required_fixes || []).map(f => ({ description: f, resolution_hint: 'See decision_record.md' })),
     }],
   }],
-}
+})
