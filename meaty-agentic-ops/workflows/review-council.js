@@ -173,6 +173,16 @@ const COUNCIL_VERDICT_SCHEMA = {
         // envelope even asserted watchlist:0 for a run that had 3 watchlist findings.
         total_findings_claimed: { type: 'number' },
         findings_not_received: { type: 'number' },
+        // Id-roster reconciliation (2026-08-11 fix): count reconciliation asks the writer to
+        // NOTICE its own loss and self-report a number — the 2026-08-08 rescue proved a
+        // truncated payload can be read as a clean, smaller population instead. Ids are cheap
+        // enough to survive a truncated prompt (see formatFindingsForPrompt), so the roster
+        // is what makes a set-difference check possible in-script, without depending on the
+        // model to notice anything. expected_finding_ids is emitted by decisionRecordPrompt
+        // BEFORE the writer sees the (possibly truncated) findings payload; delivered_finding_ids
+        // is what the writer echoes back for the findings it actually received and wrote.
+        expected_finding_ids: { type: 'array', items: { type: 'string' } },
+        delivered_finding_ids: { type: 'array', items: { type: 'string' } },
       },
     },
   },
@@ -198,6 +208,23 @@ function gateApproved(verdict) {
     )
 }
 
+// Payload-integrity check (2026-08-11 fix): a pure, model-free set-difference between the id
+// roster computed BEFORE the (possibly truncated) findings payload was sent to the
+// decision-record writer, and the id roster the writer echoes back for what it actually
+// received and wrote. Returns the array of missing ids (empty when nothing was lost).
+// Deliberately independent of gateApproved() — a verdict can be internally well-formed
+// (non-empty evidence, checked_count>0) while still describing only the survivors of a
+// truncated payload; this is the check that catches that case, which self-reported count
+// reconciliation (total_findings_claimed / findings_not_received) did not.
+// Pure function, no model call, mutation-testable — kept next to gateApproved deliberately.
+function assessPayloadIntegrity(expectedIds, verdict) {
+  const expected = Array.isArray(expectedIds) ? expectedIds : []
+  const delivered = new Set(
+    Array.isArray(verdict?.summary?.delivered_finding_ids) ? verdict.summary.delivered_finding_ids : []
+  )
+  return expected.filter(id => !delivered.has(id))
+}
+
 // ---------------------------------------------------------------------------
 // Lens → agentType routing table.
 // ALL entries are edit-less agentTypes (constraint 3).
@@ -215,6 +242,51 @@ const LENS_REVIEWER_MAP = {
 
 const DEFAULT_LENS_SET = ['correctness', 'security', 'concurrency', 'performance', 'contract']
 const DEEP_LENS_SET    = ['correctness', 'security', 'concurrency', 'performance', 'contract', 'observability']
+
+// ---------------------------------------------------------------------------
+// Findings-payload formatting (2026-08-11 fix). A bare `JSON.stringify(...).slice(0, N)` gives
+// no truncation marker and no count assertion — the 2026-08-08 rescue run received complete
+// detail for 3 accepted findings, a 4th truncated mid-sentence, and nothing after, while the
+// header above it (printed from the full in-memory object) told the writer "10 total". The
+// writer had no way to tell "truncated" from "that's everything" from the payload alone.
+//
+// Constraint 1 forbids spilling the payload to disk from inside the script, so the fix is
+// shape, not storage: ALWAYS emit a cheap, complete id/title/severity roster first (ids are
+// short — this survives even when the full JSON below does not), THEN emit as much full-detail
+// JSON as fits the remaining budget, with a loud, unmissable marker when anything was cut. A
+// reader that ignores the marker still has the complete roster to reconcile against.
+// Pure string construction, no FS access — same category as the prompt builders below.
+function formatFindingsForPrompt(findings, budgetChars) {
+  const list = Array.isArray(findings) ? findings : []
+  const roster = list
+    .map(f => `- ${f.id || '(no-id)'} [${f.disposition || f.severity || '?'}] ${(f.title || f.claim || '').slice(0, 80)}`)
+    .join('\n') || '(none)'
+  const rosterBlock = `Complete id roster (${list.length} findings — authoritative full list, survives truncation below):\n${roster}`
+
+  const full = JSON.stringify(list, null, 2)
+  if (full.length <= budgetChars) {
+    return `${rosterBlock}\n\nFull detail:\n${full}`
+  }
+
+  const marker = `\n\n...TRUNCATED: full JSON detail below covers only a subset of the ${list.length} findings. Do NOT infer or fabricate detail for findings not fully represented below — use the complete id roster above as the authoritative population, and echo delivered_finding_ids for ONLY the findings whose full detail you actually received here.\n\n`
+  const remaining = Math.max(0, budgetChars - marker.length)
+  const truncatedFull = full.slice(0, remaining)
+  return `${rosterBlock}${marker}${truncatedFull}`
+}
+
+// Flattens the adjudicator's bucketed { accepted, rejected, disputed, watchlist } object into
+// one array, tagging each finding with its disposition, so formatFindingsForPrompt and the
+// expected_finding_ids roster can both walk a single list instead of four.
+function flattenAdjudicatedFindings(adjudicatedFindings) {
+  const dispositions = ['accepted', 'rejected', 'disputed', 'watchlist']
+  const flat = []
+  for (const disposition of dispositions) {
+    for (const f of (adjudicatedFindings?.[disposition] || [])) {
+      flat.push({ disposition, ...f })
+    }
+  }
+  return flat
+}
 
 // ---------------------------------------------------------------------------
 // Prompt builders — pure string construction, no FS access.
@@ -402,7 +474,7 @@ Reviewer summary:
 ${outputSummaries || '(no reviewers returned valid findings)'}
 
 All findings (${allFindings.length} total — may contain duplicates and overlaps):
-${JSON.stringify(allFindings, null, 2).slice(0, 4000)}${allFindings.length > 20 ? '\n...(truncated for prompt — you have the full set above via reviewer outputs)' : ''}
+${formatFindingsForPrompt(allFindings, 4000)}
 
 Adjudication rules:
 - ACCEPTED: finding is evidence-backed, in scope, actionable, and worth fixing now.
@@ -420,9 +492,10 @@ Return an ADJUDICATED_FINDINGS_SCHEMA object.
 Do NOT write any files. Do NOT git add/commit/push/stash.`
 }
 
-function decisionRecordPrompt(adjudicatedFindings, runDir, target, timestamp) {
+function decisionRecordPrompt(adjudicatedFindings, runDir, target, timestamp, expectedFindingIds) {
   const blockingFindings = (adjudicatedFindings.accepted || [])
     .filter(f => f.severity === 'critical' || f.severity === 'high')
+  const flatFindings = flattenAdjudicatedFindings(adjudicatedFindings)
 
   return `Mode: E — Reviewer (with artifact write permission for run directory only)
 
@@ -439,8 +512,15 @@ Adjudicated findings:
   Watchlist: ${(adjudicatedFindings.watchlist || []).length}
   Blocking (severity >= high, accepted): ${blockingFindings.length}
 
+EXPECTED FINDING IDS (${expectedFindingIds.length} total — the complete, authoritative population
+of finding ids for this run, computed BEFORE you received the findings payload below). You MUST
+echo \`delivered_finding_ids\` in your response containing EXACTLY the ids for the findings whose
+full detail you actually received and wrote into the artifact files — nothing more, nothing less.
+Do NOT copy this list verbatim into delivered_finding_ids; it is the expectation, not your report:
+${expectedFindingIds.join(', ') || '(none)'}
+
 Full adjudicated findings:
-${JSON.stringify(adjudicatedFindings, null, 2).slice(0, 5000)}
+${formatFindingsForPrompt(flatFindings, 5000)}
 
 Write these six files (create the run directory if needed):
 1. ${runDir}/evidence_pack.md — narrative evidence pack (see ARC output contract)
@@ -471,6 +551,10 @@ NOT open your artifacts to discover what you left out:
   difference. Do NOT fabricate the missing findings, and do NOT report the survivors as though
   they were the whole population — a lost finding that goes unreported reads downstream as a
   clean review. If nothing was lost, set findings_not_received to 0.
+- Set \`delivered_finding_ids\` to the ids of exactly the findings whose full detail you received
+  and wrote into the artifact files (see EXPECTED FINDING IDS above). This is checked against the
+  expected roster in-script, independent of your own count reconciliation — an honest, complete
+  delivered_finding_ids list is what keeps a genuinely complete run from being flagged.
 Include evidence: an array of {claim, command, observed} — one entry per finding you actually
 assessed during adjudication (accepted, rejected, disputed, or watchlist). claim: the finding's
 title/claim. command: how you verified it (e.g. "adjudication of reviewer findings" or the
@@ -592,7 +676,11 @@ const {
   plan_ref: planRef,
   phase_id: phaseId,
   task_summaries: taskSummaries,
-  run_dir_prefix: runDirPrefix = 'runs',
+  // 2026-08-11: was 'runs' — untracked at every caller's repo root (no .gitignore entry
+  // anywhere), and where the 2026-08-08 rescue had to be manually re-filed under .claude/
+  // findings/ because runs/<slug> did not survive. '.claude/' is the project convention for
+  // agent-run scratch; the knob remains overridable per-caller.
+  run_dir_prefix: runDirPrefix = '.claude/council-runs',
   timestamp,
   dry_run: dryRun,
   // P3: provider routing feature flag — DEFAULT FALSE. When off, existing behaviour
@@ -855,10 +943,17 @@ if (!adjudicatedFindings) {
 phase('Decision record')
 log(`Writing ARC artifacts to ${runDir}...`)
 
+// Computed BEFORE the (possibly truncated) findings payload is sent to the writer — this is
+// the roster assessPayloadIntegrity() checks the writer's delivered_finding_ids against after
+// it returns, below.
+const expectedFindingIds = flattenAdjudicatedFindings(adjudicatedFindings)
+  .map(f => f.id)
+  .filter(Boolean)
+
 // 'task-completion-validator' writes ARC artifacts to runs/<slug>/ only (constraint 3).
 // It is edit-less for source files; run-dir artifact writes are the only exception.
 const verdict = await agent(
-  decisionRecordPrompt(adjudicatedFindings, runDir, target, timestamp),
+  decisionRecordPrompt(adjudicatedFindings, runDir, target, timestamp, expectedFindingIds),
   {
     label: 'decision-record-writer',
     phase: 'Decision record',
@@ -909,8 +1004,17 @@ if (!verdict) {
   }
 }
 
-const councilGateApproved = gateApproved(verdict)
-log(`review-council complete. approved=${verdict.approved} gate=${councilGateApproved} blocking=${verdict.summary?.blocking_count ?? '?'} runDir=${runDir}`)
+// Payload-integrity check (2026-08-11 fix): distinct from gateApproved() — a verdict can be
+// internally well-formed (non-empty evidence, checked_count>0, approved:true) while the writer
+// only ever saw a truncated subset of the adjudicated findings and honestly reported those
+// survivors as the whole population. missingFindingIds is non-empty exactly when the writer's
+// delivered_finding_ids does not cover the roster computed before it saw the payload.
+const missingFindingIds = assessPayloadIntegrity(expectedFindingIds, verdict)
+const payloadIncomplete = missingFindingIds.length > 0
+
+const gatePassed = gateApproved(verdict)
+const councilGateApproved = gatePassed && !payloadIncomplete
+log(`review-council complete. approved=${verdict.approved} gate=${gatePassed} payload_incomplete=${payloadIncomplete}${payloadIncomplete ? ` missing=[${missingFindingIds.join(',')}]` : ''} blocking=${verdict.summary?.blocking_count ?? '?'} runDir=${runDir}`)
 
 // Return the CouncilVerdict as both the workflow return value and an ExecutionReport-compatible
 // shape so execute-plan's reviewerGate can consume it directly.
@@ -919,11 +1023,20 @@ log(`review-council complete. approved=${verdict.approved} gate=${councilGateApp
 // gateApproved(verdict) directly and is unaffected by this — but a STANDALONE consumer (e.g.
 // /review:code-review) reads `status`, and a rejected verdict must not read as 'complete'.
 // Reuses this file's existing 'needs_opus' vocabulary rather than inventing a new status.
+//
+// council_payload_incomplete is deliberately distinct from council_not_approved: they demand
+// different operator actions. A genuine rejection goes to the fix loop — there is a finding to
+// act on. An incomplete payload has nothing to fix; it must be RE-DISPATCHED. Checked first so
+// a truncated-but-otherwise-clean-looking verdict is never reported as a substantive rejection.
 return {
   // CouncilVerdict — consumed by execute-plan reviewerGate / fixLoop
   ...verdict,
   status: councilGateApproved ? 'complete' : 'needs_opus',
-  ...(councilGateApproved ? {} : { reason: 'council_not_approved' }),
+  ...(councilGateApproved
+    ? {}
+    : payloadIncomplete
+      ? { reason: 'council_payload_incomplete', missing_finding_ids: missingFindingIds, expected_finding_ids: expectedFindingIds }
+      : { reason: 'council_not_approved' }),
   // F2 (autopilot-gate-evidence-chain M3): the spread above carries the reviewer's raw
   // self-reported `verdict.approved`, which can be true even when the gate rejects (e.g. empty
   // evidence). A standalone consumer reading top-level `approved` must see the GATE's verdict,
@@ -938,11 +1051,13 @@ return {
       phase: phaseId || target.ref,
       verdict: verdict,
       fix_cycles: 0,
-      escalate: !gateApproved(verdict),
+      escalate: !councilGateApproved,
       files_touched: [],
-      blockers: gateApproved(verdict)
+      blockers: councilGateApproved
         ? []
-        : (verdict.required_fixes || []).map(f => ({ description: f, resolution_hint: 'See decision_record.md' })),
+        : payloadIncomplete
+          ? [{ description: `Council payload incomplete — ${missingFindingIds.length} finding(s) never reached the artifact writer.`, resolution_hint: 'Re-dispatch the review-council run. Do NOT run a fix cycle — there is no finding to act on.' }]
+          : (verdict.required_fixes || []).map(f => ({ description: f, resolution_hint: 'See decision_record.md' })),
     }],
   }],
 }
