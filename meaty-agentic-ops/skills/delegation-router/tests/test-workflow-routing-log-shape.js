@@ -122,7 +122,16 @@ function evalLiteral(text) {
   );
   // eslint-disable-next-line no-new-func
   const fn = new Function('__stub', `with (__stub) { return (${text}); }`);
-  return fn(stub);
+  const raw = fn(stub);
+  // Coerce stand-in leaves to strings. Without this a bare identifier value (e.g.
+  // `chosen_plugin_id: chosenPluginId`) stays a Proxy, which is truthy — so structural checks pass
+  // — but serializes to `{}` in a JSONL log, which is not what the workflow would ever write. CASE 2
+  // round-trips through the real writer, so the values it writes must be realistically typed.
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    out[k] = v === null || typeof v === 'string' || typeof v === 'boolean' || typeof v === 'number' ? v : String(v);
+  }
+  return out;
 }
 
 let failures = 0;
