@@ -649,7 +649,10 @@ Do NOT write any files. Do NOT git add/commit/push/stash. Read only.`
 // (disallowedTools: Write,Edit,MultiEdit) — so the fallback must NOT re-dispatch the
 // write prompt. It runs this in-memory collection instead.
 // ---------------------------------------------------------------------------
-function collectEvidenceOnPrimary(target, taskSummaries, planRef) {
+// `routingLog` is optional: the flag-off caller omits it and the opts bag is then byte-identical
+// to the pre-change call. The P5 fallback caller supplies a schema-v2 `realization` — that path is
+// the one place this workflow genuinely measures a provider change, so it must be recorded.
+function collectEvidenceOnPrimary(target, taskSummaries, planRef, routingLog) {
   return agent(
     evidenceCollectionPrompt(target, taskSummaries, planRef),
     {
@@ -658,6 +661,7 @@ function collectEvidenceOnPrimary(target, taskSummaries, planRef) {
       agentType: 'code-reviewer',
       model: 'sonnet',
       schema: EVIDENCE_PACK_SCHEMA,
+      ...(routingLog ? { _routing_log: routingLog } : {}),
     }
   )
 }
@@ -742,6 +746,8 @@ if (provider_routing_enabled) {
   // IN-MEMORY (no artifact file, no Stage B). No retry loop, no backoff (constraint 4).
   let stageAText = null
   let stageAFailed = false
+  // What the workflow actually OBSERVED, for the realization evidence on the fallback below.
+  let stageAFailureMode = null
   try {
     stageAText = await agent(
       codexEvidenceScribePrompt(target, taskSummaries, planRef, evidArtifactPath),
@@ -752,8 +758,11 @@ if (provider_routing_enabled) {
         model: 'sonnet',
         // No schema: heavy external agent must not carry terminal StructuredOutput call.
         _routing_log: {
+          // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED. Copying
+          // the intent into the realized field is what made the field unable to audit anything.
+          kind: 'decision',
           chosen_plugin_id: 'codex',
-          actual_provider_used: 'codex',
+          intended_model: 'sonnet',
           fallback_applied: false,
           reason: 'offload evidence-scribe Stage A to codex-executor',
         },
@@ -761,10 +770,12 @@ if (provider_routing_enabled) {
     )
     if (!stageAText) {
       stageAFailed = true
+      stageAFailureMode = 'returned null'
       log('P5 fallback: codex-executor returned null for evidence-scribe Stage A. Falling back to primary claude (code-reviewer, in-memory collection).')
     }
   } catch (codexErr) {
     stageAFailed = true
+    stageAFailureMode = `threw: ${codexErr && codexErr.message ? codexErr.message : codexErr}`
     log(`P5 fallback: codex-executor threw for evidence-scribe Stage A: ${codexErr && codexErr.message ? codexErr.message : codexErr}. Falling back to primary claude (code-reviewer, in-memory collection).`)
   }
 
@@ -772,7 +783,18 @@ if (provider_routing_enabled) {
     // FIX 1: fall back to the flag-off in-memory evidence collection, NOT a re-dispatch of the
     // write scribe prompt to a write-locked agent. Produces the pack directly (no Stage B).
     log("P5 fallback: actual_provider_used='claude', fallback_applied=true for evidence-scribe Stage A. Running in-memory code-reviewer collection (no artifact write, no Stage B).")
-    evidencePack = await collectEvidenceOnPrimary(target, taskSummaries, planRef)
+    evidencePack = await collectEvidenceOnPrimary(target, taskSummaries, planRef, {
+      // Measured hop: the workflow observed codex fail and ran the on-primary scribe itself.
+      // This branch recorded nothing at all before, so the realized hop was invisible.
+      kind: 'realization',
+      chosen_plugin_id: 'codex',
+      intended_model: 'sonnet',
+      actual_provider_used: 'claude',
+      realized_model: 'sonnet',
+      fallback_applied: true,
+      realization_evidence: `orchestrator-observed: codex-executor ${stageAFailureMode} for evidence-scribe Stage A; this call is the workflow's own in-process re-dispatch to code-reviewer on claude-primary`,
+      reason: 'codex-executor failed (rate-limit / timeout / binary absent); fell back to in-memory on-primary evidence collection (no retry)',
+    })
 
     if (!evidencePack) {
       log('In-memory primary fallback returned null — evidence collection failed.')

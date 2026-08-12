@@ -19,8 +19,8 @@
 //     every offloaded call above is wrapped by agentWithPrimaryFallback() — a null return OR a
 //     thrown error (rate-limit / timeout / binary-absent / structuring miss) triggers a SINGLE
 //     re-dispatch of the same task to the primary claude agentType (the agentType the leg/skeptic/
-//     critic would use with routing OFF), recording actual_provider_used + fallback_applied:true +
-//     a log() line. No retry loop, no backoff (constraint 4: no timers).
+//     critic would use with routing OFF), recording a schema-v2 `realization` with evidence +
+//     fallback_applied:true + a log() line. No retry loop, no backoff (constraint 4: no timers).
 //   MUST-stay (never offloaded under any flag — fallback target is always primary claude):
 //   - Synthesis: implementation-planner (on-primary)
 //   - Verdict sign-off: always returns needs_opus (never self-approved)
@@ -182,8 +182,15 @@ if (leg_recursion_enabled) {
 // (gemini/ica), a null return OR a thrown error (rate-limit / timeout / binary-absent /
 // structuring miss) triggers a SINGLE re-dispatch of the same task to the primary claude
 // agentType — the agentType that stage would have used with routing OFF. No retry loop,
-// no backoff (constraint 4: no timers). Records actual_provider_used + fallback_applied:true
-// on the fallback call and emits a log() line, matching the Bob fix-cycle fallback template.
+// no backoff (constraint 4: no timers). Emits a log() line, matching the Bob fix-cycle template.
+//
+// Audit shape (schema v2 — `skills/delegation-router/audit-log.js`): the OFFLOAD dispatch below
+// records a `decision` only. It deliberately omits actual_provider_used, because nothing has run
+// yet and omitted means UNCONFIRMED — copying the intent into the realized field is what made the
+// field unable to audit anything (SKILL.md "Never write actual_provider_used: record.chosen_plugin_id").
+// The FALLBACK dispatch is the one place this workflow genuinely measures a provider change — it
+// observed the offload executor fail and issued the re-dispatch itself — so that one records a
+// `realization` with the evidence that established it.
 //
 // `offloaded` is true only when routing actually selected a non-primary executor; when false
 // the call runs exactly as the flag-off path would (no wrapping behaviour change).
@@ -195,6 +202,9 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
   }
   let result = null
   let failed = false
+  // What the workflow actually OBSERVED, kept for the realization evidence below. A self-report
+  // from the offload leg would not be a measurement; this is the orchestrator's own observation.
+  let failureMode = null
   try {
     result = await agent(`${parsedArgs.contextSlice ? parsedArgs.contextSlice + '\n\n' : ''}${prompt}`, {
       label,
@@ -203,18 +213,21 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
       model,
       schema,
       _routing_log: {
+        kind: 'decision',
         chosen_plugin_id: chosenPluginId,
-        actual_provider_used: chosenPluginId,
+        intended_model: model || null,
         fallback_applied: false,
         reason: `offload ${label} to ${offloadAgentType}`,
       },
     })
     if (!result) {
       failed = true
+      failureMode = 'returned null'
       log(`P5 fallback: ${offloadAgentType} returned null for ${label}. Falling back to primary claude (${primaryAgentType}).`)
     }
   } catch (offloadErr) {
     failed = true
+    failureMode = `threw: ${offloadErr && offloadErr.message ? offloadErr.message : offloadErr}`
     log(`P5 fallback: ${offloadAgentType} threw for ${label}: ${offloadErr && offloadErr.message ? offloadErr.message : offloadErr}. Falling back to primary claude (${primaryAgentType}).`)
   }
   if (failed) {
@@ -226,9 +239,14 @@ async function agentWithPrimaryFallback({ prompt, label, phase, offloaded, offlo
       model,
       schema,
       _routing_log: {
+        kind: 'realization',
         chosen_plugin_id: chosenPluginId,
+        intended_model: model || null,
         actual_provider_used: 'claude',
+        // null when no model was pinned for this stage — unknowable, never guessed.
+        realized_model: model || null,
         fallback_applied: true,
+        realization_evidence: `orchestrator-observed: ${offloadAgentType} ${failureMode} for ${label}; this call is the workflow's own in-process re-dispatch to ${primaryAgentType} on claude-primary`,
         reason: `${offloadAgentType} failed (rate-limit / timeout / binary absent / structuring error); escalated to primary claude immediately (no retry)`,
       },
     })

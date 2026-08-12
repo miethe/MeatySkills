@@ -1539,10 +1539,13 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
           agentType: p.fix_agent || taskOut.filter(Boolean)[0]?.assigned_to || 'python-backend-engineer',
           model: p.model,
           _routing_log: {
+            // Decision only. The Mode-D guard fired BEFORE dispatch, so claude IS the effective
+            // route; the rejected provider is named in `reason` (v2 has no override field).
+            kind: 'decision',
             chosen_plugin_id: 'claude',
-            actual_provider_used: 'claude',
+            intended_model: p.model || null,
             fallback_applied: false,
-            reason: `mode_d: ${modeDReason}`,
+            reason: `mode_d: ${modeDReason} (provider:bob rejected by the Mode-D guard before dispatch)`,
           },
         })
       } else {
@@ -1550,14 +1553,19 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
         log(`P4 Bob fix-cycle routing: dispatching bob-delegate-executor for phase ${p.id} fix-cycle ${cycles + 1}.`)
         let bobResult = null
         let bobFailed = false
+        // What the workflow actually OBSERVED, for the realization evidence below. Bob's own
+        // self-report would not be a measurement; this is the orchestrator's observation.
+        let bobFailureMode = null
         try {
           bobResult = await agent(fixPromptText, {
             phase: cycleLabel,
             agentType: 'bob-delegate-executor',
             model: p.model,
             _routing_log: {
+              // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED.
+              kind: 'decision',
               chosen_plugin_id: 'bob',
-              actual_provider_used: 'bob',
+              intended_model: p.model || null,
               fallback_applied: false,
               reason: `provider:bob fix-cycle for phase ${p.id}`,
             },
@@ -1565,10 +1573,12 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
           // Bob returns null on Mode-D abort inside the executor or tool failure.
           if (!bobResult) {
             bobFailed = true
+            bobFailureMode = 'returned null'
             log(`P4 Bob fix-cycle: bob-delegate-executor returned null for phase ${p.id} fix-cycle ${cycles + 1}. Triggering fallback to claude.`)
           }
         } catch (bobErr) {
           bobFailed = true
+          bobFailureMode = `threw: ${bobErr && bobErr.message ? bobErr.message : bobErr}`
           log(`P4 Bob fix-cycle: bob-delegate-executor threw for phase ${p.id} fix-cycle ${cycles + 1}: ${bobErr && bobErr.message ? bobErr.message : bobErr}. Triggering fallback to claude.`)
         }
 
@@ -1580,9 +1590,16 @@ async function fixLoop(p, taskOut, initialVerdict, reviewerType) {
             agentType: p.fix_agent || taskOut.filter(Boolean)[0]?.assigned_to || 'python-backend-engineer',
             model: p.model,
             _routing_log: {
+              // The one hop this path genuinely measures: the workflow observed bob fail and
+              // issued this re-dispatch itself, so the realized provider rests on evidence.
+              kind: 'realization',
               chosen_plugin_id: 'bob',
+              intended_model: p.model || null,
               actual_provider_used: 'claude',
+              // null when the phase pinned no model — unknowable, never guessed.
+              realized_model: p.model || null,
               fallback_applied: true,
+              realization_evidence: `orchestrator-observed: bob-delegate-executor ${bobFailureMode} for phase ${p.id} fix-cycle ${cycles + 1}; this call is the workflow's own in-process re-dispatch to claude-primary`,
               reason: 'bob-delegate-executor failed (timeout / binary absent / structuring error); escalated to claude immediately (no retry)',
             },
           })
@@ -1996,6 +2013,8 @@ async function reviewerGate(p, taskOut, tier) {
     // fallback_applied. reviewerType is edit-less (constraint 3), preserved unchanged.
     let stageAText = null
     let stageAFailed = false
+    // What the workflow actually OBSERVED, for the realization evidence on the fallback below.
+    let stageAFailureMode = null
     try {
       stageAText = await agent(
         codexAcValidationPrompt(p, taskOut, planRef, acArtifactPath),
@@ -2006,8 +2025,10 @@ async function reviewerGate(p, taskOut, tier) {
           model: 'sonnet',
           // No schema: read-only AC validation; structurer Stage B emits VERDICT_SCHEMA.
           _routing_log: {
+            // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED.
+            kind: 'decision',
             chosen_plugin_id: 'codex',
-            actual_provider_used: 'codex',
+            intended_model: 'sonnet',
             fallback_applied: false,
             reason: `offload AC validation Stage A to codex-executor for phase ${p.id}`,
           },
@@ -2015,10 +2036,12 @@ async function reviewerGate(p, taskOut, tier) {
       )
       if (!stageAText) {
         stageAFailed = true
+        stageAFailureMode = 'returned null'
         log(`P5 fallback: codex-executor returned null for ${p.id} AC validation Stage A. Falling back to primary claude reviewer (${reviewerType}).`)
       }
     } catch (codexErr) {
       stageAFailed = true
+      stageAFailureMode = `threw: ${codexErr && codexErr.message ? codexErr.message : codexErr}`
       log(`P5 fallback: codex-executor threw for ${p.id} AC validation Stage A: ${codexErr && codexErr.message ? codexErr.message : codexErr}. Falling back to primary claude reviewer (${reviewerType}).`)
     }
 
@@ -2033,9 +2056,16 @@ async function reviewerGate(p, taskOut, tier) {
         agentType: reviewerType,
         schema: VERDICT_SCHEMA,
         _routing_log: {
+          // Measured hop: the workflow observed codex fail and ran the on-primary reviewer itself.
+          kind: 'realization',
           chosen_plugin_id: 'codex',
+          intended_model: 'sonnet',
           actual_provider_used: 'claude',
+          // This call pins no model (the reviewer agentType's own default applies), so the
+          // realized model is genuinely unknowable here — null, never guessed.
+          realized_model: null,
           fallback_applied: true,
+          realization_evidence: `orchestrator-observed: codex-executor ${stageAFailureMode} for ${p.id} AC validation Stage A; this call is the workflow's own in-process re-dispatch to ${reviewerType} on claude-primary`,
           reason: `codex-executor failed (rate-limit / timeout / binary absent); escalated to primary claude reviewer immediately (no retry)`,
         },
       })

@@ -1849,10 +1849,14 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
         agentType: fixAgentType,
         model: parsed.fix_model || undefined,
         _routing_log: {
-          chosen_plugin_id: 'bob',
-          actual_provider_used: 'claude',
+          // The Mode-D guard fired BEFORE dispatch, so the effective routing decision is claude —
+          // recording chosen_plugin_id:'bob' here would assert an intent we knowingly did not act
+          // on. The rejected provider is named in `reason` instead (v2 has no override field).
+          kind: 'decision',
+          chosen_plugin_id: 'claude',
+          intended_model: parsed.fix_model || null,
           fallback_applied: false,
-          reason: `mode_d: ${modeDReason}`,
+          reason: `mode_d: ${modeDReason} (fix_provider:bob rejected by the Mode-D guard before dispatch)`,
         },
       })
     } else {
@@ -1860,6 +1864,9 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
       log(`P4 Bob fix-cycle routing: dispatching bob-delegate-executor for fix-cycle ${cycleNumber}.`)
       let bobResult = null
       let bobFailed = false
+      // What the workflow actually OBSERVED, for the realization evidence below. Bob's own
+      // self-report would not be a measurement; this is the orchestrator's observation.
+      let bobFailureMode = null
       try {
         bobResult = await agent(fixPromptText, {
           label: `fix-cycle-${cycleNumber}`,
@@ -1867,18 +1874,23 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
           agentType: 'bob-delegate-executor',
           model: parsed.fix_model || undefined,
           _routing_log: {
+            // No actual_provider_used: nothing has run yet, and omitted means UNCONFIRMED. Copying
+            // the intent into the realized field is what made the field unable to audit anything.
+            kind: 'decision',
             chosen_plugin_id: 'bob',
-            actual_provider_used: 'bob',
+            intended_model: parsed.fix_model || null,
             fallback_applied: false,
             reason: `fix_provider:bob fix-cycle ${cycleNumber} for contract ${parsed.contract_path || '(unknown)'}`,
           },
         })
         if (!bobResult) {
           bobFailed = true
+          bobFailureMode = 'returned null'
           log(`P4 Bob fix-cycle: bob-delegate-executor returned null for fix-cycle ${cycleNumber}. Triggering fallback to claude.`)
         }
       } catch (bobErr) {
         bobFailed = true
+        bobFailureMode = `threw: ${bobErr && bobErr.message ? bobErr.message : bobErr}`
         log(`P4 Bob fix-cycle: bob-delegate-executor threw for fix-cycle ${cycleNumber}: ${bobErr && bobErr.message ? bobErr.message : bobErr}. Triggering fallback to claude.`)
       }
 
@@ -1891,9 +1903,16 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
           agentType: fixAgentType,
           model: parsed.fix_model || undefined,
           _routing_log: {
+            // The one hop this workflow genuinely measures: it observed bob fail and issued this
+            // re-dispatch itself, so the realized provider is established by evidence, not claimed.
+            kind: 'realization',
             chosen_plugin_id: 'bob',
+            intended_model: parsed.fix_model || null,
             actual_provider_used: 'claude',
+            // null when the contract pinned no fix model — unknowable, never guessed.
+            realized_model: parsed.fix_model || null,
             fallback_applied: true,
+            realization_evidence: `orchestrator-observed: bob-delegate-executor ${bobFailureMode} for fix-cycle ${cycleNumber}; this call is the workflow's own in-process re-dispatch to ${fixAgentType} on claude-primary`,
             reason: 'bob-delegate-executor failed (timeout / binary absent / structuring error); escalated to claude immediately (no retry)',
           },
         })
