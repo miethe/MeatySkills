@@ -320,6 +320,70 @@ asyncTest('(b) a neutral row leaves overrides empty even with the gate open', as
 });
 
 // ---------------------------------------------------------------------------
+// (g) Node …0J — the CLI wires chains/must_stay from the registry into mergeFeedback,
+//     so the WRITTEN state file is immunity-annotated (DI-1). This is the whole point of
+//     the wiring: without it, mergeFeedback's `reportImmunity` never turns on and the state
+//     file the resolver reads cannot tell a demotable class from an immune one.
+// ---------------------------------------------------------------------------
+
+asyncTest('(g) --apply annotates the written state with per-class immunity from the registry', async () => {
+  // The registry topology the CLI must forward. Each row's source_skill_name is chosen so the
+  // vocabulary join ACCEPTS it for the intended class (dev-execution→implementation,
+  // ccdash→mechanical, delegation-router→orchestration); a class/skill mismatch is join-rejected
+  // upstream and never reaches this annotation. `implementation` is single-entry (immune),
+  // `mechanical` is multi-entry (a real peer exists → NOT immune), `orchestration` is MUST-stay.
+  const immunityRegistry = {
+    version: 1,
+    routing_policy: {
+      implementation: { chain: ['claude/claude-sonnet-5'] },                        // single-entry
+      mechanical: { chain: ['ica/claude-haiku-4-5', 'claude/claude-haiku-4-5'] },    // multi-entry
+      orchestration: { chain: ['claude/claude-opus-5'] },                            // MUST-stay
+    },
+    must_stay_primary: ['orchestration'],
+    // chain_join is annotation-only and never gates the write; the state file we assert on
+    // carries `overrides[class].immunity`, not chain_join — so an empty models map is fine.
+    models: {},
+  };
+  const d = deps({
+    registry: immunityRegistry,
+    mergeOpts: { contract: enabledContract },
+    fetchImpl: mockFetch(rollupData({
+      keys: [
+        keyRow({ source_skill_name: 'dev-execution', task_class: 'implementation', model: 'claude-sonnet-5', provider: 'claude' }),
+        keyRow({ source_skill_name: 'ccdash', task_class: 'mechanical', model: 'claude-haiku-4-5', provider: 'ica' }),
+        keyRow({ source_skill_name: 'delegation-router', task_class: 'orchestration', model: 'claude-opus-5', provider: 'claude' }),
+      ],
+    })),
+  });
+
+  const res = await run(['--project', 'p1', '--apply', '--json'], d);
+  assert.strictEqual(res.exitCode, 0, `expected exit 0, got ${res.exitCode}: ${d.stderr.text()}`);
+  assert.strictEqual(res.applied, true, 'gate open → applied');
+
+  // The decisions envelope proves BOTH inputs reached mergeFeedback: the single_entry_chain /
+  // immune:false labels come from `chains`, and the must_stay label can ONLY come from `must_stay`.
+  const decisions = JSON.parse(d.stdout.text()).decisions;
+  const byClass = Object.fromEntries(decisions.map(x => [x.task_class, x]));
+  assert.strictEqual(byClass.implementation.immunity.kind, 'single_entry_chain');
+  assert.strictEqual(byClass.mechanical.immunity.immune, false);
+  assert.strictEqual(byClass.orchestration.immunity.kind, 'must_stay',
+    'a MUST-stay class label proves the `must_stay` input flowed through, not just `chains`');
+
+  // AC2 — the WRITTEN state file labels a single-entry class single_entry_chain and a multi-entry
+  // class immune:false. (A MUST-stay class is join-rejected before it can demote, so it correctly
+  // never lands in overrides — its immunity lives only on the decision row asserted above.)
+  const state = JSON.parse(fs.readFileSync(d.statePath, 'utf8'));
+  assert.strictEqual(state.overrides.implementation.immunity.kind, 'single_entry_chain',
+    'a single-entry class must be labelled single_entry_chain in the written state');
+  assert.strictEqual(state.overrides.implementation.immunity.immune, true);
+  assert.strictEqual(state.overrides.mechanical.immunity.immune, false,
+    'a multi-entry class must be written immune:false');
+  assert.strictEqual(state.overrides.mechanical.immunity.kind, null);
+  assert.ok(!('orchestration' in state.overrides),
+    'a MUST-stay class is rejected upstream and must never be recorded as a demotion');
+});
+
+// ---------------------------------------------------------------------------
 // (c) / (d) nothing-to-merge exits 0 without writing
 // ---------------------------------------------------------------------------
 

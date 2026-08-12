@@ -3,6 +3,36 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-08-11 — audit entry schema v2: intent vs realization, provider vs model
+
+The audit log could not detect the substitution it exists to detect. Measured across both live logs
+in this estate (123 entries): **112 (91%) had `actual_provider_used === chosen_plugin_id`** — the
+shape the shipped Pattern B example produced — and **0 carried any model field at all**. Origin:
+`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; sibling `node_01KZS33HCND9T13BW7FGRQ8WAA` (the same example threw
+as written).
+
+- `audit-log.js` schema v2. Realized fields (`actual_provider_used`, `realized_model`) default to
+  **null = unconfirmed** and are never derived from the intent; `intended_model` records the
+  resolver's model; `model_substituted` is `null` when unknowable rather than `false`.
+  `realization_confirmed` is true only when `realization_evidence` accompanies a realized value — a
+  caller claiming confirmation without evidence gets `realization_confirmed_claimed` instead of
+  confirmation. New `appendRealization()` (evidence required) is the only path to a confirmed
+  realization, and it appends rather than mutating.
+- `appendEntry` now derives `chosen_plugin_id`/`intended_model` from `routing_record` when the
+  top-level params are absent — the documented call passed the record and nothing else, and threw.
+- New readers `findUnconfirmedEntries()` / `findModelSubstitutions()` / `readNormalizedEntries()` /
+  `normalizeEntry()`. v1 entries normalize to **unconfirmed** decisions even when they carry an
+  `actual_provider_used`, because in v1 that value was a copy of the intent.
+- `log-cli.js`: `--intended-model`, `--realized-model`, `--evidence`, `--realization`. **`--actual`
+  no longer defaults to `--chosen`** — omitted now means unconfirmed.
+- `SKILL.md` v3.4: Pattern B fixed (no intent-copying; decision and realization as two calls),
+  plus the in-process doctrine — routing to a provider is a **no-op** when the session's own
+  `ANTHROPIC_BASE_URL` is already that provider, so the model is the only dimension an in-process
+  dispatch decides, and the dispatcher must pass `model: record.model` or the agent definition's pin
+  silently wins. `SPEC.md`: invariant 7b + § "Audit entry schema v2".
+- Tests: `tests/test-audit-log-realization.js`, 9 cases. CASE 1 is the shipped v1 Pattern B call
+  verbatim — if it stops asserting *unconfirmed*, the log is auditing a copy of its own intent again.
+
 ## 2026-08-04 — DI-1: empirical routing feedback merge + discrete demotion actuation
 
 CCDash proof can now change a routing decision. This is the consumer half of BP-6 — the step that

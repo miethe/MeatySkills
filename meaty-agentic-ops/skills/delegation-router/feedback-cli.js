@@ -343,6 +343,36 @@ function resolvePolicyChain(taskClass, registry) {
 }
 
 /**
+ * DI-1 immunity topology — the opt-in `{chains, must_stay}` mergeFeedback needs to annotate (and
+ * the resolver to enforce) which task_classes are immune to demotion. This is the ONE place that
+ * reads the registry for that purpose: routing-feedback.js stays a pure function of its opts and
+ * never touches the registry or the filesystem (AC3). Keys are emitted in BOTH dash and underscore
+ * spellings so a decision's task_class matches whichever the rollup reported — the same tolerance
+ * resolvePolicyChain applies.
+ *
+ * @param {Object} registry  loaded model registry (routing_policy + must_stay_primary)
+ * @returns {{chains: Object<string, string[]>, must_stay: Set<string>}}
+ */
+function buildImmunityTopology(registry) {
+  const variantsOf = key => [
+    key,
+    String(key).replace(/-/g, '_'),
+    String(key).replace(/_/g, '-'),
+  ];
+  const policy = (registry && registry.routing_policy) || {};
+  const chains = {};
+  for (const [taskClass, spec] of Object.entries(policy)) {
+    if (!spec || !Array.isArray(spec.chain)) continue;
+    for (const k of variantsOf(taskClass)) chains[k] = spec.chain;
+  }
+  const must_stay = new Set();
+  for (const cls of (registry && registry.must_stay_primary) || []) {
+    for (const k of variantsOf(cls)) must_stay.add(k);
+  }
+  return { chains, must_stay };
+}
+
+/**
  * @param {Object} decision   one row from mergeFeedback's `decisions[]` (task_class + entry)
  * @param {Object} registry   loaded model registry (entry-key.js canonicalization source)
  * @returns {'in_chain'|'entry_not_in_chain'|'unknown_provider'|'unknown_model'|'no_chain_for_class'}
@@ -519,6 +549,14 @@ async function run(argv, deps = {}) {
   const envelope = buildEnvelope(data);
   const prior = loadFeedbackState({ statePath, env, now: deps.now });
 
+  // The registry is the ONLY source of the immunity topology, and it is read HERE (the CLI),
+  // never inside routing-feedback.js (AC3). Passing `chains`/`must_stay` is what turns on
+  // mergeFeedback's immunity annotations: a single-entry chain is labelled `single_entry_chain`
+  // and a MUST-stay class is held immune, so neither is demoted by the machine feedback loop.
+  // Loaded once here and reused for the chain_join evaluation below.
+  const registry = deps.registry || loadDefaultRegistry();
+  const { chains: immunityChains, must_stay: immunityMustStay } = buildImmunityTopology(registry);
+
   let result;
   try {
     result = mergeFeedback({
@@ -526,8 +564,9 @@ async function run(argv, deps = {}) {
       rows,
       priorState: { overrides: prior.overrides },
       now: deps.now,
-      // env LAST: a test-injected mergeOpts must never replace the real kill switch.
-      opts: { ...(deps.mergeOpts || {}), env },
+      // chains/must_stay come from the registry; a test may override them via mergeOpts, but env
+      // stays LAST so a test-injected mergeOpts can never replace the real kill switch.
+      opts: { chains: immunityChains, must_stay: immunityMustStay, ...(deps.mergeOpts || {}), env },
     });
   } catch (err) {
     return fail(1, `merge failed — ${err.message}`);
@@ -538,7 +577,6 @@ async function run(argv, deps = {}) {
   // later, inside the resolver's applyChainFeedback, where a merge-time decisions table never
   // saw it. Attaching `chain_join` here means a non-`in_chain` majority can no longer hide
   // behind a run that otherwise "looks fine".
-  const registry = deps.registry || loadDefaultRegistry();
   const decisions = result.decisions.map(d => ({ ...d, chain_join: chainJoinStatus(d, registry) }));
   const chainJoinSummary = summarizeChainJoin(decisions);
   const maybeWarnChainJoin = () => {
