@@ -1,5 +1,5 @@
 {
-  "_generated_from": "/Users/miethe/dev/homelab/development/MeatySkills/.worktrees/di1-chain-entry-key/meaty-agentic-ops/skills/delegation-router/model-registry.yaml",
+  "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
   "_yaml_sha256": "fe28b05680af64f935a07883d7455c9e6f8ef47faace610e702174c16c01a8d5",
   "version": 1,
