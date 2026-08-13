@@ -80,9 +80,18 @@ def main() -> int:
     yaml_sha256 = hashlib.sha256(raw_yaml_bytes).hexdigest()
 
     # Stamp provenance so consumers can detect a stale generated file.
-    # Use the absolute source path (more reliable than a relative path that depends on cwd).
+    # Record the SOURCE BASENAME only, never an absolute path: this file is
+    # committed to git AND deployed to ~/.claude/config/, and an absolute path
+    # embeds the generating machine's checkout/worktree location. That made the
+    # committed artifact machine-specific — the global copy and every worktree's
+    # copy carried a different `_generated_from` and so could never be
+    # byte-identical, which is exactly what defeated a naive drift check and let
+    # real staleness hide behind an expected-looking diff. The basename is
+    # deterministic and reproducible everywhere; the machine-independent
+    # staleness signal is `_yaml_sha256` below, which resolver.js already
+    # recomputes over the live YAML.
     out = {
-        "_generated_from": os.path.abspath(args.src),
+        "_generated_from": os.path.basename(args.src),
         "_generator": "scripts/build-model-registry.py",
         "_yaml_sha256": yaml_sha256,
         **data,
