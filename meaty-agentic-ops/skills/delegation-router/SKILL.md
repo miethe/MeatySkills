@@ -195,6 +195,12 @@ shelled-out `invocation_template` decides the provider itself.
   session's `ANTHROPIC_BASE_URL` does; routing to a provider the session is already on is a no-op,
   and routing to one it is not on does not reach that provider at all without a shelled-out
   `invocation_template`. In-process, the record decides the **model** and nothing else.
+- Do not say a model id tells you which provider or lane something is on — and never infer a lane
+  from a model-id **suffix**. `[1m]` (`claude-opus-5[1m]`, `claude-sonnet-5[1m]`,
+  `gemini-3.5-flash[1m]`) is a **context-window** marker meaning 1M-token context, a Claude-Code
+  client-side convention orthogonal to who serves the tokens; a native subscription session
+  legitimately reports `claude-opus-5[1m]`. The lane discriminator is **`ANTHROPIC_BASE_URL`**.
+  Reading your own session's `[1m]` as "already on ICA" suppresses offload that should have happened.
 - Do not say an audit entry's `actual_provider_used` is evidence of where a leg ran. Unless the entry
   carries `realization_confirmed: true` **with** `realization_evidence`, it is an intent or a
   self-report. Every v1 entry (no `schema_version`) is unconfirmed by definition.
