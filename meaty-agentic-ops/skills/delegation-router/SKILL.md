@@ -60,7 +60,7 @@ Repo-verified surfaces only:
 2. **Registry chain** — resolve task_class to its `routing_policy.chain`; walk top-down by priority/availability/capability.
 3. **Free-first** — free-eligible classes start at an ICA free-tier instance; primary only via the chain tail.
 4. **Determinism filter** — when `resume_active=true` on a structural stage, exclude nondeterministic providers.
-5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout.
+5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout. ⚠️ **Availability failures only. A permission denial is NOT one** — a classifier/hook/user refusal of the shelled invocation is a decision about whether this content may take this path, not a fact about the path, so the executor returns `{status: 'blocked', reason: 'permission_denied', fallback_applied: false}` with evidence and stops. It never re-attempts the same content on another lane (next entry, in-process, or reworded), and never probes to isolate the block. Rerouting after a denial belongs to the orchestrator. Closed trigger list + provenance: SPEC §5a.
 6. **Flat legs only** — the router governs FLAT legs; nesting is **never routed cross-provider**. An offloaded executor (`ica-executor` / `codex-executor` / `gemini-executor` / `bob-delegate-executor`) MUST NOT spawn nested children via the `Agent` tool — a nested spawn from an offloaded leg escapes the `RoutingRecord` audit log. Nesting is claude-primary-only. See provider-routing-spec §5 (MUST-stay #7) and `.claude/specs/subagent-nesting-spec.md` § "Claude-Primary-Only Nesting".
 
 ## External Feedback Join
@@ -185,6 +185,9 @@ shelled-out `invocation_template` decides the provider itself.
   decision entry; supply them via `appendRealization` with evidence once something has actually run.
 - On executor fallback, record `actual_provider_used` (+ `realized_model` when known) and
   `fallback_applied: true` for the realized hop — with the evidence that established it.
+- **Never record a permission denial as a fallback hop.** `fallback_applied: true` asserts an
+  *availability* condition was met; a denial is an authorization event and belongs in the audit log as
+  a `blocked` / `permission_denied` outcome, not as a provider substitution (SPEC §5a).
 - When dispatching an executor **in-process**, pass `model: record.model` to the `Agent` tool. The
   agent definition's `model:` pin is a fallback for when no record model is supplied, not a veto over
   the routing decision.
