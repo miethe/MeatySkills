@@ -2,3 +2,9 @@
 skills/YT/scrape_history.json
 skills/YT/scrape_subscriptions.json
 skills/YT/scrape_watch_later.json
+
+# Python build artifacts (added 2026-08-14 after PR #26 leaked a hooks/__pycache__ .pyc
+# via a py_compile check + directory-scoped git add). A gitignore entry does not untrack the
+# 8 older .pyc files under skills/ — those predate this rule and are left alone.
+__pycache__/
+*.pyc
