@@ -11,6 +11,29 @@ ranks the available providers — Claude primary, ICA free-tier, Bob, Gemini, Co
 single immutable `RoutingRecord` naming the chosen provider, model, agentType wrapper,
 invocation template, and an ordered fallback chain. It never runs the work itself.
 
+## `hooks/routing-log-sink.py` — the audit-log consumer, co-located on purpose
+
+`audit-log.js` + `log-cli.js` are the **writer** for `.claude/logs/routing-decisions.jsonl`.
+Nothing in a workflow calls them: `withRouting()` puts each decision into the workflow's RETURN
+ENVELOPE (`routing_log`) and workflow scripts cannot do filesystem work. For a long stretch that
+producer wire was deployed fleet-wide with **no consumer at all**, so the audit log stayed empty —
+and an empty log reads exactly like a clean one (`node_01KZVV9R3EK13DJXS44VCQ8E9C`, reopened as
+`node_01KZYDYVAD8N82NHZMTEKR7YH2`).
+
+`hooks/routing-log-sink.py` is that consumer: a Claude Code **`Stop`** hook that reads each
+completed workflow's returned `routing_log` and drives `log-cli.js --ingest`. It ships beside the
+writer because it is useless without it — a repo that deploys this skill gets both halves.
+
+- It is a **`Stop`** hook, not `PostToolUse`/`Workflow`: workflows run in the background, whose
+  `PostToolUse` fires at launch (`status: async_launched`) with **no result**, so `routing_log` is
+  never in that payload. That design would be inert.
+- It must be **registered** in the consuming project's `.claude/settings.json` under `hooks.Stop`
+  and deployed to `<repo>/.claude/hooks/` (SkillMeat artifact `hook:routing-log-sink`). Deploying
+  this skill alone does not arm it.
+- ⚠️ **This copy is a MIRROR.** The canonical edit point is
+  `agentic_meta_dev/infra/hooks/routing-log-sink.py` (the registered SkillMeat artifact source);
+  the two are held byte-identical by a test in that repo. Edit there, then re-copy here.
+
 ## How it fits the multi-model routing story
 
 SkillMeat's orchestration is multi-model: Opus reasons and orchestrates, and bounded legs are
