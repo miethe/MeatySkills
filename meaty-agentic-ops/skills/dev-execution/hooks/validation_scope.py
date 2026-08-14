@@ -110,8 +110,17 @@ DEFAULT_MAX_SCOPE_SECONDS = 900
 
 # Directories never walked when enumerating a tree — noise, not signal, and
 # potentially huge (vendored deps, VCS metadata, build output).
+#
+# `.claude/worktrees` and `.worktrees` are included so a NESTED base checkout
+# (materialized by `_materialize_ref` under a workdir that ends up inside the
+# tree being walked) is never itself enumerated as "changed" content -- see
+# `_default_workdir`'s docstring for why this is defense-in-depth rather than
+# the primary fix. Both are two-segment/one-segment alternatives in the SAME
+# pattern (not bolted on as a separate check), so `_SKIP_DIR.search(rel)`
+# alone still decides skip-or-not for every relpath, exactly as before.
 _SKIP_DIR = re.compile(
-    r"(^|/)(\.git|node_modules|__pycache__|\.venv|venv|dist|build|\.mypy_cache|\.pytest_cache)(/|$)"
+    r"(^|/)(\.git|node_modules|__pycache__|\.venv|venv|dist|build|\.mypy_cache|"
+    r"\.pytest_cache|\.claude/worktrees|\.worktrees)(/|$)"
 )
 
 # A file is treated as a "test file" candidate for the grep-resolution step (and for
@@ -338,6 +347,61 @@ def _grep_files_for_symbol(symbol: str, candidates: list[Path]) -> list[Path]:
     return [Path(line) for line in proc.stdout.splitlines() if line]
 
 
+def _check_not_nested(base_dir: Path, head_dir: Path) -> str | None:
+    """Return an error message if one resolved tree contains the other in a
+    way that would actually corrupt the walk, else None. Uses RESOLVED
+    absolute paths (symlinks and `..` included) -- a string-prefix check on
+    the raw arguments would miss exactly the case this exists to catch (a
+    relative `--workdir` resolved against a cwd that is itself inside the
+    tree being diffed).
+
+    A nested base/head pair can normally never yield a meaningful diff:
+    walking the outer tree would enumerate the entire inner checkout as
+    "changed" content (every file present in one map and absent from the
+    other), producing a whole-repo scope that LOOKS like a valid result.
+    Silently producing that result is the actual harm -- the wrapper's
+    non-fatal contract turns a nonsense scope into a silent gate pass, never
+    an error anyone sees. So this fails closed via a raised error, not a
+    best-effort skip.
+
+    EXCEPTION, deliberately: nesting under a path `_walk()` already skips
+    (chiefly `.git` -- see `_SKIP_DIR`) is harmless, because `_walk()` never
+    enumerates it as "changed" content in the first place. Without this
+    exception, the ordinary main-checkout case would ALWAYS trip this check
+    (git-common-dir for a main checkout is `<repo>/.git`, which is trivially
+    "inside" `<repo>` == head_dir, even though nothing about that is
+    corrupting the walk). This check exists for nesting `_SKIP_DIR` does NOT
+    already neutralize -- e.g. a custom `--workdir`/`--head-dir` pair that
+    lands one tree inside the other under a path that IS walked.
+
+    Identical resolved paths (base_dir == head_dir) are NOT nesting -- that
+    is the legitimate "no_changes" case and must not be rejected here.
+    """
+    b = base_dir.resolve()
+    h = head_dir.resolve()
+    if b == h:
+        return None
+    for inner, outer, inner_label, outer_label in (
+        (b, h, "base_dir", "head_dir"),
+        (h, b, "head_dir", "base_dir"),
+    ):
+        try:
+            rel = inner.relative_to(outer)
+        except ValueError:
+            continue
+        if _SKIP_DIR.search(rel.as_posix()):
+            continue
+        return (
+            f"{inner_label} {inner} is nested inside {outer_label} {outer} "
+            "under a path that would actually be walked -- a nested "
+            "base/head pair can never yield a meaningful diff there "
+            "(walking the outer tree would enumerate the inner checkout "
+            "itself as 'changed'); refusing rather than producing a "
+            "whole-repo scope"
+        )
+    return None
+
+
 def _resolution_command_repr(kept_symbols: list[str], head_dir: Path) -> str:
     """A single, auditable string documenting the effective unioned grep query --
     what was actually run was one `grep -lE` invocation per surviving symbol (needed
@@ -375,6 +439,10 @@ def resolve_test_scope(
     max_fanout = DEFAULT_MAX_FANOUT_PER_SYMBOL if max_fanout is None else max_fanout
     max_test_files = DEFAULT_MAX_TEST_FILES if max_test_files is None else max_test_files
     max_seconds = DEFAULT_MAX_SCOPE_SECONDS if max_seconds is None else max_seconds
+
+    nested_error = _check_not_nested(base_dir, head_dir)
+    if nested_error:
+        raise ValueError(nested_error)
 
     start = time.monotonic()
 
@@ -701,6 +769,10 @@ def _run_pytest_one_file(
     timeout_available = _pytest_timeout_available()
     cmd = [
         python_bin, "-m", "pytest", "-q", "--tb=no", "-rA", "--no-header",
+        # --color=no is load-bearing: _NODE_STATUS_RE anchors on ^FAILED/^PASSED, and a
+        # FORCE_COLOR/PY_COLORS environment makes pytest emit ANSI-prefixed summary lines
+        # even when captured — counts still parse, node ids silently vanish.
+        "--color=no",
         "-p", "no:cacheprovider",
         f"--confcutdir={tree_abs}",
         f"--rootdir={tree_abs}",
@@ -856,7 +928,22 @@ def measure_file(
 # Phase 2 — cleanup guard for a baseline measurement worktree (§3.2, risk R6).
 # Refuses, never widens --force. Confined to .claude/worktrees/gate-baseline-*.
 # ---------------------------------------------------------------------------
-_BASELINE_WT_RE = re.compile(r"(^|/)\.claude/worktrees/gate-baseline-[0-9a-f]{6,}$")
+#
+# Widened (see `_default_workdir`) to also confine to the new anchored
+# default location -- `<git-common-dir>/aos-validation-scope/validation-scope-
+# <sha12>` -- alongside the original `.claude/worktrees/gate-baseline-<sha>`
+# shape. Both alternatives require the SAME specific parent-directory name
+# this module itself creates (`gate-baseline-` under `.claude/worktrees`, or
+# `validation-scope-` under a directory literally named
+# `aos-validation-scope`) -- this is additive, not a general "any
+# validation-scope-* basename anywhere" relaxation, so guard 1 still refuses
+# to touch a directory this module did not create the shape of. A custom
+# `--workdir` override that names its parent directory something else falls
+# outside both alternatives and cleanup is refused (non-fatal), never forced.
+_BASELINE_WT_RE = re.compile(
+    r"(^|/)\.claude/worktrees/gate-baseline-[0-9a-f]{6,}$"
+    r"|(^|/)aos-validation-scope/validation-scope-[0-9a-f]{6,}$"
+)
 
 
 def _cleanup_baseline_worktree(repo: Path, wt: Path) -> tuple[bool, str]:
@@ -909,6 +996,51 @@ def _cleanup_baseline_worktree(repo: Path, wt: Path) -> tuple[bool, str]:
 # "resolve" (Phase 1) and "measure" (Phase 2) are siblings; neither modifies
 # the other.
 # ---------------------------------------------------------------------------
+def _git_common_dir(repo: Path) -> Path:
+    """Absolute path to the MAIN repo's shared `.git` directory -- resolved
+    correctly even when `repo` is itself a linked worktree, since
+    `git rev-parse --git-common-dir` returns the shared `.git`, never the
+    worktree's own `.git` file/`.git/worktrees/<name>` sub-path.
+
+    Resolved against `repo` before returning: from the MAIN checkout this
+    prints the bare relative string ".git", not an absolute path, so a
+    caller that joined onto it blindly from a different cwd would get a
+    silently-wrong location.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    common = Path(out)
+    if not common.is_absolute():
+        common = (repo / common).resolve()
+    return common
+
+
+def _default_workdir(repo: Path) -> Path:
+    """Where `--base-ref` worktrees are materialized when `--workdir` is not
+    given -- ANCHORED OUTSIDE any linked worktree.
+
+    The prior default (`.claude/worktrees`, resolved against cwd) is the
+    root cause this function exists to fix: when cwd is itself a linked
+    worktree (e.g. `.claude/worktrees/exec-foo`, the default lane for
+    execute-plan/autopilot/execute-contract), that relative default
+    resolves to `<that worktree>/.claude/worktrees`, nesting the newly
+    materialized base checkout INSIDE the head tree being diffed. Every
+    file in the nested base checkout then reads as "changed" (present in
+    head_map, absent from base_map), producing a whole-repo scope instead
+    of the actual few-file diff.
+
+    Anchoring on the main repo's shared `.git` directory (via
+    `_git_common_dir`, which resolves correctly from inside a worktree)
+    means the base checkout can never land inside ANY worktree, head or
+    otherwise -- it is a sibling of every worktree, not a descendant of one.
+    """
+    return _git_common_dir(repo) / "aos-validation-scope"
+
+
 def _materialize_ref(repo: Path, ref: str, workdir: Path) -> Path:
     """Detached, SHA-pinned checkout of `ref` from `repo` under `workdir`.
 
@@ -965,8 +1097,14 @@ def _build_parser() -> argparse.ArgumentParser:
     resolve.add_argument("--repo", default=".", help="repo root, used with --base-ref (default: cwd)")
     resolve.add_argument(
         "--workdir",
-        default=".claude/worktrees",
-        help="where to materialize --base-ref worktrees (default: .claude/worktrees)",
+        default=None,
+        help=(
+            "where to materialize --base-ref worktrees "
+            "(default: <git-common-dir>/aos-validation-scope, anchored "
+            "outside any linked worktree so a run from inside "
+            ".claude/worktrees/<name> never nests the base checkout inside "
+            "the head tree)"
+        ),
     )
     resolve.add_argument("--max-fanout", type=int, default=None)
     resolve.add_argument("--max-test-files", type=int, default=None)
@@ -983,8 +1121,12 @@ def _build_parser() -> argparse.ArgumentParser:
     measure.add_argument("--repo", default=".", help="repo root, used with --base-ref (default: cwd)")
     measure.add_argument(
         "--workdir",
-        default=".claude/worktrees",
-        help="where to materialize --base-ref worktrees (default: .claude/worktrees)",
+        default=None,
+        help=(
+            "where to materialize --base-ref worktrees "
+            "(default: <git-common-dir>/aos-validation-scope, anchored "
+            "outside any linked worktree)"
+        ),
     )
     measure.add_argument("--file", required=True, help="test file path, relative to both trees")
     measure.add_argument("--max-seconds", type=float, default=None, help="per-invocation pytest timeout")
@@ -999,40 +1141,63 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_resolve(args: argparse.Namespace) -> int:
+    repo = Path(args.repo)
+    baseline_wt: Path | None = None
     if args.base_dir:
         base_dir = Path(args.base_dir)
     else:
-        repo = Path(args.repo)
-        workdir = Path(args.workdir)
+        workdir = Path(args.workdir) if args.workdir else _default_workdir(repo)
         workdir.mkdir(parents=True, exist_ok=True)
         try:
             base_dir = _materialize_ref(repo, args.base_ref, workdir)
+            baseline_wt = base_dir
         except (subprocess.CalledProcessError, RuntimeError) as e:
             print(f"[validation-scope] could not materialize base ref {args.base_ref!r}: {e}", file=sys.stderr)
             return 1
 
     head_dir = Path(args.head_dir) if args.head_dir else Path(args.repo)
 
-    result = resolve_test_scope(
-        base_dir=base_dir,
-        head_dir=head_dir,
-        max_fanout=args.max_fanout,
-        max_test_files=args.max_test_files,
-        max_seconds=args.max_seconds,
-    )
+    rc = 0
+    try:
+        result = resolve_test_scope(
+            base_dir=base_dir,
+            head_dir=head_dir,
+            max_fanout=args.max_fanout,
+            max_test_files=args.max_test_files,
+            max_seconds=args.max_seconds,
+        )
+    except ValueError as e:
+        # Containment failure (base/head nested) or any other resolution-time
+        # refusal -- fail closed, never fabricate a scope. Cleanup below still
+        # runs for whatever this invocation materialized (AC4 applies
+        # regardless of whether resolution itself succeeded).
+        print(f"[validation-scope] refusing to resolve: {e}", file=sys.stderr)
+        rc = 1
+        result = None
 
-    if args.json:
-        print(json.dumps(result.as_dict(), indent=2))
-    else:
-        print(f"[validation-scope] scope_status={result.scope_status} "
-              f"test_scope={len(result.test_scope)} files "
-              f"changed_symbols={len(result.changed_symbols)} "
-              f"scope_truncated={result.scope_truncated} "
-              f"budget_exhausted={result.budget_exhausted}")
-        for f in result.test_scope:
-            syms = ", ".join(result.matched_symbols.get(f, []))
-            print(f"  {f}  <- {syms}")
-    return 0
+    if result is not None:
+        if args.json:
+            print(json.dumps(result.as_dict(), indent=2))
+        else:
+            print(f"[validation-scope] scope_status={result.scope_status} "
+                  f"test_scope={len(result.test_scope)} files "
+                  f"changed_symbols={len(result.changed_symbols)} "
+                  f"scope_truncated={result.scope_truncated} "
+                  f"budget_exhausted={result.budget_exhausted}")
+            for f in result.test_scope:
+                syms = ", ".join(result.matched_symbols.get(f, []))
+                print(f"  {f}  <- {syms}")
+
+    if baseline_wt is not None:
+        # Only ever cleans up a worktree THIS invocation materialized via
+        # --base-ref -- never when the caller passed --base-dir directly
+        # (baseline_wt stays None on that path, see above). Best-effort:
+        # a refused/failed cleanup is disclosed on stderr, never turned into
+        # a nonzero exit of its own (mirrors _cmd_measure's --cleanup path).
+        _removed, msg = _cleanup_baseline_worktree(repo, baseline_wt)
+        print(f"[validation-scope] cleanup: {msg}", file=sys.stderr)
+
+    return rc
 
 
 def _cmd_measure(args: argparse.Namespace) -> int:
@@ -1041,7 +1206,7 @@ def _cmd_measure(args: argparse.Namespace) -> int:
     if args.base_dir:
         base_dir = Path(args.base_dir)
     else:
-        workdir = Path(args.workdir)
+        workdir = Path(args.workdir) if args.workdir else _default_workdir(repo)
         workdir.mkdir(parents=True, exist_ok=True)
         try:
             # Reuses the same detached, SHA-pinned mechanism resolve_test_scope's

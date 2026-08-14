@@ -209,7 +209,17 @@ check "nonexistent base dir => exit 0 (non-fatal; empty tree, not a crash)" 0 "$
 # base = pre-fix behaviour, head = post-fix), and small synthetic trees for
 # the fail-closed contracts (measurement_failure / import-shadow / cleanup).
 # =============================================================================
-repo_root="$(cd "$hooks/../../../.." && pwd)"
+# `cd -P`, not a bare `cd`: bash's cd is LOGICAL by default, so invoked through the
+# global symlink (~/.claude/skills/dev-execution -> the repo) the four ..'s unwind the
+# SYMLINK path textually and land on $HOME instead of the repo root. ac4 then points at
+# $HOME/tests/fixtures/..., which does not exist, the engine never launches pytest, and
+# CASE 12's three assertions fail closed (91/3 via the symlink vs 94/0 via the repo path).
+# `pwd -P` is NOT a substitute -- it canonicalises AFTER cd has already resolved `..`
+# textually, so it still returns $HOME. Measured 2026-08-13.
+# $hooks itself is deliberately left as-invoked: the suite should exercise the hook copy
+# the caller actually reached. Only repo_root, which locates repo-side FIXTURE data, is
+# resolved physically.
+repo_root="$(cd -P "$hooks/../../../.." && pwd)"
 ac4="$repo_root/tests/fixtures/reviewer-gate-scope/ac4-drift-twin"
 
 echo "== CASE 12: mutation proof -- delta flips with the fix, never constant =="
@@ -404,6 +414,265 @@ json_field "both vanished node ids are named" "$out" \
     'len(d["disappeared_node_ids"]) == 2 and all("test_thing.py::test_" in n for n in d["disappeared_node_ids"])' \
     "True"
 json_field "delta.collected reports the -2" "$out" 'd["delta"]["collected"]' "-2"
+
+echo "== CASE 20: _SKIP_DIR matches both .claude/worktrees and .worktrees path shapes =="
+out="$tmpdir/c20.txt"
+"$python_bin" - <<PY >"$out" 2>&1
+import sys
+sys.path.insert(0, "$hooks")
+from validation_scope import _SKIP_DIR
+checks = [
+    (".claude/worktrees/exec-foo/skillmeat/foo.py", True),
+    (".worktrees/exec-foo/bar.py", True),
+    ("skillmeat/core/foo.py", False),
+    (".git/aos-validation-scope/validation-scope-abc123", True),
+]
+ok = all(bool(_SKIP_DIR.search(p)) == expect for p, expect in checks)
+print("OK" if ok else "MISMATCH: " + repr(checks))
+PY
+contains "_SKIP_DIR skips both nested-worktree path shapes (unit-level)" "$out" "OK"
+
+echo "== CASE 21: real git repo, from-inside-a-worktree lane (AC1-AC4) =="
+# The default lane for execute-plan/autopilot/execute-contract runs the gate
+# from INSIDE a linked worktree (VALIDATION_SCOPE_REPO="."), which is exactly
+# the shape that produced the 1806-file / budget_exhausted=true failure this
+# fix exists for. Two-sided probe: resolve the SAME base/head pair once from
+# the main checkout and once from inside a linked worktree, and assert they
+# agree and stay small.
+nest_repo="$tmpdir/nest_repo"
+mkdir -p "$nest_repo/lib" "$nest_repo/tests"
+git -C "$nest_repo" init -q
+git -C "$nest_repo" config user.email test@example.com
+git -C "$nest_repo" config user.name test
+cat > "$nest_repo/lib/widget.py" <<'PY'
+def compute(x):
+    return x + 1
+
+
+def unrelated():
+    return "noop"
+PY
+cat > "$nest_repo/tests/test_widget_behavior.py" <<'PY'
+from lib.widget import compute
+
+
+def test_compute_adds_one():
+    assert compute(1) == 2
+PY
+git -C "$nest_repo" add -A
+git -C "$nest_repo" commit -q -m base
+nest_base_sha="$(git -C "$nest_repo" rev-parse HEAD)"
+
+# Head commit: a SMALL, known change -- one symbol body edit + one new file.
+cat > "$nest_repo/lib/widget.py" <<'PY'
+def compute(x):
+    return x + 2
+
+
+def unrelated():
+    return "noop"
+PY
+cat > "$nest_repo/lib/extra.py" <<'PY'
+def helper():
+    return 1
+PY
+git -C "$nest_repo" add -A
+git -C "$nest_repo" commit -q -m head
+
+# Probe 1: resolve from the MAIN checkout.
+out_main="$tmpdir/c21_main.json"
+( cd "$nest_repo" && VALIDATION_SCOPE_BASE_REF="$nest_base_sha" VALIDATION_SCOPE_JSON=1 "$hook" ) \
+    >"$out_main" 2>"$tmpdir/c21_main.err"
+check "CASE21: resolve from main checkout => exit 0" 0 "$?"
+
+# Probe 2: add a linked worktree (mirrors execute-plan/autopilot's own
+# .claude/worktrees/<name> convention) and resolve the SAME thing from inside it.
+nest_wt="$nest_repo/.claude/worktrees/exec-foo"
+mkdir -p "$(dirname "$nest_wt")"
+git -C "$nest_repo" worktree add --detach "$nest_wt" head >/dev/null 2>&1
+out_wt="$tmpdir/c21_wt.json"
+( cd "$nest_wt" && VALIDATION_SCOPE_BASE_REF="$nest_base_sha" VALIDATION_SCOPE_JSON=1 "$hook" ) \
+    >"$out_wt" 2>"$tmpdir/c21_wt.err"
+check "CASE21: resolve from inside a linked worktree => exit 0" 0 "$?"
+
+# AC1: identical test_scope regardless of which tree the gate happened to run from.
+cmp_out="$("$python_bin" - "$out_main" "$out_wt" <<PY
+import json, sys
+a = json.load(open(sys.argv[1]))
+b = json.load(open(sys.argv[2]))
+print("MATCH" if a["test_scope"] == b["test_scope"] else "MISMATCH: %r vs %r" % (a["test_scope"], b["test_scope"]))
+PY
+)"
+if [ "$cmp_out" = "MATCH" ]; then
+    printf '  ok    AC1: test_scope identical, main checkout vs inside-worktree\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  AC1: %s\n' "$cmp_out"
+    fail=$((fail + 1))
+fi
+
+# AC2: no diff_files entry names the nested-worktree/materialized-base path shape.
+ac2_out="$("$python_bin" - "$out_wt" <<PY
+import json, sys
+d = json.load(open(sys.argv[1]))
+bad = [f for f in d["diff_files"]
+       if f.startswith(".claude/worktrees") or f.startswith(".worktrees") or "validation-scope-" in f]
+print("CLEAN" if not bad else "POLLUTED: " + ",".join(bad[:5]))
+PY
+)"
+if [ "$ac2_out" = "CLEAN" ]; then
+    printf '  ok    AC2: diff_files contains no nested-worktree/materialized-base entries\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  AC2: %s\n' "$ac2_out"
+    fail=$((fail + 1))
+fi
+
+# AC3: scope stays small and complete -- a real upper bound, not just "> 0".
+json_field "AC3: diff_files count is small (<=10), not a whole-repo scope" "$out_wt" \
+    'len(d["diff_files"]) <= 10' "True"
+json_field "AC3: diff_files matches the known 2-file change" "$out_wt" \
+    'sorted(d["diff_files"])' "['lib/extra.py', 'lib/widget.py']"
+json_field "AC3: budget_exhausted is false" "$out_wt" 'd["budget_exhausted"]' "False"
+
+# AC4: the worktree this run materialized is gone -- neither registered with
+# git nor present on disk -- after the process exits.
+wt_list_count="$(git -C "$nest_repo" worktree list 2>/dev/null | grep -c 'validation-scope-')"
+check "AC4: no validation-scope-* worktree remains registered with git" 0 "$wt_list_count"
+
+default_workdir="$("$python_bin" - "$nest_repo" <<PY
+import sys
+sys.path.insert(0, "$hooks")
+from validation_scope import _default_workdir
+from pathlib import Path
+print(_default_workdir(Path(sys.argv[1])))
+PY
+)"
+leftover_count="$(find "$default_workdir" -mindepth 1 -maxdepth 1 -type d -name 'validation-scope-*' 2>/dev/null | wc -l | tr -d ' ')"
+check "AC4: no validation-scope-<sha> directory remains on disk" 0 "$leftover_count"
+
+# =============================================================================
+# PHASE 3 -- ARGV contract (§ the flag form is the PRIMARY invocation). All
+# three real call sites (reviewer-gate.js:736, execute-plan.js:1311,
+# execute-contract.js:1026) invoke the wrapper as
+#   validation-scope.sh --json --base-ref <sha>
+# and the pre-fix wrapper had ZERO argv handling: every flag was discarded, the
+# binding guard then fired, and it exited 0 having printed nothing -- the
+# reviewer gate's self-measurement was a silent no-op on every lane. Each case
+# below fails against that pre-fix wrapper.
+# =============================================================================
+
+echo "== CASE 22: flag form ALONE (no VALIDATION_SCOPE_* env at all) resolves =="
+out="$tmpdir/c22.json"
+err="$tmpdir/c22.err"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF -u VALIDATION_SCOPE_HEAD_DIR \
+    -u VALIDATION_SCOPE_JSON -u VALIDATION_SCOPE_REPO \
+    "$hook" --json --base-dir "$base" --head-dir "$head" >"$out" 2>"$err"
+check "flag-form-only invocation => exit 0" 0 "$?"
+if [ -s "$out" ]; then
+    printf '  ok    flag form produced NONEMPTY stdout (pre-fix: silently empty)\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  flag form produced EMPTY stdout -- argv discarded, silent no-op\n'
+    fail=$((fail + 1))
+fi
+json_field "flag form: stdout is parseable JSON with scope_status" "$out" 'd["scope_status"]' "ok"
+json_field "flag form: untouched test file pulled into scope" "$out" \
+    '"tests/test_widget_behavior.py" in d["test_scope"]' "True"
+
+echo "== CASE 23: the EXACT call-site form '--json --base-ref <sha>' on a real repo =="
+# Byte-for-byte the invocation reviewer-gate.js / execute-plan.js /
+# execute-contract.js emit, run from inside the repo with no env binding.
+out="$tmpdir/c23.json"
+err="$tmpdir/c23.err"
+( cd "$nest_repo" && env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF \
+    -u VALIDATION_SCOPE_JSON -u VALIDATION_SCOPE_REPO \
+    "$hook" --json --base-ref "$nest_base_sha" ) >"$out" 2>"$err"
+check "call-site form => exit 0" 0 "$?"
+if [ -s "$out" ]; then
+    printf '  ok    call-site form produced NONEMPTY stdout\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  call-site form produced EMPTY stdout -- the gate self-measurement is a no-op\n'
+    fail=$((fail + 1))
+fi
+json_field "call-site form: diff_files matches the known 2-file change" "$out" \
+    'sorted(d["diff_files"])' "['lib/extra.py', 'lib/widget.py']"
+
+echo "== CASE 23b: --flag=value shape is accepted too =="
+out="$tmpdir/c23b.json"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF -u VALIDATION_SCOPE_HEAD_DIR \
+    -u VALIDATION_SCOPE_JSON \
+    "$hook" --json "--base-dir=$base" "--head-dir=$head" >"$out" 2>/dev/null
+check "--flag=value form => exit 0" 0 "$?"
+json_field "--flag=value form resolves identically" "$out" \
+    '"tests/test_widget_behavior.py" in d["test_scope"]' "True"
+
+echo "== CASE 24: argv supplied but carrying NO binding => LOUD on stderr, rc=0 =="
+out="$tmpdir/c24.out"
+err="$tmpdir/c24.err"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF -u VALIDATION_SCOPE_JSON \
+    "$hook" --json >"$out" 2>"$err"
+check "argv-without-binding => still exit 0 (non-fatal contract)" 0 "$?"
+if [ -s "$err" ]; then
+    printf '  ok    argv-without-binding wrote to stderr (no-op is DISTINGUISHABLE)\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  argv-without-binding was SILENT -- indistinguishable from a real run\n'
+    fail=$((fail + 1))
+fi
+contains "stderr names it as a validation-scope no-op" "$err" "[validation-scope]"
+contains "stderr names the missing binding" "$err" "--base-ref"
+
+echo "== CASE 24b: NO argv and NO env binding stays SILENT (default-on discipline) =="
+out="$tmpdir/c24b.out"
+err="$tmpdir/c24b.err"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF "$hook" >"$out" 2>"$err"
+check "bare invocation => exit 0" 0 "$?"
+if [ ! -s "$err" ] && [ ! -s "$out" ]; then
+    printf '  ok    bare invocation emitted nothing at all (no noise in unrelated runs)\n'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  bare invocation emitted output -- default-on silence broken\n'
+    fail=$((fail + 1))
+fi
+
+echo "== CASE 25: an explicit flag OVERRIDES a conflicting env var (argv wins) =="
+# env points the base at a nonexistent tree (which resolves as an empty tree);
+# the flag points it at the real fixture base. If env won, scope_status would
+# not be "ok" with the untouched test file in scope.
+out="$tmpdir/c25.json"
+VALIDATION_SCOPE_BASE_DIR="/does/not/exist" VALIDATION_SCOPE_HEAD_DIR="$head" \
+    "$hook" --json --base-dir "$base" >"$out" 2>/dev/null
+check "conflicting flag+env => exit 0" 0 "$?"
+json_field "flag base-dir won over env base-dir (scope_status ok)" "$out" 'd["scope_status"]' "ok"
+json_field "flag base-dir won: diff is the single changed file, not a whole-tree add" "$out" \
+    'sorted(d["diff_files"])' "['lib/widget.py']"
+
+echo "== CASE 25b: env-only invocation still behaves exactly as before (no regression) =="
+out="$tmpdir/c25b.json"
+VALIDATION_SCOPE_BASE_DIR="$base" VALIDATION_SCOPE_HEAD_DIR="$head" VALIDATION_SCOPE_JSON=1 \
+    "$hook" >"$out" 2>/dev/null
+check "env-only form => exit 0" 0 "$?"
+json_field "env-only form still resolves the untouched test file" "$out" \
+    '"tests/test_widget_behavior.py" in d["test_scope"]' "True"
+
+echo "== CASE 26: unknown flag => stderr warning, rc=0, measurement STILL emitted =="
+out="$tmpdir/c26.json"
+err="$tmpdir/c26.err"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF -u VALIDATION_SCOPE_HEAD_DIR \
+    -u VALIDATION_SCOPE_JSON \
+    "$hook" --json --base-dir "$base" --head-dir "$head" --not-a-real-flag >"$out" 2>"$err"
+check "unknown flag => exit 0 (warn-and-continue, never an error)" 0 "$?"
+contains "unknown flag is named on stderr" "$err" "--not-a-real-flag"
+json_field "a valid measurement is STILL emitted alongside the warning" "$out" \
+    '"tests/test_widget_behavior.py" in d["test_scope"]' "True"
+
+echo "== CASE 26b: value flag with a missing value => warned, not crashed =="
+err="$tmpdir/c26b.err"
+env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF "$hook" --base-ref >/dev/null 2>"$err"
+check "dangling value flag => exit 0" 0 "$?"
+contains "dangling value flag warned on stderr" "$err" "no value"
 
 echo ""
 printf 'validation-scope: %d passed, %d failed\n' "$pass" "$fail"
