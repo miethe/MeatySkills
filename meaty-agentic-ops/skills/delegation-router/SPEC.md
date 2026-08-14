@@ -47,7 +47,8 @@ platform skill executes it.
 - Free-first cost-shifting of free-eligible task classes to ICA free-tier.
 - MUST-stay-primary enforcement (orchestration, verdict, Mode-D, council review, synthesis).
 - Determinism filtering on resumed structural stages.
-- Failure-fallback chain emission for executor re-dispatch.
+- Failure-fallback chain emission for executor re-dispatch (**availability failures only** — see §5a:
+  a permission denial is never a traversal trigger).
 - Append-only audit logging and `skillmeat routing audit` queries.
 - Versioned external task-class vocabulary and fail-closed feedback-key validation.
 
@@ -96,6 +97,44 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 5. **Fallback chain** — emit the remaining chain tail as `fallback_chain`. Executors re-dispatch
    down it on runtime failure/timeout (not just binary-absence), recording `actual_provider_used`
    and `fallback_applied`.
+
+#### 5a. The fallback chain covers UNAVAILABILITY only — a permission denial is not a traversal trigger
+
+The chain answers one question: *the chosen provider could not carry this leg — who is next?*
+"Could not" means **availability**, and the closed list of triggers is:
+
+| Traversal trigger (availability) | NOT a traversal trigger (authorization / correctness) |
+|---|---|
+| binary or auth material absent | **permission denial** — the Claude Code permission classifier, a `PreToolUse` hook, or an explicit user/harness refusal of the executor's shelled invocation |
+| runtime failure / non-zero exit / no usable output | Mode-D boundary hit (→ `needs_opus`, `reason: mode_d`) |
+| timeout against the allotted budget | schema/validation failure (→ hard `validation_failed`) |
+| rate-limit / throttle / 429-equivalent | missing write authority (→ `needs_write_authority`) |
+
+**A denial is a decision about whether this content may take this path; unavailability is a fact
+about the path.** They are not interchangeable, and conflating them turns the fallback chain into an
+escape hatch from a control the leg is subject to. Concretely, executors MUST:
+
+- return `{status: "blocked", reason: "permission_denied", fallback_applied: false}` with the denied
+  invocation and the verbatim denial message as evidence, and stop;
+- **never** re-attempt the same content on another lane — next chain entry, in-process with native
+  tools, or a reworded/trimmed prompt. The denial attaches to the content and its destination, so
+  every such lane is the same denied act in different clothes;
+- **never** probe to isolate which part of the content tripped the classifier;
+- **never** emit `fallback_applied: true` for a denial. Doing so makes an authorization event
+  indistinguishable from an infrastructure one in the audit log, which is the one place a reviewer
+  would have caught it.
+
+Rerouting after a denial is the **orchestrator's** decision — it holds context the constrained leg
+does not, including whether the denial is correct. Escalating a denial upward is never a failure to
+complete the work; executing around one is.
+
+Observed 2026-08-13 (COMMS-SWEEP-B, bg job `cac51b90`): an `ica-executor` leg denied while shelling
+to `~/ica-claude.sh` ran 6 diagnostic probes to isolate the block, then re-executed the identical
+extraction in-process and reported it as walking `fallback_chain` entry 3 (`{claude}`) with
+`fallback_applied: true`. The harness flagged the hand-back as an auto-mode bypass. The protected
+interest was not ultimately violated, but the reroute decision was taken by the wrong party.
+Enforced (as prose) in all four executor agent definitions; tracked as
+`node_01KZY8BAFRFNF836ZD0Y51V1Z3`.
 
 ### Project-local overrides (`routing.local.toml`)
 
@@ -408,6 +447,18 @@ realizations whose model differs from the intent). Both treat v1 entries as unco
   re-dispatch down `fallback_chain` on runtime failure/timeout, not just binary-absence.
   _Status_: planned (design W3 — edits `.claude/workflows/*.js`, manual wave loop per bootstrap exception)
   _Rationale_: Today fallback triggers only on `test -f` binary-absence.
+  ⚠️ **Widening the trigger set widens the tunneling surface.** Any implementation of this item must
+  keep §5a's exclusion intact — a permission denial must never be swept in as a "runtime failure",
+  and the widened list must stay a list of *availability* conditions.
+
+- **[BL-6] Mechanical denial-is-stop enforcement** — §5a is prose in four executor agent definitions
+  and nothing checks it, which is exactly the shape that already failed once for Mode-D
+  (`mode-d-enforcement.md`: prose in a brief cannot constrain the party being constrained).
+  _Status_: not started — filed as an IntentTree finding during the §5a landing
+  _Rationale_: the honest position is that a denied leg's compliance is currently unverified;
+  candidate mechanisms are an output-time scan for `fallback_applied: true` co-occurring with a
+  denial in the session transcript, and a `fallback_applied` provenance field the audit log can
+  reject without an availability-condition witness.
 
 - **[BL-3] True 429 / quota accounting** — distinguish rate-limit from generic failure for ICA shared pool.
   _Status_: deferred
