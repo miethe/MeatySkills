@@ -41,6 +41,17 @@ CONFIG_TEMPLATE = ASSETS_DIR / "config.py.template"
 HOOK_SH = ASSETS_DIR / "hook.sh"
 
 
+class SettingsParseError(Exception):
+    """Raised when an existing settings.json cannot be safely parsed.
+
+    Callers MUST treat this as fatal: an existing settings.json that fails to
+    parse (or that parses to something other than a JSON object) must never be
+    replaced. Raising here — rather than silently falling back to an empty
+    dict — is what stops patch_settings_json() from wholesale-overwriting a
+    file it could not understand.
+    """
+
+
 def slugify(name: str) -> str:
     """Convert a project name to a safe slug for use in filenames.
 
@@ -100,6 +111,11 @@ def patch_settings_json(settings_path: Path, dry_run: bool = False) -> bool:
 
     Returns:
         True if the file was (or would be) modified, False if already present
+
+    Raises:
+        SettingsParseError: If settings_path exists but cannot be parsed as a
+            JSON object. The file is never read into an empty-dict fallback
+            and is never written to in this case — the caller must abort.
     """
     hook_entry = {
         "_comment": "NotebookLM sync hook - syncs markdown docs to NotebookLM when modified. Logs to ~/.notebooklm/sync.log",
@@ -107,19 +123,30 @@ def patch_settings_json(settings_path: Path, dry_run: bool = False) -> bool:
         "hooks": [
             {
                 "type": "command",
-                "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notebooklm-sync-hook.sh",
+                "command": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/notebooklm-sync-hook.sh',
             }
         ],
     }
 
-    # Load existing settings (or start fresh)
+    # Load existing settings. The empty-dict fallback below is only legitimate
+    # when the file does not exist at all — a file that exists but fails to
+    # parse (or parses to a non-dict) must abort rather than be treated as
+    # empty, or the write step below would silently replace it.
     if settings_path.exists():
         try:
             with open(settings_path, "r") as f:
                 settings = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            print(f"  Warning: Could not parse {settings_path}: {e}")
-            settings = {}
+            raise SettingsParseError(
+                f"Could not parse {settings_path}: {e}. "
+                "Refusing to overwrite an existing settings file that failed to parse."
+            ) from e
+        if not isinstance(settings, dict):
+            raise SettingsParseError(
+                f"{settings_path} does not contain a JSON object "
+                f"(top-level type: {type(settings).__name__}). "
+                "Refusing to overwrite an existing settings file with an unexpected shape."
+            )
     else:
         settings = {}
 
@@ -146,9 +173,15 @@ def patch_settings_json(settings_path: Path, dry_run: bool = False) -> bool:
     post_tool_use.append(hook_entry)
 
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(settings_path, "w") as f:
+
+    # Write atomically: render to a temp file in the same directory, then
+    # os.replace() into place. A crash or interruption mid-dump then leaves
+    # the original file untouched instead of a truncated/partial write.
+    tmp_path = settings_path.with_name(settings_path.name + f".tmp{os.getpid()}")
+    with open(tmp_path, "w") as f:
         json.dump(settings, f, indent=2)
         f.write("\n")
+    os.replace(tmp_path, settings_path)
 
     return True
 
@@ -240,7 +273,9 @@ def install(
     if dry_run:
         print(f"[DRY RUN] Would copy payload to: {dest_scripts}")
         if should_restore_config:
-            print(f"[DRY RUN] Would preserve existing config.py (use --no-preserve-config to override)")
+            print(
+                f"[DRY RUN] Would preserve existing config.py (use --no-preserve-config to override)"
+            )
     else:
         saved_config: str | None = None
         if dest_scripts.exists():
@@ -277,18 +312,27 @@ def install(
     if not no_hook:
         hooks_dir = target / ".claude" / "hooks"
         hook_dest = hooks_dir / "notebooklm-sync-hook.sh"
+        settings_path = target / ".claude" / "settings.json"
 
         if dry_run:
             print(f"[DRY RUN] Would copy hook to: {hook_dest}")
-            print(f"[DRY RUN] Would patch: {target / '.claude' / 'settings.json'}")
+            print(f"[DRY RUN] Would patch: {settings_path}")
+            try:
+                patch_settings_json(settings_path, dry_run=True)
+            except SettingsParseError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
         else:
             hooks_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(str(HOOK_SH), str(hook_dest))
             hook_dest.chmod(hook_dest.stat().st_mode | 0o755)
             print(f"Installed hook: {hook_dest}")
 
-            settings_path = target / ".claude" / "settings.json"
-            patch_settings_json(settings_path, dry_run=False)
+            try:
+                patch_settings_json(settings_path, dry_run=False)
+            except SettingsParseError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
             print(f"Patched settings: {settings_path}")
     else:
         print("Skipping hook installation (--no-hook).")
@@ -308,7 +352,9 @@ def install(
         print()
         print("Skipping init.py (--no-init).")
     elif dry_run:
-        print(f"[DRY RUN] Would run: python {dest_scripts / 'init.py'} --notebook-title '{notebook_title}'")
+        print(
+            f"[DRY RUN] Would run: python {dest_scripts / 'init.py'} --notebook-title '{notebook_title}'"
+        )
 
     print()
     print("Installation complete.")
@@ -438,12 +484,14 @@ Examples:
     no_init = args.no_init or args.update
 
     # Detect whether any config-related args were explicitly provided by the user
-    config_args_explicit = any([
-        args.notebook_title is not None,
-        args.include_dirs is not None,
-        args.root_files is not None,
-        args.exclude_patterns is not None,
-    ])
+    config_args_explicit = any(
+        [
+            args.notebook_title is not None,
+            args.include_dirs is not None,
+            args.root_files is not None,
+            args.exclude_patterns is not None,
+        ]
+    )
 
     target_dir = Path(args.target_dir) if args.target_dir else None
 
