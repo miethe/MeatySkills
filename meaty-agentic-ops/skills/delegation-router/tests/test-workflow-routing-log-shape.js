@@ -298,16 +298,256 @@ console.log('  substitution detected with evidence attached');
 //
 //   4a. No `_routing_log:` opts key survives anywhere. That key is inert by construction; its
 //       reappearance means someone restored the dead pattern from an old copy.
-//   4b. Every workflow declares the accumulator and returns it.
-//   4c. Every workflow EXIT is wrapped. An exit is a `return {...}` whose object carries a
-//       `status:`; the wrapper is `withRouting(`. A new exit added without it drops the whole
-//       run's audit trail on that path — silently, and most likely on a bail-out right after a
-//       fallback fired, which is the path whose routing you most wanted to see.
+//   4b. The accumulator is declared, the wrapper is wired to it, and the wrapper is actually
+//       CALLED at least as many times as there are exits.
+//   4c. Every workflow EXIT is wrapped. A new exit added without it drops the whole run's audit
+//       trail on that path — silently, and most likely on a bail-out right after a fallback
+//       fired, which is the path whose routing you most wanted to see.
+//
+// REWRITTEN 2026-08-14 (node_01M00TBZ6AHM68CDPDD0WZ0WKR). The previous 4b/4c were line-regex
+// scans, and closing node_01M00QH5WC45PFN0CXB495X9TS measured five holes in them. Each is now
+// a named property of the code below, because a guard whose coverage is unknown reads as
+// coverage it does not have:
+//
+//   1. `^\s*return (withRouting\()?\{` required a literal brace, so an exit returning an
+//      IDENTIFIER was invisible — including `execute-contract.js`'s primary success exit
+//      `return withRouting(result)`. Rewritten as `return result` it dropped the whole log and
+//      the old CASE 4 reported all clear.
+//   2. Old 4b asserted `/routing_log: __routingLog/` appears in the file. That literal occurs
+//      EXACTLY ONCE per workflow and it is always the `withRouting` arrow definition — never an
+//      exit. Deleting every call site left 4b green while its failure message claimed to prove
+//      "entries cannot leave the script". It now counts CALL SITES.
+//   3. The multi-line body scan looked for an exact `${indent}}` close and `continue`d when it
+//      found none — so an exit could be SKIPPED, indistinguishably from passing. Capture is now
+//      brace/paren balanced and an unterminated capture is a FAILURE.
+//   4. `isExit` required `/^\s*status: /`, so property shorthand (`{ ...base, status }`) and
+//      implicit arrow bodies escaped. Detection now reads the object's top-level key set.
+//   5. 4c asserted NOTHING about how many exits it found, while CASES 1–3 assert exact counts.
+//      A regex silently matching zero exits passed the entire case. There is now a per-file floor.
+//
+// Two further properties this rewrite depends on, both learned the hard way while writing it:
+//
+//   * Analysis runs on source with comment and string/template CONTENT blanked out, never on raw
+//     text. Both `execute-contract.js` and `execute-plan.js` contain the literal words
+//     `return exactly: {"scope_status": "hook_unavailable"}` INSIDE a reviewer prompt, and any
+//     line-shaped scan reads that as an exit.
+//   * "Is this return inside a function body?" is answered lexically, and a naive answer is
+//     wrong: `function f({ a, b }) {` opens TWO braces and the first is a destructured param.
+//     Scoring that as the body made every `return` in the real body look script-level.
+//
+// What CASE 4 still cannot do, stated so nobody reads it as more: it has no dataflow. An exit
+// that returns an identifier is judged by whether THAT return is wrapped, not by tracing where
+// the object came from. The four entries in EXIT_ALLOWLIST below are precisely the cases where
+// that judgement needs a human, and each carries the mechanism that makes it safe.
 // ---------------------------------------------------------------------------
+
+/**
+ * Blank comment and string/template-literal CONTENT, preserving every code character's line and
+ * column. Quotes and backticks are KEPT so `status: ''` stays distinguishable from `status: x`.
+ */
+function blankNonCode(src) {
+  let out = '';
+  let st = 'code';
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    const n = src[i + 1];
+    if (st === 'code') {
+      if (c === '/' && n === '/') { st = 'line'; out += '  '; i++; continue; }
+      if (c === '/' && n === '*') { st = 'block'; out += '  '; i++; continue; }
+      if (c === "'" || c === '"') { st = c; out += c; continue; }
+      if (c === '`') { st = 'tmpl'; out += c; continue; }
+      out += c;
+      continue;
+    }
+    if (st === 'line') { if (c === '\n') { st = 'code'; out += '\n'; } else out += ' '; continue; }
+    if (st === 'block') {
+      if (c === '*' && n === '/') { st = 'code'; out += '  '; i++; } else out += c === '\n' ? '\n' : ' ';
+      continue;
+    }
+    if (st === "'" || st === '"') {
+      if (c === '\\') { out += '  '; i++; continue; }
+      if (c === st) { st = 'code'; out += c; continue; }
+      out += c === '\n' ? '\n' : ' ';
+      continue;
+    }
+    // template literal: blank the text AND any ${...} interpolation (never needed as code here)
+    if (c === '\\') { out += '  '; i++; continue; }
+    if (c === '`') { st = 'code'; out += c; continue; }
+    if (c === '$' && n === '{') {
+      out += '  '; i++;
+      let d = 1;
+      for (i++; i < src.length && d > 0; i++) {
+        const k = src[i];
+        if (k === '{') d++; else if (k === '}') d--;
+        out += k === '\n' ? '\n' : ' ';
+      }
+      i--;
+      continue;
+    }
+    out += c === '\n' ? '\n' : ' ';
+  }
+  return out;
+}
+
+/** Collapse balanced paren groups so a param list cannot hide the `function` keyword. */
+function stripParens(s) {
+  let prev;
+  do { prev = s; s = s.replace(/\([^()]*\)/g, '()'); } while (s !== prev);
+  return s;
+}
+
+/**
+ * Per-character count of enclosing FUNCTION bodies. 0 means the script's own top level, i.e. a
+ * `return` there leaves the workflow. Block braces (`if`, `for`, object literals) do not count.
+ */
+function fnDepthMap(code) {
+  const map = new Int16Array(code.length);
+  const stack = [];
+  let d = 0;
+  let paren = 0;
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    if (c === '(') paren++;
+    else if (c === ')') paren--;
+    else if (c === '{') {
+      const pre = code.slice(Math.max(0, i - 240), i).replace(/\s+/g, ' ');
+      // Inside a parameter list or call arguments a `{` is a destructured param or an object
+      // argument — never a body, UNLESS it directly follows `=>` (an inline arrow body). Once the
+      // param list has closed, `pre` still holds those braces, so collapse parens before looking
+      // for `function`.
+      const isFn = paren > 0
+        ? /=>\s*$/.test(pre)
+        : (/=>\s*$/.test(pre) || /\bfunction\b[^{;]*$/.test(stripParens(pre)));
+      stack.push(isFn);
+      if (isFn) d++;
+    } else if (c === '}') {
+      if (stack.pop()) d--;
+    }
+    map[i] = d;
+  }
+  return map;
+}
+
+/** Capture a whole `return` statement by balancing (), {} and []. null == unterminated. */
+function captureReturn(lines, i) {
+  let d = 0;
+  const buf = [];
+  for (let j = i; j < lines.length; j++) {
+    buf.push(lines[j]);
+    for (const c of lines[j]) {
+      if (c === '(' || c === '{' || c === '[') d++;
+      else if (c === ')' || c === '}' || c === ']') d--;
+    }
+    if (d <= 0) return { expr: buf.join('\n'), end: j };
+  }
+  return null;
+}
+
+/** The object literal's own key level, with nested objects/calls/arrays removed. */
+function topLevelOf(objText) {
+  let d = 0;
+  let out = '';
+  for (const c of objText) {
+    if (c === '{' || c === '(' || c === '[') { d++; if (d === 1) continue; }
+    else if (c === '}' || c === ')' || c === ']') { d--; if (d === 0) continue; }
+    if (d === 1) out += c;
+  }
+  return out;
+}
+
+// `status:`, `status,` and bare trailing `status` (property shorthand) all count.
+const HAS_STATUS_KEY = /(^|[\s,])status\s*(:|,|$)/;
+
+/**
+ * Returns that LOOK like exits but are not, or are wrapped somewhere this scan cannot see.
+ * Keyed by normalized expression rather than line number, because line numbers move. Every entry
+ * MUST match at least one candidate — a stale entry fails the case, so the allowlist can never
+ * quietly grow to cover a real regression.
+ */
+const EXIT_ALLOWLIST = [
+  {
+    file: 'execute-contract.js',
+    match: /^\{ nodeid: claimed\.nodeid,/,
+    reason:
+      'reconcileStatus() returns a per-test status RECORD, not a run envelope: its `status` is a ' +
+      'measured test state and the object carries nodeid/contradicted, no report/blockers.',
+  },
+  {
+    file: 'execute-plan.js',
+    match: /^\{ nodeid: claimed\.nodeid,/,
+    reason: 'same reconcileStatus() status record as execute-contract.js.',
+  },
+  {
+    file: 'execute-plan.js',
+    match: /^repoBlock$/,
+    reason:
+      'the envelope is built already-wrapped inside validateRepoTarget() (both of its exits are ' +
+      '`return withRouting({...})`), so this return carries routing_log by construction. ' +
+      '`withRouting` spreads the accumulator by REFERENCE, so wrapping before later routeLog() ' +
+      'pushes still ships every entry.',
+  },
+  {
+    file: 'execute-plan.js',
+    match: /^boundary$/,
+    reason:
+      'same shape: modeBoundary() returns `withRouting({...})` on both of its exits, so the ' +
+      'boundary object is wrapped before it reaches this return.',
+  },
+];
+
+/**
+ * Minimum exits per workflow. A FLOOR, not an exact count: adding a legitimate exit should not
+ * redden the suite, but a detector that silently stops finding them must. This is the check whose
+ * absence let the old 4c pass on zero matches.
+ */
+const MIN_EXITS = {
+  'explore.js': 8,
+  'spike.js': 8,
+  'execute-contract.js': 14,
+  'execute-plan.js': 14,
+  'review-council.js': 8,
+};
+
+function collectExits(raw, file) {
+  const code = blankNonCode(raw);
+  const lines = code.split('\n');
+  const fmap = fnDepthMap(code);
+  const off = [0];
+  for (let i = 0; i < lines.length; i++) off.push(off[i] + lines[i].length + 1);
+
+  const exits = [];
+  const unterminated = [];
+  const allowed = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(\s*)return\b/.exec(lines[i]);
+    if (!m) continue;
+    const cap = captureReturn(lines, i);
+    if (!cap) { unterminated.push(i + 1); continue; }
+    const e = cap.expr.replace(/^\s*return\s*/, '').trim();
+    const wrapped = /^withRouting\s*\(/.test(e);
+    const inner = wrapped ? e.replace(/^withRouting\s*\(/, '').replace(/\)\s*;?\s*$/, '').trim() : e;
+    const isObj = inner.startsWith('{');
+    const atTopLevel = fmap[off[i] + m[1].length] === 0;
+
+    let why = null;
+    if (isObj && HAS_STATUS_KEY.test(topLevelOf(inner))) why = 'status-literal';
+    else if (!isObj && atTopLevel) why = 'script-level-indirect';
+    if (!why) continue;
+
+    const normalized = e.replace(/\s+/g, ' ').trim();
+    const hit = EXIT_ALLOWLIST.find(a => a.file === file && a.match.test(normalized));
+    if (hit) { allowed.push(hit); continue; }
+    exits.push({ line: i + 1, wrapped, why, head: normalized.slice(0, 70) });
+  }
+  return { exits, unterminated, allowed, callSites: (code.match(/withRouting\s*\(/g) || []).length };
+}
+
 console.log('CASE 4: the wire is intact — no dead opts key, and every workflow exit carries routing_log');
+const allowlistHits = new Set();
+let totalExits = 0;
 for (const f of FILES) {
-  const src = fs.readFileSync(path.join(WORKFLOWS, f), 'utf8');
-  const lines = src.split('\n');
+  const raw = fs.readFileSync(path.join(WORKFLOWS, f), 'utf8');
+  const lines = raw.split('\n');
 
   // 4a — the dead key, as a KEY (a mention in a comment is history, not a wire).
   lines.forEach((l, i) => {
@@ -317,35 +557,54 @@ for (const f of FILES) {
     );
   });
 
-  // 4b — the accumulator exists and leaves the script.
-  check(/const __routingLog = \[\]/.test(src), `${f} declares no __routingLog accumulator`);
-  check(/routing_log: __routingLog/.test(src), `${f} never returns routing_log — entries cannot leave the script`);
+  const { exits, unterminated, allowed, callSites } = collectExits(raw, f);
+  allowed.forEach(a => allowlistHits.add(a));
+  totalExits += exits.length;
 
-  // 4c — every exit is wrapped.
-  for (let i = 0; i < lines.length; i++) {
-    const m = /^(\s*)return (withRouting\()?\{/.exec(lines[i]);
-    if (!m) continue;
-    const indent = m[1];
-    let body;
-    if (lines[i].trimEnd().endsWith('}') || lines[i].trimEnd().endsWith('})')) {
-      body = [lines[i]];
-    } else {
-      let close = -1;
-      for (let j = i; j < lines.length; j++) {
-        if (lines[j] === `${indent}}` || lines[j] === `${indent}})`) { close = j; break; }
-      }
-      if (close === -1) continue;
-      body = lines.slice(i, close + 1);
-    }
-    const isExit = body.some(b => /^\s*status: /.test(b)) || /\{ status: /.test(lines[i]);
-    if (!isExit) continue;
+  // 4b — accumulator declared, wrapper wired to it, and the wrapper actually CALLED.
+  check(/const __routingLog = \[\]/.test(raw), `${f} declares no __routingLog accumulator`);
+  check(
+    /const withRouting = [^\n]*routing_log: __routingLog/.test(raw),
+    `${f}'s withRouting() does not wire routing_log to the __routingLog accumulator`
+  );
+  check(
+    callSites >= exits.length,
+    `${f} has ${exits.length} exit(s) but only ${callSites} withRouting() CALL site(s) — ` +
+      'the wrapper being DEFINED proves nothing; entries leave the script only through a call'
+  );
+
+  // 4c — capture must terminate, the floor must hold, and every exit must be wrapped.
+  check(
+    unterminated.length === 0,
+    `${f}: could not find the end of the return statement(s) at line(s) ${unterminated.join(', ')} — ` +
+      'an exit this scan cannot parse must FAIL, never be skipped'
+  );
+  check(
+    exits.length >= MIN_EXITS[f],
+    `${f}: found only ${exits.length} exit(s), expected at least ${MIN_EXITS[f]} — the detector ` +
+      'stopped seeing exits, which is indistinguishable from "every exit is wrapped"'
+  );
+  for (const e of exits) {
     check(
-      Boolean(m[2]),
-      `${f}:${i + 1} is a workflow exit that is NOT wrapped in withRouting() — this run's routing_log would be dropped on that path`
+      e.wrapped,
+      `${f}:${e.line} is a workflow exit (${e.why}) that is NOT wrapped in withRouting() — ` +
+        `this run's routing_log would be dropped on that path: ${e.head}`
     );
   }
 }
-console.log('  no dead opts key; accumulator declared, returned, and every exit wrapped');
+
+// A stale allowlist entry is a hole with a note attached, so require each one to still match.
+for (const a of EXIT_ALLOWLIST) {
+  check(
+    allowlistHits.has(a),
+    `EXIT_ALLOWLIST entry for ${a.file} (${a.match}) matched nothing — remove it, or the next ` +
+      'genuinely unwrapped exit of that shape is pre-excused'
+  );
+}
+console.log(
+  `  no dead opts key; ${totalExits} exit(s) across ${FILES.length} workflows, every one wrapped ` +
+    `(${EXIT_ALLOWLIST.length} reviewed non-exit/indirect case(s) allowlisted)`
+);
 
 if (failures) {
   console.error(`\n${failures} check(s) FAILED`);
