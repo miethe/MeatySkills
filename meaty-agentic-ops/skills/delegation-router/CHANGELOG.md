@@ -3,6 +3,49 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-08-14 — audit entry `kind: 'blocked'`: the outcome SPEC 5a mandated and the writer lacked
+
+SPEC §5a is explicit that a permission denial belongs in the audit log "as a blocked /
+permission_denied outcome, not as a provider substitution" — and the writer had no way to say it.
+`appendRealization({actual_provider_used: null, realized_model: null, …})` throws by design, and a
+denial has neither field, because nothing ran. Measured 2026-08-14 while routing 5 legs: two
+`ica-executor` legs were denied by the auto-mode classifier, both returned the correct
+`{status: blocked, reason: permission_denied, fallback_applied: false}` shape, and **neither outcome
+could be recorded.** Origin: `node_01M00JTM8FVBK12GF4AYQ7S2JN`; the denials themselves,
+`node_01KZW2PT7PFNS4RKTYPYBMKEV1`.
+
+The consequence was the quiet-gate class. The only representable options were to leave the decision
+entry unconfirmed — byte-identical to a leg that simply had not reported yet — or to write a realized
+provider, which is a lie and precisely the `actual === chosen` corruption the 2026-08-11 entry below
+exists to have removed. So `routing audit --unconfirmed` silently conflated *denied, never ran* with
+*still pending*, and **a lane that was 100% denied looked identical to a lane nobody had used** —
+which is how a broken offload lane stayed `not_started` through two filings.
+
+- **`appendBlocked({task_id, blocked_reason, denial_evidence, …})`** — a third kind, not a flag on a
+  realization. Every realized field is null **by construction** and `fallback_applied` is hard-false
+  (SPEC 5a forbids true: it would make an authorization event indistinguishable from an
+  infrastructure one). `chosen_plugin_id`/`intended_model` are echoed as the **denied intent**.
+  Passing `actual_provider_used`, `realized_model`, `realization_evidence`, or
+  `fallback_applied: true` **throws** rather than being silently dropped — a caller reaching for those
+  has misread the kind, and quietly accepting one reintroduces the copied-intent bug.
+- **`BLOCKED_REASONS`** (`permission_denied`, `mode_d`, `validation_failed`, `needs_write_authority`)
+  — a closed set mirroring §5a's "NOT a traversal trigger" column, so `--blocked` stays queryable.
+  An availability failure is rejected with a pointer to the fallback path. Adding a reason is a SPEC
+  change: the table and the list move together.
+- **`findUnconfirmedEntries()` now excludes any task with a blocked entry**, and this is the point of
+  the kind rather than a side effect. "Unconfirmed" means *nobody has checked yet*; a denial is a
+  settled answer that will never be confirmed. New reader `findBlockedEntries(log_path, reason?)`.
+- **`ingestRoutingLog()`** accepts `kind: 'blocked'`, validating in pass 1 so a malformed blocked leg
+  is *skipped* rather than thrown (pass 1 must write nothing), and counts it in `counts.blocked`.
+- **`log-cli.js --blocked --blocked-reason <r> --denial-evidence <t>`** — the headless writer, with
+  its own flags rather than reusing `--actual`/`--evidence`, which would invite the very reflex §5a
+  forbids. Also fixes the ingest total, which summed only `decision + realization`: a wholly-denied
+  batch would have reported `ingested: 0`.
+- **`appendRealization`'s all-null guard is UNCHANGED.** Relaxing it was the obvious move and the
+  wrong one — that guard is what stops an empty realization reading as a measurement.
+  `tests/test-audit-log-blocked.js` CASE 5 asserts it still throws; CASE 4 asserts the
+  blocked-vs-pending discrimination. 6 cases, zero deps.
+
 ## 2026-08-11 — audit entry schema v2: intent vs realization, provider vs model
 
 The audit log could not detect the substitution it exists to detect. Measured across both live logs

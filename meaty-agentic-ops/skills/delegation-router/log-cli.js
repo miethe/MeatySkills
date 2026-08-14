@@ -46,7 +46,14 @@
 
 const fs = require('fs');
 
-const { appendEntry, appendRealization, ingestRoutingLog, DEFAULT_LOG_PATH } = require('./audit-log.js');
+const {
+  appendEntry,
+  appendRealization,
+  appendBlocked,
+  ingestRoutingLog,
+  BLOCKED_REASONS,
+  DEFAULT_LOG_PATH,
+} = require('./audit-log.js');
 
 function printHelp(stream) {
   stream.write(
@@ -58,16 +65,24 @@ function printHelp(stream) {
       '                        [--log-path <path>]',
       '       node log-cli.js --realization --task-id <id> --evidence <text>',
       '                        [--actual <plugin_id>] [--realized-model <id>] [...]',
+      '       node log-cli.js --blocked --task-id <id> --blocked-reason <reason>',
+      '                        --denial-evidence <text> [--chosen <plugin_id>] [...]',
       '',
       'Appends a routing entry to the routing audit log and prints the written entry as',
       'JSON to stdout, exiting 0. Exits non-zero with a readable message on stderr when',
       'the entry cannot be written. Pure aside from the log append itself: no network,',
       'no model calls.',
       '',
-      'Two entry kinds:',
+      'Three entry kinds:',
       '  decision (default)  What the resolver DECIDED: provider + model intent.',
       '  --realization       What actually RAN, measured after the fact. Requires',
       '                      --evidence and at least one of --actual/--realized-model.',
+      '  --blocked           What was NOT ALLOWED to run: a permission denial, a',
+      '                      Mode-D boundary hit, a validation failure, or missing',
+      '                      write authority (SPEC 5a). Requires --blocked-reason and',
+      '                      --denial-evidence; rejects --actual/--realized-model,',
+      '                      because nothing ran. Keeps a denied leg out of',
+      '                      --unconfirmed, where it used to look merely pending.',
       '',
       'Flags:',
       '  --task-id <id>        Task identifier (e.g. TASK-3.2, node_01…). Required.',
@@ -80,8 +95,15 @@ function printHelp(stream) {
       '                        transcript path). Required for a confirmed realization —',
       '                        an executing leg\'s own self-report is not a measurement.',
       '  --realization         Write a realization entry instead of a decision entry.',
+      '  --blocked             Write a blocked entry instead of a decision entry.',
+      `  --blocked-reason <r>  Required with --blocked. One of: ${BLOCKED_REASONS.join(', ')}.`,
+      '                        An AVAILABILITY failure is NOT one of these — that is a',
+      '                        fallback, and belongs on a decision/realization entry.',
+      '  --denial-evidence <t> Required with --blocked. The verbatim refusal and the',
+      '                        invocation it refused. A denial with no evidence is a rumour.',
       '  --fallback            Force fallback_applied=true (auto-true when a measured',
-      '                        --actual differs from --chosen).',
+      '                        --actual differs from --chosen). Invalid with --blocked:',
+      '                        a denial attaches to the content, so no lane may carry it.',
       '  --reason <text>       Human-readable routing rationale.',
       '  --record <json|path>  Full RoutingRecord as an inline JSON string or a path to a',
       '                        .json file. Derives chosen_plugin_id/intended_model/reason',
@@ -107,6 +129,9 @@ function printHelp(stream) {
       '    --reason "free-tier offload"',
       '  node log-cli.js --realization --task-id P2-006 --actual ica \\',
       '    --realized-model "claude-haiku-4-5[1m]" --evidence "ccdash session S-abc123"',
+      '  node log-cli.js --blocked --task-id P2-006 --chosen ica \\',
+      '    --blocked-reason permission_denied \\',
+      '    --denial-evidence "auto-mode classifier denied Bash(~/ica-claude.sh …)"',
       '  node log-cli.js --ingest report.json --task-id node_01KZVV9R3EK13DJXS44VCQ8E9C',
       '',
     ].join('\n')
@@ -122,6 +147,9 @@ function parseArgs(argv) {
     realized_model: undefined,
     evidence: undefined,
     realization: false,
+    blocked: false,
+    blocked_reason: undefined,
+    denial_evidence: undefined,
     fallback: false,
     reason: undefined,
     record: undefined,
@@ -153,6 +181,15 @@ function parseArgs(argv) {
         break;
       case '--realization':
         args.realization = true;
+        break;
+      case '--blocked':
+        args.blocked = true;
+        break;
+      case '--blocked-reason':
+        args.blocked_reason = argv[++i];
+        break;
+      case '--denial-evidence':
+        args.denial_evidence = argv[++i];
         break;
       case '--fallback':
         args.fallback = true;
@@ -222,6 +259,42 @@ function buildEntryParams(args) {
   const chosen_plugin_id = args.chosen || (record && record.chosen_plugin_id);
   const intended_model = args.intended_model || (record && record.model) || undefined;
   const reason = args.reason !== undefined ? args.reason : (record && record.reason) || '';
+
+  // A blocked entry describes what was NOT ALLOWED to run. It carries the denied
+  // intent and the refusal, and by construction names nothing that executed —
+  // hence its own flags rather than reusing --actual/--evidence, which would
+  // invite exactly the "write a realized provider" reflex SPEC 5a forbids.
+  if (args.blocked) {
+    if (args.realization) {
+      throw new Error('--blocked and --realization are mutually exclusive: a denied leg never ran');
+    }
+    if (!args.denial_evidence) {
+      throw new Error(
+        '--denial-evidence is required with --blocked — quote the refusal and the invocation it refused (see --help)'
+      );
+    }
+    if (!args.blocked_reason) {
+      throw new Error(
+        `--blocked-reason is required with --blocked — one of: ${BLOCKED_REASONS.join(', ')} (see --help)`
+      );
+    }
+    if (args.actual || args.realized_model) {
+      throw new Error(
+        '--actual / --realized-model are invalid with --blocked: nothing ran. If something DID run, this is a realization.'
+      );
+    }
+    const params = {
+      task_id: args.task_id,
+      blocked_reason: args.blocked_reason,
+      denial_evidence: args.denial_evidence,
+      reason,
+    };
+    if (chosen_plugin_id) params.chosen_plugin_id = chosen_plugin_id;
+    if (intended_model) params.intended_model = intended_model;
+    if (record) params.routing_record = record;
+    if (args.log_path) params.log_path = args.log_path;
+    return params;
+  }
 
   // A realization entry describes what RAN; it needs no resolver intent to be valid,
   // and audit-log.js recovers intended_model from the decision entry when omitted.
@@ -342,13 +415,18 @@ function main() {
       return;
     }
 
-    const total = result.counts.decision + result.counts.realization;
+    // Every written kind must be summed here. Omitting one under-reports the
+    // ingest, and the kind most likely to be forgotten is the one a reviewer most
+    // needs to see: a wholly-denied lane would otherwise report `ingested: 0`.
+    const total =
+      result.counts.decision + result.counts.realization + result.counts.blocked;
     process.stdout.write(
       JSON.stringify(
         {
           ingested: total,
           decisions: result.counts.decision,
           realizations: result.counts.realization,
+          blocked: result.counts.blocked,
           defaulted_kind: result.counts.defaulted_kind,
           no_task_ref: result.counts.no_task_ref,
           skipped: result.skipped,
@@ -391,7 +469,9 @@ function main() {
 
   let entry;
   try {
-    entry = args.realization ? appendRealization(params) : appendEntry(params);
+    if (args.blocked) entry = appendBlocked(params);
+    else if (args.realization) entry = appendRealization(params);
+    else entry = appendEntry(params);
   } catch (err) {
     process.stderr.write(`log-cli: could not write audit entry — ${err.message}\n`);
     process.exit(1);

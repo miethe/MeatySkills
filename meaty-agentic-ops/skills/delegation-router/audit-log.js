@@ -52,9 +52,36 @@
  *                         the measured hop and requires evidence. Never mutates
  *                         the decision entry (append-only); readers join on
  *                         task_id.
+ * `kind: 'blocked'`     — written by appendBlocked() when the leg was NOT ALLOWED
+ *                         to run: a permission denial, a Mode-D boundary hit, a
+ *                         schema/validation failure, or missing write authority.
+ *                         Nothing executed, so every realized field is null BY
+ *                         CONSTRUCTION and `fallback_applied` is always false.
+ *                         Carries `blocked_reason` + `denial_evidence`.
  * A legacy v1 entry (no `schema_version`) normalizes to a decision whose
  * realization is UNCONFIRMED — including when it carries actual === chosen,
  * because that is the copied-intent shape, not a measurement.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY 'blocked' IS A THIRD KIND AND NOT A FLAVOUR OF THE OTHER TWO
+ * ---------------------------------------------------------------------------
+ * SPEC §5a draws the line the fallback chain must not cross: **a denial is a
+ * decision about whether this content may take this path; unavailability is a
+ * fact about the path.** Before this kind existed the writer could express only
+ * two things about a denied leg, and both were wrong:
+ *
+ *   (a) leave the decision entry unconfirmed — which is byte-identical to a leg
+ *       that simply has not reported yet. So `--unconfirmed` conflated "denied,
+ *       never ran" with "still pending", and a lane that was 100% denied looked
+ *       exactly like a lane nobody had used.
+ *   (b) write a realized provider — a lie, and precisely the `actual === chosen`
+ *       copied-intent corruption that made the field unauditable across 112 of
+ *       123 v1 entries.
+ *
+ * Hence a distinct kind with no realization dimension at all, rather than a flag
+ * on a realization. `appendRealization`'s "at least one realized value" guard is
+ * deliberately NOT relaxed to admit a denial: that guard is what stops an empty
+ * realization from reading as a measurement (node_01M00JTM8FVBK12GF4AYQ7S2JN).
  */
 
 'use strict';
@@ -65,6 +92,23 @@ const path = require('path');
 /** Current entry schema version. Absent on v1 entries. */
 const SCHEMA_VERSION = 2;
 
+/**
+ * The closed set of BLOCKED reasons, mirroring SPEC §5a's "NOT a traversal
+ * trigger" column verbatim. These are authorization/correctness outcomes; an
+ * availability outcome is a fallback traversal and belongs in a decision or
+ * realization entry, never here.
+ *
+ * The set is closed on purpose — `routing audit --blocked` is only queryable if
+ * the reason vocabulary is fixed. Adding a member is a SPEC change: edit §5a's
+ * table and this list together, or the log and the spec drift.
+ */
+const BLOCKED_REASONS = Object.freeze([
+  'permission_denied', // the CC permission classifier, a PreToolUse hook, or a user/harness refusal
+  'mode_d', // Mode-D boundary hit — the leg must hand back to Opus
+  'validation_failed', // schema/validation failure
+  'needs_write_authority', // the leg had no authority to write
+]);
+
 // Default log path — relative to repo root
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const DEFAULT_LOG_PATH = path.join(REPO_ROOT, '.claude', 'logs', 'routing-decisions.jsonl');
@@ -74,7 +118,11 @@ const DEFAULT_LOG_PATH = path.join(REPO_ROOT, '.claude', 'logs', 'routing-decisi
  * @property {string}  task_id                  - Task identifier (e.g. 'TASK-3.2', 'node_01…')
  * @property {string}  timestamp                - ISO 8601 UTC timestamp
  * @property {number}  schema_version           - 2 for entries written by this module
- * @property {'decision'|'realization'} kind     - Intent record or measured-outcome record
+ * @property {'decision'|'realization'|'blocked'} kind - Intent record, measured-outcome
+ *           record, or not-allowed-to-run record
+ * @property {string}  [blocked_reason]         - kind 'blocked' only; a BLOCKED_REASONS member
+ * @property {string}  [denial_evidence]        - kind 'blocked' only; the verbatim denial and
+ *           the invocation it refused. Required — a denial with no evidence is a rumour
  * @property {string}  chosen_plugin_id         - Provider selected by the resolver (the INTENT)
  * @property {?string} intended_model           - Model selected by the resolver (the INTENT)
  * @property {?string} actual_provider_used     - Provider that actually ran; null = unconfirmed
@@ -285,6 +333,109 @@ function appendRealization(params) {
 }
 
 /**
+ * Append a BLOCKED entry recording that the leg was never allowed to run.
+ *
+ * This is the writer SPEC §5a mandates and the module previously lacked. It is
+ * the ONLY honest record for a denial, because a denial has no realized hop to
+ * report: `appendRealization` requires at least one realized value and would
+ * reject `{actual: null, realized: null}` — correctly, and that guard stays.
+ *
+ * `chosen_plugin_id` / `intended_model` are the INTENT THAT WAS REFUSED, echoed
+ * so a reader can see which lane was denied without joining. They are never
+ * read as "what ran": every realized field on this entry is null by
+ * construction, and passing one is an error rather than being silently dropped —
+ * a caller reaching for `actual_provider_used` on a denial has misunderstood the
+ * kind, and quietly accepting it would reintroduce the copied-intent corruption.
+ *
+ * `fallback_applied` is hard-false for the same reason SPEC §5a forbids it:
+ * emitting true would make an authorization event indistinguishable from an
+ * infrastructure one, in the one place a reviewer would have caught it.
+ *
+ * @param {Object}  params
+ * @param {string}  params.task_id            - Task identifier of the denied leg
+ * @param {string}  params.blocked_reason     - A BLOCKED_REASONS member (e.g. 'permission_denied')
+ * @param {string}  params.denial_evidence    - The verbatim denial message and the invocation it
+ *                                              refused. Required.
+ * @param {string}  [params.chosen_plugin_id] - The provider that was DENIED (intent, not actual);
+ *                                              defaults to routing_record.chosen_plugin_id
+ * @param {string}  [params.intended_model]   - The model that was DENIED (intent, not actual);
+ *                                              defaults to params.model, then routing_record.model
+ * @param {string}  [params.model]            - Alias for intended_model
+ * @param {string}  [params.reason]           - Optional free-text note
+ * @param {Object}  [params.routing_record]   - Optional full RoutingRecord
+ * @param {string}  [params.log_path]         - Override log file path (used in tests)
+ * @returns {AuditEntry} The entry that was written
+ */
+function appendBlocked(params) {
+  const { task_id, reason = '', routing_record, log_path } = params || {};
+
+  if (!task_id) throw new Error('audit-log.appendBlocked: task_id is required');
+
+  if (!isPresent(params.denial_evidence)) {
+    throw new Error(
+      'audit-log.appendBlocked: denial_evidence is required — quote the refusal and the invocation it refused (a denial with no evidence is a rumour)'
+    );
+  }
+
+  if (!isPresent(params.blocked_reason)) {
+    throw new Error(
+      `audit-log.appendBlocked: blocked_reason is required — one of: ${BLOCKED_REASONS.join(', ')}`
+    );
+  }
+  if (!BLOCKED_REASONS.includes(params.blocked_reason)) {
+    throw new Error(
+      `audit-log.appendBlocked: unknown blocked_reason '${params.blocked_reason}' — expected one of: ${BLOCKED_REASONS.join(', ')}. An AVAILABILITY failure is not a blocked outcome; log it as a fallback instead (SPEC 5a).`
+    );
+  }
+
+  // Refuse, never drop. A realized field on a blocked entry is a contradiction:
+  // the whole claim of this kind is that nothing ran.
+  for (const f of ['actual_provider_used', 'realized_model', 'realization_evidence']) {
+    if (isPresent(params[f])) {
+      throw new Error(
+        `audit-log.appendBlocked: ${f} must not be set on a blocked entry — nothing ran. If something DID run, this is a realization, not a denial.`
+      );
+    }
+  }
+  if (params.fallback_applied === true) {
+    throw new Error(
+      'audit-log.appendBlocked: fallback_applied must not be true for a blocked outcome (SPEC 5a) — a denial attaches to the content, so no other lane may carry it'
+    );
+  }
+
+  const chosen_plugin_id =
+    params.chosen_plugin_id || (routing_record && routing_record.chosen_plugin_id) || null;
+  const intended_model =
+    params.intended_model || params.model || (routing_record && routing_record.model) || null;
+
+  const entry = {
+    task_id,
+    timestamp: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+    kind: 'blocked',
+    chosen_plugin_id,
+    intended_model,
+    // Null BY CONSTRUCTION, not by omission — nothing ran, so there is nothing to name.
+    actual_provider_used: null,
+    realized_model: null,
+    realization_confirmed: false,
+    realization_evidence: null,
+    // Unknowable, not false: no model ran, so no substitution can be asserted either way.
+    model_substituted: null,
+    fallback_applied: false,
+    blocked_reason: params.blocked_reason,
+    denial_evidence: params.denial_evidence,
+    reason,
+  };
+
+  if (routing_record) {
+    entry.routing_record = routing_record;
+  }
+
+  return writeEntry(entry, log_path);
+}
+
+/**
  * Shared append-only writer.
  *
  * @param {AuditEntry} entry
@@ -419,6 +570,13 @@ function findByProvider(provider_id, log_path) {
  * This is what `skillmeat routing audit --unconfirmed` surfaces: entries whose
  * ledger value is an intent that nothing ever checked.
  *
+ * A task with a `blocked` entry is EXCLUDED, and that exclusion is the point of
+ * the kind. "Unconfirmed" means *nobody has checked yet* — an open question. A
+ * denial is a settled answer: it will never be confirmed, because nothing ran
+ * and nothing is going to. Leaving denials in here is what made a 100%-denied
+ * lane read as an idle one, and let a broken offload lane stay `not_started`
+ * through two filings. Use `findBlockedEntries()` to see them.
+ *
  * @param {string} [log_path]
  * @returns {Array<AuditEntry & {legacy: boolean}>}
  */
@@ -428,10 +586,33 @@ function findUnconfirmedEntries(log_path) {
   const confirmedTaskIds = new Set(
     entries.filter(e => e.realization_confirmed === true).map(e => e.task_id)
   );
+  const blockedTaskIds = new Set(
+    entries.filter(e => e.kind === 'blocked').map(e => e.task_id)
+  );
 
   return entries.filter(
-    e => e.kind === 'decision' && !confirmedTaskIds.has(e.task_id)
+    e =>
+      e.kind === 'decision' &&
+      !confirmedTaskIds.has(e.task_id) &&
+      !blockedTaskIds.has(e.task_id)
   );
+}
+
+/**
+ * Find BLOCKED entries — legs that were not allowed to run.
+ *
+ * The reader half of `appendBlocked`. `blocked_reason` is a closed vocabulary
+ * (BLOCKED_REASONS), so callers may filter on it without string-sniffing.
+ *
+ * @param {string} [log_path]
+ * @param {string} [blocked_reason] - Optional: restrict to one BLOCKED_REASONS member
+ * @returns {Array<AuditEntry & {legacy: boolean}>}
+ */
+function findBlockedEntries(log_path, blocked_reason) {
+  const blocked = readNormalizedEntries(log_path).filter(e => e.kind === 'blocked');
+  return isPresent(blocked_reason)
+    ? blocked.filter(e => e.blocked_reason === blocked_reason)
+    : blocked;
 }
 
 /**
@@ -594,7 +775,7 @@ function ingestRoutingLog(params) {
       kind = 'decision';
       defaulted_kind += 1;
     }
-    if (kind !== 'decision' && kind !== 'realization') {
+    if (kind !== 'decision' && kind !== 'realization' && kind !== 'blocked') {
       skipped.push({ index, reason: `unknown kind '${entry.kind}'` });
       return;
     }
@@ -604,6 +785,35 @@ function ingestRoutingLog(params) {
         entry.chosen_plugin_id || (entry.routing_record && entry.routing_record.chosen_plugin_id);
       if (!isPresent(chosen)) {
         skipped.push({ index, reason: 'decision entry has no chosen_plugin_id' });
+        return;
+      }
+    } else if (kind === 'blocked') {
+      // Validated here rather than only in appendBlocked(): pass 1 must write
+      // nothing, so a malformed blocked leg has to be skippable, not throwable.
+      if (!isPresent(entry.denial_evidence)) {
+        skipped.push({
+          index,
+          reason: 'blocked entry has no denial_evidence — a denial with no evidence is a rumour',
+        });
+        return;
+      }
+      if (!BLOCKED_REASONS.includes(entry.blocked_reason)) {
+        skipped.push({
+          index,
+          reason: `blocked entry has unknown blocked_reason '${entry.blocked_reason}' — expected one of: ${BLOCKED_REASONS.join(', ')}`,
+        });
+        return;
+      }
+      if (
+        isPresent(entry.actual_provider_used) ||
+        isPresent(entry.realized_model) ||
+        entry.fallback_applied === true
+      ) {
+        skipped.push({
+          index,
+          reason:
+            'blocked entry names a realized provider/model or claims fallback_applied — nothing ran (SPEC 5a)',
+        });
         return;
       }
     } else {
@@ -633,6 +843,7 @@ function ingestRoutingLog(params) {
   const counts = {
     decision: planned.filter(p => p.kind === 'decision').length,
     realization: planned.filter(p => p.kind === 'realization').length,
+    blocked: planned.filter(p => p.kind === 'blocked').length,
     defaulted_kind,
     no_task_ref,
   };
@@ -642,9 +853,12 @@ function ingestRoutingLog(params) {
   }
 
   // ---- pass 2: write ----
-  const written = planned.map(p =>
-    p.kind === 'decision' ? appendEntry(p.params) : appendRealization(p.params)
-  );
+  const WRITERS = {
+    decision: appendEntry,
+    realization: appendRealization,
+    blocked: appendBlocked,
+  };
+  const written = planned.map(p => WRITERS[p.kind](p.params));
 
   return { written, skipped, counts, dry_run: false };
 }
@@ -655,8 +869,11 @@ function ingestRoutingLog(params) {
 // did not grow the next flag.
 
 module.exports = {
+  BLOCKED_REASONS,
   appendEntry,
   appendRealization,
+  appendBlocked,
+  findBlockedEntries,
   ingestRoutingLog,
   readEntries,
   readNormalizedEntries,

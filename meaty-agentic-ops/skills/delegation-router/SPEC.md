@@ -136,6 +136,16 @@ interest was not ultimately violated, but the reroute decision was taken by the 
 Enforced (as prose) in all four executor agent definitions; tracked as
 `node_01KZY8BAFRFNF836ZD0Y51V1Z3`.
 
+**Writing the outcome this section mandates.** For its first year this clause named a record the
+writer could not produce — `audit-log.js` had only `appendEntry` (decision) and `appendRealization`
+(realization), and a denial has neither a realized provider nor a realized model. Since 2026-08-14
+the writer is `appendBlocked({task_id, blocked_reason, denial_evidence})` /
+`log-cli.js --blocked`, emitting `kind: 'blocked'`; the reader is `findBlockedEntries()` /
+`skillmeat routing audit --blocked`, and a blocked task is excluded from `--unconfirmed` so
+denied-and-never-ran is finally distinguishable from still-pending. The four reasons in the right-hand
+column above ARE the `BLOCKED_REASONS` vocabulary — adding one means editing both. See §1's
+"The third kind" for the full rationale; `node_01M00JTM8FVBK12GF4AYQ7S2JN`.
+
 ### Project-local overrides (`routing.local.toml`)
 
 The global `model-registry.yaml` is shared across all repos. A project may layer
@@ -332,8 +342,25 @@ unless the dispatcher passes `model: record.model`. A record naming `claude-sonn
 ran on `claude-haiku-4-5`, and the log showed a clean entry naming a model that never executed.
 
 Readers: `findUnconfirmedEntries()` (decisions never settled by a confirmed realization — this is
-what `skillmeat routing audit --unconfirmed` surfaces) and `findModelSubstitutions()` (confirmed
-realizations whose model differs from the intent). Both treat v1 entries as unconfirmed.
+what `skillmeat routing audit --unconfirmed` surfaces), `findBlockedEntries()` (legs that were never
+allowed to run — `--blocked`), and `findModelSubstitutions()` (confirmed realizations whose model
+differs from the intent). All treat v1 entries as unconfirmed.
+
+**The third kind: `blocked`.** §5a mandates that a denial be recorded as a blocked /
+`permission_denied` outcome rather than a provider substitution, and until 2026-08-14 the writer
+could not express it: a denial has neither an `actual_provider_used` nor a `realized_model`, because
+nothing ran, and `appendRealization()` correctly rejects an all-null realization. So the only
+representable options were to leave the decision unconfirmed — indistinguishable from a leg that had
+not reported yet — or to name a provider that never executed, which is exactly the copied-intent
+corruption above. `appendBlocked({task_id, blocked_reason, denial_evidence})` writes `kind: 'blocked'`
+with every realized field null **by construction** and `fallback_applied` hard-false; passing a
+realized field is an error, not a silently-dropped hint. `blocked_reason` is the closed vocabulary
+`BLOCKED_REASONS`, mirroring §5a's "NOT a traversal trigger" column, so the reason set and that table
+must change together. Crucially, `findUnconfirmedEntries()` now **excludes** a task carrying a blocked
+entry: "unconfirmed" means nobody has checked yet, whereas a denial is a settled answer that will
+never be confirmed. Conflating them made a wholly-denied lane read as an idle one, which is how a
+broken offload lane stayed `not_started` through two filings (`node_01M00JTM8FVBK12GF4AYQ7S2JN`).
+Headless writer: `log-cli.js --blocked`.
 
 ---
 
