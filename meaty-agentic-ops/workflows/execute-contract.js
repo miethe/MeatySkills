@@ -2055,7 +2055,7 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
   // reviewResult.
   const fixCycleScan = await runModeDScanGuard(`Fix cycle ${cycleNumber}`, fixCycleRealizedProvider, parsed.branch_base)
   if (fixCycleScan.gated) {
-    return {
+    return withRouting({
       status: 'blocked',
       reason: 'mode_d_output_breach',
       blocked_phase: `fix-cycle-${cycleNumber}`,
@@ -2066,7 +2066,7 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
       }],
       run_placement: placementFacts(parsed, reviewResult),
       artifact_tracking: artifactTrackingFacts(reviewResult),
-    }
+    })
   }
 
   // Fix agents commit their changes. Refresh the commit reference so the reviewer
