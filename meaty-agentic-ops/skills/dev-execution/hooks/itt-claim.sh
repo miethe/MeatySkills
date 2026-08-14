@@ -22,8 +22,16 @@
 #   status  <node_id>   print claim state + resolved holder. Never mutates.
 #   reap                release claims held past the TTL (workspace-wide sweep).
 #   actor               print this session's claim actor id.
-#   release <node_id>   BEST-EFFORT + LOUD: there is no release primitive
-#                       upstream (see THE RELEASE GAP). Never silently pretends.
+#   renew   <node_id>   refresh the claim you hold (the liveness half). See
+#                       EXIT CODES (renew) below — a 409 here is exit 7, not a
+#                       bare non-zero: it means your guard was withdrawn MID-RUN.
+#   renew-daemon <node_id> [--interval S] [--max-minutes M]
+#                       arm a bounded background cadence so a long lane keeps
+#                       proving liveness. Started automatically by `acquire`
+#                       unless ITT_CLAIM_RENEW=0.
+#   renew-stop <node_id>   stop that cadence (does NOT release the claim).
+#   release <node_id>   hand the claim back (see THE RELEASE PRIMITIVE). Never
+#                       fails the caller; degrades loudly to the reap TTL.
 #
 # EXIT CODES (acquire):
 #   0  claim HELD by this session — proceed.
@@ -91,9 +99,10 @@
 #   is actively worse: hop N claims under session id S1, hop N returns a
 #   non-terminal `continue` envelope, hop N+1 runs as a different process (S2 or
 #   none), derives a DIFFERENT actor, and 409-conflicts against ITS OWN
-#   PREDECESSOR. Because there is no per-node release primitive upstream (see THE
-#   RELEASE GAP), that self-conflict wedges the unit of work for the full 30-
-#   minute reap TTL — a worse failure than the one being fixed.
+#   PREDECESSOR. A per-node release (see THE RELEASE PRIMITIVE) does not rescue
+#   this: hop N+1 is not the holder, so it gets a 409, and that self-conflict
+#   wedges the unit of work for the full 30-minute reap TTL — a worse failure
+#   than the one being fixed.
 #
 #   So for a hop, the actor is derived from OP_RUN_ID — the op run-record id,
 #   which IS the unit of work, minted once and threaded unchanged through every
@@ -131,19 +140,28 @@
 #   ⚠️ Hermes claims as the fixed `agent:hermes` and is therefore NOT protected by
 #   this mutex against its own concurrent wakes (filed upstream).
 #
-# THE RELEASE GAP (upstream, filed against the intenttree tree):
-#   There is NO per-node release primitive. Verified against the live API:
+# THE RELEASE PRIMITIVE (upstream intenttree 2151c3e1 — closes THE RELEASE GAP):
+#   `POST /nodes/{id}/release` with {"claimed_by_actor_id": <actor>} clears the
+#   claim for the HOLDING actor and, when the claim was what moved the node
+#   ready -> in_progress, returns it to `ready`. Idempotent when unclaimed; 409
+#   when held by a different actor. `release` uses it.
+#
+#   The three facts that made this a gap are all still true, and are why the
+#   fallback path below must never "improvise" a release:
 #     - `NodeUpdate` has no `claimed_by_actor_id` field, so `itt node update
 #       --status ready` leaves the claim SET. `/dev:autopilot`'s documented
 #       release did exactly this, which wedged the node against every other
 #       session while looking like a release.
 #     - `itt node complete` does NOT clear the claim either.
-#     - ONLY `POST /nodes/reap-stale-claims` clears it: workspace-wide, TTL>=1min.
-#   So `acquire` reaps FIRST (precedent: hermes-loop-preclaim.sh step 3), which
-#   makes an abandoned claim self-heal within the TTL rather than wedge forever.
+#     - `POST /nodes/reap-stale-claims` clears it workspace-wide, TTL>=1min.
+#   So `acquire` still reaps FIRST (precedent: hermes-loop-preclaim.sh step 3),
+#   which makes an abandoned claim self-heal within the TTL rather than wedge
+#   forever — the primitive is the fast path, not a replacement for the backstop.
 #   ⚠️ Do NOT reach for a short TTL to "release" your own claim: the sweep is
 #   workspace-wide and collateral. One `ttl_minutes=1` call during this node's
-#   investigation reported `reverted: 2`.
+#   investigation reported `reverted: 2`. Release the specific node instead.
+#   ⚠️ A deployment that predates 2151c3e1 answers 404. That is expected and
+#   non-fatal: `release` says so and leaves the TTL as the backstop.
 #
 # ENVIRONMENT:
 #   AOS_ITT_CLAIM        ON BY DEFAULT. Only an explicit falsy value
@@ -170,6 +188,21 @@
 #                        Never required for `acquire`/`claim` itself.
 #   ITT_CLAIM_REAP_TTL   reap TTL in minutes for `acquire`/`reap` (default 30 —
 #                        the server's own documented default).
+#   ITT_CLAIM_RENEW      ON BY DEFAULT. Only an explicit falsy value
+#                        ("0"/"false"/"no"/"off") stops `acquire` from arming the
+#                        renew cadence. The cadence is what makes a long lane's
+#                        liveness a FACT rather than an inference, so turning it
+#                        off restores the age-only reap exposure for that run.
+#   ITT_CLAIM_RENEW_INTERVAL
+#                        seconds between renewals (default 600 — three renewals
+#                        per 30-minute TTL window, so one lost renewal is not
+#                        fatal; minimum 30).
+#   ITT_CLAIM_RENEW_MAX_MINUTES
+#                        absolute cadence lifetime (default 1440, matching the
+#                        server's own _DEFAULT_MAX_CLAIM_HOLD_MINUTES). This is
+#                        the ONLY bound on a heartbeating claim — see the ceiling
+#                        note above `do_renew_daemon`.
+#   AOS_ITT_RENEW_DIR    cadence state dir (default ~/.cache/aos/itt-renew).
 #   ITT_CLAIM_ADOPT      truthy => permit acquiring an unclaimed `in_progress`
 #                        node (the exit-5 SUSPECT case). Set only AFTER the
 #                        evidence pass; it is an acknowledgement, not a bypass.
@@ -200,7 +233,11 @@ usage() {
     cat >&2 <<EOF
 usage: $PROG acquire <node_id>   take the claim (exit 0 held / 3 conflict / 4 terminal / 5 suspect)
        $PROG status  <node_id>   print claim state + resolved holder (read-only)
-       $PROG release <node_id>   best-effort; there is no upstream release primitive
+       $PROG renew   <node_id>   refresh the claim (exit 0 renewed / 7 CLAIM LOST / 4 no node)
+       $PROG renew-daemon <node_id> [--interval S] [--max-minutes M]
+                                 arm a bounded background renew cadence
+       $PROG renew-stop <node_id>   stop the cadence (does NOT release the claim)
+       $PROG release <node_id>   hand the claim back (falls back to the reap TTL)
        $PROG reap [--ttl <min>]  release claims older than the TTL (workspace-wide)
        $PROG actor               print this session's claim actor id
 EOF
@@ -512,6 +549,29 @@ do_status() {
     return 0
 }
 
+# _arm_renew_cadence <node_id> — called on every successful `acquire`.
+# Default-on for the same reason the claim itself is a script and not a paragraph:
+# a cadence each lane has to remember to start is a cadence that does not run.
+# Non-fatal always — failing to arm liveness must never fail the claim that
+# already succeeded.
+_arm_renew_cadence() {
+    case "${ITT_CLAIM_RENEW:-1}" in
+        0|false|FALSE|no|NO|off|OFF)
+            warn "renew cadence DISABLED by ITT_CLAIM_RENEW — this claim now ages out on the"
+            warn "  server TTL (default 30m) even while this run is still working."
+            return 0
+            ;;
+    esac
+    do_renew_daemon "$1" >/dev/null 2>&1 || {
+        warn "could not arm the renew cadence (non-fatal) — the claim is HELD but its liveness"
+        warn "  is unproven, so a run longer than the reap TTL may lose it. \`${PROG} renew ${1}\`"
+        warn "  refreshes it by hand; \`${PROG} renew-daemon ${1}\` retries the cadence."
+        return 0
+    }
+    note "renew cadence armed (every ${ITT_CLAIM_RENEW_INTERVAL:-600}s) — liveness is now a fact, not an inference"
+    return 0
+}
+
 do_acquire() {
     local node="$1"
 
@@ -521,8 +581,9 @@ do_acquire() {
         return 0
     }
 
-    # 1. Reap first, so an abandoned claim self-heals instead of wedging. There is
-    #    no per-node release upstream, which makes this the only cleaner there is.
+    # 1. Reap first, so an abandoned claim self-heals instead of wedging. A crashed
+    #    session never reaches `release`, so the TTL sweep stays the only cleaner
+    #    for the abandoned case even now that a per-node release exists.
     do_reap >/dev/null || true
 
     # 2. Attempt the claim AS-IS before touching status. Ordering is load-bearing:
@@ -538,6 +599,7 @@ do_acquire() {
     case "$HTTP_CODE" in
         200)
             note "claim HELD on ${node} by ${ACTOR}"
+            _arm_renew_cadence "$node"
             return 0
             ;;
         404)
@@ -617,6 +679,7 @@ do_acquire() {
     case "$HTTP_CODE" in
         200)
             note "claim HELD on ${node} by ${ACTOR} (promoted '${cur}' -> ready)"
+            _arm_renew_cadence "$node"
             return 0
             ;;
         409)
@@ -633,18 +696,352 @@ do_acquire() {
     esac
 }
 
+# Hand the node back. `POST /nodes/{id}/release` (upstream intenttree 2151c3e1)
+# clears claimed_by_actor_id for the HOLDING actor and, when the claim was what
+# moved the node ready -> in_progress, returns it to `ready`.
+#
+# Never fails the caller (dispatch still exits 0): a release is a courtesy on the
+# failure path, and a hook that aborts a cleanup handler is worse than one that
+# leaves a claim to age out. Every non-200 degrades to the pre-primitive
+# behaviour — the claim stays put and the reap TTL remains the backstop.
 do_release() {
     local node="$1"
-    # Deliberately loud rather than a comforting no-op. `itt node update --status
-    # ready` is NOT a release (it leaves claimed_by_actor_id set and wedges the
-    # node) and that mistake is exactly what shipped in autopilot's §5.
-    warn "there is NO per-node release primitive in the IntentTree API."
-    warn "  * \`node update --status ready\` does NOT clear the claim (it wedges the node)"
-    warn "  * \`node complete\` does NOT clear it either"
-    warn "  * only reap-stale-claims does, and it is a workspace-wide TTL sweep"
-    warn "Leaving the claim in place. It ages out after ITT_CLAIM_REAP_TTL (default 30m),"
-    warn "and a retry from THIS session re-acquires immediately (idempotent for the same actor)."
-    if resolve_api; then do_status "$node" || true; fi
+
+    # The legacy note, still correct and still the fallback whenever the endpoint
+    # is unreachable. `node update --status ready` is NOT a release (it leaves
+    # claimed_by_actor_id set and wedges the node) and that mistake is exactly
+    # what shipped in autopilot's §5 — do not "recover" by reaching for it.
+    _release_fallback_note() {
+        warn "Leaving the claim in place. It ages out after ITT_CLAIM_REAP_TTL (default 30m),"
+        warn "and a retry from THIS session re-acquires immediately (idempotent for the same actor)."
+        warn "Do NOT substitute \`node update --status ready\` — it leaves the claim SET and wedges"
+        warn "the node against every other session while looking like a release."
+    }
+
+    resolve_api || {
+        warn "cannot resolve the IntentTree API (no token/url, or \`itt\` absent) — NOT RELEASED."
+        _release_fallback_note
+        return 0
+    }
+
+    call POST "/api/v1/nodes/${node}/release" \
+        "$(printf '{"claimed_by_actor_id":"%s"}' "$ACTOR")" || {
+        warn "release: transport failure talking to the API — NOT RELEASED."
+        _release_fallback_note
+        return 0
+    }
+
+    case "$HTTP_CODE" in
+        200)
+            # Idempotent upstream: an already-unclaimed node also returns 200, so
+            # this means "not held by us any more", not "we cleared a live claim".
+            note "released ${node} (actor ${ACTOR}); status now $(node_field status)"
+            # Stop our own cadence: heartbeating a claim we just handed back would
+            # report CLAIM LOST on the next tick as though something had broken.
+            do_renew_stop "$node" >/dev/null 2>&1 || true
+            return 0
+            ;;
+        404)
+            # Either the node id is wrong, or this deployment predates the release
+            # primitive. Both are non-fatal; the second is expected on any node
+            # not yet redeployed past intenttree 2151c3e1.
+            warn "release: HTTP 404 for ${node} — unknown node, or this deployment"
+            warn "  predates the per-node release primitive (upstream 2151c3e1). NOT RELEASED."
+            _release_fallback_note
+            return 0
+            ;;
+        409)
+            warn "release: ${node} is held by a DIFFERENT actor, not ${ACTOR} ($(api_message))."
+            warn "Refusing to release another session's claim — that is the correct outcome."
+            do_status "$node" || true
+            return 0
+            ;;
+        *)
+            warn "release: HTTP $HTTP_CODE ($(api_message)) — NOT RELEASED."
+            _release_fallback_note
+            return 0
+            ;;
+    esac
+}
+
+# ---- renew (the liveness half) -----------------------------------------------
+# `acquire` proves nobody else is working this node; `renew` proves WE STILL ARE.
+# Without it the only staleness signal the server has for a laptop session is AGE,
+# and age is not liveness — which is how a legitimate 100-minute /redeploy silently
+# lost its claim to the 30-minute sweep (node_01KZQBZF9PYZDVKTJR9TD28G0Z, fixed
+# server-side in intenttree #54) while the holder kept working believing the
+# duplicate-work guard was still in place.
+#
+# WHY THE SERVER'S LIVENESS INFERENCE IS NOT ENOUGH, AND THIS IS THE RESIDUE:
+#   `reap_stale_claims` now spares a claim when it can SEE liveness — a non-dead
+#   AgentRun on the node, or a node_history write by the holder inside the TTL.
+#   A lane that arms NEITHER (no `/itt:run` Action 5a run link, and no node writes
+#   during a long build) is still reaped on age at 30 minutes. Those two signals
+#   cover the observed case; the heartbeat covers the rest, which is why the server
+#   half shipped without this and this is not redundant with it.
+#
+# A HEARTBEAT IS NOT BOUNDED BY THE SERVER'S CEILING — THE CLIENT MUST BOUND ITSELF.
+#   `reap_stale_claims(max_hold_minutes=1440)` is an absolute ceiling, but it only
+#   overrides LIVENESS EVIDENCE: it is applied to nodes that are already reap
+#   CANDIDATES (`claimed_at < cutoff`). A heartbeat refreshes `claimed_at`, so a
+#   heartbeating holder never becomes a candidate and the ceiling is never consulted
+#   at all. A runaway renew loop therefore holds a claim FOREVER — trading a guard
+#   that let go too eagerly for one that never lets go, which is precisely what the
+#   upstream fix was careful not to ship. Hence the two bounds in `do_renew_daemon`:
+#   an ANCHOR (the holding session must still be alive) and an absolute CAP,
+#   defaulting to the server's own 1440-minute ceiling.
+#
+# EXIT CODES (renew):
+#   0  renewed — claim refreshed, keep working.
+#   7  CLAIM LOST. HARD, and deliberately its own code rather than reusing 3: a
+#      conflict at `acquire` means "someone else got there first, never start"; a
+#      409 here means "you were RUNNING and your guard was withdrawn underneath
+#      you" — a different situation needing a different response. Reusing another
+#      guard's exit code trains people to wave this one through as "the usual
+#      thing" (the same reasoning that keeps usage errors at 1 and require-actor
+#      at 6, recorded in the EXIT CODES block at the top of this file).
+#   4  node not found (the id is wrong) — same meaning as `acquire`'s 4.
+#   0  + a LOUD warning when the ROUTE is absent (a deployment predating the
+#      heartbeat) or the transport failed. Fail-open, matching FAILURE POSTURE.
+#
+# 404 IS TWO DIFFERENT ANSWERS AND THEY MUST NOT BE CONFLATED (measured against the
+#   live API 2026-08-11). An unrouted path and a missing node BOTH return 404 inside
+#   the SAME error envelope — the app's exception handler normalises Starlette's
+#   default, so envelope shape does not discriminate:
+#     unrouted : {"error":{"code":"not_found","message":"Not Found"}}
+#     no node  : {"error":{"code":"not_found","message":"Node 'node_X' not found"}}
+#   Discriminating on that message text would be a guess about someone else's
+#   phrasing. So `_renew_route_absent` asks the definitive question instead: GET the
+#   node. If the node IS there, the ROUTE is what is missing. Conflating the two
+#   would make an un-redeployed server report "claim lost, re-acquire" over a claim
+#   that is perfectly intact — a false alarm on the one message that has to be
+#   trusted when it fires.
+#
+#   As of 2026-08-11 the live node (10.42.10.76:8032) serves /claim and /release but
+#   NOT /claim/heartbeat: the endpoint is merged on origin/main and not yet deployed.
+#   So this branch is the CURRENT behaviour on that host, not a legacy path — it
+#   stops being reached after the next `/redeploy`.
+
+# _renew_route_absent <node_id> -> 0 when the node exists (=> the ROUTE is what is
+# missing), 1 otherwise (=> the node is genuinely gone). Only ever called on a 404,
+# so the extra round trip costs nothing on the hot path. Restores HTTP_CODE/BODY so
+# the caller's `case` still sees the heartbeat's response, not this probe's.
+_renew_route_absent() {
+    local node="$1" saved_code="${HTTP_CODE:-}" saved_body="${HTTP_BODY:-}" rc=1
+    if call GET "/api/v1/nodes/${node}" && [ "$HTTP_CODE" = "200" ]; then rc=0; fi
+    HTTP_CODE="$saved_code"; HTTP_BODY="$saved_body"
+    return "$rc"
+}
+
+do_renew() {
+    local node="$1"
+
+    resolve_api || {
+        warn "renew: cannot resolve the IntentTree API — claim NOT renewed (liveness UNPROVEN)."
+        warn "  The claim now ages out on the server's TTL as if this run were dead."
+        return 0
+    }
+
+    if ! call POST "/api/v1/nodes/${node}/claim/heartbeat" \
+            "$(printf '{"claimed_by_actor_id":"%s"}' "$ACTOR")"; then
+        warn "renew: transport failure — claim NOT renewed (liveness UNPROVEN, non-fatal)."
+        return 0
+    fi
+
+    case "$HTTP_CODE" in
+        200)
+            note "renewed claim on ${node} by ${ACTOR}"
+            return 0
+            ;;
+        409)
+            # AC2. The one message in this script that must never be a bare non-zero
+            # exit: the holder is MID-RUN and has just been told its duplicate-work
+            # guard is gone. Say what happened, why, and the exact next action — a
+            # silent rc=1 here reads as a transient blip and gets retried past.
+            warn "=============================================================="
+            warn "CLAIM LOST on ${node} — you are no longer the holder."
+            warn "  actor       : ${ACTOR}"
+            warn "  server says : $(api_message)"
+            warn ""
+            warn "This is NOT a transient failure. Either the TTL sweep reaped this"
+            warn "claim (no liveness evidence inside the window), or another actor"
+            warn "holds it now. Either way the duplicate-work guard is WITHDRAWN:"
+            warn "a second session may already be editing the same files."
+            warn ""
+            warn "RE-ACQUIRE DELIBERATELY before continuing:"
+            warn "    ${PROG} acquire ${node}"
+            warn "  * exit 0 => you hold it again; carry on."
+            warn "  * exit 3 => someone else does. STOP, and do not destroy their work."
+            warn "=============================================================="
+            return 7
+            ;;
+        404)
+            if _renew_route_absent "$node"; then
+                warn "renew: this deployment has no /claim/heartbeat route (the node exists,"
+                warn "  the endpoint does not) — claim NOT renewed, and NOT lost. Upstream"
+                warn "  intenttree ships it; this host predates that deploy. Redeploy to close"
+                warn "  the gap: until then the claim ages out on the TTL as if this run were dead."
+                return 0
+            fi
+            warn "renew: node ${node} not found — check the id ($(api_message))"
+            return 4
+            ;;
+        *)
+            warn "renew: unexpected HTTP $HTTP_CODE ($(api_message)) — NOT renewed (non-fatal)."
+            return 0
+            ;;
+    esac
+}
+
+# ---- renew daemon (the cadence) ----------------------------------------------
+# AC3 wants a long lane renewing on a cadence shorter than the TTL. Per-lane prose
+# is EXACTLY what failed for the claim itself (`/itt:run` said "do not pre-claim"
+# and every lane obeyed it into a double-implementation), so the cadence lives in
+# the `acquire` path and every lane inherits it without a line of its own.
+# `/redeploy` settles the argument: its 100-minute core runs ON THE NODE over ssh
+# (`infra/agentic-node/redeploy-run.sh`) and never sees a node id, so a per-lane
+# renew call there could only ever be an instruction to a human.
+#
+# Bounds, both mandatory (see the ceiling note above — the server cannot bound a
+# heartbeating holder, so an unbounded loop here would be a WORSE bug than the one
+# being fixed):
+#   ANCHOR — the holding Claude Code session's pid, resolved from the same registry
+#            `resolve_holder_cc` reads. A Bash tool call is its own short-lived
+#            process, so the PARENT pid is useless as an anchor; the session is the
+#            unit that is actually still working. When no anchor is derivable (an
+#            `agent:hop-*` actor has no session pid), the cap alone bounds it — and
+#            that is STATED in the log rather than silently assumed.
+#   CAP    — absolute lifetime, default 1440 minutes to match the server's own
+#            `_DEFAULT_MAX_CLAIM_HOLD_MINUTES`, so the client can never retain a
+#            claim the server would itself have broken.
+
+RENEW_DIR="${AOS_ITT_RENEW_DIR:-${HOME:-/tmp}/.cache/aos/itt-renew}"
+
+# One state file per (node, actor): a second session renewing the same node is a
+# different daemon and must not stop or adopt ours.
+_renew_state() {
+    local node="$1" tag
+    tag="$(printf '%s' "$ACTOR" | tr -cd '[:alnum:]-')"
+    printf '%s/%s.%s' "$RENEW_DIR" "$node" "$tag"
+}
+
+# The pid of the Claude Code session this actor belongs to, or empty.
+_renew_anchor_pid() {
+    case "$ACTOR" in agent:cc-*) : ;; *) return 1 ;; esac
+    python3 - "${ACTOR#agent:cc-}" <<'ANCHOR_PY' 2>/dev/null
+import glob, json, os, sys
+prefix = sys.argv[1]
+for p in glob.glob(os.path.expanduser("~/.claude/sessions/*.json")):
+    try:
+        with open(p) as fh:
+            d = json.load(fh)
+    except Exception:
+        continue
+    if str(d.get("sessionId", "")).startswith(prefix) and isinstance(d.get("pid"), int):
+        print(d["pid"])
+        break
+ANCHOR_PY
+}
+
+do_renew_daemon() {
+    local node="$1" interval="${2:-${ITT_CLAIM_RENEW_INTERVAL:-600}}"
+    local cap="${3:-${ITT_CLAIM_RENEW_MAX_MINUTES:-1440}}"
+
+    case "$interval" in ''|*[!0-9]*) warn "renew-daemon: bad interval '${interval}'"; return 1 ;; esac
+    case "$cap"      in ''|*[!0-9]*) warn "renew-daemon: bad cap '${cap}'";           return 1 ;; esac
+    # A floor, not a policy. The default is 600s; an explicit --interval is a caller
+    # opting in, so this only has to stop the pathological case — `--interval 0`, which
+    # is a busy loop hammering the API, and the kind of thing a typo produces. 5s is
+    # still 360x tighter than the 30-minute TTL, so nothing legitimate is excluded.
+    [ "$interval" -ge 5 ] || { warn "renew-daemon: interval must be >= 5s (got '${interval}')"; return 1; }
+
+    mkdir -p "$RENEW_DIR" 2>/dev/null || {
+        warn "renew-daemon: cannot create ${RENEW_DIR} — no cadence armed (non-fatal)"; return 0; }
+
+    local state; state="$(_renew_state "$node")"
+    local pidf="${state}.pid" stopf="${state}.stop" logf="${state}.log"
+
+    # Already running for this (node, actor)? Idempotent, exactly as `acquire` is for
+    # the same actor — a lane that re-arms must not stack a second loop.
+    if [ -f "$pidf" ]; then
+        local old; old="$(cat "$pidf" 2>/dev/null || true)"
+        if [ -n "$old" ] && kill -0 "$old" 2>/dev/null; then
+            note "renew cadence already running for ${node} (pid ${old}, every ${interval}s)"
+            return 0
+        fi
+    fi
+    rm -f "$stopf" 2>/dev/null || true
+
+    local anchor; anchor="$(_renew_anchor_pid || true)"
+
+    # `nohup ... &` so the loop outlives the short-lived shell that armed it. It is
+    # deliberately orphaned: the ANCHOR, not the process tree, decides when it stops.
+    nohup bash -c '
+        set -uo pipefail
+        self="$0"; node="$1"; interval="$2"; cap="$3"; anchor="$4"; stopf="$5"; pidf="$6"
+        deadline=$(( $(date +%s) + cap * 60 ))
+        trap "rm -f \"$pidf\"" EXIT
+        if [ -n "$anchor" ]; then
+            echo "[renew] armed for $node every ${interval}s, cap ${cap}m, anchor pid ${anchor}"
+        else
+            echo "[renew] armed for $node every ${interval}s, cap ${cap}m, NO ANCHOR (actor has no session pid) — the cap is the only bound"
+        fi
+        while :; do
+            sleep "$interval"
+            if [ -f "$stopf" ]; then echo "[renew] stop requested — exiting"; exit 0; fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "[renew] absolute cap of ${cap}m reached — exiting. The claim now ages out on the"
+                echo "[renew] server TTL, which IS the intended bound: a heartbeat must not make a claim immortal."
+                exit 0
+            fi
+            if [ -n "$anchor" ] && ! kill -0 "$anchor" 2>/dev/null; then
+                echo "[renew] anchor pid ${anchor} is gone (session ended) — exiting, claim left to the TTL"
+                exit 0
+            fi
+            out="$("$self" renew "$node" 2>&1)"; rc=$?
+            printf "%s\n" "$out"
+            case "$rc" in
+                0) : ;;
+                7) echo "[renew] CLAIM LOST — stopping the cadence (see above)"; exit 7 ;;
+                4) echo "[renew] node not found — stopping the cadence"; exit 4 ;;
+                *) echo "[renew] renew exited ${rc} — stopping the cadence"; exit "$rc" ;;
+            esac
+            # A route-absent server will never start renewing, so do not spin against it
+            # for hours: the message is emitted once and the cadence retires.
+            case "$out" in
+                *"no /claim/heartbeat route"*)
+                    echo "[renew] endpoint absent on this deployment — retiring the cadence (no point looping)"
+                    exit 0 ;;
+            esac
+        done
+    ' "$0" "$node" "$interval" "$cap" "${anchor:-}" "$stopf" "$pidf" >>"$logf" 2>&1 &
+
+    local child=$!
+    printf '%s\n' "$child" > "$pidf"
+    if [ -n "$anchor" ]; then
+        note "renew cadence armed for ${node}: every ${interval}s, cap ${cap}m, anchor pid ${anchor} (pid ${child})"
+    else
+        note "renew cadence armed for ${node}: every ${interval}s, cap ${cap}m, NO ANCHOR (pid ${child})"
+    fi
+    note "  log: ${logf} · stop: ${PROG} renew-stop ${node}"
+    return 0
+}
+
+do_renew_stop() {
+    local node="$1" state; state="$(_renew_state "$node")"
+    local pidf="${state}.pid" stopf="${state}.stop"
+    : > "$stopf" 2>/dev/null || true
+    local pid; pid="$(cat "$pidf" 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+        rm -f "$pidf" 2>/dev/null || true
+        note "renew cadence stopped for ${node} (pid ${pid})"
+    else
+        note "no renew cadence running for ${node} (actor ${ACTOR})"
+    fi
+    # Stopping the cadence is NOT releasing the claim. A caller that conflates the two
+    # would leave a held claim with no liveness proof, which is worse than either.
+    note "  (the claim itself is untouched — use \`${PROG} release ${node}\` to hand it back)"
     return 0
 }
 
@@ -656,6 +1053,21 @@ case "$VERB" in
     actor)   printf '%s\n' "$ACTOR"; exit 0 ;;
     acquire) [ $# -eq 1 ] || usage; do_acquire "$1"; exit $? ;;
     status)  [ $# -eq 1 ] || usage; resolve_api || { warn "API unresolved — claim state UNKNOWN"; exit 0; }; do_status "$1"; exit 0 ;;
+    renew)   [ $# -eq 1 ] || usage; do_renew "$1"; exit $? ;;
+    renew-daemon)
+        [ $# -ge 1 ] || usage
+        rd_node="$1"; shift
+        rd_interval="${ITT_CLAIM_RENEW_INTERVAL:-600}"
+        rd_cap="${ITT_CLAIM_RENEW_MAX_MINUTES:-1440}"
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --interval)    [ $# -ge 2 ] || usage; rd_interval="$2"; shift 2 ;;
+                --max-minutes) [ $# -ge 2 ] || usage; rd_cap="$2";      shift 2 ;;
+                *) usage ;;
+            esac
+        done
+        do_renew_daemon "$rd_node" "$rd_interval" "$rd_cap"; exit $? ;;
+    renew-stop) [ $# -eq 1 ] || usage; do_renew_stop "$1"; exit 0 ;;
     release) [ $# -eq 1 ] || usage; do_release "$1"; exit 0 ;;
     reap)
         ttl="${ITT_CLAIM_REAP_TTL:-30}"
