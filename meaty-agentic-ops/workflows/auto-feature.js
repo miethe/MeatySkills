@@ -590,6 +590,71 @@ function repoKey(v) {
   return base && base.length > 0 ? base : trimmed
 }
 
+// ─── Mode-D OUTPUT scan (closes node_01KZS162D3TR3ZT113TKVDW1HB) ──────────────
+//
+// hasHighRiskPaths/hasModeDIntent (above) are ROUTING-TIME checks: they read the request's
+// declared subject matter and file paths BEFORE anything is dispatched. That is exactly the
+// class of check that missed the 2026-08-06 breach (node_01KZC1AHEDYZ8FS9TAZSXQTTSB) — a clean
+// declaration routed a leg to an offload lane, which then invented Mode-D-crossing output.
+//
+// This is the OUTPUT-time check: after a delegated leg returns, scan what it actually WROTE via
+// `.claude/skills/dev-execution/hooks/mode-d-scan.sh`, keyed on the REALIZED provider. This
+// script has no offload routing of its own (the planner/structurer/verify legs below are always
+// claude-primary; the actual implementation legs are dispatched by the NESTED execute-plan /
+// execute-contract engine, which carries its own copy of this same guard), so the realized
+// provider threaded here is always 'claude' — an accurate value, not a default masking an
+// unknown one. This script cannot shell out itself (authoring constraint 1), so — exactly like
+// runMeasureStage's validation-scope.sh dispatch in the sibling engines — it is an agent() call
+// to an edit-less agentType instructed to run the hook and return its JSON verbatim.
+async function runModeDScanGuard(stageLabel, realizedProvider, baseRef) {
+  const range = `${baseRef || 'HEAD~1'}..HEAD`
+  let scan = null
+  try {
+    scan = await agent(
+      `Run ONE command and return its output. Do not review anything. Do not edit anything.
+
+    MODE_D_SCAN_PROVIDER=${realizedProvider} MODE_D_SCAN_RANGE="${range}" MODE_D_SCAN_JSON=1 \\
+      bash .claude/skills/dev-execution/hooks/mode-d-scan.sh; echo "MODE_D_SCAN_EXIT=$?"
+
+Return the command's JSON output PLUS the trailing MODE_D_SCAN_EXIT line, parsed into the
+schema fields below. Do NOT substitute your own judgment for what the hook reported — an
+invented finding count here defeats the gate the same way a fabricated test count would defeat
+a validation-scope measurement. If the hook is missing or python3 is unavailable, set
+scan_status to "hook_unavailable" and gated to false.`,
+      {
+        phase: stageLabel,
+        label: 'guard:mode-d-scan',
+        agentType: 'task-completion-validator',
+        schema: {
+          type: 'object',
+          required: ['gated'],
+          properties: {
+            scan_status: { type: 'string' },
+            gated: { type: 'boolean' },
+            lane: { type: 'string' },
+            provider: { type: 'string' },
+            findings_count: { type: 'integer' },
+            exit_code: { type: 'integer' },
+          },
+        },
+      },
+    )
+  } catch (err) {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): runner threw (${err && err.message ? err.message : err}). Treated as non-fatal infra failure — not a breach.`)
+    return { gated: false, scan_status: 'runner_error' }
+  }
+  if (!scan) {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): runner returned nothing. Treated as non-fatal — not a breach (this hook is a backstop, not the sole control).`)
+    return { gated: false, scan_status: 'no_result' }
+  }
+  if (scan.gated) {
+    log(`MODE-D OUTPUT BREACH on ${stageLabel} (provider=${realizedProvider}): mode-d-scan.sh reported ${scan.findings_count ?? 'unknown'} finding(s) on an OFFLOAD lane (exit 2). Halting — do not merge this output.`)
+  } else {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): clean (status=${scan.scan_status || 'ok'}).`)
+  }
+  return scan
+}
+
 const _target = repoKey(parsed?.target_repo)
 const _session = repoKey(parsed?.session_repo)
 if (_target && !_session) {
@@ -662,6 +727,11 @@ if (!planText) {
     autopilot: { execution_target: 'none', escalation_recommendation: 'Planner agent was skipped; re-run /dev:autopilot or plan manually.' },
   }
 }
+
+// Mode-D output scan on the planner leg — implementation-planner has no offload routing
+// in this file (always claude-primary), so this scans advisory-only, but it wires the
+// automatic post-leg check for the one leg every autopilot request dispatches unconditionally.
+await runModeDScanGuard('Plan', 'claude', parsed.branch_base)
 
 // ── Phase 2: Structure plan (Stage B — haiku, schema) ────────────────────────
 phase('Structure plan')
@@ -801,6 +871,14 @@ try {
     autopilot: autopilotAnnotation(plan, plan.execution_target, `Nested ${plan.execution_target} errored — inspect the plan artifact and git state, then resume manually.`),
   }
 }
+
+// Mode-D output scan on the nested engine's leg — the actual implementation work happens
+// inside execute-plan/execute-contract, which each carry their own copy of this guard and
+// already halt internally on a breach. This call is the outer-layer backstop for the SAME
+// invariant: no manually-typed env var, the realized provider is threaded (nested engines
+// carry no top-level provider summary today, so 'claude' is the accurate value here — never
+// a default masking an unconfirmed offload realization, since none occurred at THIS layer).
+await runModeDScanGuard('Execute', 'claude', parsed.branch_base)
 
 if (!childReport || typeof childReport !== 'object') {
   return {

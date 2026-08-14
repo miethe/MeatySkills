@@ -1321,6 +1321,68 @@ function fixCycleModeDGuard(filesAffected, taskClass, promptText) {
   return null // Safe to dispatch to an offload lane.
 }
 
+// ─── Mode-D OUTPUT scan (closes node_01KZS162D3TR3ZT113TKVDW1HB) ──────────────
+//
+// fixCycleModeDGuard (above) and the routing tables are ROUTING-TIME checks: they read a
+// declaration (files_affected, task_class, prompt text) before a leg is dispatched. That is
+// exactly the class of check that missed the 2026-08-06 breach (node_01KZC1AHEDYZ8FS9TAZSXQTTSB)
+// — the leg's declaration was clean; it invented the crypto AFTER being routed.
+//
+// This is the OUTPUT-time check: after a delegated leg returns, scan what it actually WROTE
+// via `.claude/skills/dev-execution/hooks/mode-d-scan.sh`, keyed on the REALIZED provider (never
+// the provider that was merely intended — an offload lane that fell back to claude must scan as
+// 'claude', not as the lane that failed). This script cannot shell out itself (authoring
+// constraint 1), so — exactly like runMeasureStage's validation-scope.sh dispatch — it is an
+// agent() call to an edit-less agentType instructed to run the hook and return its JSON verbatim.
+async function runModeDScanGuard(stageLabel, realizedProvider, baseRef) {
+  const range = `${baseRef || 'HEAD~1'}..HEAD`
+  let scan = null
+  try {
+    scan = await agent(
+      `Run ONE command and return its output. Do not review anything. Do not edit anything.
+
+    MODE_D_SCAN_PROVIDER=${realizedProvider} MODE_D_SCAN_RANGE="${range}" MODE_D_SCAN_JSON=1 \\
+      bash .claude/skills/dev-execution/hooks/mode-d-scan.sh; echo "MODE_D_SCAN_EXIT=$?"
+
+Return the command's JSON output PLUS the trailing MODE_D_SCAN_EXIT line, parsed into the
+schema fields below. Do NOT substitute your own judgment for what the hook reported — an
+invented finding count here defeats the gate the same way a fabricated test count would defeat
+a validation-scope measurement. If the hook is missing or python3 is unavailable, set
+scan_status to "hook_unavailable" and gated to false.`,
+      {
+        phase: stageLabel,
+        label: 'guard:mode-d-scan',
+        agentType: 'task-completion-validator',
+        schema: {
+          type: 'object',
+          required: ['gated'],
+          properties: {
+            scan_status: { type: 'string' },
+            gated: { type: 'boolean' },
+            lane: { type: 'string' },
+            provider: { type: 'string' },
+            findings_count: { type: 'integer' },
+            exit_code: { type: 'integer' },
+          },
+        },
+      },
+    )
+  } catch (err) {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): runner threw (${err && err.message ? err.message : err}). Treated as non-fatal infra failure — not a breach.`)
+    return { gated: false, scan_status: 'runner_error' }
+  }
+  if (!scan) {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): runner returned nothing. Treated as non-fatal — not a breach (absence of a scan is not evidence of a clean leg, but this hook is a backstop, not the sole control).`)
+    return { gated: false, scan_status: 'no_result' }
+  }
+  if (scan.gated) {
+    log(`MODE-D OUTPUT BREACH on ${stageLabel} (provider=${realizedProvider}): mode-d-scan.sh reported ${scan.findings_count ?? 'unknown'} finding(s) on an OFFLOAD lane (exit 2). Halting — do not merge this output.`)
+  } else {
+    log(`Mode-D output scan (${stageLabel}, provider=${realizedProvider}): clean (status=${scan.scan_status || 'ok'}).`)
+  }
+  return scan
+}
+
 // ─── workflow body ────────────────────────────────────────────────────────────
 
 // ─── P3: Two-stage AC validation helpers (codex-executor) ─────────────────────
@@ -1588,6 +1650,11 @@ if (!sprintText) {
   })
 }
 
+// Mode-D output scan on the sprint leg itself — feature-sprint-executor has no offload
+// routing in this file (always claude-primary), so this scans advisory-only, but it wires
+// the automatic post-leg check for the one leg every contract dispatches unconditionally.
+await runModeDScanGuard('Sprint', 'claude', parsed.branch_base)
+
 log('Sprint stage complete. Running structure stage.')
 
 // Stage B — structurer (haiku, schema: SPRINT_RESULT_SCHEMA)
@@ -1775,6 +1842,18 @@ if (provider_routing_enabled) {
       required_fixes: ['AC validation Stage A failed — codex-executor returned null'],
     }
   } else {
+    // Mode-D output scan on the codex offload leg — realized provider is 'codex' because
+    // it just ran and produced the checklist artifact. This is the offload-lane case where
+    // the hook can actually GATE (lane_of('codex') === 'offload').
+    const stageAScan = await runModeDScanGuard('Review', 'codex', parsed.branch_base)
+    if (stageAScan.gated) {
+      verdict = {
+        approved: false,
+        verdict_source: 'mode_d_output_breach',
+        reviewer_type: reviewerType,
+        required_fixes: [`codex-executor (Stage A AC validation) wrote Mode-D-signature output (${stageAScan.findings_count ?? 'unknown'} finding(s)); re-run on claude-primary and do not merge this output.`],
+      }
+    } else {
     log('Stage A complete. Running Stage B haiku structurer...')
     // Stage B: cheap haiku structurer — reads checklist artifact, emits VERDICT_SCHEMA.
     try {
@@ -1803,6 +1882,7 @@ if (provider_routing_enabled) {
         reviewer_type: reviewerType,
         required_fixes: [`Stage B returned null — read ${acArtifactPath} for AC validation output`],
       }
+    }
     }
   }
 } else {
@@ -1864,6 +1944,11 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
 
   const fixPromptText = fixPrompt(parsed, verdict.required_fixes || [], cycleNumber)
 
+  // Realized provider for THIS fix-cycle dispatch — set inside whichever branch below
+  // actually runs, then fed into the automatic post-leg Mode-D output scan. Defaults to
+  // 'claude' (the flag-off / non-bob path never touches an offload lane).
+  let fixCycleRealizedProvider = 'claude'
+
   if (provider_routing_enabled && fixProvider === 'bob') {
     // P4: Bob fix-cycle routing — three-gate check (design_spec §7 + phase plan).
     const modeDReason = fixCycleModeDGuard(contractFixFiles, contractFixClass, fixPromptText)
@@ -1917,6 +2002,9 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
           bobFailed = true
           bobFailureMode = 'returned null'
           log(`P4 Bob fix-cycle: bob-delegate-executor returned null for fix-cycle ${cycleNumber}. Triggering fallback to claude.`)
+        } else {
+          // Bob actually ran and returned — this is the offload-lane realization.
+          fixCycleRealizedProvider = 'bob'
         }
       } catch (bobErr) {
         bobFailed = true
@@ -1926,6 +2014,7 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
 
       // Gate 3: Bob fallback — immediate escalation to claude, no Bob retry.
       if (bobFailed) {
+        fixCycleRealizedProvider = 'claude'
         log(`P4 Bob fallback: actual_provider_used='claude', fallback_applied=true for fix-cycle ${cycleNumber}.`)
         routeLog({
           task_ref: `fix-cycle-${cycleNumber}`,
@@ -1957,6 +2046,27 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
       agentType: fixAgentType,
       model: parsed.fix_model || undefined,
     })
+  }
+
+  // Mode-D output scan on the fix-cycle leg that just returned, keyed on the REALIZED
+  // provider (bob only when bob actually ran and returned; claude on every guard-triggered,
+  // fallback, or flag-off path). An offload lane crossing the boundary here is a hard halt —
+  // do not merge this output, and do not run the SHA-refresh below that would fold it into
+  // reviewResult.
+  const fixCycleScan = await runModeDScanGuard(`Fix cycle ${cycleNumber}`, fixCycleRealizedProvider, parsed.branch_base)
+  if (fixCycleScan.gated) {
+    return {
+      status: 'blocked',
+      reason: 'mode_d_output_breach',
+      blocked_phase: `fix-cycle-${cycleNumber}`,
+      report: [],
+      blockers: [{
+        description: `Fix cycle ${cycleNumber} (provider=${fixCycleRealizedProvider}) wrote Mode-D-signature output — ${fixCycleScan.findings_count ?? 'unknown'} finding(s) detected by mode-d-scan.sh on an offload lane. Do not merge this output.`,
+        resolution_hint: `Inspect the fix-cycle ${cycleNumber} diff for generated key material, auth/migration/deletion paths, or history rewrites. Re-run this fix on claude-primary once confirmed.`,
+      }],
+      run_placement: placementFacts(parsed, reviewResult),
+      artifact_tracking: artifactTrackingFacts(reviewResult),
+    }
   }
 
   // Fix agents commit their changes. Refresh the commit reference so the reviewer
