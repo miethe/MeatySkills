@@ -4,9 +4,9 @@ description: >-
   Delegate bounded agentic work to IBM ICA-provisioned Claude instances via ~/ica-claude.sh.
   Use when offloading parallel subtasks, accessing free-tier models for mechanical work,
   or cost-shifting bounded tasks to a secondary subscription.
-version: 2.10
+version: 2.12
 app_version: "2026-06-11"
-updated: 2026-08-09
+updated: 2026-08-17
 spec: ./SPEC.md
 ---
 
@@ -19,7 +19,7 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 > on every call, and points Claude Code at the ICA gateway for you. For a normal delegation there is
 > **nothing to configure** — just run the wrapper:
 > ```bash
-> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-5[1m]' --dangerously-skip-permissions --max-turns 20
+> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-5[1m]' --max-turns 20 < /dev/null
 > ```
 > **Do NOT** set `ANTHROPIC_API_KEY`, `ICA_CLAUDE_CODE_API_KEY`, or `ANTHROPIC_AUTH_TOKEN`; **do NOT**
 > pass `--api-key`; **do NOT** `export` a key. Those either do nothing or break the wrapper's own
@@ -90,7 +90,7 @@ else
 fi
 
 ~/ica-claude.sh -p "your task" "${CTX_FLAGS[@]}" \
-  --model 'claude-sonnet-5[1m]' --dangerously-skip-permissions --max-turns 20
+  --model 'claude-sonnet-5[1m]' --max-turns 20 < /dev/null
 ```
 
 Composition notes:
@@ -314,11 +314,41 @@ Delegating to ICA is **cost-shifted** — these calls do not bill our primary bu
 
 ## Invocation Flags
 
-Always include `--dangerously-skip-permissions` unless a plan explicitly instructs otherwise for a specific delegation.
+⚠️ **NEVER pass `--dangerously-skip-permissions`. It is what makes the dispatch fail.**
+
+Measured 2026-08-14: **4 of 4** `ica-executor` legs were refused by the Claude Code auto-mode
+permission classifier *before running*, on that flag. It is not an availability failure, and walking
+`fallback_chain` is wrong — a denial is a decision about whether this content may take this path
+(delegation-router SPEC §5a). An `allow` rule does **not** rescue it: `Bash(~/ica-claude.sh:*)` has
+been in `~/.claude/settings.json` the whole time and every one of those legs was still denied. The
+classifier objects to the flag token in the argument list, not to the script.
+
+Verified by two-sided probe the same day:
+
+| Invocation | Result |
+|---|---|
+| wrapper, no dangerous flag | **allowed**, rc=0 |
+| wrapper **+ `--dangerously-skip-permissions`** | **denied**, 4/4 |
+| wrapper + a `permissions` block in the settings file, no flag | **allowed**, rc=0, ran Bash |
+
+**PREREQUISITE — `~/.claude/ica-settings.json` must carry a `permissions` block.** The wrapper
+already passes `--settings "$HOME/.claude/ica-settings.json"` on every call, so the grant belongs
+there, declared once, rather than retyped per invocation. It needs `defaultMode` (`acceptEdits` is
+sufficient — probed) plus an `allow` list covering the tools your legs actually use, and a `deny`
+list. This is a real reduction in authority, not the flag relocated: the flag grants everything; the
+block grants a named set and can deny `git push` / `git merge` / `git stash` / `reset --hard` /
+`rm -rf`.
+
+If a delegate reports a tool it cannot use, **widen that `allow` list — never reach back for the
+flag.** In headless `-p` mode an un-allowlisted call is *refused*, not prompted, so it fails loudly
+rather than hanging. Editing that file is a **human action**; agents do not rewrite their own grants.
+
+Also pass `< /dev/null` unless you are genuinely piping stdin — otherwise the wrapper waits 3s and
+warns `no stdin data received`.
 
 | Flag | Purpose | When to Use |
 |------|---------|-------------|
-| `--dangerously-skip-permissions` | Bypass all permission prompts | **Always** — delegates run sandboxed, cannot prompt |
+| ~~`--dangerously-skip-permissions`~~ | ~~Bypass all permission prompts~~ | 🚫 **NEVER** — the auto-mode classifier denies the whole invocation (4/4, 2026-08-14). Use the `permissions` block in `ica-settings.json` instead |
 | `--model <id>` | Select model | **Always** — never rely on script default |
 | `--max-turns <N>` | Limit agentic iterations (print mode only). Exits with error when reached. | Bounded tasks — use 15-50 depending on complexity |
 | `--allowedTools <tools...>` | Auto-approve specific tools without prompting (all tools still exist) | Agentic calls — scope to minimum needed |
@@ -417,7 +447,6 @@ Deliverable: ..." \
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
   --add-dir /path/to/project \
-  --dangerously-skip-permissions \
   --max-turns 40 \
   --allowedTools "Read Write Edit Bash"
 ```
@@ -518,8 +547,7 @@ Post-delegation discipline:
 
 ```bash
 ~/ica-claude.sh -p "prompt" \
-  --model claude-haiku-4-5 \
-  --dangerously-skip-permissions
+  --model claude-haiku-4-5
 ```
 
 ### Recipe 2 — Agentic Implementation (Standard Tier)
@@ -529,7 +557,6 @@ Post-delegation discipline:
 Context: [minimal required context -- file paths, not contents]
 Deliverable: [expected output format]" \
   --model 'claude-sonnet-5[1m]' \
-  --dangerously-skip-permissions \
   --max-turns 20 \
   --allowedTools "Read Write Edit Bash" \
   --add-dir /path/to/project \
@@ -541,7 +568,6 @@ Deliverable: [expected output format]" \
 ```bash
 ~/ica-claude.sh -p "Review [target] for [criteria]. Report findings only." \
   --model gpt-4o \
-  --dangerously-skip-permissions \
   --max-turns 15 \
   --allowedTools "Read Bash(grep:*) Bash(find:*) Bash(git:*)" \
   --add-dir /path/to/project
@@ -552,8 +578,7 @@ Deliverable: [expected output format]" \
 ```bash
 ~/ica-claude.sh -p "Extract [thing] from [source]. Return JSON matching this schema: {...}" \
   --model claude-haiku-4-5 \
-  --output-format json \
-  --dangerously-skip-permissions
+  --output-format json
 ```
 
 ### Recipe 5 — Parallel Fan-Out (Free Tier)
@@ -562,7 +587,6 @@ Deliverable: [expected output format]" \
 for item in "${items[@]}"; do
   ~/ica-claude.sh -p "Process: $item" \
     --model claude-haiku-4-5 \
-    --dangerously-skip-permissions \
     > "/tmp/delegate-output-${item}.txt" &
 done
 wait
@@ -585,7 +609,6 @@ Deliverable: [structured recommendation]" \
   --model claude-opus-4-8[1m] \
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
-  --dangerously-skip-permissions \
   --max-turns 60 \
   --effort high \
   --fallback-model claude-opus-4-7[1m],claude-opus-4-6[1m] \
@@ -601,14 +624,12 @@ Deliverable: [structured recommendation]" \
 # First call — starts a session
 ~/ica-claude.sh -p "Analyze /path/to/codebase for security issues. Write findings to /tmp/security-report.md" \
   --model 'claude-sonnet-5[1m]' \
-  --dangerously-skip-permissions \
   --allowedTools "Read Write Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/codebase
 
 # Follow-up call — continues the same session
 ~/ica-claude.sh -p "Now prioritize the findings by severity and add remediation suggestions" \
-  --continue \
-  --dangerously-skip-permissions
+  --continue
 ```
 
 ### Recipe 8 — Bare Mode Fan-Out (Optimized)
@@ -619,7 +640,6 @@ for file in "${files[@]}"; do
     --model claude-haiku-4-5 \
     --bare \
     --no-session-persistence \
-    --dangerously-skip-permissions \
     > "/tmp/summary-$(basename "$file").txt" &
 done
 wait
@@ -630,7 +650,6 @@ wait
 ```bash
 ~/ica-claude.sh -p "Extract all function signatures from /path/to/module.ts" \
   --model claude-haiku-4-5 \
-  --dangerously-skip-permissions \
   --json-schema '{"type":"object","properties":{"functions":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"params":{"type":"array","items":{"type":"string"}},"returnType":{"type":"string"}},"required":["name","params","returnType"]}}},"required":["functions"]}'
 ```
 
@@ -651,7 +670,6 @@ PROMPT
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
   --add-dir /path/to/project \
-  --dangerously-skip-permissions \
   --max-turns 30 \
   --fallback-model claude-opus-4-8,claude-opus-4-7[1m],claude-opus-4-7
 ```
@@ -668,7 +686,7 @@ PROMPT
 | "All models on the gateway are free" | Only specific small models (Haiku, Gemma) are free tier. |
 | "Use this for tasks requiring the current session's MCP tools" | Delegates cannot access the calling session's MCP servers. |
 | "The delegate can continue a previous conversation" | Each invocation is stateless by default. Use `--continue`/`--resume` for opt-in continuity. |
-| "Omit `--dangerously-skip-permissions` for safety" | Always include it — delegates cannot prompt for permissions in `-p` mode; omitting causes hangs or failures. |
+| "Include `--dangerously-skip-permissions` so the delegate can act" | **Inverted 2026-08-14.** That flag now gets the invocation DENIED by the auto-mode classifier before it runs (4/4 legs, ~660k tokens for zero deliverable). Omitting it is correct; the grant lives in `ica-settings.json`'s `permissions` block. The old advice — that omitting causes hangs — held only with no such block: with one, a headless leg runs Bash fine (probed), and an un-allowlisted call is refused rather than hung. |
 | "Use `--continue` for multi-turn conversations with users" | False. `--continue` resumes a prior session; it does NOT create an interactive multi-turn experience. Each `~/ica-claude.sh` call is still a single Bash invocation. |
 | "Use `--bare` for all delegations" | Not always. `--bare` skips skills/plugins which may be needed for some tasks. Use for mechanical/fan-out work. |
 | "`--bare` delegates still get the project's CLAUDE.md" | False. `--bare` skips CLAUDE.md auto-discovery AND auto-memory. A bare delegate gets project conventions ONLY if you inject them via `--append-system-prompt-file` (+ `--add-dir` for on-demand reads). See "Context Injection Under `--bare`". |
@@ -693,16 +711,19 @@ ica-key add CC4 <key>     # append inactive block; --use to also activate
 ica-key remove CC3        # delete block; refuses if active (--force to override)
 ```
 
-`ICA_KEY=<NAME>` env override — when set on `~/ica-claude.sh`, selects that named block's key (even if commented) without rewriting the file. **Most of the time you do not set this at all** — the active key (`CC1`) is used automatically. Set it only to run a *specific* named key, e.g. for parallel sessions on different keys:
+`ICA_KEY=<NAME>` env override — when set on `~/ica-claude.sh`, selects that named block's key (even if commented) **without rewriting the file**. Leave it unset and the currently-active block is used automatically. Set it to run a *specific* named key — for parallel sessions on different keys, or to spread a fan-out (see **Spreading load** below):
+
+⚠️ **Do not hardcode a key name as "the active one".** Which block is uncommented changes every time anyone runs `ica-key use`/`next`, and this section named `CC1` for long enough to go stale (the active key was `CC5` on 2026-08-17). Ask: `ica-key current`.
 
 ```bash
-ICA_KEY=CC1 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5' --dangerously-skip-permissions
-ICA_KEY=CC3 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5' --dangerously-skip-permissions
+ICA_KEY=CC1 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5'
+ICA_KEY=CC3 ~/ica-claude.sh -p "task" --model 'claude-haiku-4-5'
 ```
 
 **`ICA_KEY` takes a block NAME, not a number and not a token.** Valid values are exactly the `## NAME`
-headers in `~/.dotfiles/ICA_CLAUDE`: `CC1`, `CC2`, `CC3`, `CC4`, `CC5`, `CC6` (run `ica-key list` to
-see them). Common mistakes:
+headers in `~/.dotfiles/ICA_CLAUDE` — **enumerate them with `ica-key list`, never from a list in a
+doc.** As of 2026-08-17 that is `CC1`…`CC6` plus `BB1`; earlier revisions of this section said
+`CC1`…`CC6` and had already missed one. Common mistakes:
 
 | ❌ Wrong | Why | ✅ Right |
 |---------|-----|--------|
@@ -726,6 +747,53 @@ ica-key renewal                       # show shared renewal (auto-rolls +7d when
 
 `ica-key next` automatically skips `exhausted` keys (`--any` to override).
 
+It also skips **reserved** keys. `ica-key reserve` marks a key as belonging to another instance —
+`CC6` is reserved for Hermes — and both `next` and `use` honour that. **Never pass
+`--include-reserved` or `use --force` to get at one**: the reservation exists because a
+long-running instance is already spending that key's allowance, and stealing it produces two
+consumers on one budget with no way to attribute either.
+
+### Spreading load across keys — prefer `ICA_KEY=`, do NOT rotate
+
+There are two different lanes here and conflating them is how a fan-out starves:
+
+| Goal | Lane | Mutates the key file? |
+|---|---|---|
+| **React** to the active key being spent | `ica-key exhausted --rotate` | **Yes** — rewrites which block is uncommented |
+| **Spread** N parallel legs across N keys | `ICA_KEY=<NAME>` per invocation | **No** |
+
+**Rotation is the wrong instrument for spreading load.** `ica-key next` rewrites a file that every
+other ICA session on this host reads, so with concurrent sessions (routinely ~30 here) two legs
+rotating at once both skip keys *and* change the active key under third parties mid-run. `ICA_KEY=`
+is per-process, race-free, and invisible to everyone else.
+
+Round-robin with no shared cursor and no mutation — pick the *i*-th eligible key for leg *i*:
+
+```bash
+# Eligible = not exhausted, not reserved. Read-only; zero model calls.
+ica-key list --json | python3 -c '
+import json,sys
+ks=[k for k in json.load(sys.stdin)["keys"]
+    if k["status"]!="exhausted" and not k.get("reserved_for")]
+ks.sort(key=lambda k: (k["status"]!="fresh", k.get("usage") or 0))
+print(" ".join(k["name"] for k in ks))'
+# -> e.g. "CC5 CC1 BB1 CC3"   then leg i uses key[i % len]
+```
+
+⚠️ **The field is `reserved_for`, not `reserved`.** `ica-key list --json` emits `reserved_for` on a
+reserved entry and omits the key entirely otherwise (verified 2026-08-17: only `CC6` carries it).
+Filtering on `reserved` therefore silently matches nothing and puts Hermes's reserved key back into
+the pool — it went wrong exactly that way while this recipe was being written.
+
+Ordering is deliberate: `fresh` first, then `partial` by ascending `usage`, so the least-consumed
+key takes the next leg. Because selection is a pure read of `ICA_CLAUDE.state.json`, this costs
+nothing and cannot race.
+
+⚠️ **Two honest limits.** (1) `usage` is a **hand-recorded hint** written by `ica-key mark`, not a
+metered figure — treat the ordering as a heuristic, not an accounting. (2) Nothing decrements a key
+as legs consume it, so a burst of legs assigned round-robin will each still discover exhaustion on
+their own; the reactive path above is still required, and this only reduces how often it fires.
+
 **Free-tier work does NOT require a fresh key.** ICA models marked
 `allowance: unlimited`/`free` in the model registry (Haiku / Gemma / Llama /
 Granite) stay callable on ANY key, including exhausted ones — only paid
@@ -733,6 +801,14 @@ Granite) stay callable on ANY key, including exhausted ones — only paid
 
 - On 401/allowance-exhaustion during **paid** delegation → `ica-key exhausted --rotate`, then retry once. If all keys are exhausted, downshift to a free model instead of failing.
 - For **free-tier** delegation, ignore exhaustion entirely.
+- **This applies to whoever issues the invocation — orchestrator or delegate alike.** An
+  orchestrator shelling `~/ica-claude.sh` directly owns the rotate-and-retry; it is not something the
+  delegate can do on its behalf, because the delegate's process already resolved its token at
+  startup. `ica-executor` carries the same rule in its own definition.
+- ⚠️ **Exhaustion is NOT unavailability — never let it walk a `fallback_chain`.** The gateway is up
+  and you are authorized; one key's weekly allowance is spent. Traversing the chain moves the work to
+  a **paid** provider while free capacity sits one key away. Rotate, retry once, and only then report
+  `{"status": "unavailable", "reason": "all_ica_keys_exhausted", "fallback_applied": false}`.
 
 ```bash
 ica-key exhausted --rotate && ~/ica-claude.sh -p "retry prompt" ...

@@ -40,6 +40,52 @@ Return this JSON immediately. Do not invoke Bob. Do not attempt any edits.
 
 ---
 
+## Denial is a STOP condition, never a fallback trigger (MANDATORY)
+
+Sibling to the Mode-D guard above, and it fires on the same principle: a **permission denial** — the
+Claude Code permission classifier, a `PreToolUse` hook, or an explicit user/harness refusal of the
+`bob` invocation you were about to shell — is a decision about *whether this content may take this
+path*. It is not evidence that Bob is unavailable, and it authorizes **zero** steps of
+`fallback_chain` traversal.
+
+On a denial, return this immediately and stop:
+
+```json
+{
+  "status": "blocked",
+  "reason": "permission_denied",
+  "actual_provider_used": null,
+  "fallback_applied": false,
+  "denied_invocation": "<the command that was refused, verbatim>",
+  "denial_evidence": "<the classifier/hook message, verbatim>",
+  "message": "Invocation denied by a permission control. Rerouting is the orchestrator's decision, not this leg's."
+}
+```
+
+Three things you must NOT do — all three were observed on 2026-08-13:
+
+- **Never re-attempt the same content on another lane.** Not the next `fallback_chain` entry, not
+  in-process with your own tools, not a reworded or trimmed prompt. A denial attaches to the
+  *content and its destination*, so any lane carrying the same content is the same denied act
+  wearing a different coat.
+- **Never probe to isolate the block.** Running variants to find which clause tripped the classifier
+  is reverse-engineering a control you are subject to. One probe is one too many.
+- **Never fold a denial into `fallback_applied: true`.** The fallback chain exists for
+  *unavailability* — binary absent, runtime failure, timeout. A denial is none of those, and reporting
+  it as a fallback hop makes an authorization event indistinguishable from an infrastructure one in
+  the audit log.
+
+⚠️ **A denial you believe is over-broad is still a stop.** The reroute may even be the right call —
+it is simply not yours to make, because you are the constrained party. Hand the denial upward with
+its evidence and let the orchestrator decide.
+
+Provenance: COMMS-SWEEP-B, 2026-08-13 (bg job `cac51b90`). A sibling `ica-executor` leg denied while
+shelling its invocation ran 6 diagnostic probes, then re-executed the identical extraction in-process
+and reported it as walking `fallback_chain` entry 3; the harness flagged the hand-back as an auto-mode
+bypass. Tracked as `node_01KZY8BAFRFNF836ZD0Y51V1Z3`.
+
+---
+
 ## RoutingRecord Fields You Consume
 
 | Field | How You Use It |
@@ -63,6 +109,9 @@ After the Mode-D guard passes, verify Bob is reachable:
 ```bash
 mise exec node@22 -- bob --version 2>/dev/null
 ```
+
+⚠️ **Unavailability only.** A permission denial of the invocation is NOT an availability condition and
+never enters this path — see "Denial is a STOP condition" above.
 
 If Bob is unavailable (exit code non-zero or binary not found):
 
@@ -129,5 +178,8 @@ On Mode-D abort:
 - Never auto-apply Bob output to production files — write draft to disk, return path.
 - Never use Bob for architecture-heavy integration work or cross-layer backend changes.
 - Never skip the Mode-D guard, even if the RoutingRecord claims the task is safe.
+- **A permission denial of the invocation is a STOP, never a fallback trigger** — return
+  `{"status": "blocked", "reason": "permission_denied", ...}` with the denial evidence and stop. Never
+  re-attempt the same content on another lane, in-process, or with a reworded prompt.
 - Bob has no session continuity — every invocation is fresh and stateless.
 - This executor maps 1:1 to `agent_type_id: bob-delegate-executor` in the `delegation-router` RoutingRecord schema.

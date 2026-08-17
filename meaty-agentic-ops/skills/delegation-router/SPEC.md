@@ -94,9 +94,53 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 4. **Determinism filter** — when `resume_active=true` AND the stage is structural, exclude any
    provider in `routing_rules.nondeterministic_providers`. Prevents stochastic output from
    poisoning a resumed session's structural state.
+4b. **Write-authority filter** — when the caller passes `requires_write: true`, exclude every
+   provider whose mapped `agent_type_id` is in `WRITE_INCAPABLE_AGENT_TYPES` (`routing-record.js`),
+   from the candidate ranking **and** from the emitted `fallback_chain`. An explicitly requested
+   write-incapable provider routes to claude with the cause named in `reason`. Default is `false`,
+   and the check is strict `=== true`, so every existing caller is byte-for-byte unaffected — a
+   truthy string does not arm it. See §4c for why this is a separate axis.
 5. **Fallback chain** — emit the remaining chain tail as `fallback_chain`. Executors re-dispatch
    down it on runtime failure/timeout (not just binary-absence), recording `actual_provider_used`
    and `fallback_applied`.
+
+#### 4c. Write authority is a SEPARATE AXIS from task_class — the taxonomy cannot express it
+
+`task_class` classifies the **kind of cognition**, never whether the leg's deliverable is a file.
+`implementation`, `documentation` and `mechanical` are all `status: routable` in
+`task-class-vocabulary.v1.json`, so all three were eligible for a provider whose executor could not
+produce a file, and nothing in the record said otherwise. The only write-adjacent logic in the
+resolver derived a `workspace-write` sandbox level from **effort** — unrelated. `scope_flags` was
+documented as the intended carrier and left `reserved for future use`.
+
+Measured 2026-08-16 (`node_01M06NSPRWSS987V5DMZXHRVJ5`): three file-authoring legs resolved to
+`ica-executor`, which then carried `disallowedTools: Write, Edit, MultiEdit`, and produced **zero
+files** between them for ~610k subagent tokens. That is not a flaky lane and not an availability
+failure — it is a **mis-route**, so neither the fallback chain (§5a) nor a retry was the right
+instrument. Re-dispatching the identical briefs to a write-capable agent worked first time.
+
+Two properties of the fix are deliberate and load-bearing:
+
+- **`WRITE_INCAPABLE_PROVIDERS` is DERIVED** from `AGENT_TYPE_ID_MAP` ∩ `WRITE_INCAPABLE_AGENT_TYPES`,
+  never restated. A second hand-maintained provider list is how the two would drift.
+- **The set is deliberately down to ONE member** (`gemini-executor`). `ica-executor` was removed on
+  2026-08-17 when it gained write authority; `codex-executor` and `bob-delegate-executor` never
+  carried `disallowedTools`. Do not read a one-element set as a placeholder, and do not read this
+  filter as "requires_write means stay on claude" — a write leg still offloads to ICA, which is what
+  `tests/test-write-authority.js` case (d) exists to hold.
+
+⚠️ **`disallowedTools` is the membership *test*, not an enforcement mechanism.** Every executor keeps
+`Bash` (shelling out is its contract), a leg wrote two files through Bash redirection under that
+denial on 2026-08-11 (`node_01KZS943C1NBSNFCY4DH1EMSVD`), and skillmeat's own
+`tool_canonicalization` classifies `disallowedTools` as `descriptive_only` for claude_code. So the
+set means *"will not reliably produce a file"* — the only claim the router needs. Where a read-only
+boundary must actually hold, the mechanism is an `--allowedTools` scope on the CLI invocation,
+checked by the process that would do the writing.
+
+⚠️ **Coverage is asymmetric between the two resolution paths, on purpose.** The registry path
+(live) filters the requested provider, all three candidate-selection sites, and the fallback chain.
+The legacy `provider-plugins.toml` path guards the **requested provider only** and does not filter
+`buildTomlCandidates`' chain. That is written down rather than left to be discovered.
 
 #### 5a. The fallback chain covers UNAVAILABILITY only — a permission denial is not a traversal trigger
 
@@ -417,6 +461,12 @@ Headless writer: `log-cli.js --blocked`.
 6. **Determinism filter applies on resumed structural stages.** When `resume_active=true`,
    nondeterministic providers are excluded from candidate ranking for structural stages.
    _Source_: `model-registry-router-globalization-v1.md § 4`; `provider-plugins.toml [routing_rules]`
+
+6b. **A leg that must produce a file is never routed to a write-incapable agent type.** Callers
+   declare it with `requires_write: true`; the resolver excludes those providers from candidates and
+   from the fallback chain. The declaration is the caller's — the resolver cannot infer it from
+   `task_class`, which describes cognition rather than deliverable (§4c).
+   _Source_: `routing-record.js WRITE_INCAPABLE_AGENT_TYPES`; `tests/test-write-authority.js`
 
 7. **Every resolution and every fallback hop is appended to the audit log.**
    `.claude/logs/routing-decisions.jsonl` is append-only; `skillmeat routing audit --violations`

@@ -45,6 +45,7 @@ const crypto = require('crypto');
 const {
   MUST_STAY_PRIMARY_CLASSES,
   AGENT_TYPE_ID_MAP,
+  WRITE_INCAPABLE_PROVIDERS,
   validateRoutingRecord,
 } = require('./routing-record.js');
 
@@ -697,6 +698,7 @@ function resolveFromRegistry(input) {
     profile = null,
     task_class,
     resume_active = false,
+    requires_write = false,
     _registryPath,
   } = input;
 
@@ -733,6 +735,23 @@ function resolveFromRegistry(input) {
     return buildRegistryMustStayRecord(
       loadedRegistry, model, effort,
       `Determinism filter: provider='${requestedProvider}' is nondeterministic and resume_active=true for structural stage '${task_class}'; routing to claude`
+    );
+  }
+
+  // ----- Write-authority filter (requires_write) -----
+  // A leg whose deliverable is a FILE must not be routed to an agent type that cannot produce
+  // one. Deliberately a separate axis from the determinism filter above and from task_class:
+  // the task-class taxonomy describes the KIND OF COGNITION, never whether a file is emitted,
+  // so `implementation`, `documentation` and `mechanical` are all `routable` and all were
+  // eligible for a write-incapable executor. Default false preserves byte-identical behavior
+  // for every caller that does not opt in.
+  const excludeWriteIncapable = requires_write === true;
+
+  if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(requestedProvider)) {
+    // Override-independent MUST-stay lookup (same reason as the two returns above).
+    return buildRegistryMustStayRecord(
+      loadedRegistry, model, effort,
+      `Write-authority filter: provider='${requestedProvider}' maps to a write-incapable agent type and requires_write=true; routing to claude`
     );
   }
 
@@ -782,6 +801,7 @@ function resolveFromRegistry(input) {
     const explicit = modelInstances
       .filter(c => c.providerId === requestedProvider)
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
+      .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
       .sort(byModelThenPriority)[0];
     if (explicit) {
       chosen = explicit;
@@ -814,6 +834,7 @@ function resolveFromRegistry(input) {
         const cand = resolveChainEntry(registry, entry);
         if (!cand) continue;  // disabled / scaffolded / absent — skip
         if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
+        if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
         chosen = cand;
         selectionReason = fb.applied
           ? `routing_policy['${policyKey}'] chain free-first (empirical-feedback re-ranked): selected '${entry}'`
@@ -838,6 +859,7 @@ function resolveFromRegistry(input) {
   if (!chosen && modelInstances.length > 0) {
     const ranked = modelInstances
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
+      .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
       .sort((a, b) => {
         // Genuinely-free first.
         if (a.free !== b.free) return a.free ? -1 : 1;
@@ -885,7 +907,7 @@ function resolveFromRegistry(input) {
     );
   }
 
-  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic);
+  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable);
   const agentTypeId = AGENT_TYPE_ID_MAP[chosen.providerId] || 'claude';
   const sampling = chosen.modelEntry.sampling;
   const continuityMode = sampling === 'stochastic' ? 'stateless' : 'resumable';
@@ -902,7 +924,7 @@ function resolveFromRegistry(input) {
     validation_contract: inferValidationContract(chosen.providerId, task_class),
     continuity_mode: continuityMode,
     fallback_chain: fallbackChain,
-    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic),
+    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable),
     // 14th field (additive, optional). Non-null ONLY when an empirical adjustment was actually
     // applied, so its presence in the audit log is itself the signal that feedback moved a
     // decision — `skillmeat routing audit` can filter on it without parsing the reason string.
@@ -947,7 +969,7 @@ function isMustStay(task_class, registryMustStay) {
   return false;
 }
 
-function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic) {
+function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable = false) {
   const chain = [];
   const seen = new Set();
 
@@ -963,6 +985,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
       if (!cand) continue;
       if (cand.providerId === chosen.providerId && cand.modelId === chosen.modelId) continue;
       if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
+      if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
       const sig = `${cand.providerId}/${cand.modelId}`;
       if (seen.has(sig)) continue;
       seen.add(sig);
@@ -974,6 +997,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
   const sameModel = enabledInstancesForModels(registry, [chosen.modelKey])
     .filter(c => !(c.providerId === chosen.providerId && c.modelId === chosen.modelId))
     .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
+    .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
     .sort((a, b) => a.priority - b.priority);
   for (const c of sameModel) {
     const sig = `${c.providerId}/${c.modelId}`;
@@ -1078,7 +1102,7 @@ function buildRegistryInvocation(chosen, profile, effort) {
   }
 }
 
-function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic) {
+function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable = false) {
   let reason = `Selected provider='${chosen.providerId}', model_id='${chosen.modelId}' for task_class='${task_class}'`;
   reason += `; cost_tier='${chosen.cost_tier}', allowance='${chosen.allowance}'`;
   reason += `, free=${chosen.free}`;
@@ -1088,6 +1112,9 @@ function buildRegistryReason(chosen, requestedProvider, task_class, selectionRea
   }
   if (excludeNondeterministic) {
     reason += '; nondeterministic providers excluded (resume_active=true, structural stage)';
+  }
+  if (excludeWriteIncapable) {
+    reason += '; write-incapable agent types excluded (requires_write=true)';
   }
   return reason;
 }
@@ -1109,6 +1136,7 @@ function resolveFromToml(input) {
     profile = null,
     task_class,
     resume_active = false,
+    requires_write = false,
     _configPath,
   } = input;
 
@@ -1132,6 +1160,20 @@ function resolveFromToml(input) {
     return buildTomlMustStayRecord(
       model, effort, config,
       `Determinism filter: provider='${requestedProvider}' is nondeterministic and resume_active=true for structural stage '${task_class}'; routing to claude`
+    );
+  }
+
+  // Write-authority filter — LEGACY PATH, requested-provider guard ONLY.
+  // Deliberately narrower than the registry path: it guards an explicitly requested
+  // write-incapable provider, and does NOT filter buildTomlCandidates' chain. Scoped that way
+  // on purpose rather than left silently uncovered — the registry path is the live one, and the
+  // provider-plugins.toml lane is driven by an explicit `provider`, which is exactly what this
+  // catches. If a chain-selected write-incapable provider ever becomes reachable here, this
+  // comment is the thing that was wrong, not a missing feature nobody knew about.
+  if (requires_write === true && WRITE_INCAPABLE_PROVIDERS.includes(requestedProvider)) {
+    return buildTomlMustStayRecord(
+      model, effort, config,
+      `Write-authority filter: provider='${requestedProvider}' maps to a write-incapable agent type and requires_write=true; routing to claude`
     );
   }
 

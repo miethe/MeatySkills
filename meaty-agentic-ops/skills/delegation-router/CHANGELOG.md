@@ -3,6 +3,44 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-08-17 — `requires_write`: the router can finally decline to send authoring work to an agent that cannot write
+
+The RoutingRecord had **no write-authority dimension at all**, and `task-class-vocabulary.v1.json`
+cannot supply one: it classifies the kind of cognition, so `implementation`, `documentation` and
+`mechanical` are all `routable` and all were eligible for a write-incapable executor. Measured
+2026-08-16 (`node_01M06NSPRWSS987V5DMZXHRVJ5`): three file-authoring legs resolved to `ica-executor`
+— which carried `disallowedTools: Write, Edit, MultiEdit` — and produced **zero files** for ~610k
+subagent tokens. Two of the three then looped on a backgrounded shell-out. It was neither an
+availability failure nor a permission denial, so the fallback chain was the wrong instrument; it was
+a mis-route, and it was recorded as `fallback_applied / ica_lane_unavailable`.
+
+- **`requires_write` input** (`resolver.js`, both resolution paths). Strict `=== true` to arm —
+  default `false` keeps every existing caller byte-identical, and a truthy string does **not** arm
+  it. Excludes write-incapable providers from the explicit-provider honor, all three
+  candidate-selection sites, and `buildRegistryFallbackChain` (a leaked fallback entry is a retry
+  that also produces no file). `reason` records `write-incapable agent types excluded
+  (requires_write=true)` so the decision is auditable.
+- **`WRITE_INCAPABLE_AGENT_TYPES` + `WRITE_INCAPABLE_PROVIDERS`** (`routing-record.js`), placed next
+  to `AGENT_TYPE_ID_MAP` because the constraint is a property of the agent type that map yields. The
+  provider list is **derived** from the intersection, never restated — a second hand-maintained list
+  is how the two drift.
+- **The set is down to one member, `gemini-executor`, and that is the answer not a placeholder.**
+  `ica-executor` gained write authority the same day (Nick's decision; its scope now travels on the
+  invocation's `--allowedTools`, which the inner Claude Code instance actually checks).
+  `codex-executor` and `bob-delegate-executor` never carried `disallowedTools`.
+- **`disallowedTools` is the membership test, NOT enforcement.** Bash stays enabled for every
+  executor, a leg wrote two files through Bash redirection under that denial on 2026-08-11
+  (`node_01KZS943C1NBSNFCY4DH1EMSVD`), and skillmeat's `tool_canonicalization` already classifies it
+  `descriptive_only` for claude_code. The set means "will not reliably produce a file".
+- **Legacy-path coverage is narrower on purpose** — the `provider-plugins.toml` path guards the
+  requested provider only, not `buildTomlCandidates`' chain. Stated in SPEC §4c rather than left to
+  be found.
+- **`tests/test-write-authority.js`** — 14 cases, zero deps. Case (d) is the one that matters: it
+  asserts `requires_write: true` **still selects ica**. A test that only checked "requires_write
+  avoids offload" would pass while silently re-breaking the free lane; if (d) fails, the fix
+  regressed into a blanket offload ban. Case (b) proves the fixture selects gemini *without* the
+  flag, so (c) is a real differential rather than a vacuous pass.
+
 ## 2026-08-14 — audit entry `kind: 'blocked'`: the outcome SPEC 5a mandated and the writer lacked
 
 SPEC §5a is explicit that a permission denial belongs in the audit log "as a blocked /

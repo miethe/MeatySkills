@@ -1,5 +1,62 @@
 # Changelog — ica-delegate
 
+## 2.12 — 2026-08-17 — spreading load across keys, and two stale hardcodings removed
+
+- **New "Spreading load across keys" section.** Round-robin across the seven ICA keys uses
+  per-invocation `ICA_KEY=<NAME>` — which selects a named block **without rewriting the key file** —
+  never `ica-key next`, which mutates a file every concurrent ICA session on the host reads. With
+  ~30 live sessions here, two legs rotating at once both skip keys and change the active key under
+  third parties mid-run. Selection is a pure read of `ica-key list --json` (fresh first, then
+  `partial` by ascending `usage`), so N legs spread across N keys with no shared cursor.
+- **The recipe filters on `reserved_for`, not `reserved`** — the field `ica-key list --json` actually
+  emits. Filtering on `reserved` matches nothing and silently returns Hermes's reserved `CC6` to the
+  pool; it went wrong exactly that way while authoring, so the gotcha is documented inline.
+- **Two stale hardcodings removed.** "the active key (`CC1`)" — it was `CC5` on 2026-08-17 — and the
+  `CC1`…`CC6` name list, which had already missed `BB1`. Both now say to ask `ica-key current` /
+  `ica-key list` instead of naming a key in prose.
+- **Reservations are stated as binding**: never `--include-reserved` or `use --force` to reach a
+  reserved key — two consumers on one allowance with no attribution.
+- **Exhaustion handling is named as the INVOKER's duty, orchestrator included.** A delegate cannot
+  rotate on its caller's behalf; its token is already resolved at process start. Also states
+  explicitly that exhaustion is **not** unavailability and must never walk a `fallback_chain` — doing
+  so moves free work onto a paid lane while free capacity sits one key away.
+
+
+## v2.11 — 2026-08-14
+
+### Changed — BREAKING for every caller: stop passing the dangerous flag; the grant moved to settings
+
+- **`--dangerously-skip-permissions` is REMOVED from all 16 invocation examples and is now
+  explicitly forbidden.** This skill had mandated it — *"Always include
+  `--dangerously-skip-permissions`"*, plus a flag-table row reading **"Always"** and an
+  anti-pattern row asserting that omitting it *"causes hangs or failures"*. That instruction is what
+  broke the lane: on 2026-08-14, **4 of 4** `ica-executor` legs were refused by the Claude Code
+  auto-mode permission classifier *before running*, on that flag — ~660k subagent tokens and ~20 min
+  wall for zero deliverable across two of them.
+- **An `allow` rule was never the fix, and had been in place the whole time.**
+  `Bash(~/ica-claude.sh:*)` was already in `~/.claude/settings.json` `allow`; every leg was still
+  denied. The classifier objects to the flag token in the argument list, not to the script, so the
+  denial message's own suggestion ("add a Bash permission rule") was already satisfied and inert —
+  an error string is printed by code but not checked by it.
+- **New PREREQUISITE: `~/.claude/ica-settings.json` must carry a `permissions` block.** It had
+  none, which is *why* callers reached for the flag — there was no declarative way to make a
+  headless leg non-interactive. The wrapper already passes
+  `--settings "$HOME/.claude/ica-settings.json"` on every call, so the grant belongs there.
+  `defaultMode: acceptEdits` plus an `allow`/`deny` pair is sufficient. This is a genuine reduction
+  in authority rather than the flag relocated: the flag grants everything, the block grants a named
+  set and can deny `git push` / `git merge` / `git stash` / `reset --hard` / `rm -rf`.
+- **Verified by two-sided probe, not inferred** — wrapper alone: allowed, rc=0; wrapper + the flag:
+  denied 4/4; wrapper + a `permissions` block and no flag: allowed, rc=0, ran Bash successfully.
+- The anti-pattern row is **inverted**, not deleted, so a reader who remembers the old rule sees why
+  it changed. Its old claim (omitting causes hangs) held only with no `permissions` block; with one,
+  an un-allowlisted call is *refused*, not prompted — it fails loudly instead of hanging.
+- Headline examples now pass `< /dev/null`, since the wrapper otherwise waits 3s and warns
+  `no stdin data received`.
+
+Tracker: `node_01KZW2PT7PFNS4RKTYPYBMKEV1` (filed twice, `not_started` both times — plausibly
+because `audit-log.js` cannot record a `blocked`/`permission_denied` outcome at all, so a
+100%-denied lane looks identical to an unused one: `node_01M00JTM8FVBK12GF4AYQ7S2JN`).
+
 ## v2.10 — 2026-08-09
 
 ### Added

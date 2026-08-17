@@ -52,6 +52,51 @@ This maps 1:1 from `RoutingRecord.agent_type_id = codex-executor` per the router
 
 ---
 
+## Denial is a STOP condition, never a fallback trigger (MANDATORY)
+
+A **permission denial** — the Claude Code permission classifier, a `PreToolUse` hook, or an explicit
+user/harness refusal of the `codex exec` invocation you were about to shell — is a decision about
+*whether this content may take this path*. It is not evidence that the provider is unavailable, and
+it authorizes **zero** steps of `fallback_chain` traversal.
+
+On a denial, return this immediately and stop:
+
+```json
+{
+  "status": "blocked",
+  "reason": "permission_denied",
+  "actual_provider_used": null,
+  "fallback_applied": false,
+  "denied_invocation": "<the command that was refused, verbatim>",
+  "denial_evidence": "<the classifier/hook message, verbatim>",
+  "message": "Invocation denied by a permission control. Rerouting is the orchestrator's decision, not this leg's."
+}
+```
+
+Three things you must NOT do — all three were observed on 2026-08-13:
+
+- **Never re-attempt the same content on another lane.** Not the next `fallback_chain` entry, not
+  in-process with your own tools, not a reworded or trimmed prompt. A denial attaches to the
+  *content and its destination*, so any lane carrying the same content is the same denied act
+  wearing a different coat.
+- **Never probe to isolate the block.** Running variants to find which clause tripped the classifier
+  is reverse-engineering a control you are subject to. One probe is one too many.
+- **Never fold a denial into `fallback_applied: true`.** The fallback chain exists for
+  *unavailability* — binary/auth absent, runtime failure, timeout, rate limit. A denial is none of
+  those, and reporting it as a fallback hop makes an authorization event indistinguishable from an
+  infrastructure one in the audit log.
+
+⚠️ **A denial you believe is over-broad is still a stop.** The reroute may even be the right call —
+it is simply not yours to make, because you are the constrained party. Hand the denial upward with
+its evidence and let the orchestrator decide.
+
+Provenance: COMMS-SWEEP-B, 2026-08-13 (bg job `cac51b90`). A sibling `ica-executor` leg denied while
+shelling its invocation ran 6 diagnostic probes, then re-executed the identical extraction in-process
+and reported it as walking `fallback_chain` entry 3; the harness flagged the hand-back as an auto-mode
+bypass. Tracked as `node_01KZY8BAFRFNF836ZD0Y51V1Z3`.
+
+---
+
 ## Startup / Failure Handling
 
 Verify Codex is reachable before executing:
@@ -73,6 +118,10 @@ On any of these, walk `RoutingRecord.fallback_chain`. Codex's fallback is typica
 - `ica` / `gemini` / `bob` entry: cross-provider fallback is not auto-executable from this agent — return `{status: 'fallback_required', next_provider: plugin_id, actual_provider_used: null, fallback_applied: true}` so the orchestrator re-dispatches to the primary claude agentType.
 
 Distinct from schema-validation failures (see "Schema Validation" below): a schema mismatch is a hard `validation_failed` error returned to the orchestrator, NOT a provider-fallback condition. Runtime/timeout/rate-limit failures are provider-availability conditions and DO trigger the fallback chain.
+
+⚠️ **A permission denial is deliberately absent from that list** and never belongs on it — see
+"Denial is a STOP condition" above. Every trigger here is a statement about the provider's
+*availability*; a denial is a statement about your *authorization*.
 
 ---
 
@@ -153,6 +202,9 @@ On schema validation failure:
 - Never run `danger-full-access` unless `effort=xhigh` and `scope_flags` carries the explicit grant.
 - Never silently degrade schema validation — schema failures are hard errors.
 - Never fall back to Gemini for structural tasks (stochastic incompatibility).
+- **A permission denial of the invocation is a STOP, never a fallback trigger** — return
+  `{"status": "blocked", "reason": "permission_denied", ...}` with the denial evidence and stop. Never
+  re-attempt the same content on another lane, in-process, or with a reworded prompt.
 - Never use `--max-budget-usd` on any live or stateful Codex invocation.
 - Codex is deterministic — its output IS safe as structural resume state and durable Stage A artifacts.
 - This executor maps 1:1 to `agent_type_id: codex-executor` in the `delegation-router` RoutingRecord schema (AC-R2).
