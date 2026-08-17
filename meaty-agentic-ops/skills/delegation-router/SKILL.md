@@ -52,6 +52,7 @@ Repo-verified surfaces only:
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
+| write authority | Pass **`requires_write: true`** for any leg whose deliverable is a FILE. It excludes write-incapable agent types (`gemini-executor`) from candidates **and** the fallback chain. Default `false`. ⚠️ `task_class` cannot express this — `implementation`/`documentation`/`mechanical` are all routable, and three authoring legs once produced zero files for ~610k tokens because nothing declared it (SPEC §4c). It is **not** an offload ban: `ica-executor` is write-capable as of 2026-08-17 and still gets write legs. |
 | Audit CLI | `skillmeat routing audit [--task-type <class>] [--violations] [--unconfirmed] [--model-substitutions]` |
 
 ## Routing Posture

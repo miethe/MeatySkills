@@ -118,6 +118,43 @@ const AGENT_TYPE_ID_MAP = {
 };
 
 /**
+ * Agent types that CANNOT author a file, and therefore must never receive a leg whose
+ * deliverable is a file. Lives next to AGENT_TYPE_ID_MAP on purpose: the constraint is a
+ * property of the agent type that map yields, not of the provider, and keeping the two
+ * apart is how they drift.
+ *
+ * Membership test is the agent definition's `disallowedTools` covering Write/Edit/MultiEdit.
+ * ⚠️ That frontmatter is NOT an enforcement mechanism — Bash stays enabled for every executor
+ * (shelling out is their contract) and a leg wrote two files through Bash redirection under it
+ * on 2026-08-11 (`node_01KZS943C1NBSNFCY4DH1EMSVD`); skillmeat's own tool_canonicalization
+ * classifies `disallowedTools` as `descriptive_only` for claude_code. So read this set as
+ * "will not reliably produce a file", which is the only claim the router needs: routing an
+ * authoring leg here is a structurally guaranteed no-op, measured at ~610k subagent tokens for
+ * zero files on 2026-08-16 (`node_01M06NSPRWSS987V5DMZXHRVJ5`).
+ *
+ * `ica-executor` was in this set until 2026-08-17 and was REMOVED when Nick granted it write
+ * authority; its write scope now travels on the invocation's `--allowedTools`, which the inner
+ * Claude Code instance actually checks. `codex-executor` and `bob-delegate-executor` never
+ * carried `disallowedTools`. So the set is deliberately down to one member — do not read a
+ * one-element set as a placeholder.
+ *
+ * @readonly
+ * @type {string[]}
+ */
+const WRITE_INCAPABLE_AGENT_TYPES = ['gemini-executor'];
+
+/**
+ * Providers whose mapped agent type is write-incapable. DERIVED from the two constants above
+ * rather than restated, so adding a provider or flipping an agent type's write capability
+ * cannot leave a second hand-maintained list behind.
+ *
+ * @readonly
+ * @type {string[]}
+ */
+const WRITE_INCAPABLE_PROVIDERS = Object.keys(AGENT_TYPE_ID_MAP)
+  .filter(pid => WRITE_INCAPABLE_AGENT_TYPES.includes(AGENT_TYPE_ID_MAP[pid]));
+
+/**
  * Providers that NEVER receive a context bundle (FR-10). `bob` has no delegate-executor skill,
  * so its context channel is deferred (DEF-1) — context_ref stays null until the transport exists.
  *
@@ -321,6 +358,8 @@ function createEmptyRecord() {
 
 module.exports = {
   MUST_STAY_PRIMARY_CLASSES,
+  WRITE_INCAPABLE_AGENT_TYPES,
+  WRITE_INCAPABLE_PROVIDERS,
   CONTEXT_REF_NULL_PROVIDERS,
   CONTEXT_CLASSES,
   MAX_RANK_DISPLACEMENT,
