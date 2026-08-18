@@ -80,7 +80,6 @@ const routeLog = entry => {
 }
 const withRouting = result => ({ ...result, routing_log: __routingLog })
 
-
 // ---------------------------------------------------------------------------
 // JSON Schemas for structured agent output (passed via schema: option to agent()).
 // These are inline because the script cannot read files (constraint 1).
@@ -1878,6 +1877,14 @@ function assessCouncilVerdict(raw, phaseId) {
     }
   }
 
+  // A COMPLETED council whose gate rejected is NOT a non-completion. review-council.js sets
+  // `status:'needs_opus'` + `reason:'council_not_approved'` on exactly that case: the council ran,
+  // adjudicated, wrote its artifacts, and the gate said no. That is an ordinary rejection carrying
+  // real `required_fixes`, so it must fall through to the normal assessment path and let the fix
+  // loop run. `integrity_failure` is reserved for genuine non-completion (status 'blocked', or
+  // 'needs_opus' with no reason or a different reason), which no fix cycle can act on.
+  const councilCompletedButRejected = raw.status === 'needs_opus' && raw.reason === 'council_not_approved'
+
   // The council bailed before writing its decision record. It carries a fallback_verdict, but
   // the previous spread produced an object with no `approved` key at all — falsy by accident.
   //
@@ -1886,7 +1893,7 @@ function assessCouncilVerdict(raw, phaseId) {
   // consumer ever saw it. It must route here (gateIntegrityResult), never fixLoop — there is
   // no finding to fix, only a re-dispatch. missing_finding_ids travels through so the operator
   // sees exactly what was lost without opening the sub-workflow's artifacts.
-  if (raw.status === 'needs_opus' || raw.status === 'blocked') {
+  if (!councilCompletedButRejected && (raw.status === 'needs_opus' || raw.status === 'blocked')) {
     const missingIdsNote = raw.reason === 'council_payload_incomplete' && Array.isArray(raw.missing_finding_ids) && raw.missing_finding_ids.length > 0
       ? ` — missing finding ids: ${raw.missing_finding_ids.join(', ')}`
       : ''
@@ -1911,6 +1918,11 @@ function assessCouncilVerdict(raw, phaseId) {
     council_recommendation: raw.recommendation ?? null,
     council_overall: raw.overall ?? null,
     council_by_lens: raw.by_lens ?? null,
+    // A completed-but-rejected council is a plain rejection: pin `approved` false regardless of
+    // what the spread carried, and keep the council's own status/reason visible for the report.
+    ...(councilCompletedButRejected
+      ? { approved: false, council_status: raw.status, council_reason: raw.reason }
+      : {}),
   }
 
   // --- Integrity checks: a pass that cannot be trusted as a pass. ---
@@ -1967,17 +1979,263 @@ function assessCouncilVerdict(raw, phaseId) {
   return { verdict, integrity_failure: null }
 }
 
-// Invoke the review-council sub-workflow for a phase. One nesting level: execute-plan is the
-// top workflow and review-council is the only sub-workflow it may nest.
-async function runCouncil(p, taskOut) {
-  return workflow('review-council', {
-    target: { type: 'phase-taskout', ref: p.id, description: p.title || p.id },
-    task_summaries: JSON.stringify(taskOut.filter(Boolean)),
-    plan_ref: planRef,
-    phase_id: p.id,
-    timestamp: graph.timestamp,
-    intensity: 'standard',
+// ---------------------------------------------------------------------------
+// Inline degraded council — bounded in-process substitute for the review-council
+// SUB-WORKFLOW, used when workflow('review-council', ...) cannot be nested because THIS
+// execute-plan run is itself a child workflow (see runCouncil() below — nesting is capped
+// at ONE level, and auto-feature → execute-plan already spends it). Reuses review-council's
+// own reviewer routing (security → senior-code-reviewer, correctness/final-verdict →
+// task-completion-validator, adjudication → karen) and this file's own VERDICT_SCHEMA,
+// because those are the parts a degraded gate must never drop.
+//
+// Omits review-council's Stage A (codex evidence scribe) and its six-file decision-record
+// writer — both need a run directory this inline path does not have. Does NOT omit the lens
+// reviewers or the final verdict.
+//
+// Returns a raw payload shaped like review-council.js's own return value, so
+// assessCouncilVerdict(raw, phaseId) — which already gates on conditional recommendations,
+// lost findings, and arc_validate_passed — consumes it unmodified. `council_mode:
+// 'inline_degraded'` travels through assessCouncilVerdict's `{...raw}` spread into the
+// verdict and out on the phase result, so a degraded pass is never indistinguishable from a
+// full ARC run — that indistinguishability was the root cause of the defect this exists to
+// fix (measured 2026-08-14, run wf_f25afc77-0a3, node_01M00JWGCKSNRPZV7C6YCCA16F).
+// ---------------------------------------------------------------------------
+
+const INLINE_COUNCIL_LENSES = [
+  { lens: 'correctness', agentType: 'task-completion-validator' },
+  { lens: 'security', agentType: 'senior-code-reviewer' },
+  { lens: 'reality-check', agentType: 'karen' },
+]
+
+const INLINE_FINDING_SCHEMA = {
+  type: 'object',
+  required: ['id', 'title', 'severity', 'confidence', 'recommendation'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string' },
+    title: { type: 'string' },
+    claim: { type: 'string' },
+    severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'] },
+    confidence: { type: 'string', enum: ['confirmed', 'probable', 'speculative'] },
+    evidence: { type: 'string' },
+    recommendation: { type: 'string' },
+  },
+}
+
+const INLINE_REVIEWER_SCHEMA = {
+  type: 'object',
+  required: ['lens', 'reviewer_type', 'findings'],
+  additionalProperties: false,
+  properties: {
+    lens: { type: 'string' },
+    reviewer_type: { type: 'string' },
+    findings: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    summary: { type: 'string' },
+  },
+}
+
+const INLINE_ADJUDICATION_SCHEMA = {
+  type: 'object',
+  required: ['accepted', 'rejected'],
+  additionalProperties: false,
+  properties: {
+    accepted: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    rejected: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    disputed: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    watchlist: { type: 'array', items: INLINE_FINDING_SCHEMA },
+  },
+}
+
+function inlineLensPrompt(lens, agentType, p, taskOut) {
+  const claimed = taskOut.filter(Boolean)
+  const taskSummaries = claimed
+    .map(t => `- ${t.id} (${t.assigned_to}): ${t.summary ?? 'no summary'} [${t.status}]${t.commit_sha ? ' commit:' + t.commit_sha : ' commit:NONE REPORTED'}`)
+    .join('\n')
+
+  return `Mode: E — Reviewer
+
+DEGRADED COUNCIL NOTICE: the full review-council sub-workflow cannot run here — execute-plan is
+itself a child workflow, so the one-level workflow() nesting cap is already spent. You are
+standing in for one lens of that council. There is no separate evidence-collection stage or
+run-directory artifact writer in this path, so read the plan and the diff yourself.
+
+Your lens: **${lens}**.
+
+Phase: ${p.id} — ${p.title}
+Plan reference: ${planRef}
+
+Task agents' self-reported claims (NOT evidence — verify against the diff):
+${taskSummaries || '(no tasks completed)'}
+
+Independently review the diff against this phase's acceptance criteria from your lens's
+perspective. For each finding: a stable id (e.g. SEC-01), title, claim, severity, confidence,
+concrete evidence (file:line or command output), and a recommendation.
+
+${EVIDENCE_RULES}
+
+Return { lens: "${lens}", reviewer_type: "${agentType}", findings: [...], summary: "..." }.
+Do NOT write any files. Do NOT git add/commit/push/stash.`
+}
+
+function inlineAdjudicationPrompt(reviewerOutputs) {
+  const outputSummaries = reviewerOutputs
+    .map((r, i) => `Reviewer ${i + 1} (${r.reviewer_type}, lens: ${r.lens}): ${(r.findings ?? []).length} findings. ${r.summary || ''}`)
+    .join('\n')
+  const allFindings = reviewerOutputs.flatMap(r => r.findings ?? [])
+
+  return `Mode: E — Reviewer
+
+You are the adjudicator for a degraded, in-process Agent Review Council (see DEGRADED COUNCIL
+NOTICE above — the full sub-workflow could not be nested). Synthesise and dedupe the
+${allFindings.length} finding(s) below across ${reviewerOutputs.length} independent reviewers
+into accepted / rejected / disputed / watchlist. Be adversarial — most findings should not
+survive unchanged.
+
+Reviewer summary:
+${outputSummaries || '(no reviewers returned valid findings)'}
+
+All findings:
+${JSON.stringify(allFindings).slice(0, 4000)}
+
+Return { accepted: [...], rejected: [...], disputed: [...], watchlist: [...] }.
+Do NOT write any files. Do NOT git add/commit/push/stash.`
+}
+
+function inlineFinalVerdictPrompt(p, adjudicated) {
+  const blocking = (adjudicated.accepted ?? []).filter(f => f.severity === 'critical' || f.severity === 'high')
+  return `Mode: E — Reviewer
+
+You are the final-verdict reviewer for a degraded, in-process Agent Review Council on phase
+${p.id} — ${p.title} (see DEGRADED COUNCIL NOTICE above — the full review-council sub-workflow
+could not be nested here).
+
+Adjudicated findings:
+  Accepted:  ${(adjudicated.accepted ?? []).length}
+  Rejected:  ${(adjudicated.rejected ?? []).length}
+  Disputed:  ${(adjudicated.disputed ?? []).length}
+  Watchlist: ${(adjudicated.watchlist ?? []).length}
+  Blocking (severity >= high, accepted): ${blocking.length}
+
+${JSON.stringify(adjudicated).slice(0, 4000)}
+
+Set approved:true only if blocking_count is 0 and you independently confirm no blocking finding
+was missed. required_fixes must list every blocking finding's recommendation.
+
+Return a verdict conforming to the VERDICT_SCHEMA (approved, reviewer_type:
+"task-completion-validator", verification_path, required_fixes, evidence, self_reported_claims).
+Do NOT git add/commit/push/stash.`
+}
+
+async function inlineDegradedCouncil(p, taskOut) {
+  log(`Phase ${p.id}: running the INLINE DEGRADED COUNCIL (council_mode:'inline_degraded') — ${INLINE_COUNCIL_LENSES.length} lens reviewers + karen adjudication + task-completion-validator final verdict. No evidence-scribe stage and no run-directory artifact writer (review-council cannot be nested — execute-plan is itself a child workflow).`)
+
+  const reviewerOutputs = await parallel(
+    INLINE_COUNCIL_LENSES.map(({ lens, agentType }) => async () =>
+      agent(inlineLensPrompt(lens, agentType, p, taskOut), {
+        label: `inline-council:${p.id}:${lens}`,
+        phase: 'Review',
+        agentType,
+        schema: INLINE_REVIEWER_SCHEMA,
+      })
+    )
+  )
+  const validOutputs = reviewerOutputs.filter(Boolean)
+
+  if (validOutputs.length === 0) {
+    log(`Phase ${p.id}: inline degraded council — all lens reviewers failed or returned nothing.`)
+    return { status: 'needs_opus', reason: 'inline_council_reviewers_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const adjudicated = await agent(inlineAdjudicationPrompt(validOutputs), {
+    label: `inline-council:${p.id}:adjudicate`,
+    phase: 'Review',
+    agentType: 'karen',
+    schema: INLINE_ADJUDICATION_SCHEMA,
   })
+
+  if (!adjudicated) {
+    log(`Phase ${p.id}: inline degraded council — adjudication (karen) returned nothing.`)
+    return { status: 'needs_opus', reason: 'inline_council_adjudication_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const finalVerdict = await agent(inlineFinalVerdictPrompt(p, adjudicated), {
+    label: `inline-council:${p.id}:final-verdict`,
+    phase: 'Review',
+    agentType: 'task-completion-validator',
+    schema: VERDICT_SCHEMA,
+  })
+
+  if (!finalVerdict) {
+    log(`Phase ${p.id}: inline degraded council — final-verdict reviewer returned nothing.`)
+    return { status: 'needs_opus', reason: 'inline_council_final_verdict_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const blockingCount = (adjudicated.accepted ?? []).filter(f => f.severity === 'critical' || f.severity === 'high').length
+  const approved = finalVerdict.approved === true && blockingCount === 0
+
+  return {
+    ...finalVerdict,
+    approved,
+    reviewer_type: 'council-review',
+    council_mode: 'inline_degraded',
+    status: 'complete',
+    recommendation: approved ? 'approve' : 'reject',
+    summary: {
+      total_findings: validOutputs.reduce((n, r) => n + (r.findings?.length ?? 0), 0),
+      accepted: (adjudicated.accepted ?? []).length,
+      rejected: (adjudicated.rejected ?? []).length,
+      disputed: (adjudicated.disputed ?? []).length,
+      watchlist: (adjudicated.watchlist ?? []).length,
+      blocking_count: blockingCount,
+    },
+    council_artifacts: { run_dir: 'inline_degraded_council (no run directory)' },
+  }
+}
+
+// Invoke the review-council sub-workflow for a phase. Nesting is capped at ONE level: THIS
+// execute-plan run may itself be a child workflow (auto-feature.js's planExecArgs() invokes
+// execute-plan via workflow('execute-plan', ...)), so execute-plan cannot assume it always
+// owns the one permitted nesting level — that assumption is exactly what this function used
+// to make, and it is false whenever autopilot is the caller.
+//
+// Two independent degrade signals, both required:
+//   (a) explicit caller signal — graph.nested === true (set by planExecArgs) means THIS run
+//       is a child workflow; take the inline path unconditionally, never attempt workflow().
+//   (b) defensive catch — belt-and-braces for a caller that forgot the flag. Matches ONLY the
+//       nesting-cap error signature; anything else re-throws, because a blanket catch here
+//       would convert a genuine review-council failure into a quiet degrade — the same class
+//       of bug this whole fix exists to close.
+//
+// Measured 2026-08-14 (run wf_f25afc77-0a3, node_01M00JWGCKSNRPZV7C6YCCA16F): under
+// auto-feature → execute-plan → workflow('review-council', ...), the nested call threw
+// "workflow() cannot be called from within a child workflow -- nesting is limited to one
+// level." Because this call sits inside a parallel() phase thunk, the throw resolved the
+// whole phase to `null` — AFTER its task agents had already committed real work — so the
+// phase reported as a generic "dropped phase" with no reviewer gate at all, while the
+// commits stayed on the branch unreviewed.
+async function runCouncil(p, taskOut) {
+  if (graph?.nested) {
+    log(`Phase ${p.id}: graph.nested=true — this execute-plan run is itself a child workflow, so review-council cannot be nested (one level only). Running the inline degraded council instead.`)
+    return inlineDegradedCouncil(p, taskOut)
+  }
+
+  try {
+    return await workflow('review-council', {
+      target: { type: 'phase-taskout', ref: p.id, description: p.title || p.id },
+      task_summaries: JSON.stringify(taskOut.filter(Boolean)),
+      plan_ref: planRef,
+      phase_id: p.id,
+      timestamp: graph.timestamp,
+      intensity: 'standard',
+    })
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err)
+    if (/nesting is limited to one level|cannot be called from within a child workflow/i.test(msg)) {
+      log(`Phase ${p.id}: workflow('review-council', ...) rejected as nested (${msg}). graph.nested was not set on this run though execute-plan is evidently itself a child workflow — degrading to the inline council. The caller should set nested:true so this defensive catch is not the only signal.`)
+      return inlineDegradedCouncil(p, taskOut)
+    }
+    throw err
+  }
 }
 
 // Single review dispatch point. Routing MUST go through here so that 'council-review' — a
@@ -2043,9 +2301,14 @@ function gateIntegrityResult(p, taskOut, reviewerType, verdict, reason, cycles, 
 // ---------------------------------------------------------------------------
 // Pattern: reviewerGate — select reviewer, run, hand off to fixLoop on rejection.
 //
-// For review_intensity:'council' phases, invokes the review-council sub-workflow
-// via workflow('review-council', ...) (one nesting level — execute-plan is the top
-// workflow; review-council is the only sub-workflow it may nest).
+// For review_intensity:'council' phases, routes through runCouncil() — which calls the
+// review-council sub-workflow via workflow('review-council', ...) ONLY when this execute-plan
+// run itself owns the one permitted nesting level (i.e. it is NOT running as a child of
+// auto-feature). When execute-plan is itself a child workflow (graph.nested === true, or the
+// nesting-cap error is caught defensively), runCouncil() degrades to a bounded in-process
+// inline council instead — see runCouncil() and inlineDegradedCouncil() above for the full
+// rationale. execute-plan must never assume it always owns the nesting level; that assumption
+// is exactly what produced the defect this comment used to codify.
 // For all other phases, falls back to a plain agent() call with an edit-less agentType.
 // ---------------------------------------------------------------------------
 
@@ -2472,6 +2735,17 @@ const {
   // prompt is byte-for-byte identical to pre-pilot. When true, the phase-owner MAY nest
   // bounded implementers for decomposition (governed by .claude/specs/subagent-nesting-spec.md).
   phase_owner_nesting_enabled = false,
+  // NOTE — `graph.nested` is deliberately NOT destructured here.
+  //
+  // It is set by auto-feature.js's planExecArgs() when THIS execute-plan run is itself a child
+  // workflow (auto-feature → execute-plan already spends the one permitted workflow() nesting
+  // level). Its only reader is runCouncil(), which reads `graph?.nested` directly rather than a
+  // binding from this block — on purpose. A `const` here would be in its temporal dead zone for
+  // anything running before this line, so if a future refactor ever reached a council dispatch
+  // earlier in the file, the read would throw a ReferenceError inside a parallel() phase thunk —
+  // which parallel() converts to `null`, i.e. a silently dropped phase. That is the exact failure
+  // class runCouncil()'s guard exists to close, so the guard must not be able to cause it.
+  // Absent/undefined is correctly falsy, which is the standalone /dev:execute-plan default.
 } = graph
 
 // ---------------------------------------------------------------------------
@@ -2613,6 +2887,15 @@ for (const wave of waves) {
 
   // All phases in this wave run concurrently (parallel barrier).
   const waveResults = await parallel(wave.phases.map(p => async () => {
+    // Recovery slot for the catch block below: the thunk's OWN taskOut, updated as soon as it
+    // exists in either branch. parallel() converts a throwing thunk to `null`, which would
+    // silently discard evidence of task work that already committed to the branch before the
+    // throw (e.g. an unguarded review-council nesting error inside reviewerGate/runCouncil, or
+    // any other unexpected mid-phase failure). Catching HERE — inside the thunk, before
+    // parallel() ever sees the throw — is what makes that evidence recoverable at all; see the
+    // dropped-phase-with-committed-work accounting after this parallel() call.
+    let __recoveredTaskOut = []
+    try {
 
     // Adaptive phases: task list cannot be enumerated up front; dispatch a phase-owner.
     if (p.phase_strategy === 'adaptive') {
@@ -2632,6 +2915,7 @@ for (const wave of waves) {
       const taskOut = poResult
         ? [{ id: p.id, assigned_to: 'phase-owner', status: 'completed', summary: poResult }]
         : []
+      __recoveredTaskOut = taskOut
       const phaseResult = await reviewerGate(p, taskOut, tier)
 
       if (progressFile) {
@@ -2651,6 +2935,7 @@ for (const wave of waves) {
       .map(t => ({ phase: p.id, id: t.id, assigned_to: t.assigned_to, prompt: t.prompt }))
 
     const taskOut = []
+    __recoveredTaskOut = taskOut
     // Dispatched tasks that came back with NO result. Recorded, never silently discarded —
     // see the droppedTasks accounting after the batch loop.
     const droppedTasks = []
@@ -2759,6 +3044,40 @@ for (const wave of waves) {
     }
 
     return phaseResult
+
+    } catch (thunkErr) {
+      // A phase whose task agents already committed work must not become indistinguishable
+      // from a phase that never ran. Without this catch, parallel() would resolve this thunk
+      // to `null` on ANY throw after task dispatch — including the review-council nesting
+      // error this fix's runCouncil() guard now prevents in the common case, but also any
+      // other unexpected mid-phase failure — discarding __recoveredTaskOut (and every commit
+      // sha it carries) along with it. The wave-level accounting after this parallel() call
+      // reads `committed_work_unreviewed` / `thunk_error` to surface exactly that case as an
+      // explicit unreviewed-work halt naming the commits, never as a generic "dropped phase".
+      const recovered = __recoveredTaskOut.filter(Boolean)
+      const committed = recovered.filter(t => t?.commit_sha)
+      const errMsg = thunkErr && thunkErr.message ? thunkErr.message : String(thunkErr)
+      log(`Phase ${p.id}: thunk threw after collecting ${recovered.length} task result(s) (${committed.length} carrying a commit_sha): ${errMsg}`)
+      return {
+        phase: p.id,
+        tasks: recovered,
+        verdict: gateFailureVerdict('unknown', `phase thunk threw before the reviewer gate completed: ${errMsg}`),
+        fix_cycles: 0,
+        gate_ran: false,
+        escalate: true,
+        thunk_error: errMsg,
+        committed_work_unreviewed: committed.length > 0,
+        files_touched: recovered.flatMap(t => t.files_affected ?? []),
+        blockers: [{
+          description: committed.length > 0
+            ? `Phase ${p.id} crashed (${errMsg}) after ${committed.length} task(s) already committed work: ${committed.map(t => `${t.id}=${t.commit_sha}`).join(', ')}. This work is UNREVIEWED, not absent.`
+            : `Phase ${p.id} crashed (${errMsg}) before any task produced committed work.`,
+          resolution_hint: committed.length > 0
+            ? `Unreviewed COMMITTED work is on the branch. Do NOT merge. Inspect the named commit(s) by hand, then either run the reviewer gate against them (invoke the reviewer-gate workflow on this scope) or revert them before proceeding.`
+            : 'Re-dispatch the phase.',
+        }],
+      }
+    }
   }))
 
   // A phase whose thunk threw — or whose agent stalled through every retry — resolves to
@@ -2793,6 +3112,29 @@ for (const wave of waves) {
     phases_returned: completedWaveResults.length,
     dropped_phases: droppedPhases,
   })
+
+  // A phase whose thunk crashed AFTER task agents had already committed work (see the
+  // per-thunk try/catch above) is NOT a dropped phase and NOT a plain reviewer escalation —
+  // its commits are real and already on the branch, but its reviewer gate never ran. Checked
+  // BEFORE the droppedPhases / droppedTasks / reviewer-escalation checks below so the returned
+  // `reason` names exactly what happened rather than folding into a generic
+  // 'reviewer_unresolved' (which reads as "reviewed and rejected", not "never reviewed at
+  // all") or a generic 'phase_dropped' (which reads as "nothing happened" when the opposite
+  // is true).
+  const crashedWithCommits = completedWaveResults.filter(r => r?.committed_work_unreviewed)
+  if (crashedWithCommits.length > 0) {
+    log(`Wave ${wave.id}: ${crashedWithCommits.length} phase(s) crashed mid-run AFTER committing work — their reviewer gates did NOT run, but the commits are already on the branch. Returning to Opus — this is UNREVIEWED WORK ON THE BRANCH, not a dropped phase.`)
+    return withRouting({
+      status: 'needs_opus',
+      reason: 'unreviewed_committed_work',
+      report,
+      blockers: crashedWithCommits.map(r => ({
+        description: `Phase ${r.phase} crashed (${r.thunk_error}) after committing: ${(r.tasks ?? []).filter(t => t?.commit_sha).map(t => `${t.id}=${t.commit_sha}`).join(', ') || '(see files_touched)'}. The reviewer gate never ran on this work.`,
+        resolution_hint: 'This is UNREVIEWED WORK ON THE BRANCH, not absent work — do NOT merge. Inspect the named commit(s) by hand, then either run the reviewer gate against them (invoke the reviewer-gate workflow on this scope) or revert them before proceeding.',
+      })),
+      run_placement: placementFacts(graph),
+    })
+  }
 
   if (droppedPhases.length > 0) {
     log(`Wave ${wave.id}: ${droppedPhases.length} phase(s) produced NO result and were dropped: ${droppedPhases.join(', ')}. Their reviewer gates did NOT run. Returning to Opus — this is not a completion.`)

@@ -57,9 +57,13 @@
  *     Workflow({ name: 'reviewer-gate', args: { scope: {...}, lenses: ['validator'], ... } })
  *
  *   As a sub-workflow: permitted, but only from a TOP-LEVEL workflow (nesting is one level only).
- *   `execute-plan`/`execute-contract` keep their own inline reviewer stages — they already satisfy
- *   this contract and already nest `review-council`; re-routing them through here would consume
- *   their one nesting level. This script therefore never calls `workflow()` itself.
+ *   `execute-plan`/`execute-contract` keep their own inline reviewer stages — they already
+ *   satisfy this contract, and `execute-plan` conditionally nests `review-council` (ONLY when
+ *   execute-plan itself owns the one permitted nesting level — see execute-plan.js's
+ *   runCouncil()/`graph.nested` guard; execute-plan is itself a child workflow when invoked by
+ *   auto-feature.js, in which case it degrades to a bounded inline council instead of calling
+ *   workflow() at all). Re-routing either engine through here would consume a nesting level
+ *   neither can assume it owns. This script therefore never calls `workflow()` itself.
  *
  * Four-constraints checklist:
  *   [x] No FS/shell access in script body
@@ -217,6 +221,68 @@ const LENS_REVIEWER_MAP = {
   'karen-final-tree-only': 'karen',
 }
 
+// ─── lens → execution capability (D1, node_01M08FAYAGN5QYF77C1ZVA146B) ────────
+//
+// Whether a lens's underlying agent can run Bash/tests/scripts at all determines whether it
+// can independently establish a `live-smoke` / `real-endpoint-field-check` verification_path,
+// or observe a cited test's real status. A lens with no execution capability that reports
+// `not-run` for a cited test is reporting a limit of ITS OWN judgment, not a finding about the
+// code — treating that report as a defect (the pre-fix behaviour) makes a `[security, ...]`
+// gate structurally unapprovable regardless of code quality (see the node for three live
+// rounds of exactly this failure). This map is NOT derived from agent definitions at runtime
+// (constraint 1 — no FS access from the script body): it is a hand-maintained mirror, and it
+// WILL go stale silently if an agent's tool grants change without a matching edit here.
+//
+//   validator (task-completion-validator): disallowedTools = Write, Edit, MultiEdit only —
+//     Bash is available (.claude/agents/reviewers/task-completion-validator.md). Can run and
+//     observe a cited test itself.
+//   security (senior-code-reviewer): disallowedTools EXPLICITLY includes Bash
+//     (.claude/agents/reviewers/senior-code-reviewer.md) — cannot run anything. This is the
+//     defect this map exists to fix.
+//   karen / karen-final-tree-only: disallowedTools = Write, Edit, MultiEdit only — Bash is
+//     available (.claude/agents/reviewers/karen.md), exactly like the validator lens. `true`.
+//
+// This map states TOOL AVAILABILITY and nothing else. It was briefly set `karen: false` as a
+// "conservative" choice on the reasoning that karen only ever judges a whole tree and is never
+// paired with `security`. Both halves were wrong, and the value is load-bearing in BOTH
+// directions, so a wrong entry is never merely cautious:
+//
+//   - too lenient: a `false` lens's `not-run`-only criteria are excused into `unverifiable`
+//     instead of rejecting, and its honest `established:false` can be delegated away. For a lens
+//     that CAN run the test, both are a free pass on work it simply did not do.
+//   - too strict: `establishingLens` counts only lenses whose capability is `=== true`, so a
+//     `false` karen that genuinely established a `live-smoke` path does not satisfy any OTHER
+//     lens's delegation. gate-risk-classes.md §2 assigns `[security, karen]` to the
+//     `irreversible-outward` class (and `[security, validator, karen]` to `authz-boundary`), so
+//     with `karen: false` a `[security, karen]` gate has NO eligible establishing lens and
+//     security's honest `established:false` becomes an integrity failure — reintroducing exactly
+//     the unapprovable-gate defect this map exists to fix, on the pairing the node named as
+//     recurring next (registrar-hardening M2, the undeploy destructive guard).
+const LENS_EXECUTION_CAPABILITY = {
+  validator: true,
+  security: false,
+  karen: true,
+  'karen-final-tree-only': true,
+}
+
+// Appended to a non-executing lens's prompt (D1). Stops it from reporting an execution gap in
+// ITS OWN judgment as though it were a finding about the code, and from claiming a verification
+// path kind that requires running something.
+const NON_EXECUTING_LENS_ADDENDUM = `NO EXECUTION CAPABILITY — this lens cannot run Bash/tests/scripts (see LENS_EXECUTION_CAPABILITY
+in the gate script). Because of that:
+  - Never set \`verification_path.kind\` to \`live-smoke\` or \`real-endpoint-field-check\` — both
+    require running something, which you cannot do. \`path-equivalence\` and
+    \`production-callsite-trace\` are still open to you: both are read-only code tracing.
+  - The MEASURED STATUSES supplied to you below (if any) are ESTABLISHED FACTS about a test's
+    real outcome, not something you have to run to know. If the measurement shows a cited
+    nodeid as \`passed\`, cite it as \`passed\` — you did not run it, but its status is not unknown
+    to you. Only report \`not-run\` for a nodeid the measurement itself does not cover.
+  - For a criterion whose verification depends on running something you cannot run AND that the
+    measurement does not cover: put it in \`unverifiable\` with a concrete "what would settle
+    it" (e.g. "an executing lens runs \`tests/test_foo.py::test_bar\` and reports the real
+    status"). Do not mark it not-met for lack of YOUR OWN execution capability — that is a gap
+    in what you personally can prove, not evidence the behaviour is broken or missing.`
+
 const LENS_BRIEF = {
   validator:
     'AC-mapping lens. For each acceptance criterion, decide met / not-met and name the concrete evidence (a real command transcript, a file:line, a test name). A green suite is NOT evidence on its own — it can sit over a defect on a path nobody tested, so for every criterion resting on tests you must establish and name the verification path (see the VERIFICATION-PATH RULE below). Never accept a fabricated or absent transcript; if evidence is missing, list the criterion under `unverifiable` rather than marking it met.',
@@ -288,6 +354,15 @@ NEW failing node id has told you everything. Conversely: a test that stopped bei
 at head ran NOWHERE, so it cannot evidence anything, and its absence LOWERS the failure count —
 if the measurement reports a collected-regression or a disappeared node id, treat it as a
 regression, never as an improvement.
+
+NON-LOCAL-FIX RULE — a required_fix must be something an implementer can discharge locally,
+pre-merge, with the tools they have right now. "Prove the GitHub Actions workflow runs green on
+GitHub's infrastructure", "verify once CI runs", "confirm after the merge" are NOT
+required_fixes — nobody can satisfy them before merging, and a fix cycle spent trying is a fix
+cycle burned on nothing. If the only way to settle something is post-merge CI or remote
+infrastructure, say so in \`unverifiable\` instead of writing it as a required_fix; the gate
+strips a matching required_fix mechanically and, if it was your only one, records the verdict as
+a gate-integrity failure rather than an actionable rejection.
 
 RED-TEST-AC RULE — never mark an acceptance criterion met on the strength of a test that is
 failing, xfailing, erroring, skipped, or was never run. List each criterion's real support in
@@ -440,8 +515,10 @@ function measurementBrief(measurement) {
 function reviewPrompt(args, lens, reviewerType, measurement) {
   const scope = args.scope || {}
   const isRepass = Boolean(args.failure_summary)
+  const canExecute = LENS_EXECUTION_CAPABILITY[lens] !== false
 
   return `${LENS_BRIEF[lens]}
+${canExecute ? '' : `\n${NON_EXECUTING_LENS_ADDENDUM}\n`}
 
 You are the **${lens}** lens on the mandatory reviewer gate for: ${scope.title || scope.id || 'the change under review'}
 Scope kind: ${scope.kind || 'change'}${scope.tier != null ? ` (tier ${scope.tier})` : ''}${scope.id ? `\nScope id: ${scope.id}` : ''}${args.plan_ref ? `\nPlan/contract ref: ${args.plan_ref}` : ''}${args.timestamp ? `\nGate timestamp: ${args.timestamp}` : ''}
@@ -520,6 +597,46 @@ function verificationGap(verdict) {
 }
 
 /**
+ * D4 (AC2, node_01M08FAYAGN5QYF77C1ZVA146B round 2). `approved:false` with every AC `met:true`,
+ * nothing `unverifiable`, no `required_fixes`, and no `self_reported_claims` names no defect at
+ * all — an orchestrator cannot run a fix cycle against a finding nobody made. Runs BEFORE
+ * `applyEvidenceRules`/`applyTestStatusRules` on the RAW lens verdict, because it is a shape
+ * check on what the lens itself emitted, not a consequence of downstream enforcement.
+ *
+ * Deliberately does NOT fire on the legitimate self-reported-side-effect downgrade
+ * (`applyEvidenceRules`'s `claims.length` branch): that downgrade only ever runs on a verdict
+ * that arrived `approved:true` (its own guard is `!verdict.approved` → return unchanged) and
+ * `self_reported_claims` non-empty, whereas this rule requires `approved:false` on the RAW
+ * verdict AND `self_reported_claims` empty — the two conditions cannot both hold for the same
+ * verdict, so the checks are structurally disjoint rather than ordered around each other.
+ */
+function applyIncoherenceRule(verdict) {
+  if (verdict.verdict_source !== 'reviewer') return verdict
+  if (verdict.approved !== false) return verdict
+
+  const acVerdicts = asList(verdict.ac_verdicts)
+  if (!acVerdicts.length) return verdict
+  if (!acVerdicts.every(ac => ac && ac.met === true)) return verdict
+  if (asList(verdict.unverifiable).length) return verdict
+  if (asList(verdict.required_fixes).length) return verdict
+  if (asList(verdict.self_reported_claims).length) return verdict
+
+  const reason = `INCOHERENT_VERDICT_SHAPE: the ${verdict.lens} lens (${verdict.reviewer_type}) returned approved:false with every one of ${acVerdicts.length} acceptance criterion(a) met:true, no unverifiable entries, no required_fixes, and no self_reported_claims — this shape names no actionable defect.`
+  log(`GATE INTEGRITY FAILURE on the ${verdict.lens} lens: ${reason}`)
+  return {
+    ...verdict,
+    approved: false,
+    verdict_source: 'gate_integrity_failure',
+    defect_class: 'incoherent-verdict-shape',
+    integrity_reason: reason,
+    summary: `Gate INTEGRITY FAILURE on the ${verdict.lens} lens (${verdict.reviewer_type}): ${reason}`,
+    required_fixes: [
+      `The ${verdict.lens} lens returned an unactionable verdict shape (INCOHERENT_VERDICT_SHAPE): rejected with every AC met, nothing unverifiable, and no required fixes named. Re-dispatch this lens for an actual finding, or record an explicit operator override. Do NOT run a fix cycle against a defect nobody named.`,
+    ],
+  }
+}
+
+/**
  * The two R3 rules, applied to a real verdict. Their outcomes differ deliberately:
  *
  *   - self-reported side effects ⇒ an ordinary REJECTION. The missing artifact is implementer
@@ -527,8 +644,18 @@ function verificationGap(verdict) {
  *   - an unverified approval ⇒ a GATE-INTEGRITY failure, mirroring execute-plan.js
  *     gateIntegrityResult(). The verdict exists but cannot be trusted, and what did not finish
  *     is the REVIEWER — a fix cycle would edit blind against a finding nobody made.
+ *
+ * D3 (AC1, node_01M08FAYAGN5QYF77C1ZVA146B). Exception to the second rule: a lens with no
+ * execution capability (LENS_EXECUTION_CAPABILITY) that honestly reports
+ * `verification_path.established:false` is not lying or slacking — it is reporting a limit of
+ * its own judgment. That is NOT a gate-integrity failure PROVIDED (a) some OTHER, EXECUTING
+ * lens in this SAME gate round actually established one of the four real path kinds
+ * (`gateContext.anyExecutingLensEstablishedPath`), and (b) this lens declared the criteria it
+ * could not settle itself in `unverifiable` rather than silently approving over them. Both
+ * conditions must hold — a non-executing lens's bare say-so is not enough on its own; the gate
+ * still needs a real path from SOMEWHERE, just not necessarily from this lens.
  */
-function applyEvidenceRules(verdict) {
+function applyEvidenceRules(verdict, gateContext = {}) {
   if (verdict.verdict_source !== 'reviewer' || !verdict.approved) return verdict
 
   const claims = asList(verdict.self_reported_claims)
@@ -548,6 +675,17 @@ function applyEvidenceRules(verdict) {
 
   const gap = verificationGap(verdict)
   if (!gap) return verdict
+
+  const canExecute = LENS_EXECUTION_CAPABILITY[verdict.lens] !== false
+  if (!canExecute) {
+    const vp = verdict.verification_path
+    const honestlyUnestablished = Boolean(vp) && vp.established === false
+    const declaredUnverifiable = asList(verdict.unverifiable).length > 0
+    if (honestlyUnestablished && declaredUnverifiable && gateContext.anyExecutingLensEstablishedPath) {
+      log(`Gate DELEGATION on the ${verdict.lens} lens: no execution capability, honestly declared verification_path.established:false, and named ${asList(verdict.unverifiable).length} unverifiable criterion(a) — the ${gateContext.establishingLens} lens already established a real verification path in this gate round. NOT a gate-integrity failure.`)
+      return { ...verdict, verification_path_delegated: gateContext.establishingLens }
+    }
+  }
 
   log(`GATE INTEGRITY FAILURE on the ${verdict.lens} lens (${verdict.reviewer_type}): ${gap}. Recording as a gate-integrity failure, NOT as an approval and NOT as a rejection. The caller must NOT run a fix cycle.`)
   return {
@@ -588,6 +726,13 @@ function reconcileStatus(claimed, measurement) {
   }
 }
 
+/** D2 (AC3): the "what would settle it" message for an AC deferred to `unverifiable` because
+ * this lens has no execution capability and every supporting test is `not-run`. */
+function unverifiableExecutionGapMessage(ac) {
+  const ids = asList(ac.supporting_tests).map(t => t.nodeid).filter(Boolean).join(', ')
+  return `Criterion "${ac.criterion}" cites ${ids || 'a test with no nodeid'} as not-run, but this lens has no execution capability (LENS_EXECUTION_CAPABILITY) and cannot run it itself. What would settle it: an executing lens (e.g. the validator lens) runs the cited test(s) and reports the real status, or the caller supplies validation_evidence covering them.`
+}
+
 /**
  * AC-3 + the AC-2 regression check, applied to a real verdict.
  *
@@ -600,6 +745,14 @@ function reconcileStatus(claimed, measurement) {
  *     ⇒ GATE-INTEGRITY failure. The verdict exists but cannot be trusted, and what did not
  *     finish is the REVIEWER (or the measurement), not the implementer — a fix cycle would
  *     edit blind against a finding nobody made. Mirrors applyEvidenceRules' R3 branch.
+ *   - D2 (AC3, node_01M08FAYAGN5QYF77C1ZVA146B round 3): an AC met:true whose supporting tests
+ *     are non-passing SOLELY because every one is `not-run`, on a lens with no execution
+ *     capability ⇒ deferred to `unverifiable`, `met` left as emitted, NO required_fix, NO
+ *     `ac-backed-by-red-test`. A lens that cannot run a test did not fail to demonstrate
+ *     anything — it reported the limit of its own judgment, and this rule is what stopped that
+ *     honest report from auto-flipping into a manufactured defect. NARROW: any ACTUAL failure
+ *     status (failed/xfailed/errored/skipped) among the supporting tests still rejects, on
+ *     EVERY lens including non-executing ones — only a pure not-run set is exempt.
  */
 function applyTestStatusRules(verdict, measurement) {
   if (verdict.verdict_source !== 'reviewer') return verdict
@@ -620,20 +773,43 @@ function applyTestStatusRules(verdict, measurement) {
     return { ...ac, supporting_tests: supporting }
   })
 
+  const canExecute = LENS_EXECUTION_CAPABILITY[verdict.lens] !== false
+
   // An AC claimed met whose support is entirely non-supporting. An AC with NO declared
   // supporting_tests is left alone here: that is R3/`unverifiable` territory, and inventing
   // a rejection from an empty list would fire on every gate whose scope has no tests at all.
-  const redBacked = acVerdicts.filter(ac => {
-    if (!ac.met) return false
+  // Split further (D2/AC3): a non-executing lens whose non-supporting set is PURELY not-run
+  // defers to unverifiable instead of rejecting; any actual failure status still rejects.
+  const redBacked = []
+  const executionGapDeferred = []
+  for (const ac of acVerdicts) {
+    if (!ac.met) continue
     const supporting = asList(ac.supporting_tests)
-    if (!supporting.length) return false
-    return supporting.every(t => NON_SUPPORTING_STATUSES.has(t.status))
-  })
+    if (!supporting.length) continue
+    if (!supporting.every(t => NON_SUPPORTING_STATUSES.has(t.status))) continue
+    const allNotRun = supporting.every(t => t.status === 'not-run')
+    if (!canExecute && allNotRun) {
+      executionGapDeferred.push(ac)
+    } else {
+      redBacked.push(ac)
+    }
+  }
 
   let adjusted = { ...verdict, ac_verdicts: acVerdicts }
   if (contradictions.length) {
     adjusted = { ...adjusted, measured_status_contradictions: contradictions }
     log(`Gate FINDING on the ${verdict.lens} lens: ${contradictions.length} claimed test status(es) contradicted by the measurement. The measurement wins.`)
+  }
+
+  if (executionGapDeferred.length) {
+    log(`Gate DEFERRAL on the ${verdict.lens} lens: ${executionGapDeferred.length} criterion(a) reported met on not-run-only tests, but this lens has no execution capability — deferring to unverifiable instead of rejecting; \`met\` is left as emitted.`)
+    adjusted = {
+      ...adjusted,
+      unverifiable: [
+        ...asList(adjusted.unverifiable),
+        ...executionGapDeferred.map(unverifiableExecutionGapMessage),
+      ],
+    }
   }
 
   if (redBacked.length) {
@@ -696,6 +872,73 @@ function gateIntegrityFrom(verdict, gap, fix) {
     integrity_reason: gap,
     summary: `Gate INTEGRITY FAILURE on the ${verdict.lens} lens (${verdict.reviewer_type}): ${gap}`,
     required_fixes: [...asList(verdict.required_fixes), fix],
+  }
+}
+
+// ─── D5 enforcement: a required_fix must be locally dischargeable pre-merge ───
+//
+// Grounding: node_01M08FAYAGN5QYF77C1ZVA146B round 3 — a required_fix demanded artifact
+// evidence "that the two GitHub Actions workflows actually run green on GitHub's
+// infrastructure", which is not establishable by ANY actor, locally, before merge.
+
+const NON_LOCAL_FIX_PATTERNS = [
+  /github\s+actions?/i,
+  /\bafter\s+(the\s+)?merge\b/i,
+  /\bonce\s+(the\s+)?(ci|pipeline|workflow)\s+run/i,
+  /\bwait(?:ing)?\s+for\s+(the\s+)?(ci|pipeline|build)\b/i,
+  /\bruns?\s+green\s+on\b/i,
+  /\bon\s+github\x27?s?\s+infrastructure\b/i,
+  /\bremote\s+infrastructure\b/i,
+]
+
+function matchesNonLocalFixPattern(fix) {
+  return typeof fix === 'string' && NON_LOCAL_FIX_PATTERNS.some(re => re.test(fix))
+}
+
+/**
+ * D5 (AC4). A required_fix demanding proof of something only observable post-merge on remote
+ * infrastructure cannot be discharged by an implementer working locally pre-merge. Matching
+ * entries are pulled out of `required_fixes` and recorded separately in
+ * `non_dischargeable_fixes`, which is surfaced on the returned envelope (script body) alongside
+ * the per-verdict field set here. If that was the verdict's ONLY blocking fix, the verdict
+ * becomes a gate-integrity failure — an ordinary rejection needs at least one actionable next
+ * step, and one left with none names no path forward, echoing what applyIncoherenceRule polices
+ * for the AC shape, applied here to the fix list instead.
+ *
+ * Applies to any not-approved verdict regardless of verdict_source: gate-authored required_fix
+ * text (gate_failure / gate_integrity_failure branches above) never matches these patterns, so
+ * this is a no-op on those verdicts in practice, not a special case to guard against.
+ */
+function applyNonLocalFixRule(verdict) {
+  if (verdict.approved) return verdict
+  const fixes = asList(verdict.required_fixes)
+  if (!fixes.length) return verdict
+
+  const nonLocal = fixes.filter(matchesNonLocalFixPattern)
+  if (!nonLocal.length) return verdict
+
+  const remaining = fixes.filter(fix => !matchesNonLocalFixPattern(fix))
+  log(`Gate FINDING on the ${verdict.lens} lens: ${nonLocal.length} required_fix(es) demand something undischargeable locally pre-merge — stripping from blocking_fixes: ${nonLocal.join(' | ')}`)
+
+  const updated = {
+    ...verdict,
+    required_fixes: remaining,
+    non_dischargeable_fixes: [...asList(verdict.non_dischargeable_fixes), ...nonLocal],
+  }
+
+  if (remaining.length) return updated
+
+  const reason = `every required_fix on the ${verdict.lens} lens demanded something undischargeable locally pre-merge: ${nonLocal.join(' | ')}`
+  log(`GATE INTEGRITY FAILURE on the ${verdict.lens} lens: ${reason}. An implementer cannot act on a fix that requires post-merge infrastructure.`)
+  return {
+    ...updated,
+    verdict_source: 'gate_integrity_failure',
+    defect_class: 'non-dischargeable-required-fix',
+    integrity_reason: reason,
+    summary: `Gate INTEGRITY FAILURE on the ${verdict.lens} lens (${verdict.reviewer_type}): every required_fix was undischargeable pre-merge.`,
+    required_fixes: [
+      `The ${verdict.lens} lens's only required_fix(es) demanded something undischargeable locally pre-merge (${nonLocal.join(' | ')}). Re-dispatch this lens for a locally-actionable finding, or record an explicit operator override. Do NOT run a fix cycle against an unsatisfiable demand.`,
+    ],
   }
 }
 
@@ -845,6 +1088,7 @@ if (!lenses.length) {
       regressions: [],
     },
     self_reported_claims: [],
+    non_dischargeable_fixes: [],
     blocking_fixes: [
       'Re-invoke reviewer-gate with an explicit `lenses` array (see gate-risk-classes.md §2 step 1/2).',
     ],
@@ -879,10 +1123,28 @@ const rawVerdicts = results.map((verdict, index) =>
   verdict || gateFailureVerdict(lenses[index], LENS_REVIEWER_MAP[lenses[index]] || null, 'workflow harness returned no result for this lens')
 )
 
-// R3 + AC-3: both enforcement passes run BEFORE anything reads `approved`, so no downstream
-// consumer can see an un-adjusted verdict. Order matters only for which reason gets reported
-// first on a verdict that violates both; either way the result is not an approval.
-const verdicts = rawVerdicts.map(applyEvidenceRules).map(v => applyTestStatusRules(v, measurement))
+// D3 (AC1): gate-wide context computed from the RAW verdicts, before any enforcement pass has
+// a chance to rewrite anyone's verdict — a non-executing lens's delegation eligibility depends
+// on whether some OTHER, EXECUTING lens in THIS gate round itself established a real path, not
+// on what enforcement did to any verdict afterward.
+const establishingLens = rawVerdicts.find(v =>
+  v.verdict_source === 'reviewer' && LENS_EXECUTION_CAPABILITY[v.lens] === true && !verificationGap(v)
+)
+const gateContext = {
+  anyExecutingLensEstablishedPath: Boolean(establishingLens),
+  establishingLens: establishingLens ? establishingLens.lens : null,
+}
+
+// D4 → R3/D3 → AC-3/D2 → D5, in that order, on the RAW lens verdict, so no downstream consumer
+// ever sees an un-adjusted verdict. applyIncoherenceRule runs first because it is a shape check
+// on what the lens itself emitted, independent of (and prior to) any enforcement rewrite;
+// applyNonLocalFixRule runs last because it operates on whatever required_fixes survive every
+// upstream pass, including fixes those passes themselves added.
+const verdicts = rawVerdicts
+  .map(applyIncoherenceRule)
+  .map(v => applyEvidenceRules(v, gateContext))
+  .map(v => applyTestStatusRules(v, measurement))
+  .map(applyNonLocalFixRule)
 
 const gateFailures = verdicts
   .filter(v => v.verdict_source === 'gate_failure')
@@ -951,6 +1213,11 @@ return {
   // Statuses a reviewer claimed that the measurement contradicted (risk R7).
   measured_status_contradictions: verdicts.flatMap(v => asList(v.measured_status_contradictions)),
   self_reported_claims: verdicts.flatMap(v => asList(v.self_reported_claims)),
+  // D5 (AC4): required_fixes stripped for demanding something undischargeable locally
+  // pre-merge (e.g. "GitHub Actions runs green on GitHub's infrastructure"). Surfaced
+  // separately from blocking_fixes so a caller can see the gate removed them, not that nobody
+  // wrote them.
+  non_dischargeable_fixes: verdicts.flatMap(v => asList(v.non_dischargeable_fixes)),
   defect_classes: defectClasses,
   blocking_fixes: blockingFixes,
   unverifiable: verdicts.flatMap(v => asList(v.unverifiable)),
