@@ -532,6 +532,13 @@ function contractArgs(parsed, plan) {
       files_affected: plan.files_affected || [],
       effort_points: plan.effort_points || 0,
     },
+    // This call site IS the nesting: auto-feature → execute-contract already spends the one
+    // permitted workflow() nesting level. Without this flag, a review_intensity:'council' sprint
+    // would try to call workflow('review-council', ...) itself — a SECOND level — which throws
+    // ("workflow() cannot be called from within a child workflow"). Setting nested:true tells
+    // execute-contract to run its bounded inline degraded council instead of attempting
+    // workflow() at all (see execute-contract.js runCouncil()), mirroring planExecArgs() below.
+    nested: true,
   }
 }
 
@@ -543,6 +550,17 @@ function planExecArgs(parsed, plan) {
     plan_ref: plan.plan_artifact_path,
     timestamp: parsed.timestamp,
     budget_total: nestedBudget(plan),
+    // This call site IS the nesting: auto-feature → execute-plan already spends the one
+    // permitted workflow() nesting level. Without this flag, execute-plan's own council-review
+    // phases (review_intensity/gate_lens → 'council-review') try to call
+    // workflow('review-council', ...) themselves — a SECOND level — which throws
+    // ("workflow() cannot be called from within a child workflow"). Because that call sits
+    // inside a parallel() phase thunk, the throw resolved the whole phase to null, so a
+    // council-gated phase's commits landed on the branch with NO reviewer gate while the wave
+    // reported a generic "dropped phase". Setting nested:true tells execute-plan to run its
+    // bounded inline degraded council instead of calling workflow() at all (see execute-plan.js
+    // runCouncil()). Measured 2026-08-14, run wf_f25afc77-0a3, node_01M00JWGCKSNRPZV7C6YCCA16F.
+    nested: true,
     ...placementArgs(parsed),
   }
 }

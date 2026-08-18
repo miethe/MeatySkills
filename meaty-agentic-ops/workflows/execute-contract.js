@@ -4,7 +4,10 @@
  * Spec: .claude/specs/workflows/execute-contract-workflow-spec.md
  * Master contract: .claude/specs/workflows/workflow-authoring-spec.md
  *
- * Patterns used: reviewerGate, fixLoop, modeBoundary (inline), two-stage structuring
+ * Patterns used: reviewerGate, fixLoop, modeBoundary (inline), two-stage structuring,
+ *   councilEscalation (dispatchReview()/runCouncil(), ported from execute-plan.js),
+ *   routingAudit (routeLog()/withRouting(), see "Routing audit accumulator" below),
+ *   modeDOutputScan (runModeDScanGuard(), see "Mode-D OUTPUT scan" below)
  * Schemas: execution-graph.schema.json (args), execution-report.schema.json (return)
  *
  * Durability design (see workflow-authoring-spec.md §16):
@@ -25,10 +28,32 @@
  *     Mode-D guard fires BEFORE Bob dispatch; on trigger → route to claude (on-primary).
  *     Bob fallback: timeout/binary-absent/structuring-error → log actual_provider_used:'claude',
  *     fallback_applied:true; dispatch same task to feature-sprint-executor immediately (no retry).
+ *   Routing decisions (bob dispatch / Mode-D reject / bob-failure fallback) are recorded via
+ *   routeLog() and ride out on the report as `routing_log` (§6) — drained post-run by
+ *   `log-cli.js --ingest`, never written from inside this script (constraint 1).
+ *   Every leg this file dispatches is scanned OUTPUT-side by runModeDScanGuard() after it
+ *   returns, keyed on the REALIZED provider — routing-time checks read a declaration; this is
+ *   the check for what the leg actually wrote (closes node_01KZS162D3TR3ZT113TKVDW1HB).
  *   MUST-stay (never offloaded under any flag):
  *   - Sprint executor: feature-sprint-executor (on-primary)
  *   - Fix agent (Mode-D or flag-off): feature-sprint-executor (on-primary; Mode-D boundary always active)
  *   - Mode-D boundary: fires before sprint spawns (constraint 2)
+ *   - Council-tier review (review_intensity:'council'): review-council sub-workflow, or its
+ *     bounded inline-degraded substitute when nested — routed through dispatchReview()/
+ *     runCouncil(), NEVER through a bare agent({agentType: reviewerType}) call, regardless of
+ *     provider_routing_enabled (fixed node_01M00NVT1S5WGY8T6W71TB676D — see reviewerAgentType()
+ *     and the "Council review funnel" block below).
+ *
+ * Nesting (args.nested — set by auto-feature.js's contractArgs() when execute-contract is
+ * dispatched via workflow('execute-contract', ...), which already spends the one permitted
+ * workflow() nesting level):
+ *   - nested:true  → a council-tier review runs the bounded INLINE DEGRADED council in-process;
+ *                    workflow('review-council', ...) is never attempted (would throw).
+ *   - nested unset/false → attempts workflow('review-council', ...) first; a defensive catch
+ *                    matching ONLY the nesting-cap error signature falls back to the same inline
+ *                    path (belt-and-braces for a caller that forgot the flag).
+ *   This file DOES now contain a workflow() call site (runCouncil(), below) — see the "Council
+ *   review funnel" block comment for the full two-guard rationale.
  *
  * Phase 1 Tier A nesting pilot (subtask_sharding_enabled, DEFAULT FALSE):
  *   When true, the on-primary sprint executor MAY shard bounded mechanical sub-tasks
@@ -117,7 +142,6 @@ const routeLog = entry => {
   return entry
 }
 const withRouting = result => ({ ...result, routing_log: __routingLog })
-
 
 // ─── inline schemas ───────────────────────────────────────────────────────────
 
@@ -292,11 +316,103 @@ const VERDICT_SCHEMA = {
  * Route reviewer agentType from review_intensity + tier.
  * Mirrors authoring-spec §8 and councilEscalation pattern.
  * Always returns an edit-less agentType (constraint 3).
+ *
+ * Returns 'council-review' when review_intensity is 'council'. 'council-review' is a SKILL,
+ * not a registered agent — it must NEVER be passed to agent({agentType}) directly. Every call
+ * site that resolves a reviewer type MUST route through dispatchReview() (below), which is the
+ * single funnel that intercepts 'council-review' before it can reach an agentType position and
+ * sends it to runCouncil() instead. KNOWN_AGENT_TYPES deliberately excludes 'council-review' so
+ * assertKnownAgentType() fails loudly if any future call site bypasses the funnel.
+ *
+ * HISTORY (node_01M00NVT1S5WGY8T6W71TB676D): this function previously carried a "NESTING
+ * SAFETY" comment claiming the file was safe because it had no workflow() call sites and
+ * therefore "never attempts to nest" — true, but irrelevant to the actual defect. The bare
+ * `agentType: reviewerType` dispatch at the flag-off review site (and again at the fix-cycle
+ * re-review site) resolved 'council-review' to nothing: agent() returns null for an
+ * unresolvable agentType, so a Tier-1 contract asking for a council silently got a null verdict
+ * — gate_failure, never council, never a loud error. Fixed by porting execute-plan.js's
+ * inline-degraded-council / dispatchReview funnel (see runCouncil() below) and by adding
+ * assertKnownAgentType() as a fail-loud guard at every dynamic agentType dispatch site.
  */
 function reviewerAgentType(reviewIntensity, tier) {
   if (reviewIntensity === 'council') return 'council-review'
   if (reviewIntensity === 'tier3' || tier === 3) return 'karen'
   return 'task-completion-validator'
+}
+
+// ─── KNOWN_AGENT_TYPES allowlist ───────────────────────────────────────────────
+// Used ONLY as a fail-loud validation gate immediately before a dynamically resolved agentType
+// (reviewerType, fixAgentType) reaches agent() — never as a dispatch table.
+//
+// SYNC OWNER: this block is a hand-maintained MIRROR of the generated region in
+// .claude/workflows/execute-plan.js (the one delimited by `// >>> AOS-GENERATED
+// KNOWN_AGENT_TYPES`, produced by agentic_meta_dev/scripts/gen_workflow_roster.py from this
+// deployment root's own .claude/agents/ plus ~/.claude/agents/). When that region changes, this
+// one must be updated to match, minus 'council-review' (see below).
+//
+// It is NOT itself wrapped in the AOS-GENERATED sentinels, and that omission is deliberate:
+//   1. gen_workflow_roster.py hardcodes `target = root/.claude/workflows/execute-plan.js`, so it
+//      cannot regenerate or --check a region in THIS file. Sentinels would name a generator that
+//      never runs here.
+//   2. check_global_artifact_drift.py ELIDES every sentinel-delimited region from the
+//      deployed-vs-upstream diff (`_strip_generated_regions`) and only re-verifies regions
+//      declared under `generated_regions:` in scripts/global-artifact-manifest.yaml. This file's
+//      manifest entry declares KNOWN_AGENT_TYPES under `ignore_blocks:`, not
+//      `generated_regions:` — so adding the sentinels here would REMOVE this block from the
+//      drift diff while adding no generator verification in exchange. That is a net loss of
+//      coverage, and it is the precise "an elided region is not a reconciled one" failure the
+//      manifest's own execute-plan commentary was written about.
+// Closing this properly is a cross-repo change (teach gen_workflow_roster.py a second target,
+// then move this file's manifest entry from `ignore_blocks:` to `generated_regions:`); until
+// that lands, the honest state is a hand-mirrored block that says so.
+//
+// The previous comment here claimed this set "Mirrors execute-plan.js's KNOWN_AGENT_TYPES". That
+// was false when written: 15 entries against execute-plan's 36, missing 'ica-executor' and
+// 'gemini-executor' — both of which have agent definitions in THIS repo's .claude/agents/ — so a
+// legitimate `args.fix_agent: 'ica-executor'` was rejected by a gate whose comment promised
+// parity (node_01M00NVT1S5WGY8T6W71TB676D, GATE-01). Brought to parity below.
+//
+// 'council-review' is deliberately EXCLUDED: it is a skill, not an agent, in every deployment.
+// Its presence in a set like this was the mechanism of the exact defect this file just fixed —
+// a reviewer type resolved to 'council-review' and was handed straight to agent() as an
+// agentType, so the dispatch resolved nothing while looking like an ordinary reviewer call.
+// Keeping it out of this set is what makes assertKnownAgentType() catch a regression instead of
+// rubber-stamping it. Never re-add it.
+// Parity target: execute-plan.js's AOS-GENERATED region, verbatim minus 'council-review'.
+// Ordering/grouping intentionally matches that region so a future diff of the two is readable.
+const KNOWN_AGENT_TYPES = new Set([
+  'python-backend-engineer', 'ui-engineer-enhanced', 'ui-engineer', 'frontend-developer',
+  'frontend-architect', 'backend-architect', 'backend-typescript-architect',
+  'nextjs-architecture-expert', 'data-layer-expert', 'refactoring-expert', 'openapi-expert',
+  'ai-engineer', 'documentation-complex', 'documentation-writer', 'documentation-expert',
+  'api-documenter', 'changelog-generator', 'feature-sprint-executor', 'phase-owner',
+  'codebase-explorer', 'search-specialist', 'symbols-engineer', 'artifact-tracker',
+  'task-completion-validator', 'karen', 'code-reviewer',
+  'senior-code-reviewer', 'api-librarian', 'telemetry-auditor', 'prd-writer',
+  'feature-planner', 'general-purpose',
+  // Provider-routing executors (registered agent definitions — see
+  // .claude/specs/provider-routing-spec.md). 'ica-executor' and 'gemini-executor' have agent
+  // definitions in this repo's own .claude/agents/ and were missing from this set entirely, so
+  // a valid provider-routed fix_agent override was rejected as a phantom.
+  'ica-executor', 'codex-executor', 'gemini-executor', 'bob-delegate-executor',
+])
+
+/**
+ * Fail-loud guard for a dynamically resolved agentType, called immediately before it reaches
+ * agent(). Throws (rather than dispatching) when the agentType is not in KNOWN_AGENT_TYPES —
+ * most importantly when it is 'council-review', which must be routed through dispatchReview()/
+ * runCouncil() instead. A phantom or misrouted agentType dispatched anyway resolves to nothing
+ * and produces a null verdict several steps downstream (§8b gate_failure) instead of a loud,
+ * immediately-attributable failure at the point of the mistake.
+ */
+function assertKnownAgentType(agentType, context) {
+  if (!KNOWN_AGENT_TYPES.has(agentType)) {
+    throw new Error(
+      `${context}: agentType '${agentType}' is not in KNOWN_AGENT_TYPES. ` +
+      `'council-review' is a skill, not an agent — route it through dispatchReview()/runCouncil(), ` +
+      `never through a direct agent({agentType}) call. Refusing to dispatch.`
+    )
+  }
 }
 
 /**
@@ -1383,6 +1499,392 @@ scan_status to "hook_unavailable" and gated to false.`,
   return scan
 }
 
+// ─── Council review funnel (ported from execute-plan.js, node_01M00NVT1S5WGY8T6W71TB676D) ────
+//
+// 'council-review' is a SKILL, not a registered agent. Every call site in this file that needs
+// a council-tier review MUST go through dispatchReview() below — it is the single funnel that
+// intercepts 'council-review' before it can ever occupy an agentType position and reroutes it
+// to runCouncil() instead of agent({agentType: 'council-review'}).
+//
+// runCouncil() mirrors execute-plan.js's runCouncil(): auto-feature.js's contractArgs() sets
+// nested:true because that dispatch site (workflow('execute-contract', ...)) already spends the
+// one permitted workflow() nesting level, so a nested execute-contract run must never attempt a
+// second workflow('review-council', ...) call — it would throw ("workflow() cannot be called
+// from within a child workflow -- nesting is limited to one level.") and, because this call can
+// sit inside code the caller may itself run inside a fix-loop, an unguarded throw here would
+// discard the sprint's already-committed work under a generic dropped-phase failure. Two
+// independent degrade signals, both honored:
+//   (a) explicit caller signal — parsed.nested === true means THIS execute-contract run is
+//       itself a child workflow; take the inline path unconditionally, never attempt workflow().
+//   (b) defensive catch — belt-and-braces for a caller that forgot the flag. Matches ONLY the
+//       nesting-cap error signature; anything else re-throws, because a blanket catch here would
+//       convert a genuine review-council failure into a quiet degrade — the same class of bug
+//       this whole fix exists to close.
+//
+// inlineDegradedCouncil() is the bounded in-process substitute for the review-council
+// SUB-WORKFLOW when it cannot be nested. Reuses review-council's own reviewer routing
+// (correctness → task-completion-validator, security → senior-code-reviewer, adjudication →
+// karen, final verdict → task-completion-validator) and this file's own VERDICT_SCHEMA — the
+// parts a degraded gate must never drop. Omits review-council's evidence-scribe stage and
+// six-file decision-record writer (both need a run directory this inline path does not have).
+// `council_mode: 'inline_degraded'` travels through assessCouncilVerdict's `{...raw}` spread
+// into the verdict and out on the phase result, so a degraded pass is never indistinguishable
+// from a full ARC run.
+
+const CONDITIONAL_RECOMMENDATIONS = new Set([
+  'proceed_with_conditions',
+  'approve_with_conditions',
+  'conditional',
+  'conditional_approval',
+])
+
+const INLINE_COUNCIL_LENSES = [
+  { lens: 'correctness', agentType: 'task-completion-validator' },
+  { lens: 'security', agentType: 'senior-code-reviewer' },
+  { lens: 'reality-check', agentType: 'karen' },
+]
+
+const INLINE_FINDING_SCHEMA = {
+  type: 'object',
+  required: ['id', 'title', 'severity', 'confidence', 'recommendation'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string' },
+    title: { type: 'string' },
+    claim: { type: 'string' },
+    severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'] },
+    confidence: { type: 'string', enum: ['confirmed', 'probable', 'speculative'] },
+    evidence: { type: 'string' },
+    recommendation: { type: 'string' },
+  },
+}
+
+const INLINE_REVIEWER_SCHEMA = {
+  type: 'object',
+  required: ['lens', 'reviewer_type', 'findings'],
+  additionalProperties: false,
+  properties: {
+    lens: { type: 'string' },
+    reviewer_type: { type: 'string' },
+    findings: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    summary: { type: 'string' },
+  },
+}
+
+const INLINE_ADJUDICATION_SCHEMA = {
+  type: 'object',
+  required: ['accepted', 'rejected'],
+  additionalProperties: false,
+  properties: {
+    accepted: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    rejected: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    disputed: { type: 'array', items: INLINE_FINDING_SCHEMA },
+    watchlist: { type: 'array', items: INLINE_FINDING_SCHEMA },
+  },
+}
+
+function inlineLensPrompt(lens, agentType, contractPath, sprintResult) {
+  const acLine = `AC verdicts claimed: ${(sprintResult.ac_verdicts || []).filter(v => v.met).length}/${(sprintResult.ac_verdicts || []).length} met.`
+  const commitLine = sprintResult.commit_sha ? ` commit:${sprintResult.commit_sha}` : ' commit:NONE REPORTED'
+
+  return `Mode: E — Reviewer
+
+DEGRADED COUNCIL NOTICE: the full review-council sub-workflow cannot run here — this
+execute-contract run is itself a child workflow, so the one-level workflow() nesting cap is
+already spent. You are standing in for one lens of that council. There is no separate
+evidence-collection stage or run-directory artifact writer in this path, so read the contract
+and the diff yourself.
+
+Your lens: **${lens}**.
+
+Contract: ${contractPath || '(none supplied)'}
+
+Sprint agent's self-reported claim (NOT evidence — verify against the diff):
+- SPRINT (feature-sprint-executor): ${acLine}${commitLine}
+  Completion report: ${sprintResult.completion_report_path || '(none reported)'}
+
+Independently review the diff against the contract's acceptance criteria from your lens's
+perspective. For each finding: a stable id (e.g. SEC-01), title, claim, severity, confidence,
+concrete evidence (file:line or command output), and a recommendation.
+
+${EVIDENCE_RULES}
+
+Return { lens: "${lens}", reviewer_type: "${agentType}", findings: [...], summary: "..." }.
+Do NOT write any files. Do NOT git add/commit/push/stash.`
+}
+
+function inlineAdjudicationPrompt(reviewerOutputs) {
+  const outputSummaries = reviewerOutputs
+    .map((r, i) => `Reviewer ${i + 1} (${r.reviewer_type}, lens: ${r.lens}): ${(r.findings ?? []).length} findings. ${r.summary || ''}`)
+    .join('\n')
+  const allFindings = reviewerOutputs.flatMap(r => r.findings ?? [])
+
+  return `Mode: E — Reviewer
+
+You are the adjudicator for a degraded, in-process Agent Review Council (see DEGRADED COUNCIL
+NOTICE above — the full sub-workflow could not be nested). Synthesise and dedupe the
+${allFindings.length} finding(s) below across ${reviewerOutputs.length} independent reviewers
+into accepted / rejected / disputed / watchlist. Be adversarial — most findings should not
+survive unchanged.
+
+Reviewer summary:
+${outputSummaries || '(no reviewers returned valid findings)'}
+
+All findings:
+${JSON.stringify(allFindings).slice(0, 4000)}
+
+Return { accepted: [...], rejected: [...], disputed: [...], watchlist: [...] }.
+Do NOT write any files. Do NOT git add/commit/push/stash.`
+}
+
+function inlineFinalVerdictPrompt(contractPath, adjudicated) {
+  const blocking = (adjudicated.accepted ?? []).filter(f => f.severity === 'critical' || f.severity === 'high')
+  return `Mode: E — Reviewer
+
+You are the final-verdict reviewer for a degraded, in-process Agent Review Council on the Tier 1
+sprint for contract ${contractPath || '(none supplied)'} (see DEGRADED COUNCIL NOTICE above —
+the full review-council sub-workflow could not be nested here).
+
+Adjudicated findings:
+  Accepted:  ${(adjudicated.accepted ?? []).length}
+  Rejected:  ${(adjudicated.rejected ?? []).length}
+  Disputed:  ${(adjudicated.disputed ?? []).length}
+  Watchlist: ${(adjudicated.watchlist ?? []).length}
+  Blocking (severity >= high, accepted): ${blocking.length}
+
+${JSON.stringify(adjudicated).slice(0, 4000)}
+
+Set approved:true only if blocking_count is 0 and you independently confirm no blocking finding
+was missed. required_fixes must list every blocking finding's recommendation.
+
+Return a verdict conforming to the VERDICT_SCHEMA (approved, reviewer_type:
+"task-completion-validator", verification_path, required_fixes, evidence, self_reported_claims).
+Do NOT git add/commit/push/stash.`
+}
+
+async function inlineDegradedCouncil(parsed, sprintResult) {
+  log(`Sprint review: running the INLINE DEGRADED COUNCIL (council_mode:'inline_degraded') — ${INLINE_COUNCIL_LENSES.length} lens reviewers + karen adjudication + task-completion-validator final verdict. No evidence-scribe stage and no run-directory artifact writer (review-council cannot be nested — execute-contract is itself a child workflow).`)
+
+  const reviewerOutputs = await parallel(
+    INLINE_COUNCIL_LENSES.map(({ lens, agentType }) => async () =>
+      agent(inlineLensPrompt(lens, agentType, parsed.contract_path, sprintResult), {
+        label: `inline-council:sprint:${lens}`,
+        phase: 'Review',
+        agentType,
+        schema: INLINE_REVIEWER_SCHEMA,
+      })
+    )
+  )
+  const validOutputs = reviewerOutputs.filter(Boolean)
+
+  if (validOutputs.length === 0) {
+    log('Sprint review: inline degraded council — all lens reviewers failed or returned nothing.')
+    return { status: 'needs_opus', reason: 'inline_council_reviewers_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const adjudicated = await agent(inlineAdjudicationPrompt(validOutputs), {
+    label: 'inline-council:sprint:adjudicate',
+    phase: 'Review',
+    agentType: 'karen',
+    schema: INLINE_ADJUDICATION_SCHEMA,
+  })
+
+  if (!adjudicated) {
+    log('Sprint review: inline degraded council — adjudication (karen) returned nothing.')
+    return { status: 'needs_opus', reason: 'inline_council_adjudication_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const finalVerdict = await agent(inlineFinalVerdictPrompt(parsed.contract_path, adjudicated), {
+    label: 'inline-council:sprint:final-verdict',
+    phase: 'Review',
+    agentType: 'task-completion-validator',
+    schema: VERDICT_SCHEMA,
+  })
+
+  if (!finalVerdict) {
+    log('Sprint review: inline degraded council — final-verdict reviewer returned nothing.')
+    return { status: 'needs_opus', reason: 'inline_council_final_verdict_failed', council_mode: 'inline_degraded', report: [] }
+  }
+
+  const blockingCount = (adjudicated.accepted ?? []).filter(f => f.severity === 'critical' || f.severity === 'high').length
+  const approved = finalVerdict.approved === true && blockingCount === 0
+
+  return {
+    ...finalVerdict,
+    approved,
+    reviewer_type: 'council-review',
+    council_mode: 'inline_degraded',
+    status: 'complete',
+    recommendation: approved ? 'approve' : 'reject',
+    summary: {
+      total_findings: validOutputs.reduce((n, r) => n + (r.findings?.length ?? 0), 0),
+      accepted: (adjudicated.accepted ?? []).length,
+      rejected: (adjudicated.rejected ?? []).length,
+      disputed: (adjudicated.disputed ?? []).length,
+      watchlist: (adjudicated.watchlist ?? []).length,
+      blocking_count: blockingCount,
+    },
+    council_artifacts: { run_dir: 'inline_degraded_council (no run directory)' },
+  }
+}
+
+/**
+ * Council verdict assessment (authoring-spec §8b, one level up) — ported verbatim from
+ * execute-plan.js's assessCouncilVerdict(). A council payload that exists but is conditional,
+ * partial, or self-reportedly under-evidenced is NOT a pass, and — unlike a rejection — it is
+ * not something a fix cycle can act on: there is no finding to fix, only a re-dispatch.
+ */
+function assessCouncilVerdict(raw, phaseId) {
+  // workflow() returns null if the user skips it.
+  if (!raw) {
+    return {
+      verdict: {
+        approved: false,
+        reviewer_type: 'council-review',
+        required_fixes: ['Council workflow was skipped — manual review required.'],
+      },
+      integrity_failure: null,
+    }
+  }
+
+  // A COMPLETED council whose gate rejected is NOT a non-completion. review-council.js sets
+  // `status:'needs_opus'` + `reason:'council_not_approved'` on exactly that case: the council ran,
+  // adjudicated, wrote its artifacts, and the gate said no. That is an ordinary rejection carrying
+  // real `required_fixes`, so it must fall through to the normal assessment path and let the fix
+  // loop run. `integrity_failure` is reserved for genuine non-completion (status 'blocked', or
+  // 'needs_opus' with no reason or a different reason), which no fix cycle can act on.
+  const councilCompletedButRejected = raw.status === 'needs_opus' && raw.reason === 'council_not_approved'
+
+  // The council bailed before writing its decision record. It carries a fallback_verdict, but
+  // a bare spread would produce an object with no `approved` key at all — falsy by accident.
+  if (!councilCompletedButRejected && (raw.status === 'needs_opus' || raw.status === 'blocked')) {
+    return {
+      verdict: {
+        ...(raw.fallback_verdict ?? {}),
+        approved: false,
+        reviewer_type: 'council-review',
+        council_status: raw.status,
+        council_reason: raw.reason ?? null,
+      },
+      integrity_failure: `the review-council sub-workflow did not complete (status '${raw.status}'${raw.reason ? `, reason '${raw.reason}'` : ''})`,
+    }
+  }
+
+  const summary = raw.summary ?? {}
+  const verdict = {
+    ...raw,
+    reviewer_type: 'council-review',
+    council_recommendation: raw.recommendation ?? null,
+    council_overall: raw.overall ?? null,
+    council_by_lens: raw.by_lens ?? null,
+    // A completed-but-rejected council is a plain rejection: pin `approved` false regardless of
+    // what the spread carried, and keep the council's own status/reason visible for the report.
+    ...(councilCompletedButRejected
+      ? { approved: false, council_status: raw.status, council_reason: raw.reason }
+      : {}),
+  }
+
+  const integrityReasons = []
+
+  const claimed = summary.total_findings_claimed
+  const delivered = summary.total_findings
+  const notReceived = summary.findings_not_received
+  if (typeof notReceived === 'number' && notReceived > 0) {
+    integrityReasons.push(`${notReceived} adjudicated finding(s) never reached the artifact writer (findings_not_received=${notReceived})`)
+  } else if (typeof claimed === 'number' && typeof delivered === 'number' && claimed > delivered) {
+    integrityReasons.push(`the council claimed ${claimed} findings but only ${delivered} were delivered — ${claimed - delivered} lost at the adjudication/artifact seam`)
+  }
+  if (summary.arc_validate_passed === false) {
+    integrityReasons.push('the council\'s own `arc validate` did not pass (arc_validate_passed=false)')
+  }
+
+  if (integrityReasons.length > 0) {
+    return {
+      verdict: { ...verdict, approved: false, verdict_source: 'gate_integrity_failure' },
+      integrity_failure: integrityReasons.join('; '),
+    }
+  }
+
+  const rec = typeof raw.recommendation === 'string' ? raw.recommendation.toLowerCase() : null
+  if (rec && CONDITIONAL_RECOMMENDATIONS.has(rec) && verdict.approved) {
+    const conditions = (raw.required_fixes ?? []).length > 0
+      ? raw.required_fixes
+      : [`The council returned '${raw.recommendation}' for ${phaseId} but supplied no explicit conditions in required_fixes. Read the council artifacts (${raw.council_artifacts?.scorecard_json ?? raw.council_artifacts?.run_dir ?? 'run_dir'}) and resolve the conditions before treating this as approved.`]
+    return {
+      verdict: {
+        ...verdict,
+        approved: false,
+        verdict_source: 'conditional_approval',
+        required_fixes: conditions,
+      },
+      integrity_failure: null,
+    }
+  }
+
+  return { verdict, integrity_failure: null }
+}
+
+/**
+ * Invoke the review-council sub-workflow for the sprint. Ported from execute-plan.js's
+ * runCouncil() — see the "Council review funnel" block comment above for the two degrade
+ * signals this honors.
+ */
+async function runCouncil(parsed, sprintResult) {
+  if (parsed?.nested) {
+    log('Sprint review: parsed.nested=true — this execute-contract run is itself a child workflow, so review-council cannot be nested (one level only). Running the inline degraded council instead.')
+    return inlineDegradedCouncil(parsed, sprintResult)
+  }
+
+  try {
+    return await workflow('review-council', {
+      target: { type: 'contract-sprint', ref: 'sprint', description: parsed.contract_path || 'Tier 1 sprint' },
+      task_summaries: JSON.stringify([{
+        id: 'SPRINT',
+        assigned_to: 'feature-sprint-executor',
+        status: 'completed',
+        commit_sha: sprintResult.commit_sha,
+        summary: `AC verdicts: ${(sprintResult.ac_verdicts || []).filter(v => v.met).length}/${(sprintResult.ac_verdicts || []).length} met. Completion report: ${sprintResult.completion_report_path}`,
+      }]),
+      plan_ref: parsed.contract_path,
+      phase_id: 'sprint',
+      timestamp: parsed.timestamp,
+      intensity: 'standard',
+    })
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err)
+    if (/nesting is limited to one level|cannot be called from within a child workflow/i.test(msg)) {
+      log(`Sprint review: workflow('review-council', ...) rejected as nested (${msg}). parsed.nested was not set on this run though execute-contract is evidently itself a child workflow — degrading to the inline council. The caller should set nested:true so this defensive catch is not the only signal.`)
+      return inlineDegradedCouncil(parsed, sprintResult)
+    }
+    throw err
+  }
+}
+
+/**
+ * Single review dispatch point. Routing MUST go through here so that 'council-review' — a
+ * SKILL, deliberately absent from KNOWN_AGENT_TYPES — can never land in an agentType position.
+ * Returns { verdict, integrity_failure }. Ported from execute-plan.js's dispatchReview().
+ *
+ * The P3 codex two-stage AC-validation offload path is intentionally NOT reachable from here:
+ * council review is MUST-STAY (never offloaded, per the file header's routing table), so the
+ * council branch below always runs regardless of provider_routing_enabled. Callers on the
+ * non-council path that want the codex offload keep dispatching it themselves before falling
+ * back to this funnel — see the flag-off `else` branch at the initial review site.
+ */
+async function dispatchReview(parsed, reviewerType, sprintResult, measurement, label) {
+  if (reviewerType === 'council-review') {
+    return assessCouncilVerdict(await runCouncil(parsed, sprintResult), 'sprint')
+  }
+  assertKnownAgentType(reviewerType, 'dispatchReview')
+  const verdict = await agent(reviewPrompt(parsed, sprintResult, measurement), {
+    label: label || 'review',
+    phase: 'Review',
+    agentType: reviewerType,
+    schema: VERDICT_SCHEMA,
+  })
+  return enforceEvidenceRules(verdict, 'sprint', reviewerType, measurement)
+}
+
 // ─── workflow body ────────────────────────────────────────────────────────────
 
 // ─── P3: Two-stage AC validation helpers (codex-executor) ─────────────────────
@@ -1545,6 +2047,67 @@ if (modeD) {
     reason: 'mode_d',
     blocked_phase: 'sprint',
     report: [],
+  })
+}
+
+// ── Reviewer-type pre-flight (before any agents spawn) ───────────────────────
+// The gate config is validated HERE, not at the review dispatch point ~250 lines below,
+// because by then Stage A has already committed real work to the run branch: a phantom
+// reviewer type discovered at that point costs an entire sprint and still cannot be
+// reviewed. assertKnownAgentType() at each dispatch site remains as the regression
+// backstop; this is the cheap check that makes an undispatchable gate config a
+// pre-flight error instead of a post-sprint one (node_01M00NVT1S5WGY8T6W71TB676D,
+// fix direction 2: "an unknown agentType is a validation error before any agent is
+// spawned, not a null verdict after").
+//
+// 'council-review' is EXEMPT here and only here: it is the one value that legitimately
+// resolves to a non-agent, because dispatchReview() intercepts it and routes it to
+// runCouncil(). Exempting it is not a hole — assertKnownAgentType() still rejects it at
+// every dispatch site, so a future call site that bypasses the funnel fails loudly.
+const preflightReviewerType = reviewerAgentType(
+  parsed.review_intensity || 'standard',
+  parsed.tier || 1
+)
+if (preflightReviewerType !== 'council-review' && !KNOWN_AGENT_TYPES.has(preflightReviewerType)) {
+  log(`HALTING — unknown_reviewer_agent_type: '${preflightReviewerType}'. No agents were spawned.`)
+  return withRouting({
+    status: 'blocked',
+    reason: 'unknown_reviewer_agent_type',
+    report: [],
+    blockers: [{
+      description: `review_intensity '${parsed.review_intensity || 'standard'}' (tier ${parsed.tier || 1}) resolved to reviewer agentType '${preflightReviewerType}', which is not in KNOWN_AGENT_TYPES. Dispatching it would resolve to nothing and return a null verdict, so the sprint would have run and committed with no trustworthy reviewer gate. Halted before the sprint instead.`,
+      resolution_hint: `Set review_intensity to one of: 'standard' (task-completion-validator), 'tier3' (karen), 'council' (routed through runCouncil()). If '${preflightReviewerType}' is a real agent, add it to KNOWN_AGENT_TYPES — but do NOT add 'council-review': it is a skill, and the funnel exists to keep it out of agentType positions.`,
+    }],
+  })
+}
+
+// ── fix_agent pre-flight (same reasoning, same place: before any agents spawn) ─
+// args.fix_agent is a caller-supplied agentType override for the fix-loop. It was previously
+// validated ONLY by assertKnownAgentType() at the fix-cycle dispatch site, which is ~380 lines
+// and one entire sprint later: a typo'd or phantom fix_agent threw AFTER Stage A had already
+// spawned, burned the sprint budget and committed real work to the run branch — and it threw
+// rather than returning a structured result, so the caller got an exception instead of a
+// blocker it could act on. That is the same asymmetry the reviewer pre-flight above exists to
+// remove (node_01M00NVT1S5WGY8T6W71TB676D, GATE-01): a config value that CANNOT be dispatched
+// is a validation error before any agent is spawned, not a post-sprint throw.
+//
+// No 'council-review' exemption here, unlike the reviewer pre-flight: there is no council funnel
+// on the fix path — a fix agent must be a real, write-capable agent, and 'council-review' in this
+// position is unambiguously wrong (it is a skill, and an edit-less one at that).
+//
+// assertKnownAgentType(fixAgentType, 'fix-cycle') at the dispatch site is deliberately KEPT as
+// the regression backstop for a future call path that reaches the fix loop without passing here.
+const preflightFixAgentType = parsed.fix_agent || 'feature-sprint-executor'
+if (!KNOWN_AGENT_TYPES.has(preflightFixAgentType)) {
+  log(`HALTING — unknown_fix_agent_type: '${preflightFixAgentType}'. No agents were spawned.`)
+  return withRouting({
+    status: 'blocked',
+    reason: 'unknown_fix_agent_type',
+    report: [],
+    blockers: [{
+      description: `args.fix_agent resolved to agentType '${preflightFixAgentType}', which is not in KNOWN_AGENT_TYPES. Dispatching it would resolve to nothing, so the fix loop would silently no-op after the sprint had already run, committed, and been rejected by the reviewer. Halted before the sprint instead.`,
+      resolution_hint: `Omit args.fix_agent to use the default 'feature-sprint-executor', or set it to a registered write-capable agent (e.g. 'python-backend-engineer', 'ui-engineer-enhanced', 'refactoring-expert'). If '${preflightFixAgentType}' is a real agent in this deployment, add it to KNOWN_AGENT_TYPES — but never 'council-review' (a skill, and edit-less) and never a reviewer agentType (edit-less by definition, so it cannot apply a fix).`,
+    }],
   })
 }
 
@@ -1816,8 +2379,21 @@ const reviewerType = reviewerAgentType(
 const provider_routing_enabled = parsed.provider_routing_enabled === true
 
 let verdict
+let integrityFailure = null
 
-if (provider_routing_enabled) {
+if (reviewerType === 'council-review') {
+  // Council review is MUST-STAY (never offloaded, per the file header's routing table) AND
+  // must never be dispatched as a bare agentType — route through the single funnel regardless
+  // of provider_routing_enabled. dispatchReview() intercepts 'council-review' before it can
+  // reach agent({agentType}) and sends it to runCouncil() instead (see the "Council review
+  // funnel" block above; node_01M00NVT1S5WGY8T6W71TB676D).
+  const councilResult = await dispatchReview(parsed, reviewerType, sprintResult, measurement)
+  verdict = councilResult.verdict
+  integrityFailure = councilResult.integrity_failure
+  if (integrityFailure) {
+    log(`GATE INTEGRITY FAILURE: ${integrityFailure}. The sprint is UNREVIEWED, not rejected — re-dispatch council-review (or invoke the reviewer-gate workflow on this scope) requiring a named verification path and a clean measured delta. The fix loop is deliberately skipped.`)
+  }
+} else if (provider_routing_enabled) {
   // P3 two-stage AC validation: codex-executor Stage A + haiku Stage B.
   const acArtifactPath = acValidationArtifactPath(parsed.contract_path, parsed.timestamp)
   log(`P3 two-stage AC validation: Stage A codex → artifact at ${acArtifactPath}`)
@@ -1887,6 +2463,10 @@ if (provider_routing_enabled) {
   }
 } else {
   // Flag off: existing on-primary reviewer with inline VERDICT_SCHEMA (unchanged).
+  // assertKnownAgentType is a fail-loud guard: reviewerType cannot be 'council-review' here
+  // (that branch already returned above), so this only ever catches a genuinely phantom or
+  // misrouted type — never a routine dispatch.
+  assertKnownAgentType(reviewerType, 'review (flag-off)')
   verdict = await agent(reviewPrompt(parsed, sprintResult, measurement), {
     label: 'review',
     phase: 'Review',
@@ -1903,8 +2483,10 @@ if (provider_routing_enabled) {
 //   - a still-approving verdict over a missing/failed/regression-carrying measurement →
 //     gate-INTEGRITY failure. No fix cycle in the two integrity cases — nothing has been
 //     found yet, so a cycle would edit blind.
-let integrityFailure = null
-{
+// Skipped for the council branch above: assessCouncilVerdict() already applies its own
+// integrity checks with different semantics (no ac_verdicts/verification_path shape to
+// reconcile), and dispatchReview()'s council path never falls through to here.
+if (reviewerType !== 'council-review') {
   const enforced = enforceEvidenceRules(verdict, 'sprint', reviewerType, measurement)
   verdict = enforced.verdict
   integrityFailure = enforced.integrity_failure
@@ -1922,6 +2504,14 @@ let integrityFailure = null
 // Flag-off (provider_routing_enabled=false): pre-P4 hardcoded fix-agent path.
 const fixAgentType = parsed.fix_agent || 'feature-sprint-executor'
 const fixProvider = parsed.fix_provider || 'claude'
+// REGRESSION BACKSTOP ONLY — the same value was already validated in the fix_agent pre-flight
+// block above (before the sprint spawned), which returns a structured status:'blocked' instead of
+// throwing. This throw is therefore expected to be unreachable on every path that enters through
+// the pre-flight; it stays because a future call path that reaches the fix loop without passing
+// pre-flight must fail loudly here rather than dispatch a phantom agentType and get a silent
+// no-op from the tool layer. Do NOT treat this as the primary guard: a throw here has already
+// cost a full sprint (GATE-01, node_01M00NVT1S5WGY8T6W71TB676D).
+assertKnownAgentType(fixAgentType, 'fix-cycle')
 
 // P4: Derive Mode-D guard inputs from contract metadata.
 // files_affected and fix_task_class come from contractMeta if available.
@@ -2135,21 +2725,17 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
   phase('Measure')
   measurement = await runMeasureStage(parsed)
 
-  // Re-run reviewer after each fix cycle, pointed at the post-fix HEAD.
+  // Re-run reviewer after each fix cycle, pointed at the post-fix HEAD. Routed through
+  // dispatchReview() — never a bare agent({agentType: reviewerType}) — so a council-tier
+  // re-review cannot hit the same 'council-review' agentType defect the initial review was
+  // fixed for (node_01M00NVT1S5WGY8T6W71TB676D). dispatchReview() applies enforceEvidenceRules
+  // itself for the non-council path and assessCouncilVerdict's own integrity checks for the
+  // council path — no separate enforceEvidenceRules call needed here.
   phase('Review')
-  verdict = await agent(reviewPrompt(parsed, reviewResult, measurement), {
-    label: `review-cycle-${cycleNumber}`,
-    phase: 'Review',
-    agentType: reviewerType,
-    schema: VERDICT_SCHEMA,
-  })
-
-  // R3 + AC-3 + validation-scope on the re-review too: a fix cycle must not be able to end
-  // on an unverified approval, a red-backed AC, or a measurement-integrity failure.
-  const enforcedCycle = enforceEvidenceRules(verdict, 'sprint', reviewerType, measurement)
-  verdict = enforcedCycle.verdict
-  if (enforcedCycle.integrity_failure) {
-    integrityFailure = enforcedCycle.integrity_failure
+  const cycleReview = await dispatchReview(parsed, reviewerType, reviewResult, measurement, `review-cycle-${cycleNumber}`)
+  verdict = cycleReview.verdict
+  if (cycleReview.integrity_failure) {
+    integrityFailure = cycleReview.integrity_failure
     log(`GATE INTEGRITY FAILURE on re-review (fix cycle ${cycleNumber}): ${integrityFailure}. Halting the fix loop — the fix so far is unreviewed, not rejected.`)
   }
 
