@@ -674,6 +674,79 @@ env -u VALIDATION_SCOPE_BASE_DIR -u VALIDATION_SCOPE_BASE_REF "$hook" --base-ref
 check "dangling value flag => exit 0" 0 "$?"
 contains "dangling value flag warned on stderr" "$err" "no value"
 
+echo "== CASE 27: a test that drives a changed ENDPOINT by URL only is in scope =="
+# The blind spot symbol-scoping alone still had: the reviewer gate on the
+# artifact-id exact-first sweep reported "no regressions vs base" while
+# POST /api/v1/artifacts/{artifact_id}/version 503'd on every request, because
+# the only test file booting that route spells the URL and never names the
+# handler. Pre-fix this fixture resolved to test_scope: [] -- silently empty.
+epbase="$tmpdir/ep-base"
+ephead="$tmpdir/ep-head"
+mkep() {
+    root="$1"
+    body="$2"
+    mkdir -p "$root/app" "$root/tests"
+    cat > "$root/app/widgets_router.py" <<PY
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/widgets", tags=["widgets"])
+
+
+@router.post("/{widget_id:path}/version")
+async def push_widget_version(widget_id: str) -> dict:
+    return {"ok": $body, "widget": widget_id}
+PY
+    # Names the URL, never push_widget_version -- byte-identical in both trees.
+    cat > "$root/tests/test_widget_version_endpoint.py" <<'PY'
+def test_push_version(client, widget):
+    resp = client.post(f"/api/v1/widgets/{widget.id}/version", json={"files": {}})
+    assert resp.status_code == 200
+PY
+}
+mkep "$epbase" "True"
+mkep "$ephead" "False"
+
+out="$tmpdir/c27.json"
+"$python_bin" "$engine" resolve --base-dir "$epbase" --head-dir "$ephead" --json >"$out" 2>&1
+check "endpoint-scoped resolve => exit 0" 0 "$?"
+json_field "URL-only test file pulled into scope" "$out" \
+    '"tests/test_widget_version_endpoint.py" in d["test_scope"]' "True"
+json_field "justified by the ROUTE identity, not a symbol name" "$out" \
+    'any(s.startswith("route:") for s in d["matched_symbols"]["tests/test_widget_version_endpoint.py"])' \
+    "True"
+json_field "no symbol name justified it (this is the blind spot, proven)" "$out" \
+    'all(s.startswith("route:") for s in d["matched_symbols"]["tests/test_widget_version_endpoint.py"])' \
+    "True"
+json_field "the kept route is reported on changed_symbols" "$out" \
+    '"route:/widgets/{widget_id:path}/version" in d["changed_symbols"]' "True"
+
+echo "== CASE 27b: a non-discriminating route is DISCLOSED, never silently dropped =="
+mkdir -p "$tmpdir/rb-base/app" "$tmpdir/rb-head/app" "$tmpdir/rb-base/tests" "$tmpdir/rb-head/tests"
+mkrb() {
+    cat > "$1/app/bare_router.py" <<PY
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+@router.get("/{item_id}")
+async def read_item(item_id: str) -> dict:
+    return {"v": $2}
+PY
+    cat > "$1/tests/test_bare.py" <<'PY'
+def test_noop():
+    assert True
+PY
+}
+mkrb "$tmpdir/rb-base" "1"
+mkrb "$tmpdir/rb-head" "2"
+out="$tmpdir/c27b.json"
+"$python_bin" "$engine" resolve --base-dir "$tmpdir/rb-base" --head-dir "$tmpdir/rb-head" --json \
+    >"$out" 2>&1
+check "bare-placeholder route => exit 0" 0 "$?"
+json_field "the undiscriminating route is named in symbols_dropped" "$out" \
+    'any(x["reason"] == "route_not_discriminating" for x in d["symbols_dropped"])' "True"
+
 echo ""
 printf 'validation-scope: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1

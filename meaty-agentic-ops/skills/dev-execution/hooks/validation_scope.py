@@ -32,6 +32,17 @@ This module computes, from a base tree and a head tree:
 4. Which test files, anywhere in the tree, *reference* one of those symbols by name —
    via ``grep -lE`` over the tree's test files — even when those test files never
    appear in the diff at all. This is the mechanism that would have caught PR #299.
+5. Which test files reference a changed ENDPOINT by its HTTP ROUTE — for a changed
+   route handler in a router module, the decorator's path literal (plus the module's
+   ``APIRouter(prefix=...)``) is turned into a URL-shaped grep regex. Symbol-scoping
+   alone is still blind to a test that drives a changed endpoint purely over HTTP and
+   names no changed Python symbol: the gate on the artifact-id exact-first sweep
+   reported "no regressions vs base" while
+   ``POST /api/v1/artifacts/{artifact_id}/version`` returned 503 for every request,
+   because ``tests/integration/test_enterprise_artifact_version_update.py`` spells the
+   URL and never the handler name — and so appeared in neither the resolved nor the
+   omitted list. Route identities carry the same fanout/budget bounds and the same
+   disclosure obligations as symbol identities.
 
 BOUNDED, NOT UNBOUNDED
 -----------------------
@@ -143,7 +154,10 @@ def _is_dunder(name: str) -> bool:
 @dataclass
 class SymbolDrop:
     symbol: str
-    reason: str  # "too_short" | "dunder" | "fanout"
+    #: "too_short" | "dunder" | "fanout" | "route_not_discriminating"
+    #: A ``route:<path>``-prefixed ``symbol`` is an endpoint identity, not a
+    #: Python name (see step 4b).
+    reason: str
     fanout: int | None = None
 
     def as_dict(self) -> dict:
@@ -347,6 +361,141 @@ def _grep_files_for_symbol(symbol: str, candidates: list[Path]) -> list[Path]:
     return [Path(line) for line in proc.stdout.splitlines() if line]
 
 
+def _grep_files_for_regex(pattern: str, candidates: list[Path]) -> list[Path]:
+    """``grep -lE <pattern> <candidate files>`` for an already-built regex.
+
+    The symbol path (:func:`_grep_files_for_symbol`) wraps its needle in ``\\b``
+    word boundaries, which is wrong for a URL-shaped needle whose first and
+    last characters are ``/``. Same bounded, deterministic mechanism otherwise.
+    """
+    if not candidates:
+        return []
+    try:
+        proc = subprocess.run(
+            ["grep", "-lE", pattern, *[str(c) for c in candidates]],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return []
+    if proc.returncode not in (0, 1):
+        return []
+    return [Path(line) for line in proc.stdout.splitlines() if line]
+
+
+# ---------------------------------------------------------------------------
+# Step 4b — ENDPOINT-scoped resolution (an endpoint is an identity too).
+#
+# WHY: a symbol-scoped selector is still blind to one case that a diff-scoped
+# one is also blind to — a test that exercises a changed ENDPOINT purely
+# through its HTTP route, naming no changed Python symbol at all. That is not
+# hypothetical: the reviewer gate on this very branch reported "no regressions
+# vs base" while ``POST /api/v1/artifacts/{artifact_id}/version`` was returning
+# 503 for EVERY request, because the only test file that boots that route
+# (``tests/integration/test_enterprise_artifact_version_update.py``) names the
+# URL, never the handler ``push_artifact_content``. It appeared in neither the
+# resolved nor the omitted list, so its absence was not even disclosed.
+#
+# So: for a changed router file, the route path literal on a changed handler's
+# decorator is treated as a first-class identity alongside the symbol names,
+# and test files are grepped for a URL-shaped regex derived from it.
+# ---------------------------------------------------------------------------
+
+#: HTTP verbs that appear as ``@router.<verb>(...)`` route decorators.
+_ROUTE_DECORATOR_VERBS = frozenset(
+    {"get", "post", "put", "patch", "delete", "head", "options", "api_route"}
+)
+
+#: A path placeholder: ``{artifact_id}`` / ``{artifact_id:path}``.
+_PATH_PLACEHOLDER_RE = re.compile(r"\{[^}]*\}")
+
+
+def _router_prefix(tree: ast.AST) -> str:
+    """Best-effort ``APIRouter(prefix="/x")`` literal for a router module.
+
+    Returns ``""`` when the prefix is absent or not a literal — the derived
+    endpoint regex then simply matches on the route path alone, which is
+    looser but never wrong.
+    """
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        fn = node.func
+        name = fn.attr if isinstance(fn, ast.Attribute) else getattr(fn, "id", None)
+        if name != "APIRouter":
+            continue
+        for kw in node.keywords:
+            if kw.arg == "prefix" and isinstance(kw.value, ast.Constant):
+                if isinstance(kw.value.value, str):
+                    return kw.value.value
+    return ""
+
+
+def _route_paths_for_changed_handlers(source: str, changed_lines: set[int]) -> set[str]:
+    """Route paths declared by handlers that enclose at least one changed line.
+
+    A decorator's own lines count as part of the handler for this purpose: a
+    change to the ``responses=`` map or the dependency list is a change to the
+    endpoint's observable contract just as much as a change to its body.
+    Never raises — an unparseable file contributes nothing here.
+    """
+    if not changed_lines:
+        return set()
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return set()
+
+    prefix = _router_prefix(tree)
+    paths: set[str] = set()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        starts = [node.lineno] + [d.lineno for d in node.decorator_list]
+        start = min(starts)
+        end = getattr(node, "end_lineno", node.lineno) or node.lineno
+        if not any(start <= ln <= end for ln in changed_lines):
+            continue
+        for dec in node.decorator_list:
+            if not isinstance(dec, ast.Call):
+                continue
+            fn = dec.func
+            if (
+                not isinstance(fn, ast.Attribute)
+                or fn.attr not in _ROUTE_DECORATOR_VERBS
+            ):
+                continue
+            for arg in dec.args:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    paths.add(prefix + arg.value)
+                    break
+    return paths
+
+
+def _endpoint_regex(route_path: str) -> str | None:
+    """Turn a route path into a grep regex that matches how tests spell URLs.
+
+    ``/artifacts/{artifact_id:path}/version`` becomes
+    ``/artifacts/[^"'[:space:]]*/version`` so it matches an f-string like
+    ``f"/api/v1/artifacts/{artifact.id}/version"`` — placeholders are
+    interpolated at the call site, so they cannot be matched literally, but the
+    literal segments around them can.
+
+    Returns ``None`` when the path has no literal segment substantial enough to
+    be discriminating (a bare ``/`` or ``/{id}``), rather than emitting a
+    regex that would match most of the tree.
+    """
+    chunks = [c for c in _PATH_PLACEHOLDER_RE.split(route_path) if c not in ("", "/")]
+    if not chunks:
+        return None
+    # Require some real literal text, not just separators.
+    if sum(len(c.strip("/")) for c in chunks) < 4:
+        return None
+    return "[^\"'[:space:]]*".join(re.escape(c) for c in chunks)
+
+
 def _check_not_nested(base_dir: Path, head_dir: Path) -> str | None:
     """Return an error message if one resolved tree contains the other in a
     way that would actually corrupt the walk, else None. Uses RESOLVED
@@ -468,6 +617,7 @@ def resolve_test_scope(
 
     # ---- Step 2/3: changed symbols per file (both sides) + module identity ----
     raw_symbols: set[str] = set()
+    raw_routes: set[str] = set()
     for rel in py_changed:
         base_path, head_path = base_map.get(rel), head_map.get(rel)
         try:
@@ -490,8 +640,10 @@ def resolve_test_scope(
 
         if base_text is not None:
             raw_symbols |= _enclosing_symbols(base_text, base_lines)
+            raw_routes |= _route_paths_for_changed_handlers(base_text, base_lines)
         if head_text is not None:
             raw_symbols |= _enclosing_symbols(head_text, head_lines)
+            raw_routes |= _route_paths_for_changed_handlers(head_text, head_lines)
 
         # module-level identity fallback (step 3): dotted import path + stem.
         raw_symbols.add(rel[: -len(".py")].replace("/", "."))
@@ -541,6 +693,34 @@ def resolve_test_scope(
                 continue
             matched_symbols.setdefault(rel, set()).add(name)
 
+    # ---- Bound 1c: ENDPOINT-scoped pass — a changed route is an identity too. ----
+    # Same fanout bound and wall-clock budget as the symbol pass. Runs AFTER the
+    # symbol pass so a tight budget degrades the cheaper-to-lose signal first,
+    # and every drop is disclosed on ``symbols_dropped`` (reason ``fanout``)
+    # exactly like a symbol drop — never silently.
+    kept_routes: list[str] = []
+    for route in sorted(raw_routes):
+        if time.monotonic() - start > max_seconds:
+            budget_exhausted = True
+            break
+        pattern = _endpoint_regex(route)
+        if pattern is None:
+            symbols_dropped.append(
+                SymbolDrop(f"route:{route}", "route_not_discriminating")
+            )
+            continue
+        matches = _grep_files_for_regex(pattern, candidate_paths)
+        fanout = len(matches)
+        if fanout > max_fanout:
+            symbols_dropped.append(SymbolDrop(f"route:{route}", "fanout", fanout))
+            continue
+        kept_routes.append(route)
+        for m in matches:
+            rel = rel_by_path.get(m)
+            if rel is None:
+                continue
+            matched_symbols.setdefault(rel, set()).add(f"route:{route}")
+
     budget_exhausted_files: list[str] = []
     if budget_exhausted:
         # The files whose membership could not be fully determined: any candidate
@@ -571,7 +751,7 @@ def resolve_test_scope(
         scope_status="ok",
         test_scope=test_scope,
         matched_symbols=final_matched_symbols,
-        changed_symbols=sorted(kept_symbols),
+        changed_symbols=sorted(kept_symbols) + [f"route:{r}" for r in kept_routes],
         symbols_dropped=symbols_dropped,
         diff_files=sorted(changed),
         scope_truncated=scope_truncated,
