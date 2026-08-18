@@ -547,12 +547,31 @@ _rsl_create_run() {
     # First boundary for this (node, session): one create+start+link round trip.
     # `--external` keeps the internal worker from auto-advancing a run that a
     # real harness owns; `--harness-type claude_code` satisfies §10 clause 5.
+    # A run minted with no `--name` gets the server's literal fallback "Agent run"
+    # (AgentRunService.create). Measured 2026-08-17: 221 of 410 runs on the node carried
+    # exactly that string, which makes every run surface unreadable and every catalog
+    # lookup useless. Name it here — this is the only place that knows the node and the
+    # session. Short by construction: the column is String(200).
+    local run_name="claude_code ${node_id} @${harness_session_id%%-*}"
+
+    # `--harness` is deliberately NOT passed: the CLI used to send "simulated" by default
+    # while this call sent `--harness-type claude_code`, and the server stored both
+    # verbatim — 324/410 runs carried that contradictory pair. The server now derives
+    # `harness` from `harness_type`, so sending nothing is what produces a consistent row.
     itt_args=(
         "run" "start" "$node_id"
+        "--name" "$run_name"
         "--harness-type" "claude_code"
         "--external"
         "--ccdash-session-id" "$ccdash_session_id"
+        "--aos-session-uuid" "$harness_session_id"
     )
+    # The AOS run identity, when this hook fires inside an `op` run. Passed explicitly
+    # rather than leaning on the CLI's env-derived default, so the value is auditable
+    # from this call site. Measured 2026-08-17: 0 of 410 runs carried either uuid.
+    if [ -n "${OP_RUN_ID:-}" ]; then
+        itt_args+=("--aos-run-uuid" "$OP_RUN_ID")
+    fi
     if [ -n "$transcript" ]; then
         itt_args+=("--ccdash-transcript-path" "$transcript")
     fi

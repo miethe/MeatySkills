@@ -228,6 +228,22 @@ assert_contains happy-path-ccdash-form "S-$SID"
 # harness_type populated is an explicit M1 exit criterion (design-spec Sec 10 clause 5).
 assert_contains happy-path-harness-type "--harness-type"
 assert_contains happy-path-transcript "$SID.jsonl"
+# A run minted with no --name gets the server literal "Agent run" (221 of 410 runs on the
+# node carried exactly that on 2026-08-17). The name must reach the mint call.
+assert_contains happy-path-name "--name"
+assert_contains happy-path-name-node "claude_code $NODE"
+# AOS run identity: 0 of 410 runs carried either uuid before this. The session uuid is the
+# BARE form here — the S- prefix is CCDash's representation and belongs only to
+# --ccdash-session-id; collapsing the two is the seam this hook exists to keep open.
+assert_contains happy-path-aos-session "--aos-session-uuid $SID"
+# --harness must NOT be sent: the CLI default "simulated" contradicting --harness-type
+# claude_code is what produced 324/410 mismatched rows. The server derives it now.
+if grep -q -- "--harness " "$calls" 2>/dev/null; then
+  printf 'FAIL happy-path-no-harness: mint call sent --harness, which reintroduces the mismatch\n'
+  fail=$((fail + 1))
+else
+  pass=$((pass + 1))
+fi
 
 if [ -f "$sidecar_home/$NODE.json" ]; then
   pass=$((pass + 1))
