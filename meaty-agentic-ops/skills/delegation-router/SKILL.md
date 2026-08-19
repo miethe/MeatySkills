@@ -246,13 +246,13 @@ shelled-out `invocation_template` decides the provider itself.
 
 | Resource | Path |
 |---|---|
-| Capability contract (RoutingRecord, scoring, invariants) | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/SPEC.md` |
-| How to read/extend the model registry | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/references/model-registry.md` |
-| Self-install into a new project | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/references/bootstrap.md` |
-| Today→Proposed workflow examples | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/references/workflow-walkthrough.md` |
-| Resolver engine | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/resolver.js` |
-| RoutingRecord schema | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/routing-record.js` |
-| Audit log writer | `/Users/miethe/dev/homelab/development/skillmeat/.claude/skills/delegation-router/audit-log.js` |
+| Capability contract (RoutingRecord, scoring, invariants) | `SPEC.md` |
+| How to read/extend the model registry | `references/model-registry.md` |
+| Self-install into a new project | `references/bootstrap.md` |
+| Today→Proposed workflow examples | `references/workflow-walkthrough.md` |
+| Resolver engine | `resolver.js` |
+| RoutingRecord schema | `routing-record.js` |
+| Audit log writer | `audit-log.js` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` |
 | Feedback contract + validator | `routing-feedback-contract.v1.json`, `task-class-vocabulary.js` |
 | Model registry (authoritative source) | `~/.claude/config/model-registry.yaml` (global canonical) |
