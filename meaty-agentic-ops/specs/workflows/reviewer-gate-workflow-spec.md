@@ -73,6 +73,7 @@ is reading something this does not do. What it actually changes:
 | `files_changed` | `string[]` | recommended | The review scope. The reviewer is told not to widen it. |
 | `failure_summary` | `string` | re-pass only | Presence switches the prompt to re-pass mode. This is the **delta** (`execution-doctrine.md` rule 2) — never the full plan, cumulative diff, or progress file. |
 | `evidence_refs` | `string[]` | optional | Evidence the implementer offered, to be verified rather than trusted. |
+| `evidence_artifacts` | `(string \| {path, claim?})[]` | optional | Files the **orchestrator staged BEFORE the gate ran**, each holding the verbatim artifact (command transcript, row, response body, diff hunk). Reading one is **first-hand verification** for the claim it carries, so a claim it substantiates does not belong in `self_reported_claims`. Distinct from `evidence_refs`, which is the implementer's word and is to be distrusted. See § The staged-artifact escape. |
 | `gate_lens_reason` | `string` | required with 2 lenses | `untrusted-input` \| `authz-boundary` \| `irreversible-outward` \| `ambiguity-tie`. Advisory here (classification lives in the plan) but logged, so an unjustified second lens is auditable. |
 | `plan_ref`, `timestamp`, `notes` | `string` | optional | Passed through into the prompt. Timestamps come from args — the script may not call `new Date()` (constraint 4). |
 
@@ -141,3 +142,35 @@ Mode D is not applicable: this workflow spawns only edit-less reviewers and muta
   `/workflows` and stops the task; the workflow cannot self-terminate a stage.
 - **No lens invention.** The script routes only the four lenses above; adding one is a change to
   both this spec and `gate-risk-classes.md` §1's vocabulary table, together.
+
+## The staged-artifact escape (`evidence_artifacts`)
+
+R3 downgrades any approving verdict carrying `self_reported_claims`, and that rule is
+deliberately **not** capability-aware: `applyEvidenceRules` returns on `if (claims.length)`
+before any `LENS_EXECUTION_CAPABILITY` check. A missing artifact is implementer work, so an
+ordinary rejection is the right next action — that is by design, not an oversight.
+
+But it composes badly with a lens that cannot execute. The `security` lens maps to
+`senior-code-reviewer`, defined `disallowedTools: Write, Edit, MultiEdit, Bash`. For any
+criterion whose evidence IS an execution — a test run, a mutation proof, a reproduced
+vulnerability — that lens cannot re-derive the fact, must record it as a self-reported claim,
+and thereby cannot return `approved: true` however correct the work is. Observed on skillmeat
+P1 of modular-context-activation with all ACs met and zero substantive required fixes, and
+again over three non-converging rounds on registrar-hardening M0
+(`node_01M08FAYAGN5QYF77C1ZVA146B`, `node_01KZHCYD1KZFF5NXSH9Q2RCX1H`).
+
+`evidence_artifacts` is the sanctioned way out, and it **weakens nothing**: no enforcement
+branch changed. The SELF-REPORT RULE already names "the file on disk" as valid evidence; this
+contract simply lets the orchestrator declare *which* files those are, so the reviewer can
+Read them instead of guessing that staged evidence exists. Reading a file is a direct
+observation available to an edit-less, Bash-less lens.
+
+**Caller obligation.** Stage the artifacts *before* invoking the gate — write the verbatim
+output to disk and pass the paths. Staging after the gate runs is too late, and the reviewer
+cannot ask for them mid-run.
+
+**What it is not.** A path in this list is a pointer, never a promise. The script cannot read
+the filesystem (constraint: no FS access in a workflow script) and asserts nothing about the
+file existing or supporting its claim. An artifact that is missing, empty, unreadable, or that
+does not show what its claim says returns the claim to `self_reported_claims` exactly as
+before — the reviewer is told this explicitly in the STAGED-ARTIFACT RULE.

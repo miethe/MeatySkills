@@ -281,7 +281,12 @@ in the gate script). Because of that:
     measurement does not cover: put it in \`unverifiable\` with a concrete "what would settle
     it" (e.g. "an executing lens runs \`tests/test_foo.py::test_bar\` and reports the real
     status"). Do not mark it not-met for lack of YOUR OWN execution capability — that is a gap
-    in what you personally can prove, not evidence the behaviour is broken or missing.`
+    in what you personally can prove, not evidence the behaviour is broken or missing.
+  - STAGED ARTIFACTS are your route to first-hand verification of an EXECUTION side effect.
+    Where the gate supplies "Staged evidence artifacts" below, those are files the orchestrator
+    wrote BEFORE this gate ran, holding the verbatim output/content itself. Reading one with
+    Read is a direct observation of the artifact — it is NOT taking a leg's word — so a claim
+    a staged artifact substantiates does NOT belong in \`self_reported_claims\`. Read them.`
 
 const LENS_BRIEF = {
   validator:
@@ -323,7 +328,23 @@ SELF-REPORT RULE — never accept a leg's, a report's, or a summary's statement 
 happened as evidence that it happened. "I registered the node / wrote the file / updated the row /
 published the artifact" is a claim; the evidence is the artifact itself — the row, the file on
 disk, the response body, the diff hunk. Verify each one yourself, or list it in
-\`self_reported_claims\`, which blocks approval by construction.`
+\`self_reported_claims\`, which blocks approval by construction.
+
+STAGED-ARTIFACT RULE — the counterpart to the SELF-REPORT RULE, and the ONLY sanctioned way an
+execution side effect becomes verifiable to a lens that cannot execute. When the gate supplies
+"Staged evidence artifacts", each entry names a file the orchestrator wrote BEFORE the gate ran,
+containing the verbatim artifact — the command transcript, the row, the response body, the diff
+hunk. Reading that file yourself IS first-hand verification for the claim it carries: the SELF-REPORT
+RULE names "the file on disk" as evidence, and this is that file. So:
+  - Read every staged artifact whose claim bears on a criterion you are judging. Do not skip one
+    and then list its claim as self-reported — the artifact was staged precisely so you need not.
+  - A claim SUBSTANTIATED by a staged artifact you actually read does NOT go in
+    \`self_reported_claims\`. Cite the artifact path as the evidence in \`ac_verdicts\`.
+  - A staged artifact that is MISSING, empty, unreadable, or that does not actually show what its
+    claim says it shows substantiates NOTHING. Say so explicitly, and the claim goes back to
+    \`self_reported_claims\` (or the criterion to \`unverifiable\`) exactly as before. A path in
+    this list is a pointer, never a promise — the file's CONTENT is the evidence, and an
+    artifact that fails to substantiate its claim is a finding in its own right, not a neutral.`
 
 // ─── the validation-scope rules, verbatim in every lens prompt ────────────────
 //
@@ -387,6 +408,25 @@ function bullets(items, emptyText) {
   const list = asList(items)
   if (!list.length) return `  (${emptyText})`
   return list.map(item => `  - ${item}`).join('\n')
+}
+
+/**
+ * Render one `evidence_artifacts[]` entry for the reviewer prompt.
+ *
+ * The contract is deliberately permissive on SHAPE and strict on MEANING. An entry may be a
+ * bare path string, or `{path, claim}` naming the side effect the file substantiates. Anything
+ * else is stringified rather than dropped: a malformed entry the reviewer can still see is
+ * safer than a silently swallowed one, because the reviewer's fallback (list the claim under
+ * `self_reported_claims`) is the SAFE direction. Nothing here asserts the file exists — this
+ * script cannot read the filesystem, and must never imply it verified something it did not.
+ * The reviewer reads the file; an absent or non-substantiating artifact is its finding to make.
+ */
+function describeEvidenceArtifact(entry) {
+  if (entry && typeof entry === 'object') {
+    const path = entry.path || entry.file || '(no path given)'
+    return entry.claim ? `${path} — substantiates: ${entry.claim}` : String(path)
+  }
+  return String(entry)
 }
 
 /**
@@ -532,7 +572,7 @@ ${bullets(args.files_changed, 'none supplied')}
 
 Measured validation scope and base→head delta:
 ${measurementBrief(measurement)}
-${asList(args.evidence_refs).length ? `\nEvidence the implementer offered (verify it, do not trust it):\n${bullets(args.evidence_refs, '')}\n` : ''}${args.notes ? `\nOperator notes:\n${args.notes}\n` : ''}
+${asList(args.evidence_refs).length ? `\nEvidence the implementer offered (verify it, do not trust it):\n${bullets(args.evidence_refs, '')}\n` : ''}${asList(args.evidence_artifacts).length ? `\nStaged evidence artifacts — files written BEFORE this gate ran, holding the verbatim artifact.\nReading one is FIRST-HAND verification for the claim it carries (see the STAGED-ARTIFACT RULE):\n${bullets(asList(args.evidence_artifacts).map(describeEvidenceArtifact), '')}\n` : ''}${args.notes ? `\nOperator notes:\n${args.notes}\n` : ''}
 Read the code and the evidence. Run read-only commands where they settle a question.
 
 ${EVIDENCE_RULES}
