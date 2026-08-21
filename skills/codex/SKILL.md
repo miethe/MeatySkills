@@ -47,6 +47,46 @@ The resolver deploys to `~/.claude/hooks/cf_context_resolve.py` (upstream:
 `install.sh`); override the path with `CF_E_RESOLVER`. Spec:
 `agentic_meta_dev/docs/project_plans/design-specs/context-fabric/CF-E-auto-injection.md`.
 
+## Write-Lane Pre-Flight (CODEX-WRITE-PREFLIGHT — MANDATORY for any edit dispatch)
+
+**Dispatch every `codex exec` through `scripts/codex-run.sh`, and pass `--task-class write`
+whenever the run is expected to edit files.** The wrapper is transparent — it forwards stdin,
+stdout, stderr and codex's own exit code — and it does two things prose could not:
+
+1. **Refuses (exit 2) an invocation that cannot do what it was dispatched to do.** A declared
+   write task in `--sandbox read-only`, or with no explicit `--sandbox` at all, never launches.
+2. **Refuses (exit 2) a `resume` with no explicit `--sandbox`**, regardless of task class.
+
+```bash
+CODEX_RUN="$(git rev-parse --show-toplevel)/.claude/skills/codex/scripts/codex-run.sh"
+echo "<your prompt>" | "$CODEX_RUN" --task-class write -- \
+  timeout 900 codex exec --ignore-user-config --skip-git-repo-check \
+    --sandbox workspace-write -C "$REPO" -m gpt-5.6-sol \
+    --config model_reasoning_effort="xhigh" --json 2>"$LOG.err"
+```
+
+Every invocation — allowed **and** refused — appends one JSON line (full argv, sandbox, model,
+effort, cwd, verdict, reason) to `${CODEX_INVOCATION_LOG:-${CODEX_SESSION_LOG_DIR:-~/.codex/exec-logs}/invocations.jsonl}`
+at mode 0600, and a piped prompt is tee'd to a sibling `.prompt` file. Logging is best-effort and
+never blocks a dispatch; a refusal is never suppressed by a logging failure. Use `--check-only` to
+validate a command you intend to build yourself.
+
+> **Why this is a script and not a paragraph.** ⚠️ **`resume` does NOT reliably inherit the
+> sandbox mode** — this file asserted that it did, in two places, and the claim is falsified.
+> Measured 2026-08-18 (`node_01M0BCYZXQ2MNVRWAJZCHV9Y6X`): `codex exec resume --last` dropped
+> `--sandbox workspace-write`; the resumed turn self-reported *"the continuation environment is
+> read-only"*, burned **5.66M input tokens** and wrote **zero files at exit 0**. A fresh
+> non-resume dispatch with an explicit `--sandbox`, against the same on-disk partial state, same
+> model and effort, completed cleanly. The 2026-08-16 "Idea-A derail" (3 sessions, exit 0, zero
+> files) has the **identical shape** and its cause can never be confirmed, because **the
+> invocation was never written to disk.** A read-only run's exit 0 is indistinguishable from a
+> derail, and both are indistinguishable from success until you check the diff — so the refusal
+> and the log are the same fix, and neither can live in a sentence a dispatcher may skip.
+>
+> Tests: `scripts/tests/test_codex_run.sh` (26 assertions; the first case is the literal breach
+> shape — if it stops failing against an unguarded wrapper, the guard is decoration). Usage errors
+> exit **64, not 2**, so a misparsed flag never reads as a breach.
+
 ## Running a Task
 
 > **Headless-first.** `codex exec` is non-interactive and the default here. **Never block the run
@@ -89,7 +129,9 @@ The resolver deploys to `~/.claude/hooks/cf_context_resolve.py` (upstream:
    only when network/broad access is required (ask first for the latter two if interactive — see
    Error Handling). Always pass an explicit `--sandbox <mode>` plus `--ignore-user-config` so the
    global `~/.codex/config.toml` (which defaults to `danger-full-access`) cannot silently widen
-   permissions.
+   permissions. **On an edit run this is not a convention — it is enforced**: dispatch through
+   `scripts/codex-run.sh --task-class write` (§ Write-Lane Pre-Flight), which refuses the run
+   rather than letting it burn tokens in a sandbox that cannot write.
 4. **Always pass** `--ignore-user-config`, an explicit `--sandbox <mode>`, `--skip-git-repo-check`,
    and **`-C <repo-root>`** for AOS-managed / headless `codex exec` calls. `-C <repo-root>` is not
    optional in headless mode: the session-rollout `session_meta` records that directory as `cwd`,
@@ -105,8 +147,11 @@ The resolver deploys to `~/.claude/hooks/cf_context_resolve.py` (upstream:
    `/dev/null`** — you want the warnings/errors captured (`2>"$LOG.err"`), not discarded.
 7. **`--full-auto` no longer exists** (removed in current Codex). To let Codex apply edits
    non-interactively, use `--sandbox workspace-write`. `codex exec` does not prompt for approvals.
-8. **Resume**: `echo "your prompt" | codex exec --ignore-user-config --skip-git-repo-check resume --last 2>codex-err.log`.
-   All flags go between `exec` and `resume`; don't change model/effort on resume unless asked.
+8. **Resume**: `echo "your prompt" | codex exec --ignore-user-config --skip-git-repo-check --sandbox <mode> resume --last 2>codex-err.log`.
+   All flags go between `exec` and `resume`; don't change model/effort on resume unless asked —
+   but **always re-pass `--sandbox` explicitly.** It is *not* reliably inherited (§ Write-Lane
+   Pre-Flight); a resume that silently drops `workspace-write` runs read-only and returns exit 0
+   having written nothing.
 9. Run the command, then **surface the session id and rollout path** (see Session Logging) so the
    run is traceable and CCDash-ingestable. Summarize the outcome.
 10. **After Codex completes** (interactive only), you may note: "You can resume this Codex session
@@ -146,8 +191,10 @@ echo "<your prompt>" | timeout 600 codex exec \
 echo "[exit ${PIPESTATUS[0]}] flat log: $LOG.jsonl  errlog: $LOG.err"
 ```
 
-Swap `--sandbox workspace-write` (and drop `--json` for a human-readable stream, or keep it) for
-edit tasks. The native rollout JSONL is still written to `~/.codex/sessions/...` regardless.
+For **edit** tasks, swap `--sandbox workspace-write` (and drop `--json` for a human-readable
+stream, or keep it) **and route the whole command through `codex-run.sh --task-class write --`**
+per § Write-Lane Pre-Flight. The native rollout JSONL is still written to `~/.codex/sessions/...`
+regardless.
 
 ### Quick Reference
 Headless runs: prepend `timeout 600`, add `-C <repo-root>`, and prefer `--json` with `2>"$LOG.err"`
@@ -157,9 +204,9 @@ for quick interactive one-shots.
 | Use case | Sandbox mode | Key flags |
 | --- | --- | --- |
 | Read-only review or analysis | `read-only` | `timeout 600 codex exec --ignore-user-config --sandbox read-only -C <DIR> --json 2>err.log` |
-| Apply local edits | `workspace-write` | `timeout 900 codex exec --ignore-user-config --sandbox workspace-write -C <DIR> --json 2>err.log` |
+| Apply local edits | `workspace-write` | `codex-run.sh --task-class write -- timeout 900 codex exec --ignore-user-config --sandbox workspace-write -C <DIR> --json 2>err.log` (wrapper MANDATORY — § Write-Lane Pre-Flight) |
 | Permit network or broad access | `danger-full-access` | `--ignore-user-config --sandbox danger-full-access -C <DIR>` (ask first if interactive) |
-| Resume recent session | Inherited from original | `echo "prompt" \| codex exec --ignore-user-config --skip-git-repo-check resume --last 2>err.log` |
+| Resume recent session | ⚠️ **NOT inherited — re-pass it** | `echo "prompt" \| codex exec --ignore-user-config --skip-git-repo-check --sandbox <mode> resume --last 2>err.log` |
 | Quick argv one-shot (scripted) | `read-only` | `--ignore-user-config --sandbox read-only "<prompt>" < /dev/null 2>/dev/null` (argv prompt → redirect stdin, see the stdin trap above) |
 | Code review of changes | `read-only` | `codex exec --ignore-user-config --sandbox read-only -C <DIR> review --uncommitted 2>err.log` (or `--base <branch>` / `--commit <sha>`) |
 
@@ -281,7 +328,11 @@ Not every model supports every effort level; keep Ultra to Sol/Terra.
 - **Do not reflexively `AskUserQuestion` after a run.** In headless/AOS/background/loop contexts,
   never ask — report the result (with session id + rollout path) and either continue the plan or
   stop. Reserve `AskUserQuestion` for a live interactive turn where a genuine decision is needed.
-- When resuming an AOS-managed run, pipe the new prompt via stdin: `echo "new prompt" | codex exec --ignore-user-config --skip-git-repo-check resume --last 2>err.log`. The resumed session automatically reuses the same model, reasoning effort, and sandbox mode from the original session.
+- When resuming an AOS-managed run, pipe the new prompt via stdin **and re-pass `--sandbox`
+  explicitly**: `echo "new prompt" | codex exec --ignore-user-config --skip-git-repo-check --sandbox workspace-write resume --last 2>err.log`.
+  ⚠️ **The sandbox mode is NOT reliably inherited** — this line claimed it was until 2026-08-19, and
+  that claim is falsified (see § Write-Lane Pre-Flight). Model and reasoning effort do appear to
+  carry over, but they are cheap to re-pass and the sandbox is not; pass all three.
 - Restate the chosen model, reasoning effort, and sandbox mode when proposing follow-up actions.
 
 ## Error Handling
@@ -308,6 +359,21 @@ Not every model supports every effort level; keep Ultra to Sol/Terra.
   `codex exec` edit run: check `git status --porcelain` / `git diff --stat` for the expected changes,
   or re-run the task's own acceptance probe. Treat **"exit 0 + empty diff on an edit task" as a
   FAILED/derailed run, not a success.**
+- **A read-only review/AC-validation run can crash mid-turn and STILL exit 0 — never trust the exit
+  code, ever.** Verified 2026-08-12 (`codex-cli 0.147.0-alpha.6.5`, `node_01KZVX4MT9129FK4S2S8FRCBAW`):
+  two consecutive `codex exec --sandbox read-only` review invocations each read the target files via
+  `command_execution`, then died on a different internal Codex error before emitting any
+  `agent_message` — and both processes exited 0. A caller that reads exit code alone sees a clean,
+  completed review; there is no answer. The positive marker to check for instead: the `--json` event
+  stream's **last non-blank line must be `{"type":"turn.completed",...}`**, which Codex only writes
+  when a turn actually finishes — a crash stops the stream before it regardless of the exit code —
+  **and** at least one `{"type":"item.completed","item":{"type":"agent_message",...}}` must appear
+  in the stream (a completed turn with zero agent_message is not "answered" either). Use
+  [`scripts/codex_review.sh`](../../../scripts/codex_review.sh) rather than hand-rolling this check:
+  it runs the invocation, applies exactly this detector, prints ONLY the final answer on success, and
+  exits non-zero naming the transcript path when no completed turn with an answer was found. Positive
+  control (a fabricated crashed-shape transcript that the detector must refuse) lives in
+  [`scripts/test_codex_review.sh`](../../../scripts/test_codex_review.sh).
 - Before using high-impact flags (`--sandbox workspace-write`, `--sandbox danger-full-access`,
   `--dangerously-bypass-approvals-and-sandbox`), get the user's permission **if interactive** and not
   already granted. In headless/AOS runs, follow the sandbox the plan/contract specifies — do not
