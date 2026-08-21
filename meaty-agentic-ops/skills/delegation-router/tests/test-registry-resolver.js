@@ -109,6 +109,17 @@ function baseRegistry() {
   };
 }
 
+function registryWithCodex() {
+  const registry = baseRegistry();
+  registry.models['gpt-5.6-terra'] = {
+    family: 'gpt', class: 'terra', sampling: 'deterministic', status: 'active',
+    providers: [
+      { provider: 'codex', model_id: 'gpt-5.6-terra', cost_tier: 'premium', allowance: 'billed', enabled: true, priority: 1 },
+    ],
+  };
+  return registry;
+}
+
 function writeRegistry(reg) {
   const p = path.join(os.tmpdir(), `test-registry-${process.pid}-${Math.floor(process.hrtime()[1])}.json`);
   fs.writeFileSync(p, JSON.stringify(reg), 'utf8');
@@ -123,6 +134,45 @@ function resolveWithRegistry(reg, params) {
     fs.unlinkSync(p);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Codex invocation contract
+// ---------------------------------------------------------------------------
+
+describe('Codex invocation contract', () => {
+  test('read-only template includes every mandatory headless Codex flag', () => {
+    const record = resolveWithRegistry(registryWithCodex(), {
+      model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'standard',
+    });
+    const template = record.invocation_template;
+
+    for (const fragment of [
+      'timeout 600 codex exec',
+      '--ignore-user-config',
+      '--sandbox read-only',
+      '--skip-git-repo-check',
+      '-C {repo_root}',
+      '-m gpt-5.6-terra',
+      '--config model_reasoning_effort="medium"',
+      '"{prompt}"',
+      '< /dev/null',
+    ]) {
+      assert.ok(template.includes(fragment), `missing '${fragment}': ${template}`);
+    }
+  });
+
+  test('workspace-write template routes through the mandatory write-lane wrapper', () => {
+    const record = resolveWithRegistry(registryWithCodex(), {
+      model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'high',
+    });
+
+    assert.ok(
+      record.invocation_template.startsWith('{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 codex exec'),
+      `write lane must use codex-run.sh: ${record.invocation_template}`
+    );
+    assert.ok(record.invocation_template.includes('--sandbox workspace-write'));
+  });
+});
 
 // ---------------------------------------------------------------------------
 // (a) enabled:false instance is skipped

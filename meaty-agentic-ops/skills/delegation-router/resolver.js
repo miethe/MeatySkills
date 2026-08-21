@@ -1095,7 +1095,12 @@ function buildRegistryInvocation(chosen, profile, effort) {
       return `mise exec node@22 -- bob -p "{prompt}"`;
     case 'codex': {
       const sandboxMode = sandboxModeFor(profile, effort);
-      return `codex exec --sandbox ${sandboxMode} "{prompt}"`;
+      const codexEffort = codexReasoningEffortFor(effort);
+      const invocation = `timeout 600 codex exec --ignore-user-config --sandbox ${sandboxMode} --skip-git-repo-check -C {repo_root} -m ${modelId} --config model_reasoning_effort="${codexEffort}" "{prompt}" < /dev/null`;
+      if (sandboxMode === 'workspace-write' || sandboxMode === 'danger-full-access') {
+        return `{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- ${invocation}`;
+      }
+      return invocation;
     }
     default:
       return `${providerId} "{prompt}" --model ${modelId}`;
@@ -1349,6 +1354,13 @@ function sandboxModeFor(profile, effort) {
   if (effort === 'xhigh') return 'danger-full-access';
   if (effort === 'high' || effort === 'extended') return 'workspace-write';
   return 'read-only';
+}
+
+function codexReasoningEffortFor(effort) {
+  if (effort === 'low') return 'low';
+  if (effort === 'high' || effort === 'extended') return 'high';
+  if (effort === 'xhigh') return 'xhigh';
+  return 'medium';
 }
 
 function buildScopeFlags(providerId, profile, effort) {
