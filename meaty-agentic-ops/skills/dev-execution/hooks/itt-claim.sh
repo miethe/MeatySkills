@@ -202,6 +202,11 @@
 #                        server's own _DEFAULT_MAX_CLAIM_HOLD_MINUTES). This is
 #                        the ONLY bound on a heartbeating claim — see the ceiling
 #                        note above `do_renew_daemon`.
+#   ITT_CLAIM_ANCHOR_PID
+#                        optional live pid that bounds the renew cadence. Origin:
+#                        node_01M0QXD9B07HDPT298NSSS0W8G. An `agent:hop-*` actor
+#                        has no session pid, so without this the cap is the ONLY
+#                        bound and a dead run holds its claim for 24h.
 #   AOS_ITT_RENEW_DIR    cadence state dir (default ~/.cache/aos/itt-renew).
 #   ITT_CLAIM_ADOPT      truthy => permit acquiring an unclaimed `in_progress`
 #                        node (the exit-5 SUSPECT case). Set only AFTER the
@@ -925,8 +930,23 @@ _renew_state() {
     printf '%s/%s.%s' "$RENEW_DIR" "$node" "$tag"
 }
 
-# The pid of the Claude Code session this actor belongs to, or empty.
+# The pid of the explicit caller anchor, or the Claude Code session this actor belongs to, or empty.
 _renew_anchor_pid() {
+    if [ "${ITT_CLAIM_ANCHOR_PID+x}" = x ]; then
+        local explicit_anchor="${ITT_CLAIM_ANCHOR_PID}"
+        case "$explicit_anchor" in
+            ''|*[!0-9]*)
+                warn "renew-daemon: ITT_CLAIM_ANCHOR_PID is malformed ('${explicit_anchor}') — falling back"
+                ;;
+            *)
+                if kill -0 "$explicit_anchor" 2>/dev/null; then
+                    printf '%s\n' "$explicit_anchor"
+                    return 0
+                fi
+                warn "renew-daemon: ITT_CLAIM_ANCHOR_PID ${explicit_anchor} is not alive — falling back"
+                ;;
+        esac
+    fi
     case "$ACTOR" in agent:cc-*) : ;; *) return 1 ;; esac
     python3 - "${ACTOR#agent:cc-}" <<'ANCHOR_PY' 2>/dev/null
 import glob, json, os, sys
@@ -972,17 +992,25 @@ do_renew_daemon() {
     fi
     rm -f "$stopf" 2>/dev/null || true
 
-    local anchor; anchor="$(_renew_anchor_pid || true)"
+    local anchor anchor_source="none"
+    anchor="$(_renew_anchor_pid || true)"
+    if [ -n "$anchor" ]; then
+        if [ "${ITT_CLAIM_ANCHOR_PID+x}" = x ] && [ "$anchor" = "${ITT_CLAIM_ANCHOR_PID}" ]; then
+            anchor_source="explicit"
+        else
+            anchor_source="session-registry"
+        fi
+    fi
 
     # `nohup ... &` so the loop outlives the short-lived shell that armed it. It is
     # deliberately orphaned: the ANCHOR, not the process tree, decides when it stops.
     nohup bash -c '
         set -uo pipefail
-        self="$0"; node="$1"; interval="$2"; cap="$3"; anchor="$4"; stopf="$5"; pidf="$6"
+        self="$0"; node="$1"; interval="$2"; cap="$3"; anchor="$4"; anchor_source="$5"; stopf="$6"; pidf="$7"
         deadline=$(( $(date +%s) + cap * 60 ))
         trap "rm -f \"$pidf\"" EXIT
         if [ -n "$anchor" ]; then
-            echo "[renew] armed for $node every ${interval}s, cap ${cap}m, anchor pid ${anchor}"
+            echo "[renew] armed for $node every ${interval}s, cap ${cap}m, anchor pid ${anchor} (source ${anchor_source})"
         else
             echo "[renew] armed for $node every ${interval}s, cap ${cap}m, NO ANCHOR (actor has no session pid) — the cap is the only bound"
         fi
@@ -1014,12 +1042,12 @@ do_renew_daemon() {
                     exit 0 ;;
             esac
         done
-    ' "$0" "$node" "$interval" "$cap" "${anchor:-}" "$stopf" "$pidf" >>"$logf" 2>&1 &
+    ' "$0" "$node" "$interval" "$cap" "${anchor:-}" "$anchor_source" "$stopf" "$pidf" >>"$logf" 2>&1 &
 
     local child=$!
     printf '%s\n' "$child" > "$pidf"
     if [ -n "$anchor" ]; then
-        note "renew cadence armed for ${node}: every ${interval}s, cap ${cap}m, anchor pid ${anchor} (pid ${child})"
+        note "renew cadence armed for ${node}: every ${interval}s, cap ${cap}m, anchor pid ${anchor} (source ${anchor_source}, pid ${child})"
     else
         note "renew cadence armed for ${node}: every ${interval}s, cap ${cap}m, NO ANCHOR (pid ${child})"
     fi
