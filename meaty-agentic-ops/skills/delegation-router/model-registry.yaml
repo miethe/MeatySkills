@@ -23,29 +23,55 @@
 #
 # CRITICAL ACCURACY INVARIANT (do not assume — encode it)
 #   ICA "free" (`allowance: unlimited`, $0, cost-shifted off the primary budget)
-#   applies ONLY to: claude-haiku-4-5, gemma-4-26b, llama-4-maverick, granite-4-small.
-#   ICA Sonnet / Opus / GPT / Gemini are `allowance: shared_token_pool` — token-limited
+#   applies to: claude-haiku-4-5, gemma-4-26b, llama-4-maverick, granite-4-small, AND
+#   (as of 2026-08-26, Nick authoritative) gpt-5.6-luna-dzus — FIVE models, not four.
+#   Any doc/note still saying "exactly 4" is stale.
+#   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
-# ICA 1M-CONTEXT PREFERENCE (do not regress)
-#   For ICA-served Claude Opus/Sonnet AND ICA-served Gemini, the `[1m]` (1M-context)
-#   instance is ALWAYS preferred over the plain 200k instance — same provider, same
-#   shared token pool, strictly larger context window at no extra cost-tier. The `[1m]`
-#   instance therefore carries the LOWER `priority` number (preferred); the plain
-#   200k instance is kept only as a demoted fallback. opus-4-8 on ICA is 1m-only.
-#   Re-confirmed for claude-opus-5 on 2026-07-31 ([1m]=1000000, plain=200000).
-#   ⚠️ The `[1m]` suffix is a CLAUDE CODE CLIENT-SIDE hint, NOT a real gateway model id.
-#   It only works through the Claude Code client (ica-claude.sh / ANTHROPIC_MODEL). Raw
-#   transports (/v1/messages, /chat/completions) MUST send the plain id — sending a `[1m]`
-#   id there returns 403 `team_model_access_denied` ("can only access models=['global-models']"),
-#   which is easy to misread as "no access to this model at all". Verified 2026-07-31.
-#   The gateway silently caps the plain id at 200k even for models that are natively
-#   1M (Sonnet 5, Gemini 3.x) — the `[1m]` suffix is what unlocks the full window on
-#   the ICA path. (NOT needed on the NATIVE gemini-cli path: those models are 1M
-#   natively, no suffix.) Verified via `modelUsage.<id>.contextWindow` 2026-06-09
-#   (Claude) and 2026-07-08 (sonnet-5[1m]=1M/plain=200k; gemini-3.5-flash[1m]=1M/
-#   plain=200k; gemini-3.1-pro-preview[1m]=1M/plain=200k). When adding or editing any
-#   ICA Opus/Sonnet/Gemini instance, keep the `[1m]` variant ranked first.
+# ICA 1M-CONTEXT PREFERENCE — RETIRED 2026-08-26 (was: "always prefer `[1m]`")
+#   ⚠️ INVERTED, not softened. Measured 2026-08-26 across both gateways (beta + ccx)
+#   and all 11 keys: every `[1m]`/dated model id now 403s on EVERY transport,
+#   including the Claude Code client path that used to be the one place it worked.
+#   USE BARE IDS EVERYWHERE. Bare ids now carry NATIVE (not 200k-capped) context —
+#   measured via usage.prompt_tokens: bare claude-sonnet-5 = 600,007 tokens on beta,
+#   950,007 on ccx; bare gemini-3.7-flash = 950,002 on ccx; bare gpt-5.6-sol =
+#   600,007 on ccx; bare claude-haiku-4-5 = 190,008 accepted / 250,000 rejected
+#   (that ceiling is Haiku's own real 200k limit, not a gateway cap). Nothing is
+#   lost by dropping the suffix. Do not reintroduce `[1m]` on any ICA model id.
+#   Full inventory: agentic_meta_dev `docs/agentic-operator/ICA-CCX-LANE-MATRIX.md`;
+#   findings: `docs/audits/ica-lane-findings-2026-08-26.md`.
+#
+#   The paragraph below is the RETIRED doctrine, kept for history (do not delete —
+#   it explains why every provider row below used to carry a `[1m]` suffix):
+#   > For ICA-served Claude Opus/Sonnet AND ICA-served Gemini, the `[1m]` (1M-context)
+#   > instance is ALWAYS preferred over the plain 200k instance — same provider, same
+#   > shared token pool, strictly larger context window at no extra cost-tier. The `[1m]`
+#   > instance therefore carries the LOWER `priority` number (preferred); the plain
+#   > 200k instance is kept only as a demoted fallback. opus-4-8 on ICA is 1m-only.
+#   > Re-confirmed for claude-opus-5 on 2026-07-31 ([1m]=1000000, plain=200000).
+#   > The `[1m]` suffix is a CLAUDE CODE CLIENT-SIDE hint, NOT a real gateway model id.
+#   > It only works through the Claude Code client (ica-claude.sh / ANTHROPIC_MODEL). Raw
+#   > transports (/v1/messages, /chat/completions) MUST send the plain id — sending a `[1m]`
+#   > id there returns 403 `team_model_access_denied` ("can only access models=['global-models']"),
+#   > which is easy to misread as "no access to this model at all". Verified 2026-07-31.
+#   > The gateway silently caps the plain id at 200k even for models that are natively
+#   > 1M (Sonnet 5, Gemini 3.x) — the `[1m]` suffix is what unlocks the full window on
+#   > the ICA path. (NOT needed on the NATIVE gemini-cli path: those models are 1M
+#   > natively, no suffix.) Verified via `modelUsage.<id>.contextWindow` 2026-06-09
+#   > (Claude) and 2026-07-08 (sonnet-5[1m]=1M/plain=200k; gemini-3.5-flash[1m]=1M/
+#   > plain=200k; gemini-3.1-pro-preview[1m]=1M/plain=200k).
+#
+# ICA OPUS — RETRACTED 2026-08-26 (was: "claude-opus-5[1m] = verified spine-offload lane")
+#   ⚠️ THERE IS NO ICA OPUS LANE. claude-opus-5 / claude-opus-4-8 / claude-opus-4-6
+#   return 403 on ALL 11 keys (CC1-CC8, BB1, CCx1-CCx3), on BOTH gateways — while
+#   claude-sonnet-5 returns 200 on those exact same keys, which is what makes this
+#   an Opus-SPECIFIC tenancy entitlement rather than auth, key exhaustion, or the
+#   retired `[1m]` rule. ALL FOUR `ica/claude-opus-*` provider rows below are
+#   `enabled: false`. This SUPERSEDES the 2026-07-31 "verified spine-offload lane"
+#   entry in the changelog below — that lane is dead. Escalate off-ICA to the
+#   subscription Opus 5 instead. Re-probe with `ica-key verify <NAME> --model
+#   claude-opus-5` before ever re-enabling a row here.
 #
 # SCORECARD: scores{cost,intelligence,taste,speed} mirror MODEL-ROUTING.md §1.5 (agentic_meta_dev). Higher=better; cost=real spend on the preferred lane; per-provider cost_score overrides where lanes differ. Update doc and registry together.
 #
@@ -53,7 +79,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-07-31   # ICA now serves claude-opus-5 — VERIFIED end-to-end (gateway /models list + cache-busted /chat/completions probe + Claude Code executor path via ica-claude.sh). ENABLED ica/claude-opus-5[1m] (priority 2, cost_score 8) → the ICA spine-offload lane is now claude-opus-5[1m]; claude-opus-4-8[1m] demoted to the spine-offload FALLBACK (still enabled). Verified capabilities on the ICA lane: [1m]=1,000,000 ctx vs plain id=200,000 (the [1m] invariant holds for Opus 5 too); maxOutputTokens reported 64,000 on ICA (vs 128K first-party — ICA-side cap, plan long outputs accordingly); tool_use OK on both Claude Code and raw /v1/messages; adaptive thinking via output_config.effort OK (thinking blocks + thinking_tokens); legacy thinking.type:enabled ALSO OK (diverges from sonnet-5, where the legacy form 400s); output_config.format (structured JSON schema) HONORED — Opus 5 does NOT have Sonnet 5's structured-output gap, so no tool-call workaround needed. ⚠️ The [1m] suffix is a Claude-Code CLIENT-SIDE hint, not a gateway model id: raw /v1/messages + /chat/completions MUST use the plain "claude-opus-5" (passing "claude-opus-5[1m]" returns 403 team_model_access_denied). Prior 2026-07-28   # Grounded use-case-rankings layer added (co-located use-case-rankings.yaml, rf-provenanced, human-gated); second_opinion + svg_generation chains re-ranked from the pilot evidence (supersedes the 2026-07-27 by-analogy gemini-3.6 promotions on those two chains — note the cost-posture change on second_opinion: leg-1 now metered codex/gpt-5.6-terra); per-model playbook_ref pointers added -> model-playbook skill. Prior 2026-07-27   # Dual-key ICA gateway probe (probe-ica-models.sh, CC + CODEX keys). ADDED gemini-3.6-flash (ICA servability verified via ica-claude.sh) — ENABLED + PROMOTED to leg-1 in web_research / second_opinion / svg_generation chains (3.5-flash demoted to fallback). ADDED claude-sonnet-4-5 (ICA-only fallback lane, verified, not in any auto chain — prefer sonnet-5/4-6 first). gpt-5.6-{terra,luna}-dzus RE-CONFIRMED not dispatchable (/responses Azure api-version 400 both keys; luna's only working path = CODEX key + raw /chat/completions no-effort, unreachable by wired executors) → left documented in the native codex blocks, NO ICA provider rows carried (matches the 2026-07-20 revert). claude-opus-5[1m] RE-PROBED still absent from the gateway → stays disabled; ICA spine-offload remains claude-opus-4-8[1m]. Prior 2026-07-24   # Opus 5 (claude-opus-5) lands as the new SPINE / MUST-stay tier (orchestration + mode_d chains repointed claude-opus-4-8 -> claude-opus-5). Opus 4.8 demoted to legacy (Anthropic moved it to the legacy model list, same $5/$25) but kept selectable + as the ICA claude-opus-4-8[1m] spine-offload fallback (Opus 5 ICA availability unconfirmed -> claude-opus-5[1m] scaffolded/disabled pending a gateway probe). Sonnet 5 stays the default implementation workhorse; added token_economy_note (new tokenizer ~30% more tokens vs 4.6 -> prefer 4.6[1m]/Haiku for bounded/mechanical high-volume fan-out on metered/ICA lanes). Codex gpt-5.6 line (sol/terra/luna) unchanged/current. Prior 2026-07-21   # ICA GPT retest: NEW gpt-5.5-gus works with tools+reasoning on RAW transports (chat/completions, /responses w/ effort-scaling, /messages) on both keys — but 400s via Claude Code (CC's output_config rejected by Azure) → added status:scaffolded/enabled:false pending an output_config-strip path. gpt-5.4-gus + gpt-5.1-chat-gus REGRESSED (not servable on any key/endpoint) → status:degraded/enabled:false. gpt-5.6-*-dzus retest: terra-dzus dead on all routes; luna-dzus works ONLY via CODEX key + /chat/completions + tool + NO reasoning_effort (the strip-reasoning-control-param hypothesis CONFIRMED, narrow path; /responses still api-version-gated). One unifying finding: the ICA Azure-backed GPT deployments reject the client's reasoning-control param (reasoning_effort on chat, output_config on /messages) — strip it and the working models complete (effort defaults server-side). Prior 2026-07-20   # ICA Sonnet 5 reasoning REVALIDATED WORKING via Claude Code (supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end; legacy thinking.type:enabled now 400s. Reasoning-dependent offload to ica/claude-sonnet-5[1m] is now allowed; only gap = output_config.format (structured JSON) dropped by the gateway → use a tool-call. Gemini 3.5-flash/3.1-pro usable via ICA (/v1/messages + /chat/completions + CC [1m]); reasoning not surfaced as thinking blocks, grounding native-key-only. ALSO REVERTED the earlier same-day gpt-5.6-*-dzus ICA additions: those ICA gateway ids are listed on the gateway but NOT reliably servable (load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masked it via Opus fallback). code_review restored to codex/gpt-5.6-terra first. Parked design + retry trigger: docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. Prior (2026-07-09): Codex gpt-5.6 line added; code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only). ICA Sonnet 5 reasoning caveat. Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
+updated: 2026-08-26   # RECONCILE against the live registry (~/.claude/config/model-registry.yaml, node_01M0Z8DK6YR41BXEQ122ZE5943) — this file had been deliberately left behind it since 2026-08-26's ICA lane sweep because deploying it as-is would have restored the dead ICA Opus rows (see 583ffc9, which fixed every OTHER doc in this skill but explicitly skipped this file). Audited diff, not a copy: (a) all four `ica/claude-opus-*` provider rows set `enabled: false` — see the header's "ICA OPUS — RETRACTED" note; (b) every live `[1m]` provider `model_id` (Sonnet, Sonnet 4.6, Sonnet 4.5, Gemini 3.1-pro/3.6/3.5) stripped to its bare id, and the `second_opinion`/`web_research`/`implementation`/`svg_generation` routing_policy chains updated to match — see the header's "ICA 1M-CONTEXT PREFERENCE — RETIRED" note; (c) added an ICA ccx row for gpt-5.6-sol, `enabled: false`, carrying `capability_gap` (tools + reasoning are mutually exclusive on both transports there — a 200 status is not evidence it reasons); (d) gpt-5.6-luna-dzus provider row promoted to `cost_tier: free, allowance: unlimited` — it joined the ICA free tier (now five models, not four); (e) four models added `status: scaffolded, enabled: false` per the "ADDING A NEW MODEL" convention — gemini-3.7-flash (promotion candidate over gemini-3.6-flash on web_research/second_opinion/svg_generation pending a head-to-head, node_01M0Z7K4QJXD2EWK0BPKD98QVG), gpt-5.4-gus (servable again on ccx, retires 2026-08-31 regardless), meta-llama/llama-3-3-70b-instruct, mistral-medium-2505. NOT ported: the live registry's newer `provider_lanes:` schema block and per-row `lane:` fields — that is a structural addition, not a correctness fix, and is out of scope for this reconcile; a future edit may port it deliberately. Prior 2026-07-31   # ICA now serves claude-opus-5 — VERIFIED end-to-end (gateway /models list + cache-busted /chat/completions probe + Claude Code executor path via ica-claude.sh). ENABLED ica/claude-opus-5[1m] (priority 2, cost_score 8) → the ICA spine-offload lane is now claude-opus-5[1m]; claude-opus-4-8[1m] demoted to the spine-offload FALLBACK (still enabled). Verified capabilities on the ICA lane: [1m]=1,000,000 ctx vs plain id=200,000 (the [1m] invariant holds for Opus 5 too); maxOutputTokens reported 64,000 on ICA (vs 128K first-party — ICA-side cap, plan long outputs accordingly); tool_use OK on both Claude Code and raw /v1/messages; adaptive thinking via output_config.effort OK (thinking blocks + thinking_tokens); legacy thinking.type:enabled ALSO OK (diverges from sonnet-5, where the legacy form 400s); output_config.format (structured JSON schema) HONORED — Opus 5 does NOT have Sonnet 5's structured-output gap, so no tool-call workaround needed. ⚠️ The [1m] suffix is a Claude-Code CLIENT-SIDE hint, not a gateway model id: raw /v1/messages + /chat/completions MUST use the plain "claude-opus-5" (passing "claude-opus-5[1m]" returns 403 team_model_access_denied). Prior 2026-07-28   # Grounded use-case-rankings layer added (co-located use-case-rankings.yaml, rf-provenanced, human-gated); second_opinion + svg_generation chains re-ranked from the pilot evidence (supersedes the 2026-07-27 by-analogy gemini-3.6 promotions on those two chains — note the cost-posture change on second_opinion: leg-1 now metered codex/gpt-5.6-terra); per-model playbook_ref pointers added -> model-playbook skill. Prior 2026-07-27   # Dual-key ICA gateway probe (probe-ica-models.sh, CC + CODEX keys). ADDED gemini-3.6-flash (ICA servability verified via ica-claude.sh) — ENABLED + PROMOTED to leg-1 in web_research / second_opinion / svg_generation chains (3.5-flash demoted to fallback). ADDED claude-sonnet-4-5 (ICA-only fallback lane, verified, not in any auto chain — prefer sonnet-5/4-6 first). gpt-5.6-{terra,luna}-dzus RE-CONFIRMED not dispatchable (/responses Azure api-version 400 both keys; luna's only working path = CODEX key + raw /chat/completions no-effort, unreachable by wired executors) → left documented in the native codex blocks, NO ICA provider rows carried (matches the 2026-07-20 revert). claude-opus-5[1m] RE-PROBED still absent from the gateway → stays disabled; ICA spine-offload remains claude-opus-4-8[1m]. Prior 2026-07-24   # Opus 5 (claude-opus-5) lands as the new SPINE / MUST-stay tier (orchestration + mode_d chains repointed claude-opus-4-8 -> claude-opus-5). Opus 4.8 demoted to legacy (Anthropic moved it to the legacy model list, same $5/$25) but kept selectable + as the ICA claude-opus-4-8[1m] spine-offload fallback (Opus 5 ICA availability unconfirmed -> claude-opus-5[1m] scaffolded/disabled pending a gateway probe). Sonnet 5 stays the default implementation workhorse; added token_economy_note (new tokenizer ~30% more tokens vs 4.6 -> prefer 4.6[1m]/Haiku for bounded/mechanical high-volume fan-out on metered/ICA lanes). Codex gpt-5.6 line (sol/terra/luna) unchanged/current. Prior 2026-07-21   # ICA GPT retest: NEW gpt-5.5-gus works with tools+reasoning on RAW transports (chat/completions, /responses w/ effort-scaling, /messages) on both keys — but 400s via Claude Code (CC's output_config rejected by Azure) → added status:scaffolded/enabled:false pending an output_config-strip path. gpt-5.4-gus + gpt-5.1-chat-gus REGRESSED (not servable on any key/endpoint) → status:degraded/enabled:false. gpt-5.6-*-dzus retest: terra-dzus dead on all routes; luna-dzus works ONLY via CODEX key + /chat/completions + tool + NO reasoning_effort (the strip-reasoning-control-param hypothesis CONFIRMED, narrow path; /responses still api-version-gated). One unifying finding: the ICA Azure-backed GPT deployments reject the client's reasoning-control param (reasoning_effort on chat, output_config on /messages) — strip it and the working models complete (effort defaults server-side). Prior 2026-07-20   # ICA Sonnet 5 reasoning REVALIDATED WORKING via Claude Code (supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end; legacy thinking.type:enabled now 400s. Reasoning-dependent offload to ica/claude-sonnet-5[1m] is now allowed; only gap = output_config.format (structured JSON) dropped by the gateway → use a tool-call. Gemini 3.5-flash/3.1-pro usable via ICA (/v1/messages + /chat/completions + CC [1m]); reasoning not surfaced as thinking blocks, grounding native-key-only. ALSO REVERTED the earlier same-day gpt-5.6-*-dzus ICA additions: those ICA gateway ids are listed on the gateway but NOT reliably servable (load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masked it via Opus fallback). code_review restored to codex/gpt-5.6-terra first. Parked design + retry trigger: docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. Prior (2026-07-09): Codex gpt-5.6 line added; code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only). ICA Sonnet 5 reasoning caveat. Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Task-class → ordered preference chain. The chain IS the priority / free-first
@@ -65,14 +91,14 @@ routing_policy:
   documentation:    { chain: ["ica/claude-haiku-4-5", "claude/claude-haiku-4-5"], enabled: true }
   mechanical:       { chain: ["ica/claude-haiku-4-5", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-4-5"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_second_opinion_routing), see use-case-rankings.yaml, conf 0.6. gpt-5.6-sol = escalation-only (disagreement at terra tier).
-  second_opinion:   { chain: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash[1m]", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"], enabled: true }
+  second_opinion:   { chain: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"], enabled: true }
   # Grounded 2026-08-09 (execution pilot, n=3; see use-case-rankings.yaml `agentic-coding`, conf 0.5). CHAIN DELIBERATELY UNCHANGED — codex/gpt-5.6-terra shipped 3/3 real legs with zero logic defects but is EXPLICITLY-SELECTABLE ONLY, not an auto leg, on n=3 with no head-to-head arm. Explicit selection already resolves (codex-executor, fallback claude/claude-sonnet-5) and needs no chain edit. ⚠️ Dispatch an implementer leg at effort `high` — sandboxModeFor() maps standard→read-only, so a default-effort codex implementer CANNOT WRITE and fails by producing nothing.
   implementation:   { chain: ["claude/claude-sonnet-5"], enabled: true }   # workhorse default; ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload)
-  web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview[1m]"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
+  web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
   code_review:      { chain: ["codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # codex workhorse = gpt-5.6-terra (successor to gpt-5.5); escalate to gpt-5.6-sol (frontier SOTA) on two failures per the two-failure rule. (An ICA gpt-5.6-terra-dzus lane was attempted 2026-07-20 but reverted — model not reliably servable on the gateway; see ica-codex-responses-shim-v1.md.)
   image_generation: { chain: ["nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
-  svg_generation:   { chain: ["claude/claude-fable-5", "ica/gemini-3.1-pro-preview[1m]", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
+  svg_generation:   { chain: ["claude/claude-fable-5", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
   video_generation: { chain: ["sora/sora-2"], enabled: true }
   orchestration:    { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
   mode_d:           { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
@@ -104,7 +130,7 @@ models:
     providers:
       - { provider: claude, model_id: "claude-opus-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
       # ICA: PROMOTED to enabled 2026-07-31 — claude-opus-5 appeared on the gateway /models list and passed the full executor-path verification (see the `updated:` changelog above). This is now THE ICA spine-offload lane; claude-opus-4-8[1m] is the fallback. Keep the [1m] variant ranked first per the file-header 1M invariant. NOTE max_output 64000 on ICA (< the 128000 first-party ceiling). Raw transports must use the PLAIN id — "[1m]" is a Claude-Code client hint and 403s on /v1/messages.
-      - { provider: ica,    model_id: "claude-opus-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000 }
+      - { provider: ica,    model_id: "claude-opus-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000 }
 
   claude-opus-4-8:
     family: claude
@@ -122,7 +148,7 @@ models:
     providers:
       - { provider: claude, model_id: "claude-opus-4-8",     cost_tier: premium,  allowance: billed,            enabled: true, priority: 1 }
       # ICA claude-opus-4-8[1m]: stays enabled, but DEMOTED to the spine-offload FALLBACK 2026-07-31 — claude-opus-5[1m] is verified on the gateway and takes the primary spine-offload lane. Prefer opus-5[1m]; reach here only if opus-5 is unavailable or you need 4.8's older/lighter tokenizer.
-      - { provider: ica,    model_id: "claude-opus-4-8[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica,    model_id: "claude-opus-4-8", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   claude-opus-4-7:
     family: claude
@@ -138,8 +164,8 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
-      - { provider: ica, model_id: "claude-opus-4-7[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "claude-opus-4-7",     cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2 }
+      - { provider: ica, model_id: "claude-opus-4-7", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "claude-opus-4-7",     cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2 }  # disabled 2026-08-26 — no ICA Opus lane, see header
 
   claude-opus-4-6:
     family: claude
@@ -155,8 +181,8 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
-      - { provider: ica, model_id: "claude-opus-4-6[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "claude-opus-4-6",     cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2 }
+      - { provider: ica, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "claude-opus-4-6",     cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2 }  # disabled 2026-08-26 — no ICA Opus lane, see header
 
   claude-sonnet-5:
     family: claude
@@ -177,7 +203,7 @@ models:
       - { provider: claude, model_id: "claude-sonnet-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback. Verified 2026-07-08: [1m]=1M, plain=200k via modelUsage.
       # ✅ reasoning WORKS on this ICA lane via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent legs OK here. Only gap: output_config.format (structured JSON) dropped by the gateway — use a tool-call.
-      - { provider: ica,    model_id: "claude-sonnet-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica,    model_id: "claude-sonnet-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica,    model_id: "claude-sonnet-5",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   claude-sonnet-4-6:
@@ -195,7 +221,7 @@ models:
     providers:
       - { provider: claude, model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: billed,            enabled: true, priority: 1, cost_score: 5 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is demoted fallback.
-      - { provider: ica,    model_id: "claude-sonnet-4-6[1m]",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica,    model_id: "claude-sonnet-4-6",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica,    model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3 }
 
   claude-sonnet-4-5:
@@ -220,7 +246,7 @@ models:
     observed_ids: ["claude-sonnet-4-5-20250929"]
     providers:
       # ICA-only lane (no subscription entry — sonnet-5 is the subscription default). 1m preferred over plain 200k.
-      - { provider: ica, model_id: "claude-sonnet-4-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "claude-sonnet-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica, model_id: "claude-sonnet-4-5",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2 }
 
   claude-haiku-4-5:
@@ -409,7 +435,7 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback.
-      - { provider: ica, model_id: "gemini-3.1-pro-preview[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica, model_id: "gemini-3.1-pro-preview",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2 }
 
   # ── Google (native gemini-cli, AI Studio GEMINI_API_KEY — metered; free Code Assist OAuth tier sunset 2026-07) ──
@@ -429,7 +455,7 @@ models:
     providers:
       - { provider: gemini, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }   # native gemini-cli: 1M without a suffix, Search-grounded
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, model_id: "gemini-3.6-flash[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica, model_id: "gemini-3.6-flash",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   gemini-3.5-flash:
@@ -447,7 +473,7 @@ models:
     providers:
       - { provider: gemini, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }   # native gemini-cli: 1M without a suffix, Search-grounded
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, model_id: "gemini-3.5-flash[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
       - { provider: ica, model_id: "gemini-3.5-flash",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   gemini-3.1-pro-preview:
@@ -505,6 +531,14 @@ models:
     status: active
     providers:
       - { provider: codex, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      # ICA ccx lane — measured 2026-08-26. SERVABLE (all 3 CCx keys, bare id, 600,007
+      # prompt tokens) but tools and reasoning are mutually exclusive there on BOTH
+      # transports: /v1/chat/completions with tools + explicit reasoning_effort returns
+      # 200 with reasoning_tokens=0 at every level; /v1/responses with tools returns
+      # reasoning_tokens=0 at low AND high effort. Reasoning is only real when NO tools
+      # are present. Left enabled:false — do not flip on the strength of a 200; assert
+      # reasoning_tokens>0 alongside a tool call first. node_01M0Z7JP9YT7W15X94Z843AM9Y.
+      - { provider: ica, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, max_context: 600000, capability_gap: "tools+reasoning mutually exclusive on BOTH transports (reasoning_tokens=0 whenever tools are present) — measured 2026-08-26" }
 
   gpt-5.6-terra:
     family: openai
@@ -577,7 +611,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: ica, model_id: "gpt-5.6-luna-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+      - { provider: ica, model_id: "gpt-5.6-luna-dzus", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
 
@@ -612,6 +646,71 @@ models:
     status: active
     providers:
       - { provider: codex, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+
+  # ── ICA ccx-only, newly discovered 2026-08-26 — scaffolded per the header's ─────
+  # "ADDING A NEW MODEL" convention: registered so agents know they exist, every
+  # provider instance enabled:false until a head-to-head or capability confirmation.
+  # Full inventory: agentic_meta_dev docs/agentic-operator/ICA-CCX-LANE-MATRIX.md.
+
+  gemini-3.7-flash:
+    family: google
+    class: gemini-flash
+    descriptor: "Gemini 3.7 Flash on the ICA ccx gateway — newer than gemini-3.6-flash, which currently leads the web_research / second_opinion / svg_generation chains. Servable (bare id, tool use OK, structured output honored, 950,002 prompt tokens measured). A promotion CANDIDATE on those three chains, but the scores below are BY-ANALOGY placeholders carried from 3.6-flash — no head-to-head has been run. Do not promote on version number alone; see node_01M0Z7K4QJXD2EWK0BPKD98QVG."
+    scores: { cost: 8, intelligence: 7, taste: 6, speed: 8 }   # placeholder, by-analogy from gemini-3.6-flash — UNVERIFIED, pending head-to-head
+    when_to_use: []   # deliberately empty — not auto-routed pending the head-to-head
+    playbook_ref: model-playbook/routes/google-gemini.md#gemini-3.7-flash
+    tools: [web_search, large_context]
+    related_skills: [gemini-cli]
+    max_context: 1000000
+    sampling: stochastic
+    status: scaffolded
+    providers:
+      - { provider: ica, model_id: "gemini-3.7-flash", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1, max_context: 1000000 }
+
+  gpt-5.4-gus:
+    family: openai
+    class: codex
+    descriptor: "GPT-5.4 (`gpt-5.4-gus`) via ICA. Previously recorded as REGRESSED/not-servable on the beta gateway (2026-07-21); on the ccx gateway it is servable again as of 2026-08-26 (200 on both transports, tool_use OK, structured output honored, max completion 128,000). Kept scaffolded/disabled: the upstream gpt-5.4 line retires 2026-08-31 and OpenAI's own migration note points it at gpt-5.6-luna, which is already free on this lane. Documented so a future probe does not re-file it as a discovery."
+    scores: { cost: 6, intelligence: 6, taste: 5, speed: 7 }
+    when_to_use: []
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.4-gus
+    tools: []
+    related_skills: [codex]
+    max_context: 128000
+    sampling: deterministic
+    status: scaffolded
+    providers:
+      - { provider: ica, model_id: "gpt-5.4-gus", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+
+  meta-llama/llama-3-3-70b-instruct:
+    family: meta
+    class: llama
+    descriptor: "Llama 3.3 70B Instruct on the ICA ccx gateway. Pool-cost (not free), and in practice superseded by the FREE meta-llama/llama-4-maverick-17b-128e-instruct-fp8 already on this registry — recorded for completeness, no reason to route here over the free tier."
+    scores: { cost: 5, intelligence: 5, taste: 4, speed: 6 }
+    when_to_use: []
+    playbook_ref: model-playbook/routes/open-models.md#llama-3-3-70b-instruct
+    tools: []
+    related_skills: []
+    max_context: 127200
+    sampling: stochastic
+    status: scaffolded
+    providers:
+      - { provider: ica, model_id: "meta-llama/llama-3-3-70b-instruct", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+
+  mistral-medium-2505:
+    family: mistral
+    class: mistral
+    descriptor: "Mistral Medium 2505 — the first Mistral model on any ICA lane, discovered on the ccx catalog 2026-08-26. Tool use + structured output OK; watsonx-backed, so emits tool-call arguments as a JSON string — call it on /v1/chat/completions, never /v1/messages (the Anthropic-shape translation layer 500s on the string form)."
+    scores: { cost: 6, intelligence: 6, taste: 5, speed: 6 }
+    when_to_use: []
+    playbook_ref: model-playbook/routes/open-models.md#mistral-medium-2505
+    tools: []
+    related_skills: []
+    max_context: 127200
+    sampling: stochastic
+    status: scaffolded
+    providers:
+      - { provider: ica, model_id: "mistral-medium-2505", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   # ── Bob (local, zero-cost, stateless) ───────────────────────────────────────
 
