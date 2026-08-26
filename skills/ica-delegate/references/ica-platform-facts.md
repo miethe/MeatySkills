@@ -17,7 +17,11 @@ upstream LiteLLM/Bedrock documentation about a deployment that turns out to dive
 This is the fact most likely to be missed, because it inverts the mental model. `ica-delegate` is
 framed around *sending work out* to ICA, so it is easy to assume the calling session is on the
 subscription. **It frequently is not:** `~/ica-claude.sh` is a normal way to launch an interactive
-Claude Code session, and `claude-opus-5[1m]` is the documented spine-offload lane.
+Claude Code session. ⚠️ **Updated 2026-08-26:** the wrapper's beta-lane default used to be
+`claude-opus-5[1m]`, described as the spine-offload lane. That is retired — every `[1m]` id and
+every Opus id now 403s on both ICA gateways, so the wrapper now defaults to bare
+`claude-sonnet-5` on both lanes. The check below is unchanged and is still the only reliable
+discriminator: read `ANTHROPIC_BASE_URL`, never the model id.
 
 ```bash
 env | grep -E "^(ANTHROPIC_BASE_URL|ANTHROPIC_MODEL|CCDASH_LAUNCHER)="

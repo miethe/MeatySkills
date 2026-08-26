@@ -222,8 +222,8 @@ shelled-out `invocation_template` decides the provider itself.
   *concepts* (design §7); the resolver's `MUST_STAY_PRIMARY_CLASSES` list has 6 entries because
   schema-recovery and cross-wave-merge are split out as distinct task_class strings.
 - Do not say ICA Sonnet/Opus are free — they are `allowance: shared_token_pool` (opt-in
-  cost-shift). Only Haiku 4.5 / Gemma 4 / Llama 4 Maverick / Granite 4 are `allowance: unlimited`.
-  ICA Gemini 3.5 Flash (live 2026-07-07) is also `shared_token_pool` — **not free**.
+  cost-shift). Only Haiku 4.5 / Gemma 4 / Llama 4 Maverick / Granite 4 / GPT-5.6 Luna are
+  `allowance: unlimited`. ICA Gemini 3.5 Flash (live 2026-07-07) is also `shared_token_pool` — **not free**.
 - Do not say the resolver ranks or orders candidates by the `scores:` block — v3 ranking is
   chain / priority / availability / capability-match (all registry-driven). The `scores:` block
   (`cost · intelligence · taste · speed`, 1–10) is advisory metadata mirroring MODEL-ROUTING §1.5

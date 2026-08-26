@@ -450,7 +450,7 @@ Headless writer: `log-cli.js --blocked`.
    _Source_: `model-registry-router-globalization-v1.md § 3.3`
 
 4. **Free vs not-free is encoded, never assumed.** `allowance: unlimited` (Haiku 4.5, Gemma 4,
-   Llama 4 Maverick, Granite 4) are genuinely free / cost-shifted. `allowance: shared_token_pool`
+   Llama 4 Maverick, Granite 4, GPT-5.6 Luna) are genuinely free / cost-shifted. `allowance: shared_token_pool`
    (ICA Sonnet/Opus) are token-limited and NOT free — they stay opt-in cost-shifts.
    _Source_: `model-registry-router-globalization-v1.md § 3.2`
 

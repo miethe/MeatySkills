@@ -10,9 +10,10 @@ Loaded only when the routed model is a Gemini family member. Source: `model-regi
   `svg_generation` chains, leg-2 in `second_opinion` (2026-07-27 promotion, by analogy to
   3.5-flash, not by evidence — see gotchas).
 - **Invocation lanes:** `gemini/gemini-3.6-flash` (native gemini-cli, 1M without a suffix,
-  Google-Search **GROUNDED** — Gemini 3+ only). `ica/gemini-3.6-flash[1m]` (ICA gateway,
-  `shared_token_pool`, NOT free, 1M **with** the `[1m]` suffix — plain id caps at 200k, **not**
-  grounded on the ICA path).
+  Google-Search **GROUNDED** — Gemini 3+ only). `ica/gemini-3.6-flash` (ICA gateway,
+  `shared_token_pool`, NOT free; ⚠️ **superseded 2026-08-26: use the bare id** — `[1m]` 403s on
+  every transport now, and the bare id carries native/1M-scale context for free, measured up to
+  950,002 prompt tokens on `gemini-3.7-flash`, ccx. Not grounded on the ICA path either way).
 - **Effort/context:** 1M context (native, no suffix needed). Auth: AI Studio `GEMINI_API_KEY` at
   `~/.config/aos/secrets.env`.
 - **Gotchas — GROUNDED 2026-07-28, conf 0.6, cuts against the current chain promotion:**
@@ -37,7 +38,8 @@ Loaded only when the routed model is a Gemini family member. Source: `model-regi
   evidence against the "promote to newest flash" rationale. Consider it the stronger flash-tier
   SVG choice pending a formal re-validation.
 - **Invocation lanes:** `gemini/gemini-3.5-flash` (native, grounded, 1M without a suffix),
-  `ica/gemini-3.5-flash[1m]` (ICA, ungrounded, needs the `[1m]` suffix).
+  `ica/gemini-3.5-flash` (ICA, ungrounded). ⚠️ Superseded 2026-08-26: use the **bare** id on ICA —
+  `[1m]` 403s on every transport now; the bare id carries native context for free.
 - **Gotchas:** the free "Gemini Code Assist for individuals" OAuth tier was sunset — on
   `IneligibleTierError`, fix `GEMINI_API_KEY`/`selectedType` in `~/.gemini/settings.json`;
   **do not** re-OAuth, that tier is permanently gone.
@@ -65,8 +67,9 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 - **When to pick:** same as `gemini-3.1-pro-preview` (web-research, large-context, exploration) —
   reach for this lane specifically when the caller is already on the ICA profile and doesn't need
   Search grounding.
-- **Invocation lane:** `ica/gemini-3.1-pro-preview[1m]` — always use the `[1m]` id (plain caps at
-  200k on the gateway; plain `ica/gemini-3.1-pro-preview` is a demoted fallback only).
+- **Invocation lane:** `ica/gemini-3.1-pro-preview` — ⚠️ **superseded 2026-08-26: use the bare
+  id.** The old "`[1m]` always, plain is a demoted fallback" rule is inverted now: `[1m]` 403s on
+  every transport, and the bare id carries native context for free.
 - **Gotchas:** `shared_token_pool`, not free. Not Search-grounded — the ICA proxy cannot ground;
   use the native lane above if grounding is required.
 
@@ -83,8 +86,10 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
   Nano Banana image-gen, SVG/multimodal input. Reach for this **only** when you need a capability
   the ICA proxy lacks.
 - **ICA gateway:** cheaper-feeling (shared pool) but **not** grounded and **not** free
-  (`allowance: shared_token_pool`) — needs the `[1m]` suffix to unlock 1M (the plain id silently
-  caps at 200k on the ICA path only; native is already 1M without a suffix).
+  (`allowance: shared_token_pool`). ⚠️ **Superseded 2026-08-26:** the old "needs `[1m]` to unlock
+  1M, plain caps at 200k" rule is inverted — `[1m]` 403s on every transport now, and the **bare**
+  id carries native/large context for free (measured up to 950,002 prompt tokens on
+  `gemini-3.7-flash`, ccx).
 - Prefer ICA-first for non-grounded cross-family second opinions; reach for native only to close
   a grounding/image-gen/SVG capability gap.
 - Auth: `GEMINI_API_KEY` (AI Studio, metered) in `~/.config/aos/secrets.env`;
@@ -94,8 +99,15 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 ## Do Not Say
 
 - Do not say Gemini on ICA gets Search grounding — it doesn't; grounding is native-key-only.
-- Do not say the plain (non-`[1m]`) ICA Gemini id gets 1M context — it's silently capped at 200k
-  on that path.
+- ⚠️ **Do not say the plain (non-`[1m]`) ICA Gemini id caps at 200k — RETRACTED 2026-08-26.**
+  Measured: bare `gemini-3.7-flash` accepted 950,002 prompt tokens on ccx. The bare id now carries
+  native context; it is the `[1m]` id that is dead (403s on every transport).
+- Do not say a `[1m]`-suffixed Gemini id reaches ICA on any transport — superseded 2026-08-26,
+  every `[1m]` id 403s now.
+- Do not say `gemini-3.7-flash` is unavailable — it is servable on ccx (950,002 prompt tokens
+  measured, tool use and structured output both confirmed) and outranks the model currently
+  leading three routing chains, but is not yet promoted pending a head-to-head vs `gemini-3.6-flash`.
+  See `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` F4.
 
 **Full transport mechanics:** headless flags, output caps, image/SVG prompt templates —
 `~/.claude/skills/gemini-cli/SKILL.md`. ICA lane mechanics shared across models —

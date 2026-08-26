@@ -55,7 +55,7 @@ feature-end gate.
 Haiku-class and open-model work routes to ICA **first** (free, $0 to the primary budget) and only
 falls back to `claude/*` on failure or absence — so free-eligible work never burns primary tokens
 in the happy path. This applies to free-tier ICA models only (`allowance: unlimited`: Haiku 4.5,
-Gemma 4, Llama 4 Maverick, Granite 4). ICA Sonnet/Opus (`shared_token_pool`) remain opt-in
+Gemma 4, Llama 4 Maverick, Granite 4, GPT-5.6 Luna). ICA Sonnet/Opus (`shared_token_pool`) remain opt-in
 cost-shifts, not always-on free routes.
 
 ## How a leg gets routed (end to end)

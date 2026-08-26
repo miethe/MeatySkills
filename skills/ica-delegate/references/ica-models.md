@@ -1,9 +1,42 @@
 # ICA Gateway Model Inventory
 
-Model reference for the IBM ICA gateway (`https://api.nextgen-beta.ica.ibm.com/ica`).
-Accessed via `~/ica-claude.sh --model <identifier>`. The gateway **caps the plain id at 200k** — even for models that are natively 1M (Opus 5, Sonnet 5, Gemini 3.x). Models with the `[1m]` suffix (Claude Opus/Sonnet AND Gemini — e.g. `opus[1m]`, `claude-opus-5[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`, `gemini-3.5-flash[1m]`) provide ~1M context — confirmed via the authoritative `modelUsage.<id>.contextWindow` field (never trust the model's self-report): Claude 2026-06-09, Sonnet 5 + Gemini `[1m]` on 2026-07-08, and **Opus 5 on 2026-07-31**. Script default is `claude-opus-5[1m]`; **preferred ICA Opus is now `claude-opus-5[1m]`** (Opus 5 landed on the gateway by 2026-07-31 — it was absent on the 2026-07-24 and 2026-07-27 probes; `claude-opus-4-8[1m]` is demoted to the spine-offload **fallback**, still enabled and still usable). **Preferred Sonnet on ICA is `claude-sonnet-5[1m]`** (Sonnet 5 landed on the gateway 2026-07-08, superseding `claude-sonnet-4-6[1m]`). The `opus[1m]` short alias still routes to `claude-opus-4-8[1m]` — its target was **not** re-tested for Opus 5, so use the explicit `claude-opus-5[1m]` id.
+Model reference for the IBM ICA gateway (`https://api.nextgen-beta.ica.ibm.com/ica`, the "beta"
+lane; the sibling "ccx" gateway is covered where noted below).
+Accessed via `~/ica-claude.sh --model <identifier>`.
+
+⚠️ **SUPERSEDED 2026-08-26 — read this before anything else in the file.** Everything below about
+"the gateway caps the plain id at 200k, always use `[1m]`" and "`claude-opus-5[1m]` is the
+preferred ICA Opus / spine-offload lane" is **retracted**, measured across both gateways (beta and
+ccx) and all 11 keys:
+
+- **The `[1m]` suffix is retired.** Every `[1m]`-suffixed and dated id now returns **403 on every
+  transport, including the Claude Code client path** — there is no longer a transport on which it
+  succeeds. **Use bare ids everywhere.**
+- **Bare ids now carry each model's native context, for free.** Measured via
+  `usage.prompt_tokens`: bare `claude-sonnet-5` accepted 600,007 tokens on beta and 950,007 on ccx;
+  `gemini-3.7-flash` accepted 950,002. Bare `claude-haiku-4-5` accepted 190,008 and rejected
+  250,000 — that is Haiku's own real 200k model limit, not a gateway cap. Dropping `[1m]` costs
+  nothing.
+- **There is no ICA Opus lane.** `claude-opus-5`, `claude-opus-4-8`, and `claude-opus-4-6` all
+  return 403 on every one of the 11 keys, on both gateways — a tenancy-wide entitlement revocation,
+  not auth or key exhaustion (`claude-sonnet-5` returns 200 on those same keys). Do not route
+  spine-offload, or anything else, to an ICA Opus id. The offload workhorse is bare
+  `claude-sonnet-5`.
+
+The rest of this document was written while the old behavior was live and is kept as a historical
+record with the sections that are now dead marked inline — **do not follow an instruction to use
+`[1m]` or an ICA Opus id anywhere below.** Receipts:
+`agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` (F1/F2) and
+`agentic_meta_dev/docs/agentic-operator/ICA-CCX-LANE-MATRIX.md`.
+
+<details>
+<summary>Historical — the original `[1m]`/Opus intro and prefix/quoting gotchas (superseded, do not follow)</summary>
+
+The gateway **caps the plain id at 200k** — even for models that are natively 1M (Opus 5, Sonnet 5, Gemini 3.x). Models with the `[1m]` suffix (Claude Opus/Sonnet AND Gemini — e.g. `opus[1m]`, `claude-opus-5[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`, `gemini-3.5-flash[1m]`) provide ~1M context — confirmed via the authoritative `modelUsage.<id>.contextWindow` field (never trust the model's self-report): Claude 2026-06-09, Sonnet 5 + Gemini `[1m]` on 2026-07-08, and **Opus 5 on 2026-07-31**. Script default is `claude-opus-5[1m]`; **preferred ICA Opus is now `claude-opus-5[1m]`** (Opus 5 landed on the gateway by 2026-07-31 — it was absent on the 2026-07-24 and 2026-07-27 probes; `claude-opus-4-8[1m]` is demoted to the spine-offload **fallback**, still enabled and still usable). **Preferred Sonnet on ICA is `claude-sonnet-5[1m]`** (Sonnet 5 landed on the gateway 2026-07-08, superseding `claude-sonnet-4-6[1m]`). The `opus[1m]` short alias still routes to `claude-opus-4-8[1m]` — its target was **not** re-tested for Opus 5, so use the explicit `claude-opus-5[1m]` id.
 
 > ⚠️ **`[1m]` ids must keep the `claude-` prefix.** The bare `sonnet-5[1m]` / `sonnet-4-6[1m]` (no prefix) **401s** on teams scoped to the `global-models` group — the gateway strips `[1m]`, is left with `sonnet-5` / `sonnet-4-6`, which is not in the group, and rejects it (observed 2026-06-10). Use `claude-sonnet-5[1m]`. Also **quote the model arg in zsh** (`--model 'claude-sonnet-5[1m]'`) — the `[1m]` glob otherwise aborts the command with `no matches found`. And **`[1m]` belongs only on the Claude Code path** — raw `/v1/messages` / `/chat/completions` calls must send the plain id or they 403 with `team_model_access_denied` (see the gotcha row in Known Limitations).
+
+</details>
 
 ---
 
@@ -16,7 +49,7 @@ Not the Anthropic API. Knowing this predicts most of its quirks instead of disco
 |---|---|---|
 | Response ids | `msg_bdrk_01Cefyx3ZVQzLomk2j9jFs9Q` | Upstream is **Amazon Bedrock**. Model ids carry no `anthropic.`/`us.anthropic.` prefix, so the proxy normalizes them. |
 | `GET /v1/models` shape | every entry `{"object":"model","owned_by":"openai"}` — including the Claude and Gemini ids | A **LiteLLM**-style proxy with an OpenAI-shaped model registry. `owned_by:"openai"` is a LiteLLM default, **not** a statement about the model's vendor. |
-| `[1m]` absent from the catalog | 0 of 22 ids contain `[1m]` | `[1m]` is a **Claude Code client-side hint**, never a gateway model id → `[1m]` on a raw transport is an *unregistered model group* → 403 `team_model_access_denied`. |
+| `[1m]` absent from the catalog | 0 of 22 ids contain `[1m]` | `[1m]` was a **Claude Code client-side hint**, never a gateway model id. ⚠️ **Superseded 2026-08-26:** it is no longer reachable from any transport — `[1m]` ids 403 on the Claude Code path too now, not only raw transports. |
 | Top-level unknown fields | accepted and dropped (see Known Limitations) | Proxy envelope parsing, not Anthropic's strict schema. |
 
 ⚠️ **Do not extrapolate a "Bedrock feature mask" without probing.** Reasoning by analogy from
@@ -46,25 +79,26 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 | Gemma 4 26B Preview | `gemma-4-26b-a4b-it` | Free | Google; good for simple extraction and classification |
 | Llama 4 Maverick 17B Instruct | `meta-llama/llama-4-maverick-17b-128e-instruct-fp8` | Free | Meta; fast, lightweight reasoning |
 | Granite 4 Small | `ibm/granite-4-h-small` | Free | IBM; smallest model, fastest response |
-| Claude Sonnet 5 | `claude-sonnet-5` | Token Limited | **Current-gen Sonnet; landed on ICA 2026-07-08.** Preferred ICA workhorse — use the `[1m]` variant. Plain id caps at 200k. |
+| OpenAI GPT-5.6 Luna | `gpt-5.6-luna-dzus` | Free | **Added to the free tier 2026-08-26.** Cheap/fast GPT-5.6-line model; see the reachability caveat below — completes reliably only via a raw CODEX-key `/chat/completions` call with `reasoning_effort` omitted, not yet via `ica-claude.sh`/Claude Code. |
+| Claude Sonnet 5 | `claude-sonnet-5` | Token Limited | **Current-gen Sonnet; landed on ICA 2026-07-08. Preferred ICA workhorse and the ICA offload lane, full stop.** ⚠️ Superseded 2026-08-26: use this **bare** id — it now carries native context (950,007 prompt tokens measured on ccx, 600,007 on beta); the old "plain id caps at 200k, use `[1m]`" guidance is dead, and `[1m]` 403s. |
 | Claude Sonnet 4.6 | `claude-sonnet-4-6` | Token Limited | Older Sonnet; now a fallback below Sonnet 5 |
 | Claude Sonnet 4.5 | `claude-sonnet-4-5` | Token Limited | Legacy; strong general-purpose |
 | OpenAI GPT-4o | `gpt-4o` | Token Limited | OpenAI multimodal; alternative reasoning style |
-| Gemini 3.5 Flash | `gemini-3.5-flash` | Token Limited | Google; fast cross-family lens. Plain id caps at 200k — use `[1m]`. NOT Search-grounded on the gateway. |
-| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | Token Limited | Google; long-context strength. Plain id caps at 200k — use `[1m]`. |
-| Claude Opus 4.6 | `claude-opus-4-6` | Token Limited | Deep reasoning, architecture decisions |
-| Claude Opus 4.7 | `claude-opus-4-7` | Token Limited | Stronger reasoning than 4.6 |
-| Claude Opus 4.6 (1M variant) | `claude-opus-4-6[1m]` | Token Limited | 1M context variant; same format as confirmed variants — untested but expected to work |
-| Claude Opus 4.7 (1M variant) | `claude-opus-4-7[1m]` | Token Limited | **Confirmed 1M** — 224k inline token test passed 2026-06-08; self-reports 200k (ignore). |
-| Claude Opus 5 (1M variant) | `claude-opus-5[1m]` | Token Limited | **Confirmed live + 1M (2026-07-31)** — `modelUsage` reports `contextWindow: 1000000` (plain `claude-opus-5` = 200000). **Preferred ICA Opus + spine-offload lane + script default.** Verified end-to-end: raw `/chat/completions` nonce OK, `~/ica-claude.sh --model 'claude-opus-5[1m]'` returns the nonce, tool use works via Claude Code (2-turn Read test) **and** raw `/v1/messages` (`['thinking','tool_use']`, `stop_reason: tool_use`), `output_config.effort` thinking works (125 thinking tokens), legacy `thinking.type: enabled` **also** works (diverges from Sonnet 5, where it 400s), and `output_config.format` json_schema **is honored**. `maxOutputTokens` on this lane = **64000** (below the 128k first-party ceiling). Allowance `shared_token_pool` — token-limited, not free. ⚠️ the `[1m]` suffix is a Claude Code client hint: raw transports must send plain `claude-opus-5`. |
-| Claude Opus 4.8 (1M variant) | `claude-opus-4-8[1m]` | Token Limited | **Confirmed 1M (2026-06-09)** — `modelUsage` reports `contextWindow: 1000000`. **Spine-offload fallback below `claude-opus-5[1m]`** (still enabled, still usable — 4.8's older/lighter tokenizer can still be preferable for bounded high-volume fan-out on a metered pool). (Earlier "401" note was stale — 4.8[1m] is live on the gateway.) |
-| Opus alias (1M variant) | `opus[1m]` | Token Limited | **Confirmed 1M** — short alias; `modelUsage` shows it routes to `claude-opus-4-8[1m]`. Whether *this gateway-side* alias now retargets Opus 5 is **unverified** — use the explicit `claude-opus-5[1m]` id. **Distinct from the client-side alias:** `~/ica-claude.sh --model opus` is remapped by `ica-settings.json`'s `ANTHROPIC_DEFAULT_OPUS_MODEL`, which now points at `claude-opus-5[1m]` — verified 2026-07-31 (`modelUsage` showed `claude-opus-5[1m]`, `canonicalModel: claude-opus-5`, ctx 1000000). Don't conflate the two aliases. |
-| Claude Sonnet 5 (1M variant) | `claude-sonnet-5[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `contextWindow: 1000000` (plain `claude-sonnet-5` = 200000). **Preferred Sonnet on ICA.** MUST keep the `claude-` prefix. |
-| Claude Sonnet 4.6 (1M variant) | `claude-sonnet-4-6[1m]` | Token Limited | **Confirmed working 2026-06-10** (returns output normally); older fallback below `claude-sonnet-5[1m]`. MUST keep the `claude-` prefix — the bare `sonnet-4-6[1m]` **401s** on `global-models`-scoped teams. |
-| Gemini 3.5 Flash (1M variant) | `gemini-3.5-flash[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). The ICA `[1m]` rule applies to Gemini too. Not Search-grounded on the gateway. |
-| Gemini 3.1 Pro Preview (1M variant) | `gemini-3.1-pro-preview[1m]` | Token Limited | **Confirmed 1M (2026-07-08)** — `modelUsage` reports `1000000` (plain = 200000). |
-| Claude Opus 4.8 | `claude-opus-4-8` | Token Limited | Previous-gen Opus (200k variant); below Opus 5 |
-| Claude Opus 5 | `claude-opus-5` | Token Limited | **Current-gen Opus; confirmed present on the gateway 2026-07-31** (absent on the 2026-07-24 / 2026-07-27 probes). Plain id caps at 200k — use the `[1m]` variant. This plain id is what **raw** transports (`/v1/messages`, `/chat/completions`) must send. |
+| Gemini 3.5 Flash | `gemini-3.5-flash` | Token Limited | Google; fast cross-family lens. ⚠️ Superseded 2026-08-26: use the **bare** id — native context confirmed (`gemini-3.7-flash` measured 950,002 prompt tokens bare); `[1m]` 403s. NOT Search-grounded on the gateway. |
+| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | Token Limited | Google; long-context strength. ⚠️ Superseded 2026-08-26: use the **bare** id (see Sonnet 5 row above); `[1m]` 403s. |
+| Claude Opus 4.6 | `claude-opus-4-6` | Token Limited | ⚠️ **Superseded 2026-08-26: 403 tenancy-wide (all 11 keys, both gateways) — no ICA Opus lane exists.** Row kept for the historical "deep reasoning" note only; do not route here. |
+| Claude Opus 4.7 | `claude-opus-4-7` | Token Limited | Stronger reasoning than 4.6 (historical note; not individually re-probed 2026-08-26, assume dead under the same Opus-tenancy revocation until re-verified) |
+| Claude Opus 4.6 (1M variant) | `claude-opus-4-6[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` ids 403 everywhere now; row is dead history. |
+| Claude Opus 4.7 (1M variant) | `claude-opus-4-7[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` ids 403 everywhere now; row is dead history. |
+| Claude Opus 5 (1M variant) | `claude-opus-5[1m]` | Token Limited | ⚠️ **Superseded 2026-08-26 — RETRACTED. There is no ICA Opus lane.** The "preferred ICA Opus + spine-offload lane" claim below is a dated verification that has since been contradicted: `claude-opus-5` (with or without `[1m]`) now 403s on all 11 keys, both gateways — a tenancy-wide entitlement revocation, distinct from the `[1m]` retirement. Do not route spine-offload here; use bare `claude-sonnet-5`. Historical detail (no longer actionable): confirmed live + 1M (2026-07-31) via `modelUsage.contextWindow: 1000000`; tool use, thinking, and `output_config.format` all worked at the time; `maxOutputTokens` was 64000. |
+| Claude Opus 4.8 (1M variant) | `claude-opus-4-8[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — RETRACTED. `claude-opus-4-8` 403s tenancy-wide now (both gateways, all 11 keys); the "spine-offload fallback" role is void, and `[1m]` also 403s independently. No ICA Opus lane, primary or fallback, exists. |
+| Opus alias (1M variant) | `opus[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` 403s everywhere and every Opus id it could route to also 403s tenancy-wide. This alias is dead on ICA regardless of what it targets. |
+| Claude Sonnet 5 (1M variant) | `claude-sonnet-5[1m]` | Token Limited | ⚠️ **Superseded 2026-08-26 — RETRACTED.** `[1m]` ids 403 on every transport now, including Claude Code. Use bare `claude-sonnet-5` — it carries the same (or greater) context for free; see the plain-id row above. |
+| Claude Sonnet 4.6 (1M variant) | `claude-sonnet-4-6[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` ids 403 everywhere now; row is dead history. |
+| Gemini 3.5 Flash (1M variant) | `gemini-3.5-flash[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` ids 403 everywhere now; use bare `gemini-3.5-flash` (or newer `gemini-3.7-flash`, see `ICA-CCX-LANE-MATRIX.md`). |
+| Gemini 3.1 Pro Preview (1M variant) | `gemini-3.1-pro-preview[1m]` | Token Limited | ⚠️ Superseded 2026-08-26 — `[1m]` ids 403 everywhere now; use bare `gemini-3.1-pro-preview`. |
+| Claude Opus 4.8 | `claude-opus-4-8` | Token Limited | Previous-gen Opus (200k variant); below Opus 5. ⚠️ Superseded 2026-08-26: also 403s tenancy-wide now, same as Opus 5 — see next row. |
+| Claude Opus 5 | `claude-opus-5` | Token Limited | Current-gen Opus; was confirmed present on the gateway 2026-07-31. ⚠️ **Superseded 2026-08-26 — RETRACTED.** Now returns 403 on all 11 keys, both gateways (beta: `team not allowed to access model`; ccx: `403: Model not available - E002`) while `claude-sonnet-5` returns 200 on the same keys — an Opus-specific tenancy entitlement revocation. There is no ICA Opus lane, plain or `[1m]`, primary or fallback. Do not re-enable without re-probing `ica-key verify <NAME> --model claude-opus-5` first. |
 | OpenAI GPT-5.5 | `gpt-5.5-gus` | Token Limited | **NEW (2026-07)** OpenAI reasoning model. Works with tools+reasoning on raw `/chat/completions`, `/responses` (effort scales), and `/messages` — but ❌ **400s via `ica-claude.sh`/Claude Code** (`Unknown parameter: 'output_config'` — Azure rejects CC's effort param). Reachable only from a raw client that omits the reasoning-control param. See the ⚠️ note below. |
 | OpenAI GPT-5.1 | `gpt-5.1-chat-gus` | Token Limited | ❌ **REGRESSED — not servable** (2026-07-21): `LLM Provider NOT provided` on all keys. Superseded by `gpt-5.5-gus`. |
 | OpenAI GPT-5.4 | `gpt-5.4-gus` | Token Limited | ❌ **REGRESSED — not servable** (2026-07-21): 404 / `LLM Provider NOT provided` on all keys. Superseded by `gpt-5.5-gus`. |
@@ -75,12 +109,12 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 
 | Tier | Models | Cost | Default Pick |
 |---|---|---|---|
-| Free | Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small | $0 (unlimited) | `claude-haiku-4-5` |
-| Standard | Sonnet 5, Sonnet 4.6, Sonnet 4.5, GPT-4o, Gemini 3.5 Flash, Gemini 3.1 Pro | Token-limited | `claude-sonnet-5[1m]` |
-| Premium | Opus 5, Opus 4.8, Opus 4.7, Opus 4.6 | Token-limited (expensive) | `claude-opus-5[1m]` (fallback `claude-opus-4-8[1m]`) |
-| 1M Context | Opus 5[1m], Sonnet 5[1m], Opus 4.8[1m], opus[1m] alias (→4.8[1m]), Opus 4.7[1m], Sonnet 4.6[1m], Opus 4.6[1m], Gemini 3.5 Flash[1m], Gemini 3.1 Pro[1m] | Token-limited | `claude-sonnet-5[1m]` (`claude-opus-5[1m]` for hardest) |
+| Free | Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small, GPT-5.6 Luna | $0 (unlimited) | `claude-haiku-4-5` |
+| Standard | Sonnet 5, Sonnet 4.6, Sonnet 4.5, GPT-4o, Gemini 3.5 Flash, Gemini 3.1 Pro | Token-limited | `claude-sonnet-5` |
+| Premium | ⚠️ **RETIRED 2026-08-26 — no ICA Opus lane exists** (Opus 5, 4.8, 4.7, 4.6 all 403 tenancy-wide, both gateways). Nothing routes here; escalate above ICA (primary subscription Opus) instead. | — | — |
+| 1M Context | ⚠️ **RETIRED 2026-08-26 — the whole `[1m]` id family 403s on every transport now.** Native context is carried by the bare ids in the Standard tier above (see below), so this tier no longer has a distinct member set. | Token-limited | `claude-sonnet-5` |
 
-> **Opus/Sonnet/Gemini default to `[1m]` on ICA.** For ICA Claude Opus/Sonnet **and** ICA Gemini, always pick the `[1m]` variant on the Claude Code path — same token pool and cost tier, strictly larger context. The plain 200k IDs (`claude-sonnet-5`, `claude-opus-5`, `claude-opus-4-8`, `gemini-3.5-flash`) are fallback-only on the ICA path — **except** on raw transports, where the plain id is mandatory (see the client-hint gotcha below). This is why the Standard/Premium default picks above are the `[1m]` forms. (Native gemini-cli needs no suffix — it's 1M by default.)
+> ⚠️ **Superseded 2026-08-26 — this blockquote's `[1m]`-first instruction is inverted, do not follow it.** `[1m]` ids now 403 on every transport, including Claude Code, so there is no lane on which the suffix works. **Use the bare/plain id everywhere** — `claude-sonnet-5`, `gemini-3.5-flash`, etc. now carry native (measured ~600k–950k token) context with no suffix needed, at no cost. Historical text, kept for context only: *"Opus/Sonnet/Gemini default to `[1m]` on ICA... always pick the `[1m]` variant on the Claude Code path — same token pool and cost tier, strictly larger context... the plain 200k IDs are fallback-only... except on raw transports, where the plain id is mandatory."* None of that holds any more.
 
 > ⚠️ **ICA GPT models reject the client's reasoning-control param (2026-07-21).** The gateway's
 > Azure-backed GPT deployments (`gpt-5.5-gus`, the `gpt-5.6-*-dzus` codex ids) 400 when the standard
@@ -104,16 +138,16 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 | Summarization / extraction | Free | `claude-haiku-4-5` | Haiku excels at following structured instructions |
 | Simple classification / Q&A | Free | `gemma-4-26b-a4b-it` | Lightweight, fast |
 | High-volume batch (>10 calls) | Free | `claude-haiku-4-5` | Zero cost per call; accept minor quality tradeoff |
-| Code generation (single file) | Standard | `claude-sonnet-5[1m]` | Balances quality and token budget; 1m = no truncation risk |
-| Multi-file refactoring | Standard | `claude-sonnet-5[1m]` | Needs cross-file coherence + headroom |
-| Code review / bug finding | Standard | `claude-sonnet-5[1m]` | Needs nuance but not max depth |
+| Code generation (single file) | Standard | `claude-sonnet-5` | Balances quality and token budget; bare id now carries native context, no truncation risk |
+| Multi-file refactoring | Standard | `claude-sonnet-5` | Needs cross-file coherence + headroom |
+| Code review / bug finding | Standard | `claude-sonnet-5` | Needs nuance but not max depth |
 | Second opinion / alternative approach | Standard | `gpt-4o` | Different model family provides genuine diversity |
-| Complex architecture decisions | Premium | `claude-opus-5[1m]` | Deep reasoning required |
-| Novel algorithm design | Premium | `claude-opus-5[1m]` | Benefits from strongest reasoning |
-| Context-heavy tasks (>100k input) | Standard+ | `claude-sonnet-5[1m]` | Free-tier quality degrades with long context |
-| Very large context tasks (>200k input) | 1M Context | `claude-opus-5[1m]` | Standard models hard-capped at 200k; `[1m]` variants confirmed up to ~800k practical ceiling |
+| Complex architecture decisions | ⚠️ was Premium (retired) | `claude-sonnet-5`, or escalate off-ICA to primary-subscription Opus | No ICA Opus lane exists (2026-08-26) — see Full Model Inventory |
+| Novel algorithm design | ⚠️ was Premium (retired) | `claude-sonnet-5`, or escalate off-ICA to primary-subscription Opus | Same — no ICA Opus lane |
+| Context-heavy tasks (>100k input) | Standard | `claude-sonnet-5` | Bare id carries native context now; free-tier quality still degrades with long context |
+| Very large context tasks (>200k input) | ⚠️ was "1M Context" (retired) | `claude-sonnet-5` (bare) | Bare `claude-sonnet-5` measured up to 950,007 prompt tokens on ccx / 600,007 on beta — no `[1m]` suffix needed or usable |
 
-**Decision shortcut:** Default to Free (`claude-haiku-4-5`) for anything mechanical. Use Standard (`claude-sonnet-5[1m]`) for tasks requiring judgment. Escalate to Premium (`claude-opus-5[1m]` — the ICA spine-offload lane; `claude-opus-4-8[1m]` is the fallback) only when Standard output is demonstrably insufficient. For Opus/Sonnet/Gemini always take the `[1m]` form on the ICA Claude Code path — never the plain 200k ID except as a fallback (raw transports are the exception: they require the plain id).
+**Decision shortcut (superseded 2026-08-26):** Default to Free (`claude-haiku-4-5`) for anything mechanical. Use Standard (`claude-sonnet-5`, bare id) for tasks requiring judgment, including very-large-context tasks. There is no ICA Premium/Opus escalation any more — escalate off-ICA to the primary-subscription Opus when Standard output is demonstrably insufficient. Never use a `[1m]` id; it 403s on every transport now.
 
 **Cross-family diversity:** When seeking a second opinion or alternative reasoning, prefer a different model family (e.g., use `gpt-4o` or `gemma-4-26b-a4b-it` if the primary session is Claude). Different training produces genuinely different perspectives.
 
@@ -123,9 +157,9 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 
 | Guideline | Value |
 |---|---|
-| Hard ceiling (input) | 200,000 tokens (plain ids); ~1,000,000 tokens for `[1m]` variants — confirmed via `modelUsage.<id>.contextWindow`: Claude Opus 4.x 2026-06-09, Sonnet 5 + Gemini 2026-07-08, **`claude-opus-5[1m]` = 1,000,000 / plain `claude-opus-5` = 200,000 on 2026-07-31** |
-| Hard ceiling (output) | `maxOutputTokens` reported **64,000** on the ICA `claude-opus-5` lane (2026-07-31) — an ICA-side cap **below** the 128,000 first-party ceiling. Budget long generations accordingly / chunk the output. |
-| Practical safe ceiling | ~150k tokens (standard); ~800k tokens for `[1m]` variants |
+| Hard ceiling (input) | ⚠️ **Superseded 2026-08-26.** The `[1m]`-variant figures below are dead (no `[1m]` id is reachable any more). Current measurement: bare `claude-sonnet-5` accepted 600,007 prompt tokens on beta and 950,007 on ccx; bare `gemini-3.7-flash` accepted 950,002. Bare `claude-haiku-4-5` caps at its real 200k model limit (accepted 190,008, rejected 250,000) — that is Haiku's own ceiling, not a gateway cap. Historical (dead): 200,000 tokens (plain ids); ~1,000,000 tokens for `[1m]` variants — confirmed via `modelUsage.<id>.contextWindow`: Claude Opus 4.x 2026-06-09, Sonnet 5 + Gemini 2026-07-08, `claude-opus-5[1m]` = 1,000,000 / plain `claude-opus-5` = 200,000 on 2026-07-31. |
+| Hard ceiling (output) | ⚠️ **Unverifiable as of 2026-08-26** — the lane this was measured on (`claude-opus-5[1m]`/ICA Opus) no longer exists. Historical (dead): `maxOutputTokens` reported 64,000 on the ICA `claude-opus-5` lane (2026-07-31), below the 128,000 first-party ceiling. Do not assume this figure applies to `claude-sonnet-5`; re-probe before relying on an output ceiling. |
+| Practical safe ceiling | ~150k tokens (standard, still applicable); the "~800k for `[1m]` variants" figure is dead — no `[1m]` id is reachable. Use the bare `claude-sonnet-5` figures in the input-ceiling row above instead. |
 | Observed consumption rate | ~1.2-1.5x direct API (gateway overhead) |
 | Recommended prompt budget | Keep input under ~50k for free tier; ~100k for standard/premium |
 | Tool-use overhead per round | ~1-3k tokens of framing per tool call/response |
@@ -143,16 +177,16 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 
 | Limitation | Impact | Workaround |
 |---|---|---|
-| 200k context cap (plain ids) | Cannot use full native context windows on plain ids | Use `[1m]` variants (`claude-opus-5[1m]`, `claude-sonnet-5[1m]`, `opus[1m]` → `claude-opus-4-8[1m]`) for up to ~800k tokens; chunk when stuck on a plain id |
-| **64k max output on the ICA Opus 5 lane** | `maxOutputTokens` = 64000 (2026-07-31) — half the 128k first-party ceiling; long single-shot generations will be truncated | Chunk the generation, or ask for a plan-then-emit-in-parts response |
-| Faster context consumption | Effective usable context is lower than 200k | Budget conservatively |
+| ~~200k context cap (plain ids)~~ — RETRACTED 2026-08-26 | Was believed to cap plain ids at 200k | Bare ids now carry each model's native context for free (600k–950k measured on `claude-sonnet-5`); do not use a `[1m]` id, it 403s everywhere |
+| ~~64k max output on the ICA Opus 5 lane~~ — lane retired 2026-08-26 | `maxOutputTokens` was 64000 (2026-07-31) on a lane that no longer exists (no ICA Opus) | N/A — unverifiable on `claude-sonnet-5`; re-probe before assuming an output ceiling |
+| Faster context consumption | Was believed lower than the (now-retracted) 200k plain-id cap | Superseded 2026-08-26 — bare ids carry native context; budget conservatively regardless |
 | Gateway latency | Higher TTFB than direct API | Expect 2-5s additional overhead per call |
 | Model availability fluctuates | Some models may be temporarily unavailable | Fall back to next available in same tier |
 | Non-Claude models have different tool-use support | May not support `--allowedTools` cleanly | Use single-shot for non-Claude models |
 | Token budget is shared across all token-limited models | Heavy Opus use depletes budget for Sonnet too | Prefer free tier when acceptable |
 | **Agent tool rejects dated model IDs** | Default subagent model (Haiku) uses `claude-haiku-4-5-20251001` which is NOT in the gateway's `global-models` group → 401 error | Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. Or delegate via `~/ica-claude.sh` Bash calls instead. |
-| **Plain ids silently cap at 200k; `[1m]` unlocks ~1M — and this now covers Gemini** | `claude-opus-5[1m]` (preferred Opus/script default), `claude-opus-4-8[1m]` (fallback), `opus[1m]` (alias → 4.8[1m]), `claude-opus-4-7[1m]`, `claude-sonnet-5[1m]` (preferred Sonnet), `claude-sonnet-4-6[1m]` (older fallback), **`gemini-3.5-flash[1m]`, and `gemini-3.1-pro-preview[1m]`** are accepted by the gateway and provide ~1M context. **Verify only via the JSON `modelUsage.<id>.contextWindow` field** (`--output-format json`). Confirmed **2026-07-31: `claude-opus-5[1m]`=1000000 / plain `claude-opus-5`=200000**. Confirmed 2026-07-08: `claude-sonnet-5[1m]`=1M / plain `claude-sonnet-5`=200k; `gemini-3.5-flash[1m]`=1M / plain=200k; `gemini-3.1-pro-preview[1m]`=1M / plain=200k (Claude Opus 4.x re-confirmed 2026-06-09). The model's *self-report* of its window/identity is unreliable. The bracket-less dash form (`...-1m`) does not route. **The `[1m]` rule is ICA-gateway-specific for Gemini — native gemini-cli is 1M without a suffix.** | On the ICA Claude Code path, use `[1m]` for Claude Opus/Sonnet **and** Gemini. Default Sonnet = `claude-sonnet-5[1m]`; default Opus = `claude-opus-5[1m]` (script default), fallback `claude-opus-4-8[1m]`. |
-| **`[1m]` is a Claude Code CLIENT-SIDE hint, not a gateway model id** | Raw transports (`/v1/messages`, `/chat/completions`) must send the **plain** id. Sending `claude-opus-5[1m]` to `/v1/messages` returns **HTTP 403 `team_model_access_denied`** — "team not allowed to access model. This team can only access models=['global-models']" (observed 2026-07-31, re-confirmed 2026-08-07 for `claude-sonnet-5[1m]` **and** `claude-opus-5[1m]`). That error reads like "no access to this model at all" when the real cause is just the suffix. **Positive proof:** `GET /v1/models` lists 22 ids and **none** contains `[1m]`. | `[1m]` only on `~/ica-claude.sh` / Claude Code; plain `claude-opus-5` (or `claude-sonnet-5`) on raw curl/SDK calls. Before concluding a model is unavailable, retry once with the suffix stripped. |
+| ⚠️ ~~Plain ids silently cap at 200k; `[1m]` unlocks ~1M~~ — **RETRACTED 2026-08-26, inverted** | The whole premise is now wrong. **`[1m]` ids 403 on every transport**, so there is no gateway-served id containing `[1m]` any more. **Bare ids carry native context for free**: `claude-sonnet-5` measured 600,007 prompt tokens on beta / 950,007 on ccx; `gemini-3.7-flash` 950,002 on ccx; `claude-haiku-4-5` correctly caps at its own real 200k model limit (190,008 accepted, 250,000 rejected). Historical detail (dead): the old confirmed-1M figures for `claude-opus-5[1m]`/`claude-sonnet-5[1m]`/the two Gemini `[1m]` ids via `modelUsage.<id>.contextWindow`. | **Use the bare/plain id everywhere, on every transport.** Never emit a `[1m]` id. Default Sonnet = `claude-sonnet-5`; there is no ICA Opus lane (see Full Model Inventory) to default to. |
+| ⚠️ ~~`[1m]` is a Claude Code CLIENT-SIDE hint, not a gateway model id~~ — **superseded 2026-08-26** | The split this row describes (`[1m]` works on Claude Code, 403s on raw transports) no longer holds: `[1m]` ids now 403 on **every** transport, including Claude Code. Historical detail (dead): the original 403 `team_model_access_denied` observation on raw `/v1/messages`. | Do not emit `[1m]` on any transport; use the bare id. If you see a 403 on a bare, non-Opus id, that is a genuine new finding — see the Opus-entitlement row in Full Model Inventory for the one bare-id family that still legitimately 403s. |
 | **Unknown TOP-LEVEL request fields are silently dropped — ICA is not a validation lane** | The proxy envelope is loosely validated; Anthropic direct 400s on the same body. Worst case is a **typo in a real field**: `temperatur: 0.9`, `max_tokenz: 5`, `tool_choise: {...}` all returned **200** and were ignored, so the call ran at defaults while looking correct (verified 2026-08-07). A parameter that "had no effect" may simply never have been sent, which is observationally identical to a genuine gateway strip. **Nested** unknowns *are* strict — `messages[0].bogus_nested` → 400 `Extra inputs are not permitted` — and that partial strictness is what makes the envelope laxity easy to miss. | Never treat an ICA 200 as proof of request-shape correctness. Validate bodies against **Anthropic direct** or a local JSON-schema check. Assert the *effect* (`usage`, `stop_reason`, `modelUsage.<id>`), not the status code. Spell-check params before reporting a feature as stripped. |
 | **Response ids are Bedrock-shaped (`msg_bdrk_…`)** | The upstream is Amazon Bedrock behind a LiteLLM proxy. Harmless in itself, but any code that pattern-matches `^msg_[A-Za-z0-9]+$` on ids, or asserts an exact id shape in tests, will behave differently across ICA vs Anthropic direct. | Treat the id as an opaque string. Don't design a future surface on an assumed Bedrock feature mask — probe it (two of those assumptions were already **wrong**; see the proxy section above). |
 
@@ -162,12 +196,10 @@ caching, server-side web search/fetch, code execution. Probe before designing on
 
 | Behavior | Status | Notes |
 |---|---|---|
-| Extended thinking on `claude-opus-5[1m]` | ✅ **Works — both request forms** (verified 2026-07-31) | `output_config.effort` produces a real `thinking` block (`usage.output_tokens_details.thinking_tokens` = 125 on the probe). The legacy `thinking.type: enabled` form **also works on Opus 5** — a **divergence from `claude-sonnet-5[1m]`, where the legacy form 400s**. Either form is safe here. |
-| Tool use on `claude-opus-5[1m]` | ✅ **Works on both transports** (verified 2026-07-31) | Claude Code path: 2-turn Read-tool test returned the right value. Raw `/v1/messages`: content types `['thinking','tool_use']`, `stop_reason: tool_use`. |
-| `output_config.format` on `claude-opus-5` (structured-JSON schema) | ✅ **Honored** (verified 2026-07-31) | json_schema structured output returned pure `{"answer": 42}` — Opus 5 does **not** have the Sonnet 5 `format`-dropped gap. You can rely on `format` on this lane rather than forcing a tool-call. |
-| Extended thinking on `claude-sonnet-5[1m]` | ✅ **Works via Claude Code** (revalidated 2026-07-20) | CC 2.1.215 emits `thinking.type: adaptive` + `output_config.effort`; ICA Sonnet 5 reasons end-to-end. Legacy `thinking.type: enabled` now **400s** (was silently no-op'd pre-CC-fix, the basis of the stale 2026-07-09 "no reasoning" finding). `effort` scales depth: low → ~1,116 think tokens, max → 6,000 capped. Reasoning-dependent offload to `claude-sonnet-5[1m]` is fine behind a reviewer gate. |
-| `output_config.format` on `claude-sonnet-5` (structured-JSON schema) | ⚠️ **Silently dropped by the gateway** (observed on Sonnet 5) | On the Sonnet 5 lane the gateway forwards `effort` but **not** `format` → you get prose, not schema-constrained JSON. Use a forced **tool-call** for structured output there. **Scope note:** this is not gateway-wide — `claude-opus-5` honors `format` (row above). Treat it as per-model, and probe before relying on `format` for a model not listed here. |
-| Gemini (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) reasoning | ⚠️ Not surfaced as thinking blocks | Reachable via both `/v1/messages` and `/chat/completions` + the CC `[1m]` path; tool use works. Gemini's internal reasoning is not exposed as Anthropic thinking blocks via ICA, and Google-Search grounding is native-key-only (not via ICA). |
+| ~~Extended thinking / tool use / `output_config.format` on `claude-opus-5[1m]`~~ | ⚠️ **UNVERIFIABLE 2026-08-26 — the lane is gone.** Was ✅ verified 2026-07-31 (thinking, tool use, and structured `format` all worked). `claude-opus-5` now 403s tenancy-wide, `[1m]` ids 403 on every transport — there is nothing left to probe on this row. Do not cite these as current capabilities. | N/A |
+| Extended thinking on `claude-sonnet-5` | ✅ **Works via Claude Code** (revalidated 2026-07-20) — ⚠️ id updated 2026-08-26: use the **bare** id, `claude-sonnet-5[1m]` 403s now | CC 2.1.215 emits `thinking.type: adaptive` + `output_config.effort`; ICA Sonnet 5 reasons end-to-end. Legacy `thinking.type: enabled` now **400s** (was silently no-op'd pre-CC-fix, the basis of the stale 2026-07-09 "no reasoning" finding). `effort` scales depth: low → ~1,116 think tokens, max → 6,000 capped. Reasoning-dependent offload to `claude-sonnet-5` is fine behind a reviewer gate. |
+| `output_config.format` on `claude-sonnet-5` (structured-JSON schema) | ⚠️ **Silently dropped by the gateway** (observed on Sonnet 5) | On the Sonnet 5 lane the gateway forwards `effort` but **not** `format` → you get prose, not schema-constrained JSON. Use a forced **tool-call** for structured output there. **Scope note:** the "not gateway-wide, Opus honors it" comparison above no longer applies — that lane is gone and cannot be re-checked. Probe before relying on `format` for any model. |
+| Gemini (`gemini-3.5-flash`, `gemini-3.1-pro-preview`) reasoning | ⚠️ Not surfaced as thinking blocks | Reachable via both `/v1/messages` and `/chat/completions`; tool use works. ⚠️ id note 2026-08-26: use the **bare** id (no `[1m]`, it 403s). Gemini's internal reasoning is not exposed as Anthropic thinking blocks via ICA, and Google-Search grounding is native-key-only (not via ICA). |
 
 ## Enumerate what is actually served — `GET /v1/models`
 
@@ -192,11 +224,18 @@ curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" 
 
 Two things to read off it:
 
-- **`gpt-5.6-sol` is NOT served on ICA.** The frontier GPT tier is Codex-direct only; only
-  `-terra-dzus` and `-luna-dzus` are on the gateway. Don't route a Sol leg here.
+- ⚠️ **"`gpt-5.6-sol` is NOT served on ICA" is stale/scope-limited, superseded 2026-08-26.** That
+  was true of the **beta** gateway's default-key snapshot above (only `-terra-dzus`/`-luna-dzus`
+  listed). Measured 2026-08-26 on the **ccx** gateway (this doc's beta-only scope did not cover
+  it): `gpt-5.6-sol` **is** servable on all three CCx keys. It is still not a usable agentic lane —
+  tools and reasoning are mutually exclusive in practice on both `/v1/chat/completions` and
+  `/v1/responses` (`reasoning_tokens: 0` with tools present at every effort level; reasoning only
+  fires with no tools). Don't route a tool-using Sol leg expecting it to reason. Receipts:
+  `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` F3.
 - The catalog is the **transport-layer** truth. It says nothing about Claude Code alias remaps
-  (`opus`, `sonnet`, `[1m]`), which live in `ica-settings.json`. A model in this list is reachable
-  on a raw transport with that exact id; a `[1m]` form is reachable only via Claude Code.
+  (`opus`, `sonnet`), which live in `ica-settings.json`. A model in this list is reachable
+  on a raw transport with that exact id. ⚠️ The `[1m]` alias note is dead 2026-08-26 — `[1m]` is no
+  longer reachable on any transport, including Claude Code.
 
 ⚠️ **This is the default-key view.** A named `ICA_KEY` block (`CC1`…`CC6`) may be scoped to a
 different model group — re-run the probe under that block before assuming parity.
@@ -220,4 +259,6 @@ different model group — re-run the probe under that block before assuming pari
       caching remains unprobed.
 - [ ] Batches API, Files API, server-side web search/fetch, code execution — **unprobed.** Do not
       assume present or absent; the Bedrock-analogy prediction was wrong twice already.
-- [ ] Whether the `opus[1m]` short alias now retargets `claude-opus-5[1m]` (last observed routing to `claude-opus-4-8[1m]`; not re-probed 2026-07-31 — use the explicit id meanwhile)
+- [x] ~~Whether the `opus[1m]` short alias now retargets `claude-opus-5[1m]`~~ — **moot as of
+      2026-08-26**: `[1m]` ids 403 on every transport and every Opus id 403s tenancy-wide, so no
+      target this alias could resolve to is reachable.

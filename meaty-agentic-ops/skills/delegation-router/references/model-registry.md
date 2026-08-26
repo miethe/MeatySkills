@@ -107,7 +107,7 @@ never assumed**:
 
 | `allowance` | Meaning | Examples |
 |---|---|---|
-| `unlimited` | Genuinely free, cost-shifted off the primary budget ($0 to primary) | ICA Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small |
+| `unlimited` | Genuinely free, cost-shifted off the primary budget ($0 to primary) | ICA Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4 Small, GPT-5.6 Luna |
 | `shared_token_pool` | Token-limited on ICA's shared pool — **NOT free**; opt-in cost-shift only | ICA Sonnet, ICA Opus (`[1m]` variants), ICA Gemini 3.5 Flash |
 | `billed` | Primary subscription tokens | `claude/*` instances |
 

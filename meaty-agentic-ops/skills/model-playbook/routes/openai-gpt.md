@@ -12,15 +12,22 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
   `svg_generation` taste (reported #1 on Design Arena's general/frontend index in one snapshot —
   ambiguous whether that is the SVG-specific sub-arena or the broader index). See
   `use-case-rankings.yaml`.
-- **Invocation lane:** `codex/gpt-5.6-sol` via `codex exec -m gpt-5.6-sol`. **No working ICA
-  lane** — the `gpt-5.6-sol` id was never carried on the gateway (only terra/luna `-dzus` ids were
-  attempted, both dead; see below).
+- **Invocation lane:** `codex/gpt-5.6-sol` via `codex exec -m gpt-5.6-sol`. ⚠️ **"No working ICA
+  lane" is stale/scope-limited, superseded 2026-08-26.** `gpt-5.6-sol` **is** servable on the
+  **ccx** gateway (all three CCx keys, measured 2026-08-26) — the earlier claim that its id "was
+  never carried on the gateway" was true of the beta gateway's terra/luna-only `-dzus` shim lane,
+  not of ccx. It is still **not a usable agentic lane**, though: tools and reasoning are mutually
+  exclusive in practice — `reasoning_tokens: 0` with tools present on both `/v1/chat/completions`
+  and `/v1/responses` at every effort level; reasoning only fires (`reasoning_tokens: 25`) with no
+  tools. Registered `enabled: false` with a `capability_gap` field. Receipts:
+  `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` F3.
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh|ultra` (`ultra` = Sol/Terra only, Luna
   caps at `xhigh`). Pass the config string: `--config model_reasoning_effort="<level>"`. Global
   `~/.codex/config.toml` defaults Sol @ `xhigh`.
 - **Gotchas:** `max_context` 400000.
-- **Anti-patterns:** no free ICA lane for Sol — only `gpt-5.6-terra-dzus`/`-luna-dzus` carry an ICA
-  shim lane; Sol's id was never on the gateway. Use metered `codex/gpt-5.6-sol`.
+- **Anti-patterns:** no *usable agentic* ICA lane for Sol (see above — tools kill reasoning there);
+  `gpt-5.6-terra-dzus`/`-luna-dzus` remain the ICA shim lanes that actually work agentically. Use
+  metered `codex/gpt-5.6-sol` for real agentic Sol work.
 
 ## gpt-5.6-terra
 
@@ -77,6 +84,11 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 - **Invocation lane:** `ica/gpt-5.6-luna-dzus` — same mechanism as `gpt-5.6-terra-dzus`
   (`~/ica-codex.sh` + local Responses shim). Same effort caveat (dropped on tool turns).
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh` — no `ultra`.
+- **Allowance (added 2026-08-26):** `gpt-5.6-luna-dzus` is now `allowance: unlimited` in the
+  model registry — the fifth genuinely-free ICA model alongside Haiku 4.5 / Gemma 4 / Llama 4
+  Maverick / Granite 4H Small (see `routes/ica-lanes.md`'s free-5 section). "Free-to-us" above
+  was already describing the $0 cost; this is the same fact now encoded in the registry's
+  `allowance` field rather than left as prose.
 
 ## gpt-5.5-gus
 
@@ -136,8 +148,10 @@ Still `active` (`ica/gpt-4o`), but legacy-tier. Grounded 2026-07-28, conf 0.6: r
 ## Do Not Say
 
 - `gpt-5.6-terra-dzus` / `gpt-5.6-luna-dzus` ARE reachable via ICA now — a free agentic Codex lane
-  via `~/ica-codex.sh` + the local Responses shim (shipped 2026-07-29). But `gpt-5.6-sol` has NO ICA
-  lane (its id was never carried). Don't claim reasoning-effort is controllable on dzus tool turns.
+  via `~/ica-codex.sh` + the local Responses shim (shipped 2026-07-29). ⚠️ Do not say `gpt-5.6-sol`
+  has no ICA lane at all — that is stale/scope-limited as of 2026-08-26: it **is** servable on the
+  **ccx** gateway (see `gpt-5.6-sol` section above), just not usable agentically (tools kill
+  reasoning there). Don't claim reasoning-effort is controllable on dzus tool turns.
 - Do not say `gpt-5.5-gus` works via plain `ica-claude.sh`/Claude Code — it needs the
   `ica-gpt.sh` param-strip shim (laptop-only).
 

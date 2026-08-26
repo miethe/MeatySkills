@@ -12,6 +12,18 @@ spec: ./SPEC.md
 
 # ICA Delegate
 
+> ⚠️ **SUPERSEDED 2026-08-26 — read before anything below.** This entire document was written
+> while `[1m]` worked and an ICA Opus lane existed. Measured across both gateways (beta and ccx)
+> and all 11 keys: **(1) `[1m]` ids now 403 on every transport, including Claude Code — use bare
+> ids everywhere; they carry native context for free** (bare `claude-sonnet-5` measured 600,007
+> prompt tokens on beta / 950,007 on ccx). **(2) There is no ICA Opus lane** — `claude-opus-5`,
+> `claude-opus-4-8`, `claude-opus-4-6` all 403 on every one of the 11 keys, both gateways (a
+> tenancy-wide entitlement revocation; `claude-sonnet-5` returns 200 on those same keys). Do not
+> route anything to an ICA Opus id, plain or `[1m]`; the offload workhorse is bare
+> `claude-sonnet-5`. Every `[1m]`/Opus instruction below is dead — invert it. Receipts:
+> `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` (F1/F2),
+> `agentic_meta_dev/docs/agentic-operator/ICA-CCX-LANE-MATRIX.md`.
+
 Delegate bounded work to a secondary Claude subscription accessed through the IBM ICA gateway. The transport is `~/ica-claude.sh -p "prompt"` with model, turn, and output flags. Each invocation is independent by default — no shared state with the calling session.
 
 > ### 🔑 You do NOT set, pass, or manage an API key
@@ -19,7 +31,7 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 > on every call, and points Claude Code at the ICA gateway for you. For a normal delegation there is
 > **nothing to configure** — just run the wrapper:
 > ```bash
-> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-5[1m]' --max-turns 20 < /dev/null
+> ~/ica-claude.sh -p "your task" --model 'claude-sonnet-5' --max-turns 20 < /dev/null
 > ```
 > **Do NOT** set `ANTHROPIC_API_KEY`, `ICA_CLAUDE_CODE_API_KEY`, or `ANTHROPIC_AUTH_TOKEN`; **do NOT**
 > pass `--api-key`; **do NOT** `export` a key. Those either do nothing or break the wrapper's own
@@ -42,14 +54,14 @@ Delegate bounded work to a secondary Claude subscription accessed through the IB
 | Fan-out: multiple independent bounded subtasks | Run concurrently, aggregate results |
 | Second-opinion generation or review on isolated code/docs | Fresh context, unbiased assessment |
 | Bounded subtasks with clear deliverables fitting <50k token prompts | Clean separation of concerns |
-| Large-context analysis requiring >100k–800k tokens of input (use `[1m]` model) | Offload massive context work while preserving the primary session's context budget |
+| Large-context analysis requiring >100k tokens of input (⚠️ 2026-08-26: use the **bare** id, not `[1m]` — see the banner above) | Offload massive context work while preserving the primary session's context budget |
 
 ## When NOT To Use
 
 | Anti-Pattern | Reason |
 |--------------|--------|
 | Tasks requiring the current session's MCP tools, memory, or project context | Delegates cannot access the calling session's MCP servers |
-| Tasks requiring more than 200k context (standard models only) | Standard models hard-capped at 200k; use `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) for tasks up to ~800k tokens |
+| ⚠️ ~~Tasks requiring more than 200k context (standard models only)~~ — RETRACTED 2026-08-26 | Bare ids now carry native context (measured up to 950,007 tokens on `claude-sonnet-5`, ccx). There is no `[1m]` id to reach for any more, and no ICA Opus lane. |
 | Interactive or multi-turn conversation with the user | Each invocation is a single Bash call; not interactive |
 | Tasks requiring models unavailable on the gateway | Check model inventory first |
 | Work that needs the primary session's file-edit capabilities | Delegate reads file paths, not edits in the calling workspace |
@@ -90,7 +102,7 @@ else
 fi
 
 ~/ica-claude.sh -p "your task" "${CTX_FLAGS[@]}" \
-  --model 'claude-sonnet-5[1m]' --max-turns 20 < /dev/null
+  --model 'claude-sonnet-5' --max-turns 20 < /dev/null
 ```
 
 Composition notes:
@@ -128,72 +140,59 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 | `~/ica-claude.sh` exists and is executable | `test -x ~/ica-claude.sh` passes |
 | API key file present | `~/.dotfiles/ICA_CLAUDE` contains `ICA_CLAUDE_CODE_API_KEY=...` |
 | Gateway endpoint | `https://api.nextgen-beta.ica.ibm.com/ica` |
-| Default model in script | `claude-opus-4-8[1m]` via `ANTHROPIC_MODEL`, **and** `model: "claude-opus-4-8[1m]"` in `ica-settings.json` — both must be `[1m]` or the no-`--model` default silently downgrades to 200k (see "Durable fix" below). Still prefer an explicit `--model`. |
+| Default model in script | ⚠️ **Superseded 2026-08-26 — was `claude-opus-4-8[1m]`; that id 403s tenancy-wide now (no ICA Opus lane) and `[1m]` 403s independently.** Default should be bare `claude-sonnet-5` — still prefer an explicit `--model` regardless. |
 | Free-tier models | `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, `ibm/granite-4-h-small` |
-| Context cap | 200k (standard models); ~1M for `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) — confirmed 2026-06-08 |
+| Context cap | ⚠️ **Superseded 2026-08-26.** Bare ids now carry native context (measured up to 950,007 tokens on `claude-sonnet-5`, ccx; 600,007 on beta). The old "200k plain / ~1M via `[1m]`" split is dead — `[1m]` 403s everywhere and there is no ICA Opus lane to pair it with. |
 
-## Prefer `[1m]` for Opus, Sonnet, and Gemini — Always **on the Claude Code path**
+## Use bare ids everywhere — `[1m]` is retired (superseded 2026-08-26)
 
-> ### 🚦 First decide the CALL PATH, then the id form — they are not the same rule
-> `[1m]` is a **Claude Code client-side hint**, not a gateway model id. It is *right* on the
-> wrapper path and *fatal* on a raw transport. Pick the row for how you are calling:
->
-> | Call path | Id form | Wrong form gives you |
-> |---|---|---|
-> | `~/ica-claude.sh` / `claude --model` / `ica-settings.json` / Agent-tool subagents | **`[1m]`** — `'claude-sonnet-5[1m]'` | plain id → silent 200k cap (no error, truncated context) |
-> | Raw `POST /v1/messages`, `/chat/completions`, Anthropic/OpenAI **SDKs**, any app adapter (e.g. an embedded agent in your own service) | **plain** — `claude-sonnet-5` | `[1m]` → **HTTP 403 `team_model_access_denied`** |
->
-> The 403 message is *"team not allowed to access model. This team can only access
-> models=['global-models']"*, which reads like the model is unavailable to you entirely. It is
-> not — **drop the suffix and the identical call succeeds.** Before concluding any ICA model is
-> unavailable, retry once with `[1m]` stripped.
->
-> **Positive proof, not inference:** `GET /v1/models` lists **22** servable ids and **zero** of
-> them contain `[1m]` (verified 2026-08-07). The suffix exists only in the Claude Code client
-> layer — see [Enumerate the catalog](#enumerate-the-catalog-free-authoritative) below and
-> `references/ica-models.md`.
->
-> ⚠️ **If you are building an app/SDK adapter against ICA, this section's title does not apply
-> to you** — you are on the bottom row. Send bare ids.
+⚠️ **This section previously instructed "always use `[1m]` on the Claude Code path." That
+instruction is now dead and inverted.** Measured 2026-08-26 across both gateways (beta and ccx)
+and all 11 keys: `[1m]` ids now **403 on every transport, including Claude Code** — the
+call-path split this section used to teach (`[1m]` on the wrapper path, plain on raw transports)
+no longer exists, because there is no longer a transport on which `[1m]` succeeds.
 
-**When delegating to ICA *via Claude Code*, always use the `[1m]` (1M-context) variant for Claude Opus/Sonnet AND Gemini** wherever one exists. Same shared token pool, same cost tier, strictly larger context window — there is no downside, and it removes the silent-truncation risk on context-heavy work. The gateway **silently caps the plain id at 200k** even for models that are natively 1M (Sonnet 5, Gemini 3.x); the `[1m]` suffix is what unlocks the full window on the ICA path.
+**Bare ids now carry each model's native context, for free.** Measured via `usage.prompt_tokens`:
+bare `claude-sonnet-5` accepted 600,007 prompt tokens on the beta gateway and 950,007 on ccx; bare
+`gemini-3.7-flash` accepted 950,002. Bare `claude-haiku-4-5` correctly caps at its own real 200k
+model limit (accepted 190,008, rejected 250,000) — that is Haiku's own ceiling, not a gateway cap.
+**Use the bare id on every call path — the wrapper, `ica-settings.json`, Agent-tool subagents, and
+raw transports alike. Never emit a `[1m]` id anywhere.**
 
-| Class | Plain (avoid) | Use this `[1m]` variant |
-|-------|---------------|-------------------------|
-| **Sonnet 5** (preferred ICA workhorse for **non-reasoning** waves, since 2026-07-08) | `claude-sonnet-5` | `claude-sonnet-5[1m]` |
-| Sonnet 4.6 (older fallback) | `claude-sonnet-4-6` | `claude-sonnet-4-6[1m]` |
-| Opus 4.8 (default) | `claude-opus-4-8` | `claude-opus-4-8[1m]` (or `opus[1m]` alias) |
-| Opus 4.7 | `claude-opus-4-7` | `claude-opus-4-7[1m]` |
-| Opus 4.6 | `claude-opus-4-6` | `claude-opus-4-6[1m]` |
-| Gemini 3.5 Flash | `gemini-3.5-flash` | `gemini-3.5-flash[1m]` |
-| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` | `gemini-3.1-pro-preview[1m]` |
+| Class | Id to use |
+|-------|-----------|
+| **Sonnet 5** (preferred ICA workhorse — non-reasoning **and** reasoning-dependent waves) | `claude-sonnet-5` (bare) |
+| Sonnet 4.6 (older fallback) | `claude-sonnet-4-6` (bare) |
+| Opus (any generation) | ⚠️ **No ICA Opus lane exists** — `claude-opus-5`/`claude-opus-4-8`/`claude-opus-4-6` all 403 tenancy-wide on all 11 keys, both gateways (`claude-sonnet-5` returns 200 on those same keys, so this is an Opus-specific entitlement revocation, not the `[1m]` retirement). Do not route here; escalate off-ICA to the primary-subscription Opus instead. |
+| Gemini 3.5 Flash | `gemini-3.5-flash` (bare) |
+| Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` (bare) |
 
-> ⚠️ **Keep the `claude-` prefix on the `[1m]` id.** The bare form `sonnet-4-6[1m]` / `sonnet-5[1m]` **401s** on teams limited to the `global-models` group: the gateway strips `[1m]`, is left with the un-prefixed `sonnet-4-6` (not in `global-models`), and rejects it. Use the fully-prefixed `claude-sonnet-5[1m]` (Sonnet 5 confirmed 1M via `modelUsage.contextWindow` on 2026-07-08). The `opus[1m]` alias is fine (routes to `claude-opus-4-8[1m]`), but for Sonnet there is no bare alias — always write `claude-sonnet-5[1m]`.
+> ⚠️ **The prefix/quoting gotchas below are historical** (kept for archaeology, not because they
+> still apply): a bare `sonnet-5` was never subject to the missing-`claude-` 401, and there is no
+> `[1m]` glob bracket left to quote in zsh — `--model claude-sonnet-5` needs no quoting.
+
+> ✅ **ICA Sonnet 5 reasoning WORKS via Claude Code (revalidated 2026-07-20, still current).**
+> Claude Code emits `thinking.type: adaptive` + `output_config.effort`, and ICA Sonnet 5 reasons
+> end-to-end. `effort` scales depth (low → ~1,116 think tokens, max → 6,000 capped).
 >
-> ⚠️ **Quote the model arg in zsh.** `[1m]` is a glob bracket; unquoted, zsh aborts the whole command with `no matches found` (NO_MATCH is fatal) and nothing runs. Always: `--model 'claude-sonnet-5[1m]'`.
-
-> ✅ **ICA Sonnet 5 reasoning WORKS via Claude Code — reasoning-dependent offload is fine (revalidated
-> 2026-07-20; supersedes the stale 2026-07-09 "no reasoning" caveat).** Claude Code (2.1.215) now emits
-> the `thinking.type: adaptive` + `output_config.effort` controls the Claude-5 family needs, and ICA
-> Sonnet 5 reasons end-to-end. Evidence (raw `/ica/v1/messages`, **`--fallback-model` OFF**, unique
-> nonces): legacy `thinking.type: enabled` now returns **HTTP 400** on Sonnet 5 (so if CC still sent
-> legacy the leg would *error*, not run flat); adaptive produces real thinking blocks and
-> `output_config.effort` scales depth (effort=low → ~1,116 think tokens, max → 6,000 capped); the CC
-> path is proven (`claude --model 'claude-sonnet-5[1m]'`, fallback off → thinking block, no 400).
-> 0-token cases are adaptive *correctly declining* to think on trivial prompts.
->
-> **So `claude-sonnet-5[1m]` is the offload workhorse for both bounded/mechanical AND
-> reasoning-dependent waves** (behind the usual reviewer gate). `claude-opus-4-8[1m]` remains the pick
-> when you want the strongest reasoning, but Sonnet 5 reasoning is no longer disqualified from ICA.
+> **So bare `claude-sonnet-5` is the offload workhorse for both bounded/mechanical AND
+> reasoning-dependent waves** (behind the usual reviewer gate). ⚠️ The historical "`claude-opus-4-8[1m]`
+> remains the pick for the strongest reasoning" line is dead — there is no ICA Opus lane to escalate
+> to; escalate off-ICA instead.
 >
 > **⚠️ One remaining gap:** `output_config.format` (structured-JSON schema) is silently **dropped** by
-> the ICA gateway (effort passes through, format does not) → you get prose, not schema-constrained
-> JSON. For structured output on the ICA Sonnet 5 lane, use a forced **tool-call** instead. Full
-> detail: MODEL-ROUTING §1.
+> the ICA gateway on the Sonnet 5 lane (effort passes through, format does not) → you get prose, not
+> schema-constrained JSON. Use a forced **tool-call** instead. Full detail: MODEL-ROUTING §1.
 
-Exceptions (no `[1m]` needed): **Haiku** and the free open models (Gemma, Llama, Granite) — mechanical/free-tier work where context is not the constraint and no `[1m]` variant exists; and **GPT**, served at its native window. ⚠️ **Gemini on ICA is NOT served at its native 1M** — the plain `gemini-3.5-flash` / `gemini-3.1-pro-preview` ids cap at 200k on the gateway; use the `[1m]` id there. (On the **native gemini-cli** path Gemini 3.x *is* 1M without a suffix — the `[1m]` id is an ICA-gateway artifact only.) The plain 200k Opus/Sonnet/Gemini IDs remain valid only as a fallback if a `[1m]` variant is unavailable.
+Exceptions (no id-form question at all): **Haiku**, the free open models (Gemma, Llama, Granite),
+and **GPT-5.6 Luna** — mechanical/free-tier work; and **GPT**, served at its native window.
+⚠️ Gemini historically needed `[1m]` to reach 1M on ICA — that id form is now dead like every other
+`[1m]` id; use the bare Gemini ids, which now carry native context per the table above.
 
-> The delegation-router enforces the same rule automatically: for ICA-served Opus/Sonnet/Gemini it emits the `[1m]` model_id and keeps the plain 200k ID as a demoted fallback (see `model-registry.yaml` → "ICA 1M-CONTEXT PREFERENCE").
+> ⚠️ **Superseded 2026-08-26:** the delegation-router's `model-registry.yaml` "ICA 1M-CONTEXT
+> PREFERENCE" invariant referenced here has itself been retired — all `[1m]` provider rows are now
+> `enabled: false`, and the six `ica/claude-opus-*` rows are `enabled: false` too. Do not cite this
+> paragraph's original claim as current router behavior.
 
 ## ICA is NOT a validation lane — a green run here proves nothing about the paid lane
 
@@ -264,13 +263,18 @@ The ICA gateway only accepts models in the `global-models` group. Dated model ID
 
 The 401 above is the `haiku`/`sonnet`/`opus` **alias** resolving to a non-`global-models` id (dated Haiku, or plain 200k Sonnet). The Claude Code model-config env vars remap what those aliases resolve to, and `~/ica-claude.sh` already loads `--settings ~/.claude/ica-settings.json` — so set them there once and **every** delegate, subagent (e.g. a `model: haiku` `document-writer`), and background task on the ICA profile is fixed, with zero effect on the primary Anthropic session:
 
+⚠️ **Superseded 2026-08-26 — the example below used `[1m]` ids and an Opus default; both are dead.**
+`[1m]` 403s on every transport now, and there is no ICA Opus lane (`claude-opus-*` 403s
+tenancy-wide). Use bare ids, and point the `opus` alias at `claude-sonnet-5` too — there is nothing
+else on ICA for it to resolve to:
+
 ```jsonc
 {
-  "model": "claude-opus-4-8[1m]",            // no-`--model` default is now 1M, not plain 200k
+  "model": "claude-sonnet-5",                 // bare id — no-`--model` default now carries native context
   "env": {
     "ANTHROPIC_BASE_URL": "https://api.nextgen-beta.ica.ibm.com/ica",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL":   "claude-opus-4-8[1m]",   // `opus`  alias → 1M
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5[1m]",   // `sonnet` alias → Sonnet 5, 1M (ICA serves Sonnet 5 since 2026-07-08; was claude-sonnet-4-6[1m])
+    "ANTHROPIC_DEFAULT_OPUS_MODEL":   "claude-sonnet-5",       // `opus` alias — no ICA Opus lane exists; remap to Sonnet 5
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5",       // `sonnet` alias → Sonnet 5, bare (ICA serves Sonnet 5 since 2026-07-08)
     "ANTHROPIC_DEFAULT_HAIKU_MODEL":  "claude-haiku-4-5"       // `haiku` alias + background tasks → global-models id (kills the 401)
   }
 }
@@ -426,7 +430,7 @@ The CLI is designed to pair `--bare` with **explicit** context re-injection. Alw
 ### Why a naked `--bare` overloads in the first place
 
 The failure is **gateway ceiling × monorepo CLAUDE.md tree**, not "ICA loads more than normal":
-- ICA `[1m]` models **self-report a 200k window**; the CLI sizes its "prompt too long" / compaction logic against that, and the beta gateway enforces a real per-request input cap well under the advertised 1M.
+- (Historical, `[1m]` era) ICA `[1m]` models **self-reported a 200k window**; the CLI sized its "prompt too long" / compaction logic against that, and the beta gateway enforced a real per-request input cap well under the advertised 1M. ⚠️ `[1m]` ids are dead as of 2026-08-26 — bare ids now carry the native context directly; re-verify this compaction behavior against bare ids before relying on it.
 - CLAUDE.md **auto-discovery** in large monorepos is huge — e.g. `skillmeat` (**121 files / ~849k chars**), `meatywiki` (**49 files / ~1.14M chars**). Auto-discovery + a large inline prompt stacks past the effective ceiling → `Prompt is too long` *before the task runs*.
 - Normal subscription subagents don't hit this: correctly-reported large window + lazy interactive CLAUDE.md loading.
 
@@ -443,13 +447,15 @@ For a project you delegate into repeatedly, maintain a hand-trimmed `CLAUDE.dele
 Project conventions are in the injected CLAUDE.md. If you touch packages/foo,
 read ./packages/foo/CLAUDE.md first. Write files incrementally.
 Deliverable: ..." \
-  --model 'claude-opus-4-8[1m]' \
+  --model claude-sonnet-5 \
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
   --add-dir /path/to/project \
   --max-turns 40 \
   --allowedTools "Read Write Edit Bash"
 ```
+
+⚠️ Superseded 2026-08-26: was `--model 'claude-opus-4-8[1m]'` — dead (no ICA Opus lane, `[1m]` 403s). Use bare `claude-sonnet-5`.
 
 ## Build-and-Gate Pre-Flight (worktree · env · data · visual)
 
@@ -508,13 +514,13 @@ was broken or off-brief.
 | Intent | Pattern | Model | Tool Scope | Turn Cap |
 |--------|---------|-------|------------|----------|
 | Quick answer / extraction | Single-shot, no tools | `claude-haiku-4-5` (free) | None | — |
-| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-5[1m]` (4.6[1m] = older fallback) | `"Read Write Edit Bash"` | `--max-turns 20` |
+| Bounded code task (generate, refactor) | Agentic | `claude-sonnet-5` (bare; `claude-sonnet-4-6` = older fallback) | `"Read Write Edit Bash"` | `--max-turns 20` |
 | Large parallel fan-out (many small tasks) | Multiple single-shot calls | `claude-haiku-4-5` (free) | None | — |
-| Complex reasoning subtask | Agentic | `claude-opus-4-8[1m]` | `"Read Write Edit Bash"` | `--max-turns 50` (no cost cap — ICA is free-to-us) |
+| Complex reasoning subtask | Agentic | `claude-sonnet-5` (bare) — ⚠️ no ICA Opus lane as of 2026-08-26; escalate off-ICA to primary-subscription Opus if this is insufficient | `"Read Write Edit Bash"` | `--max-turns 50` (no cost cap — ICA is free-to-us) |
 | Structured data extraction | Single-shot + `--json-schema` | `claude-haiku-4-5` (free) | None | — |
 | Second opinion (read-only review) | Agentic, read-only | `gpt-4o` or `gemini-3.1-pro-preview` | `"Read Bash(grep:*) Bash(find:*)"` | `--max-turns 15` |
-| **Large-context task (>100k–800k tokens input)** | Single-shot or agentic | `claude-opus-4-8[1m]` or `opus[1m]` | As needed | — |
-| **Live infra / DB / deploy (mutating)** | Agentic, `--bare`, self-restoring prompt | `claude-opus-4-7[1m]`/`-4-8[1m]` + `--fallback-model` | `"Read Bash"` | **No cost cap; generous `--max-turns` only** — see "Live/Stateful Delegations" |
+| **Large-context task (>100k tokens input)** | Single-shot or agentic | `claude-sonnet-5` (bare — carries native context, no `[1m]` needed or usable) | As needed | — |
+| **Live infra / DB / deploy (mutating)** | Agentic, `--bare`, self-restoring prompt | `claude-sonnet-5` (bare) + `--fallback-model` — ⚠️ no ICA Opus lane as of 2026-08-26 | `"Read Bash"` | **No cost cap; generous `--max-turns` only** — see "Live/Stateful Delegations" |
 
 ## Context Budget Discipline
 
@@ -522,7 +528,7 @@ was broken or off-brief.
 |------|-----------|
 | Send file paths, not file contents, when the delegate has filesystem access | Avoids bloating the prompt with content the delegate can read itself |
 | Keep prompt text under ~50k tokens (standard models) | Leaves room for tool-use overhead within the 200k ceiling |
-| For `[1m]` variants, prompt can reach ~800k tokens | Confirmed ~1M context; leave ~200k for tool-use overhead and output |
+| ⚠️ ~~For `[1m]` variants, prompt can reach ~800k tokens~~ — RETRACTED 2026-08-26 | No `[1m]` id is reachable any more. Bare `claude-sonnet-5` measured up to 950,007 prompt tokens on ccx / 600,007 on beta — leave headroom for tool-use overhead and output |
 | Prefer multiple small delegations over one large context-heavy delegation | Reduces risk of context exhaustion mid-task |
 | Factor in that tool-use rounds consume context faster than expected | Each tool call/response pair adds ~1-3k tokens of framing |
 | For agentic calls, budget: ~100k prompt space, rest for tool-use overhead | Conservative split ensures the delegate can complete multi-step work |
@@ -556,7 +562,7 @@ Post-delegation discipline:
 ~/ica-claude.sh -p "Task: [task description]
 Context: [minimal required context -- file paths, not contents]
 Deliverable: [expected output format]" \
-  --model 'claude-sonnet-5[1m]' \
+  --model 'claude-sonnet-5' \
   --max-turns 20 \
   --allowedTools "Read Write Edit Bash" \
   --add-dir /path/to/project \
@@ -592,26 +598,30 @@ done
 wait
 ```
 
-### Recipe 6 — Deep Opus Reasoning (no cost cap)
+### Recipe 6 — Deep Reasoning (no cost cap)
 
-ICA is free-to-us, so do **not** dollar-cap opus reasoning — let it do the work. Bound only with a generous `--max-turns` as a runaway backstop. (Omit `--max-budget-usd` entirely; the old "budget-capped" framing is deprecated.)
+⚠️ **Superseded 2026-08-26 — renamed from "Deep Opus Reasoning"; there is no ICA Opus lane.**
+`claude-opus-4-8` (and every other ICA Opus id, `[1m]` or bare) 403s tenancy-wide. The deepest
+reasoning available on ICA today is `claude-sonnet-5` (bare); escalate off-ICA to the
+primary-subscription Opus if that proves insufficient.
 
-> ✅ **Sonnet 5 is a valid cheaper reasoning lane here (revalidated 2026-07-20).** ICA
-> `claude-sonnet-5[1m]` now reasons via Claude Code (adaptive thinking + `output_config.effort`
-> honored — see the reasoning note above). Prefer **Opus** (`claude-opus-4-8[1m]`, below) for the
-> hardest reasoning; drop to `claude-sonnet-5[1m]` when Sonnet-tier reasoning suffices. Only caveat on
-> the Sonnet 5 lane: `output_config.format` structured JSON is dropped — use a tool-call.
+ICA is free-to-us, so do **not** dollar-cap the reasoning — let it do the work. Bound only with a generous `--max-turns` as a runaway backstop. (Omit `--max-budget-usd` entirely; the old "budget-capped" framing is deprecated.)
+
+> ✅ **Sonnet 5 reasons well via Claude Code (revalidated 2026-07-20, still current).** ICA
+> `claude-sonnet-5` (bare — `[1m]` 403s now) reasons via Claude Code (adaptive thinking +
+> `output_config.effort` honored — see the reasoning note above). One caveat on this lane:
+> `output_config.format` structured JSON is silently dropped — use a tool-call instead.
 
 ```bash
 ~/ica-claude.sh -p "Task: [complex architecture/design task]
 Context: [paths to relevant files]
 Deliverable: [structured recommendation]" \
-  --model claude-opus-4-8[1m] \
+  --model claude-sonnet-5 \
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
   --max-turns 60 \
   --effort high \
-  --fallback-model claude-opus-4-7[1m],claude-opus-4-6[1m] \
+  --fallback-model claude-sonnet-4-6 \
   --allowedTools "Read Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/project
 ```
@@ -623,7 +633,7 @@ Deliverable: [structured recommendation]" \
 ```bash
 # First call — starts a session
 ~/ica-claude.sh -p "Analyze /path/to/codebase for security issues. Write findings to /tmp/security-report.md" \
-  --model 'claude-sonnet-5[1m]' \
+  --model 'claude-sonnet-5' \
   --allowedTools "Read Write Bash(grep:*) Bash(find:*)" \
   --add-dir /path/to/codebase
 
@@ -653,7 +663,10 @@ wait
   --json-schema '{"type":"object","properties":{"functions":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"params":{"type":"array","items":{"type":"string"}},"returnType":{"type":"string"}},"required":["name","params","returnType"]}}},"required":["functions"]}'
 ```
 
-### Recipe 10 — Large-Context Delegation (`[1m]` model)
+### Recipe 10 — Large-Context Delegation (bare model, native context)
+
+⚠️ **Superseded 2026-08-26 — was titled "`[1m]` model"; `[1m]` ids 403 on every transport now, and
+there is no ICA Opus lane.** Bare ids carry native context for free.
 
 For tasks requiring >100k tokens of inline context — whole-repo analysis, large document processing, multi-file synthesis.
 
@@ -661,20 +674,23 @@ For tasks requiring >100k tokens of inline context — whole-repo analysis, larg
 ~/ica-claude.sh -p "$(cat <<'PROMPT'
 Task: [describe task requiring large context]
 
-[inline content up to ~800k tokens — or pass file paths if delegate has fs access]
+[inline content up to ~900k tokens — or pass file paths if delegate has fs access]
 
 Deliverable: [expected output]
 PROMPT
 )" \
-  --model claude-opus-4-8[1m] \
+  --model claude-sonnet-5 \
   --bare \
   --append-system-prompt-file /path/to/project/CLAUDE.md \
   --add-dir /path/to/project \
   --max-turns 30 \
-  --fallback-model claude-opus-4-8,claude-opus-4-7[1m],claude-opus-4-7
+  --fallback-model claude-sonnet-4-6
 ```
 
-> **Note**: `[1m]` variants self-report 200k context — ignore this. Confirmed ~1M actual context (tested 2026-06-08). Practical ceiling ~800k tokens to leave room for output and tool-use overhead.
+> **Note**: Bare `claude-sonnet-5` measured up to 950,007 prompt tokens accepted on ccx (600,007 on
+> beta) via `usage.prompt_tokens` — leave headroom for output and tool-use overhead. The old
+> "`[1m]` variants self-report 200k, ignore it" note is dead; there is no `[1m]` id left to reach
+> for.
 
 ---
 
@@ -682,8 +698,8 @@ PROMPT
 
 | Prohibited Claim | Truth |
 |-----------------|-------|
-| "The ICA gateway supports unlimited context" | False. Standard models have a hard 200k cap; `[1m]` variants (`opus[1m]`, `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`) are confirmed to ~1M but are NOT unlimited. |
-| "All models on the gateway are free" | Only specific small models (Haiku, Gemma) are free tier. |
+| "The ICA gateway supports unlimited context" | False. `claude-haiku-4-5` caps at its real 200k model limit. Bare `claude-sonnet-5` measured up to 950,007 prompt tokens (ccx) — large, but NOT unlimited. ⚠️ Superseded 2026-08-26: there is no `[1m]` id any more (403s everywhere) and no ICA Opus lane — do not cite `[1m]` variants here. |
+| "All models on the gateway are free" | Only five specific models (Haiku 4.5, Gemma 4, Llama 4 Maverick, Granite 4H Small, GPT-5.6 Luna) are free tier; everything else (Sonnet, Gemini, other GPT ids) is `shared_token_pool`. |
 | "Use this for tasks requiring the current session's MCP tools" | Delegates cannot access the calling session's MCP servers. |
 | "The delegate can continue a previous conversation" | Each invocation is stateless by default. Use `--continue`/`--resume` for opt-in continuity. |
 | "Include `--dangerously-skip-permissions` so the delegate can act" | **Inverted 2026-08-14.** That flag now gets the invocation DENIED by the auto-mode classifier before it runs (4/4 legs, ~660k tokens for zero deliverable). Omitting it is correct; the grant lives in `ica-settings.json`'s `permissions` block. The old advice — that omitting causes hangs — held only with no such block: with one, a headless leg runs Bash fine (probed), and an un-allowlisted call is refused rather than hung. |
@@ -692,7 +708,7 @@ PROMPT
 | "`--bare` delegates still get the project's CLAUDE.md" | False. `--bare` skips CLAUDE.md auto-discovery AND auto-memory. A bare delegate gets project conventions ONLY if you inject them via `--append-system-prompt-file` (+ `--add-dir` for on-demand reads). See "Context Injection Under `--bare`". |
 | "If a `--bare` delegate is missing context, drop `--bare`" | False — that reintroduces the `Prompt is too long` overload (full nested CLAUDE.md tree × the gateway's effective ceiling). Keep `--bare`; re-inject the bounded root CLAUDE.md instead. |
 | "Use the Agent tool with default model on ICA profile" | Default model (Haiku) uses a dated ID that the gateway rejects. Always specify `model: "sonnet"` or `model: "opus"` for Agent tool subagents. |
-| "ICA Sonnet 5 can't reason / think hard, so route reasoning to Opus/Sonnet 4.6" | Stale — this was the 2026-07-09 finding, **reversed 2026-07-20**. ICA `claude-sonnet-5[1m]` reasons fine via Claude Code now (adaptive thinking + `output_config.effort` honored). Reasoning-dependent offload to Sonnet 5 is fine; reserve Opus for the hardest reasoning. See the reasoning note above. |
+| "ICA Sonnet 5 can't reason / think hard, so route reasoning to Opus/Sonnet 4.6" | Stale — this was the 2026-07-09 finding, **reversed 2026-07-20**. ICA `claude-sonnet-5` (bare — `[1m]` 403s as of 2026-08-26) reasons fine via Claude Code (adaptive thinking + `output_config.effort` honored). Reasoning-dependent offload to Sonnet 5 is fine. ⚠️ "Reserve Opus for the hardest reasoning" is also stale as of 2026-08-26 — there is no ICA Opus lane; escalate off-ICA instead. See the reasoning note above. |
 | "ICA Sonnet 5 returns schema-constrained JSON if I pass `output_config.format`" | False. The ICA gateway silently drops `output_config.format` (it forwards `effort` but not `format`) → you get prose, not schema JSON. Use a forced **tool-call** for structured output on the ICA lane. |
 
 ## Key Rotation
@@ -796,7 +812,7 @@ their own; the reactive path above is still required, and this only reduces how 
 
 **Free-tier work does NOT require a fresh key.** ICA models marked
 `allowance: unlimited`/`free` in the model registry (Haiku / Gemma / Llama /
-Granite) stay callable on ANY key, including exhausted ones — only paid
+Granite / GPT-5.6 Luna) stay callable on ANY key, including exhausted ones — only paid
 `shared_token_pool` models (Sonnet/Opus) are blocked. So:
 
 - On 401/allowance-exhaustion during **paid** delegation → `ica-key exhausted --rotate`, then retry once. If all keys are exhausted, downshift to a free model instead of failing.

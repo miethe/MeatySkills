@@ -2,7 +2,9 @@
 
 Loaded only when the routed model is one of the free, open-weight ICA models. Source:
 `model-registry.yaml` `models:` block; all three carry `allowance: unlimited` (genuinely free,
-cost-shifted off the primary budget) — see `routes/ica-lanes.md` for the free-4 boundary.
+cost-shifted off the primary budget) — see `routes/ica-lanes.md` for the free-5 boundary (this
+route covers the three open-weight models; `gpt-5.6-luna-dzus`, the fifth free model added
+2026-08-26, is documented in `routes/openai-gpt.md`).
 
 ## gemma-4-26b
 
