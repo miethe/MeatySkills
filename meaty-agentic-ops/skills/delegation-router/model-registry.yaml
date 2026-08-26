@@ -655,17 +655,20 @@ models:
   gemini-3.7-flash:
     family: google
     class: gemini-flash
-    descriptor: "Gemini 3.7 Flash on the ICA ccx gateway — newer than gemini-3.6-flash, which currently leads the web_research / second_opinion / svg_generation chains. Servable (bare id, tool use OK, structured output honored, 950,002 prompt tokens measured). A promotion CANDIDATE on those three chains, but the scores below are BY-ANALOGY placeholders carried from 3.6-flash — no head-to-head has been run. Do not promote on version number alone; see node_01M0Z7K4QJXD2EWK0BPKD98QVG."
-    scores: { cost: 8, intelligence: 7, taste: 6, speed: 8 }   # placeholder, by-analogy from gemini-3.6-flash — UNVERIFIED, pending head-to-head
-    when_to_use: []   # deliberately empty — not auto-routed pending the head-to-head
+    descriptor: "Gemini 3.7 Flash — newest Gemini flash tier, found scaffolded-but-unregistered on the ICA `ccx` gateway 2026-08-26 (bare `gemini-3.7-flash`, tool_use + structured output honored, 950,002 prompt tokens measured; not yet in native gemini-cli's known model list, so ICA is currently the ONLY reachable lane — no Google Search grounding there, same as every ICA-proxied Gemini). HEAD-TO-HEAD RUN 2026-08-26 (node_01M0Z7K4QJXD2EWK0BPKD98QVG, n=3 prompts per use case, one operator/session, same ICA ccx /v1/messages transport for both models — see docs/audits/gemini-3.7-vs-3.6-flash-head-to-head-2026-08-26.md in agentic_meta_dev): gemini-3.7-flash matched-or-beat gemini-3.6-flash on every one of 9 prompts (web-research synthesis, second-opinion code/reasoning/SQL critique, SVG icon generation) AND consumed meaningfully fewer output tokens per completion at matched max_tokens budgets — 3.6-flash was truncated mid-answer on 5 of 9 prompts at budgets where 3.7-flash completed cleanly (one SVG prompt needed a 10,000-token budget for 3.6-flash to finish vs 4,471 for 3.7-flash on the same prompt), and 3.6-flash also broke an explicit 'no markdown fences' instruction on one SVG prompt where 3.7-flash complied. RECOMMENDATION: promote to a leg-1/leg-2 ICA-only entry in second_opinion and svg_generation ahead of gemini-3.6-flash's ICA rows, and to web_research's ICA fallback leg (native gemini-3.6-flash stays leg-1 there since it alone has Search grounding) — pending human review of the pilot before flipping enabled/routing_policy. Still NOT auto-routed (n=3 pilot, single session, no adversarial verification of its own scoring)."
+    scores: { cost: 8, intelligence: 7, taste: 7, speed: 9 }   # 1-10, higher=better. MEASURED 2026-08-26 (n=3/use-case pilot, see descriptor above) — supersedes the by-analogy placeholder {cost:8, intelligence:6, taste:6, speed:9} previously carried from 3.6-flash. intelligence/taste raised on measured critique-completeness + instruction-adherence; speed/cost carried at the same ICA-lane tier as 3.6 (same shared_token_pool pricing, and the token-efficiency edge is a QUALITATIVE finding here — not yet re-expressed as a scorecard delta).
+    when_to_use: [second-opinion, svg-generation, web-research-ica-fallback]
     playbook_ref: model-playbook/routes/google-gemini.md#gemini-3.7-flash
     tools: [web_search, large_context]
     related_skills: [gemini-cli]
     max_context: 1000000
     sampling: stochastic
-    status: scaffolded
+    status: scaffolded   # NOT active — see recommendation above; a human decision, not an agent one, promotes this.
     providers:
-      - { provider: ica, model_id: "gemini-3.7-flash", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1, max_context: 1000000 }
+      # ICA ccx gateway ONLY (2026-08-26). `[1m]` is RETIRED on this gateway and 403s on every id as
+      # of 2026-08-26 — do not add a `gemini-3.7-flash[1m]` row. The bare id already carries native
+      # ~950k-token context on ccx.
+      - { provider: ica, model_id: "gemini-3.7-flash", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1, cost_score: 8, max_context: 1000000 }
 
   gpt-5.4-gus:
     family: openai
