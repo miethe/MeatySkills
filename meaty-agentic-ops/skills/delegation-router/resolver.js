@@ -581,6 +581,13 @@ function makeInstanceCandidate(modelKey, modelEntry, instance) {
     allowance: instance.allowance,
     priority: typeof instance.priority === 'number' ? instance.priority : 99,
     free: isGenuinelyFree(instance),
+    // Additive, 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ). A provider ROW, not a model, can be
+    // restricted to tool-less calls (e.g. ica/gpt-5.6-sol: reasoning_tokens=0 the instant a tool
+    // call is made, on both ICA transports — node_01M0Z7JP9YT7W15X94Z843AM9Y). Mirrors the
+    // WRITE_INCAPABLE_PROVIDERS axis in shape, but this one is per-INSTANCE (codex/gpt-5.6-sol is
+    // NOT restricted — only the ICA row is), so it lives on the instance rather than a provider-id
+    // set.
+    toolRestricted: instance.tool_mode === 'none',
   };
 }
 
@@ -755,6 +762,18 @@ function resolveFromRegistry(input) {
     );
   }
 
+  // ----- Tool-mode filter (needs_tools) -----
+  // A candidate INSTANCE can be tool_mode:"none"-restricted (currently only ica/gpt-5.6-sol:
+  // reasoning_tokens=0 the instant a tool call is made, on both ICA transports — measured
+  // node_01M0Z7JP9YT7W15X94Z843AM9Y). Unlike the write-authority axis this is per-INSTANCE, not
+  // per-provider (codex/gpt-5.6-sol is NOT restricted), so there is no early-return here — it is
+  // applied per-candidate at every selection site below via `cand.toolRestricted`. Default TRUE
+  // (conservative): a caller must explicitly pass needs_tools:false to reach a restricted
+  // instance. This is the opposite default polarity from requires_write (which defaults false)
+  // because an UNDECLARED task might need a tool call and a restricted instance would silently
+  // forfeit reasoning if one is attempted — the safe default is to stay off it, not to use it.
+  const excludeToolRestricted = input.needs_tools !== false;
+
   // ----- Empirical routing feedback (DI-1, §2.4 Option C) -----
   // Read-only, default-deny, and reached ONLY here — after the MUST-stay and determinism early
   // returns above, so a protected class cannot be touched even by a bug in this block. Two
@@ -802,6 +821,7 @@ function resolveFromRegistry(input) {
       .filter(c => c.providerId === requestedProvider)
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
+      .filter(c => !(excludeToolRestricted && c.toolRestricted))
       .sort(byModelThenPriority)[0];
     if (explicit) {
       chosen = explicit;
@@ -835,6 +855,7 @@ function resolveFromRegistry(input) {
         if (!cand) continue;  // disabled / scaffolded / absent — skip
         if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
         if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
+        if (excludeToolRestricted && cand.toolRestricted) continue;
         chosen = cand;
         selectionReason = fb.applied
           ? `routing_policy['${policyKey}'] chain free-first (empirical-feedback re-ranked): selected '${entry}'`
@@ -860,6 +881,7 @@ function resolveFromRegistry(input) {
     const ranked = modelInstances
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
+      .filter(c => !(excludeToolRestricted && c.toolRestricted))
       .sort((a, b) => {
         // Genuinely-free first.
         if (a.free !== b.free) return a.free ? -1 : 1;
@@ -907,11 +929,17 @@ function resolveFromRegistry(input) {
     );
   }
 
-  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable);
+  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted);
   const agentTypeId = AGENT_TYPE_ID_MAP[chosen.providerId] || 'claude';
   const sampling = chosen.modelEntry.sampling;
   const continuityMode = sampling === 'stochastic' ? 'stateless' : 'resumable';
   const invocationTemplate = buildRegistryInvocation(chosen, profile, effort);
+  const scopeFlags = buildScopeFlags(chosen.providerId, profile, effort);
+  // tool_mode:"none" is real enforcement, not description-only, mirroring how this skill already
+  // treats --allowedTools elsewhere (SPEC.md § disallowedTools is membership-test-only; the CLI
+  // scope flag is what actually holds). Appended here rather than inside buildScopeFlags because
+  // it depends on the CHOSEN instance's own registry row, not on providerId/profile/effort alone.
+  if (chosen.toolRestricted) scopeFlags.push('--allowedTools ""');
 
   const record = {
     chosen_plugin_id: chosen.providerId,
@@ -919,12 +947,12 @@ function resolveFromRegistry(input) {
     effort,
     agent_type_id: agentTypeId,
     invocation_template: invocationTemplate,
-    scope_flags: buildScopeFlags(chosen.providerId, profile, effort),
+    scope_flags: scopeFlags,
     stage: 'A',
     validation_contract: inferValidationContract(chosen.providerId, task_class),
     continuity_mode: continuityMode,
     fallback_chain: fallbackChain,
-    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable),
+    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted),
     // 14th field (additive, optional). Non-null ONLY when an empirical adjustment was actually
     // applied, so its presence in the audit log is itself the signal that feedback moved a
     // decision — `skillmeat routing audit` can filter on it without parsing the reason string.
@@ -969,7 +997,7 @@ function isMustStay(task_class, registryMustStay) {
   return false;
 }
 
-function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable = false) {
+function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false) {
   const chain = [];
   const seen = new Set();
 
@@ -986,6 +1014,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
       if (cand.providerId === chosen.providerId && cand.modelId === chosen.modelId) continue;
       if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
       if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
+      if (excludeToolRestricted && cand.toolRestricted) continue;
       const sig = `${cand.providerId}/${cand.modelId}`;
       if (seen.has(sig)) continue;
       seen.add(sig);
@@ -998,6 +1027,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
     .filter(c => !(c.providerId === chosen.providerId && c.modelId === chosen.modelId))
     .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
     .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
+    .filter(c => !(excludeToolRestricted && c.toolRestricted))
     .sort((a, b) => a.priority - b.priority);
   for (const c of sameModel) {
     const sig = `${c.providerId}/${c.modelId}`;
@@ -1085,7 +1115,12 @@ function buildRegistryInvocation(chosen, profile, effort) {
       // the /messages proxy — no always-on daemon). Claude/Gemini ICA models stay on the raw
       // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/.
       if (/gpt/i.test(modelId)) {
-        return `~/ica-gpt.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
+        // tool_mode:"none" (currently gpt-5.6-sol only): reasoning_tokens=0 the instant a tool
+        // call is made on this lane (node_01M0Z7JP9YT7W15X94Z843AM9Y). --allowedTools "" is real
+        // enforcement here, not description-only — embedded directly in the invocation, mirroring
+        // how --sandbox is embedded (not left to scope_flags alone) elsewhere in this function.
+        const toolFlag = chosen.toolRestricted ? ' --allowedTools ""' : '';
+        return `~/ica-gpt.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions${toolFlag}`;
       }
       return `~/ica-claude.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
     }
@@ -1107,7 +1142,7 @@ function buildRegistryInvocation(chosen, profile, effort) {
   }
 }
 
-function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable = false) {
+function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false) {
   let reason = `Selected provider='${chosen.providerId}', model_id='${chosen.modelId}' for task_class='${task_class}'`;
   reason += `; cost_tier='${chosen.cost_tier}', allowance='${chosen.allowance}'`;
   reason += `, free=${chosen.free}`;
@@ -1120,6 +1155,12 @@ function buildRegistryReason(chosen, requestedProvider, task_class, selectionRea
   }
   if (excludeWriteIncapable) {
     reason += '; write-incapable agent types excluded (requires_write=true)';
+  }
+  if (excludeToolRestricted) {
+    reason += '; tool-mode-restricted instances excluded (needs_tools!=false)';
+  }
+  if (chosen.toolRestricted) {
+    reason += '; chosen instance is tool_mode:"none" — invocation carries --allowedTools ""';
   }
   return reason;
 }
@@ -1378,11 +1419,72 @@ function inferValidationContract(providerId, task_class) {
 }
 
 // ---------------------------------------------------------------------------
+// Sol -> Terra -> Sol sandwich recipe (node_01M122PQQ86YWJWDA9GT83PBWQ)
+// ---------------------------------------------------------------------------
+
+/**
+ * Compose the Sol->Terra->Sol sandwich: a three-leg recipe for a task that needs BOTH gpt-5.6-sol's
+ * frontier reasoning AND a tool-calling step, given the two are mutually exclusive on the ICA lane
+ * (node_01M0Z7JP9YT7W15X94Z843AM9Y — reasoning_tokens=0 the instant a tool call is made).
+ *
+ * plan:    gpt-5.6-sol, tool-less (needs_tools:false)  — produces the plan/reasoning
+ * execute: gpt-5.6-terra, tools required (needs_tools defaults true) — carries out the tool-using
+ *          steps against the plan
+ * review:  gpt-5.6-sol, tool-less (needs_tools:false)  — reviews execute's result
+ *
+ * This is a pure composition over resolve() — it does not introduce a new task_class or touch
+ * must_stay_primary. Each leg is independently a fully-validated RoutingRecord; the caller
+ * dispatches all three itself (this function makes no invocation calls of its own — resolver.js
+ * has no child_process/exec by design, see the file header INVARIANTS).
+ *
+ * @param {Object} baseInput - same shape as resolve()'s input; task_class is IGNORED per-leg
+ *   (each leg pins its own) but everything else (profile, effort, _registryPath, ...) passes
+ *   through unchanged to all three legs.
+ * @param {Object} [legOverrides]
+ * @param {Object} [legOverrides.plan]    - extra fields merged onto the plan leg's input
+ * @param {Object} [legOverrides.execute] - extra fields merged onto the execute leg's input
+ * @param {Object} [legOverrides.review]  - extra fields merged onto the review leg's input
+ * @returns {{plan: RoutingRecord, execute: RoutingRecord, review: RoutingRecord}}
+ */
+function resolveSandwich(baseInput, legOverrides) {
+  const overrides = legOverrides || {};
+  const base = { ...(baseInput || {}) };
+  delete base.task_class;   // each leg pins its own; a caller-supplied one would be ambiguous
+
+  const plan = resolve({
+    ...base,
+    ...(overrides.plan || {}),
+    model: (overrides.plan && overrides.plan.model) || 'gpt-5.6-sol',
+    provider: (overrides.plan && overrides.plan.provider) || 'ica',
+    task_class: 'review',
+    needs_tools: false,
+  });
+  const execute = resolve({
+    ...base,
+    ...(overrides.execute || {}),
+    model: (overrides.execute && overrides.execute.model) || 'gpt-5.6-terra',
+    provider: (overrides.execute && overrides.execute.provider) || 'codex',
+    task_class: (overrides.execute && overrides.execute.task_class) || 'implementation',
+  });
+  const review = resolve({
+    ...base,
+    ...(overrides.review || {}),
+    model: (overrides.review && overrides.review.model) || 'gpt-5.6-sol',
+    provider: (overrides.review && overrides.review.provider) || 'ica',
+    task_class: 'review',
+    needs_tools: false,
+  });
+
+  return { plan, execute, review };
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
 module.exports = {
   resolve,
+  resolveSandwich,
   parseToml,           // exported for tests
   loadPluginsConfig,   // exported for tests
   loadRegistry,        // exported for tests

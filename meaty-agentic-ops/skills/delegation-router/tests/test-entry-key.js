@@ -90,10 +90,16 @@ describe('AC1 — canonicalization resolves via alias / model_id / observed_ids'
     assert.deepEqual(res, { ok: true, key: 'claude/claude-haiku-4-5' });
   });
 
-  test('reverse providers[*].model_id lookup resolves an ICA [1m]-suffixed model id to its alias', () => {
-    const res = canonicalizeEntry('ica', 'claude-sonnet-4-6[1m]', registry);
+  test('reverse providers[*].model_id lookup resolves a per-instance ICA model id to its alias', () => {
+    // 'gemma-4-26b-a4b-it' is a real registry providers[*].model_id whose parent `models` key is
+    // 'gemma-4-26b' — the two deliberately differ, exercising the reverse lookup rather than the
+    // exact-alias-hit path above. Was 'claude-sonnet-4-6[1m]' until the 2026-07-31/2026-08-26 [1m]
+    // retirement removed every [1m]-suffixed provider row from the real registry (see
+    // model-registry.yaml's header); swapped 2026-08-27 (node_01M123CYDEN9JNYKEBNQ1W95EP) to a
+    // currently-real pair rather than a retired one.
+    const res = canonicalizeEntry('ica', 'gemma-4-26b-a4b-it', registry);
     assert.equal(res.ok, true);
-    assert.equal(res.key, 'ica/claude-sonnet-4-6');
+    assert.equal(res.key, 'ica/gemma-4-26b');
   });
 
   test('the dated slug appears NOWHERE via alias/model_id — only observed_ids resolves it', () => {

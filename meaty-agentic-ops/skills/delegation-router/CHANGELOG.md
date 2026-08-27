@@ -3,6 +3,23 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-08-27 — `needs_tools` + `resolveSandwich()`: unblock gpt-5.6-sol for tool-less reasoning
+
+`gpt-5.6-sol` reasons genuinely on the ICA ccx lane only when NO tool call is made
+(`reasoning_tokens=0` the instant one is, on both `/v1/chat/completions` and `/v1/responses` —
+measured 2026-08-26/27, `node_01M0Z7JP9YT7W15X94Z843AM9Y`). The `ica/gpt-5.6-sol` provider row now
+carries `tool_mode: "none"` (previously left `enabled: false` entirely) and the resolver adds a
+`needs_tools` input (default `true`, conservative) that refuses to route a tool-requiring request to
+any `tool_mode: "none"`-restricted instance — mirroring `requires_write`'s shape but per-INSTANCE,
+not per-provider, and with the opposite default polarity. Three new routable task classes (`review`,
+`adjudication`, `critique`) chain to it; `must_stay_primary` membership (`verdict`, `council_review`,
+`synthesis`) is untouched. Enforcement is real (`--allowedTools ""` embedded in the invocation, not
+description-only). New export `resolveSandwich()` composes a Sol→Terra→Sol recipe (tool-less
+plan → tools-required execute → tool-less review) for tasks needing both. See SPEC.md
+§ "Tool-less Sol lane + the Sol→Terra→Sol sandwich". node_01M122PQQ86YWJWDA9GT83PBWQ.
+⚠️ Deploy deliberately withheld — see the HOLD note in `model-registry.yaml`'s header
+(`node_01M0X28GWQYPZFGH8TQC9V9DAB`).
+
 ## 2026-08-17 — `requires_write`: the router can finally decline to send authoring work to an agent that cannot write
 
 The RoutingRecord had **no write-authority dimension at all**, and `task-class-vocabulary.v1.json`

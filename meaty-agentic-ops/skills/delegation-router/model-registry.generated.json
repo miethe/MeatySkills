@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "fe28b05680af64f935a07883d7455c9e6f8ef47faace610e702174c16c01a8d5",
+  "_yaml_sha256": "d5c6455bbe8b43f41ed9d656967901afc08b3f3a5f73f0135205197db5db8aca",
   "version": 1,
-  "updated": "2026-07-31",
+  "updated": "2026-08-27",
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -30,7 +30,7 @@
     "second_opinion": {
       "chain": [
         "codex/gpt-5.6-terra",
-        "ica/gemini-3.6-flash[1m]",
+        "ica/gemini-3.6-flash",
         "ica/gemma-4-26b-a4b-it",
         "ica/claude-haiku-4-5"
       ],
@@ -46,7 +46,7 @@
       "chain": [
         "gemini/gemini-3.6-flash",
         "gemini/gemini-3.5-flash",
-        "ica/gemini-3.1-pro-preview[1m]"
+        "ica/gemini-3.1-pro-preview"
       ],
       "enabled": true
     },
@@ -67,7 +67,7 @@
     "svg_generation": {
       "chain": [
         "claude/claude-fable-5",
-        "ica/gemini-3.1-pro-preview[1m]",
+        "ica/gemini-3.1-pro-preview",
         "gemini/gemini-3.5-flash",
         "gemini/gemini-3.6-flash"
       ],
@@ -76,6 +76,24 @@
     "video_generation": {
       "chain": [
         "sora/sora-2"
+      ],
+      "enabled": true
+    },
+    "review": {
+      "chain": [
+        "ica/gpt-5.6-sol"
+      ],
+      "enabled": true
+    },
+    "adjudication": {
+      "chain": [
+        "ica/gpt-5.6-sol"
+      ],
+      "enabled": true
+    },
+    "critique": {
+      "chain": [
+        "ica/gpt-5.6-sol"
       ],
       "enabled": true
     },
@@ -139,10 +157,10 @@
         },
         {
           "provider": "ica",
-          "model_id": "claude-opus-5[1m]",
+          "model_id": "claude-opus-5",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 2,
           "cost_score": 8,
           "tools": [
@@ -190,10 +208,10 @@
         },
         {
           "provider": "ica",
-          "model_id": "claude-opus-4-8[1m]",
+          "model_id": "claude-opus-4-8",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 2,
           "cost_score": 8,
           "tools": [
@@ -229,10 +247,10 @@
       "providers": [
         {
           "provider": "ica",
-          "model_id": "claude-opus-4-7[1m]",
+          "model_id": "claude-opus-4-7",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 1,
           "tools": [
             "one_million_context"
@@ -244,7 +262,7 @@
           "model_id": "claude-opus-4-7",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 2
         }
       ]
@@ -275,10 +293,10 @@
       "providers": [
         {
           "provider": "ica",
-          "model_id": "claude-opus-4-6[1m]",
+          "model_id": "claude-opus-4-6",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 1,
           "tools": [
             "one_million_context"
@@ -290,7 +308,7 @@
           "model_id": "claude-opus-4-6",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 2
         }
       ]
@@ -342,7 +360,7 @@
         },
         {
           "provider": "ica",
-          "model_id": "claude-sonnet-5[1m]",
+          "model_id": "claude-sonnet-5",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -402,7 +420,7 @@
         },
         {
           "provider": "ica",
-          "model_id": "claude-sonnet-4-6[1m]",
+          "model_id": "claude-sonnet-4-6",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -452,7 +470,7 @@
       "providers": [
         {
           "provider": "ica",
-          "model_id": "claude-sonnet-4-5[1m]",
+          "model_id": "claude-sonnet-4-5",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -837,7 +855,7 @@
       "providers": [
         {
           "provider": "ica",
-          "model_id": "gemini-3.1-pro-preview[1m]",
+          "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -898,7 +916,7 @@
         },
         {
           "provider": "ica",
-          "model_id": "gemini-3.6-flash[1m]",
+          "model_id": "gemini-3.6-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -961,7 +979,7 @@
         },
         {
           "provider": "ica",
-          "model_id": "gemini-3.5-flash[1m]",
+          "model_id": "gemini-3.5-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
           "enabled": true,
@@ -1090,6 +1108,18 @@
           "allowance": "billed",
           "enabled": true,
           "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.6-sol",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "max_context": 600000,
+          "tool_mode": "none",
+          "capability_gap": "tools+reasoning mutually exclusive on BOTH transports (reasoning_tokens=0 whenever a tool call is made) — measured 2026-08-26/27; tool_mode:none is how the resolver keeps this instance out of any tool-requiring request"
         }
       ]
     },
@@ -1230,8 +1260,8 @@
         {
           "provider": "ica",
           "model_id": "gpt-5.6-luna-dzus",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
+          "cost_tier": "free",
+          "allowance": "unlimited",
           "enabled": true,
           "priority": 1
         }
@@ -1304,6 +1334,131 @@
           "cost_tier": "premium",
           "allowance": "billed",
           "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gemini-3.7-flash": {
+      "family": "google",
+      "class": "gemini-flash",
+      "descriptor": "Gemini 3.7 Flash — newest Gemini flash tier, found scaffolded-but-unregistered on the ICA `ccx` gateway 2026-08-26 (bare `gemini-3.7-flash`, tool_use + structured output honored, 950,002 prompt tokens measured; not yet in native gemini-cli's known model list, so ICA is currently the ONLY reachable lane — no Google Search grounding there, same as every ICA-proxied Gemini). HEAD-TO-HEAD RUN 2026-08-26 (node_01M0Z7K4QJXD2EWK0BPKD98QVG, n=3 prompts per use case, one operator/session, same ICA ccx /v1/messages transport for both models — see docs/audits/gemini-3.7-vs-3.6-flash-head-to-head-2026-08-26.md in agentic_meta_dev): gemini-3.7-flash matched-or-beat gemini-3.6-flash on every one of 9 prompts (web-research synthesis, second-opinion code/reasoning/SQL critique, SVG icon generation) AND consumed meaningfully fewer output tokens per completion at matched max_tokens budgets — 3.6-flash was truncated mid-answer on 5 of 9 prompts at budgets where 3.7-flash completed cleanly (one SVG prompt needed a 10,000-token budget for 3.6-flash to finish vs 4,471 for 3.7-flash on the same prompt), and 3.6-flash also broke an explicit 'no markdown fences' instruction on one SVG prompt where 3.7-flash complied. RECOMMENDATION: promote to a leg-1/leg-2 ICA-only entry in second_opinion and svg_generation ahead of gemini-3.6-flash's ICA rows, and to web_research's ICA fallback leg (native gemini-3.6-flash stays leg-1 there since it alone has Search grounding) — pending human review of the pilot before flipping enabled/routing_policy. Still NOT auto-routed (n=3 pilot, single session, no adversarial verification of its own scoring).",
+      "scores": {
+        "cost": 8,
+        "intelligence": 7,
+        "taste": 7,
+        "speed": 9
+      },
+      "when_to_use": [
+        "second-opinion",
+        "svg-generation",
+        "web-research-ica-fallback"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.7-flash",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.7-flash",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 1,
+          "cost_score": 8,
+          "max_context": 1000000
+        }
+      ]
+    },
+    "gpt-5.4-gus": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "GPT-5.4 (`gpt-5.4-gus`) via ICA. Previously recorded as REGRESSED/not-servable on the beta gateway (2026-07-21); on the ccx gateway it is servable again as of 2026-08-26 (200 on both transports, tool_use OK, structured output honored, max completion 128,000). Kept scaffolded/disabled: the upstream gpt-5.4 line retires 2026-08-31 and OpenAI's own migration note points it at gpt-5.6-luna, which is already free on this lane. Documented so a future probe does not re-file it as a discovery.",
+      "scores": {
+        "cost": 6,
+        "intelligence": 6,
+        "taste": 5,
+        "speed": 7
+      },
+      "when_to_use": [],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.4-gus",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 128000,
+      "sampling": "deterministic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.4-gus",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 1
+        }
+      ]
+    },
+    "meta-llama/llama-3-3-70b-instruct": {
+      "family": "meta",
+      "class": "llama",
+      "descriptor": "Llama 3.3 70B Instruct on the ICA ccx gateway. Pool-cost (not free), and in practice superseded by the FREE meta-llama/llama-4-maverick-17b-128e-instruct-fp8 already on this registry — recorded for completeness, no reason to route here over the free tier.",
+      "scores": {
+        "cost": 5,
+        "intelligence": 5,
+        "taste": 4,
+        "speed": 6
+      },
+      "when_to_use": [],
+      "playbook_ref": "model-playbook/routes/open-models.md#llama-3-3-70b-instruct",
+      "tools": [],
+      "related_skills": [],
+      "max_context": 127200,
+      "sampling": "stochastic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "meta-llama/llama-3-3-70b-instruct",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 1
+        }
+      ]
+    },
+    "mistral-medium-2505": {
+      "family": "mistral",
+      "class": "mistral",
+      "descriptor": "Mistral Medium 2505 — the first Mistral model on any ICA lane, discovered on the ccx catalog 2026-08-26. Tool use + structured output OK; watsonx-backed, so emits tool-call arguments as a JSON string — call it on /v1/chat/completions, never /v1/messages (the Anthropic-shape translation layer 500s on the string form).",
+      "scores": {
+        "cost": 6,
+        "intelligence": 6,
+        "taste": 5,
+        "speed": 6
+      },
+      "when_to_use": [],
+      "playbook_ref": "model-playbook/routes/open-models.md#mistral-medium-2505",
+      "tools": [],
+      "related_skills": [],
+      "max_context": 127200,
+      "sampling": "stochastic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "mistral-medium-2505",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": false,
           "priority": 1
         }
       ]
