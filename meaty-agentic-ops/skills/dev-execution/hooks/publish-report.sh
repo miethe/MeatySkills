@@ -201,9 +201,23 @@ STATUS=$?
 MESSAGE="$(printf '%s' "${RESULT}" | sed -n 's/.*"reason": "\([^"]*\)".*/\1/p' | head -1)"
 ROUTE_OUT="$(printf '%s' "${RESULT}" | sed -n 's/.*"route": "\([^"]*\)".*/\1/p' | head -1)"
 
+# node_01M14WH846J90CXZHK1EEGH1G6 AC2: the authoring-machine-local vs host-qualified distinction
+# must be surfaced in THIS hook's own logged output, not only in publish_report.py's internal
+# --json payload. A substring match (not a JSON-key regex) is deliberate: `detail` in the engine's
+# own JSON carries publish_report.py's full --json payload as an ESCAPED string
+# (`\"preview_url_scope\": \"host-qualified\"`), and these two literal values never contain a
+# quote themselves, so matching on them survives arbitrary levels of JSON string-escaping.
+if printf '%s' "${RESULT}" | grep -q "authoring-machine-local"; then
+    DURABILITY="authoring-machine-local (NOT durable across sessions/other machines)"
+elif printf '%s' "${RESULT}" | grep -q "host-qualified"; then
+    DURABILITY="host-qualified (durable)"
+else
+    DURABILITY="unknown"
+fi
+
 case "${STATUS}" in
     0)
-        echo "[publish-report] published route=${ROUTE_OUT:-${ROUTE}} instance_key=${INSTANCE_KEY:-<none>}" >&2
+        echo "[publish-report] published route=${ROUTE_OUT:-${ROUTE}} instance_key=${INSTANCE_KEY:-<none>} preview_url_scope=${DURABILITY}" >&2
         ;;
     1)
         echo "[publish-report] GUARDRAIL REJECTED (R1 — scope misattribution): ${RESULT}" >&2
