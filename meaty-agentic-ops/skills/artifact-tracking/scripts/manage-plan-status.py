@@ -18,22 +18,20 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import yaml
 
+# Shared status vocabulary — single source of truth for the canonical enum + alias map. When run
+# as a script the script dir is on sys.path[0]; the insert keeps the import working if imported.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _status_aliases as sa  # noqa: E402
+from _frontmatter_edit import FrontmatterEditor  # noqa: E402
 
-VALID_STATUSES = [
-    "draft",
-    "pending",
-    "planning",
-    "in_progress",
-    "in-progress",
-    "review",
-    "completed",
-    "complete",
-    "approved",
-    "deferred",
-    "blocked",
-    "archived",
-    "superseded",
-]
+
+# Canonical accepted set = the ratified 15-value IntentTree NodeStatus enum
+# (docs/agentic-operator/contracts/frontmatter-schema.md §4). Legacy / CCDash-era synonyms
+# (draft, complete, pending, in-progress, review, accepted, …) are still ACCEPTED for backward
+# compatibility via the shared alias map, but are NORMALIZED to their NodeStatus on write.
+# NOTE: the CCDash-era `approved` / `superseded` spellings are intentionally dropped — they are
+# neither NodeStatus nor in the ratified alias map; use `ready` / `archived` instead.
+VALID_STATUSES = sorted(sa.NODE_STATUSES)
 
 PLAN_DIRECTORIES: Dict[str, List[str]] = {
     "prd": ["docs/project_plans/PRDs"],
@@ -106,10 +104,10 @@ def extract_frontmatter_and_body(
     return frontmatter, body
 
 
-def write_frontmatter_and_body(filepath: Path, frontmatter: Dict[str, Any], body: str) -> None:
-    """Write frontmatter and body back to a file."""
-    frontmatter_yaml = yaml.safe_dump(frontmatter, default_flow_style=False, sort_keys=False)
-    filepath.write_text(f"---\n{frontmatter_yaml}---\n{body}", encoding="utf-8")
+# NOTE: there is deliberately no `write_frontmatter_and_body` here any more. Dumping a parsed
+# dict back over the whole block is what escaped em-dashes, requoted bare dates, flattened list
+# indentation and collapsed block scalars in keys the caller never named. Writes go through
+# `FrontmatterEditor`, which edits only the targeted key's lines. See `_frontmatter_edit.py`.
 
 
 def parse_yaml_value(value: str) -> Any:
@@ -191,14 +189,33 @@ def read_status(filepath: Path) -> Optional[str]:
 
 
 def validate_status(status: str) -> bool:
-    """Validate status value against supported superset."""
-    if status in VALID_STATUSES:
+    """Validate a status value: a NodeStatus, or a back-compat alias spelling.
+
+    Hand-review / unknown values (not a NodeStatus and not in the alias map) are rejected.
+    """
+    if sa.is_acceptable(status):
         return True
     print(
-        f"Error: Invalid status '{status}'. Must be one of: {', '.join(VALID_STATUSES)}",
+        "Error: Invalid status '{s}'. Must be a NodeStatus ({n}) "
+        "or a recognized alias ({a}).".format(
+            s=status,
+            n=", ".join(VALID_STATUSES),
+            a=", ".join(sorted(sa.STATUS_ALIASES)),
+        ),
         file=sys.stderr,
     )
     return False
+
+
+def normalize_status_value(status: str) -> str:
+    """Normalize an accepted status to its canonical NodeStatus for writeback.
+
+    A NodeStatus is returned as-is; a recognized alias is resolved to its NodeStatus. (Callers
+    validate first, so a hand-review value never reaches here — but it is returned unchanged if
+    it somehow does, rather than raising.)
+    """
+    canonical = sa.resolve(status)[0]
+    return canonical if canonical is not None else status
 
 
 def update_fields(filepath: Path, status: Optional[str], field: Optional[str], value: Optional[str]) -> bool:
@@ -218,36 +235,50 @@ def update_fields(filepath: Path, status: Optional[str], field: Optional[str], v
         print("Error: --field and --value must be used together", file=sys.stderr)
         return False
 
-    frontmatter, body = extract_frontmatter_and_body(filepath)
+    frontmatter, _ = extract_frontmatter_and_body(filepath)
     if frontmatter is None:
         return False
 
+    # Targeted, line-level edits: only the keys named below change on disk.
+    editor = FrontmatterEditor.from_text(filepath.read_text(encoding="utf-8"))
+    if editor is None:
+        print(f"Error: Could not parse YAML frontmatter in {filepath}", file=sys.stderr)
+        return False
+
     old_status = frontmatter.get("status", "not set")
+    new_status: Optional[str] = None
+    parsed_value: Any = None
 
     if status is not None:
-        frontmatter["status"] = status
+        # Accept an alias spelling but persist the canonical NodeStatus.
+        new_status = normalize_status_value(status)
+        editor.set("status", new_status)
 
     if field is not None and value is not None:
         parsed_value = parse_yaml_value(value)
         if field == "status" and isinstance(parsed_value, str):
             if not validate_status(parsed_value):
                 return False
-        frontmatter[field] = parsed_value
+            parsed_value = normalize_status_value(parsed_value)
+            new_status = parsed_value
+        editor.set(field, parsed_value)
 
-    # Always touch updated on write operations.
-    frontmatter["updated"] = datetime.now().strftime("%Y-%m-%d")
+    # Always touch updated on write operations. A date, not a "YYYY-MM-DD" string: PyYAML quotes a
+    # date-shaped STRING to preserve its stringness, which would flip a bare `updated: 2026-08-01`
+    # to a quoted scalar on the first write. A file that already quotes it keeps its quotes.
+    editor.set("updated", datetime.now().date())
 
     try:
-        write_frontmatter_and_body(filepath, frontmatter, body)
+        filepath.write_text(editor.render(), encoding="utf-8")
     except Exception as exc:
         print(f"Error: Could not write {filepath}: {exc}", file=sys.stderr)
         return False
 
     print(f"✓ Updated file: {filepath}")
     if status is not None:
-        print(f"  Status: {old_status} -> {status}")
+        print(f"  Status: {old_status} -> {new_status}")
     if field is not None:
-        print(f"  Field: {field} = {frontmatter.get(field)!r}")
+        print(f"  Field: {field} = {parsed_value!r}")
     return True
 
 
@@ -308,8 +339,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python manage-plan-status.py --read docs/project_plans/PRDs/features/my-feature.md
-  python manage-plan-status.py --file docs/project_plans/PRDs/features/my-feature.md --status approved
+  python manage-plan-status.py --read docs/project_plans/PRDs/my-feature.md
+  python manage-plan-status.py --file docs/project_plans/PRDs/my-feature.md --status approved
   python manage-plan-status.py --file docs/project_plans/SPIKEs/foo.md --field priority --value high
   python manage-plan-status.py --query --type spike --status draft
 """,

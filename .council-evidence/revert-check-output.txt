@@ -1,0 +1,44 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_assess_payload_integrity_positive_control ________________
+
+    @pytest.mark.skipif(not NODE_AVAILABLE, reason="node is not installed — positive control needs a JS engine")
+    def test_assess_payload_integrity_positive_control() -> None:
+        """Mandatory positive control (per house rule: an assertion that only ever passes against
+        unmodified code proves nothing). Extracts the real assessPayloadIntegrity() out of the
+        upstream file via Node and runs it over a planted verdict shaped exactly like the
+        2026-08-08 rescue: 10 findings expected, only 4 delivered. Must return the 6 missing ids.
+        A revert of the guard (assessPayloadIntegrity always returning []) was run once by hand
+        against this same script and confirmed red — see .council-evidence/ in the fix worktree."""
+        src = _upstream_council_src()
+        fn_src = _extract_js_function(src, "assessPayloadIntegrity")
+    
+        script = f"""
+    {fn_src}
+    const expected = Array.from({{ length: 10 }}, (_, i) => `F-${{i + 1}}`);
+    const verdict = {{ summary: {{ delivered_finding_ids: ['F-1', 'F-2', 'F-3', 'F-4'] }} }};
+    process.stdout.write(JSON.stringify(assessPayloadIntegrity(expected, verdict)));
+    """
+        result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=10)
+        assert result.returncode == 0, f"node execution failed: {result.stderr}"
+        missing = json.loads(result.stdout)
+>       assert set(missing) == {"F-5", "F-6", "F-7", "F-8", "F-9", "F-10"}, (
+            f"expected exactly the 6 undelivered ids (F-5..F-10) for the 10-expected/4-delivered "
+            f"case, got {missing}"
+        )
+E       AssertionError: expected exactly the 6 undelivered ids (F-5..F-10) for the 10-expected/4-delivered case, got []
+E       assert set() == {'F-10', 'F-5... 'F-8', 'F-9'}
+E         
+E         Extra items in the right set:
+E         'F-8'
+E         'F-9'
+E         'F-6'
+E         'F-5'
+E         'F-7'
+E         'F-10'
+E         Use -v to get more diff
+
+tests/test_workflow_gate_integrity.py:1662: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_workflow_gate_integrity.py::test_assess_payload_integrity_positive_control - AssertionError: expected exactly the 6 undelivered ids (F-5..F-10) for the ...
+1 failed, 90 deselected in 0.12s

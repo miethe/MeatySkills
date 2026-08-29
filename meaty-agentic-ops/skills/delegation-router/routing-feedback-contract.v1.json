@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "contract_id": "aos.routing.feedback",
+  "contract_version": "1.0.0",
+  "live_consumption": "disabled_pending_ccdash_di4f_and_di4e",
+  "live_consumption_gate": {
+    "note": "The merge + actuation implementation LANDED 2026-08-04 (routing-feedback.js, DI-1), so the old 'until implementation' reason is retired. What remains is producer-side signal quality: flipping this to 'enabled' requires BOTH of the conditions below, OR a written decision accepting a cost-only merge that states why a dead 0.5-weighted failure term is acceptable. Anything other than the exact string 'enabled' keeps consumption off.",
+    "requires": [
+      "ccdash DI-4f — routing-key skill attribution (114 of 188 min_sample-clearing keys have a NULL skill_name)",
+      "ccdash DI-4e — populate success_rate (0 non-null today; itself gated on DI-4f)"
+    ],
+    "not_waiting_on": "regression_rate — permanently null, no signal exists (test_results/test_runs are 0 rows, no retry linkage). The merge behaves correctly with it null rather than waiting."
+  },
+  "taxonomy": {
+    "taxonomy_id": "aos.routing.task_class",
+    "taxonomy_version": "1.0.0",
+    "taxonomy_digest": "sha256:d96a0819b0a3a42d14eccc1421d3146b8364253d975d9d54f4f264d4b6adeaca"
+  },
+  "accepted_producers": {
+    "ccdash": {
+      "mapping_id": "ccdash.skill_name_to_aos.routing.task_class",
+      "mapping_version": "1.2.0",
+      "mapping_digest": "sha256:4d62b43a14fb083d146354a8fa08749042c2fa88214738b483053faddc0e81ab",
+      "source_task_class_rules": {
+        "aos-operator": "orchestration",
+        "artifact-tracking": "mechanical",
+        "ccdash": "mechanical",
+        "changelog-sync": "documentation",
+        "claude-agent-sdk": "_unclassified",
+        "claude-api": "_unclassified",
+        "claude-code": "_unclassified",
+        "codex": "_unclassified",
+        "council-run": "council_review",
+        "debug": "implementation",
+        "debugging": "implementation",
+        "delegation-router": "orchestration",
+        "delivery-report": "documentation",
+        "dev-execution": "implementation",
+        "enterprise-demo-deploy": "mode_d",
+        "firecrawl": "web_research",
+        "firecrawl-scrape": "web_research",
+        "firecrawl-search": "web_research",
+        "frontend-design": "implementation",
+        "gemini-cli": "second_opinion",
+        "html-capsules": "implementation",
+        "ica-delegate": "_unclassified",
+        "intentmd_creator": "documentation",
+        "intenttree": "orchestration",
+        "intenttree-cli": "orchestration",
+        "op": "orchestration",
+        "plan-status": "documentation",
+        "planning": "orchestration",
+        "receiving-code-review": "code_review",
+        "release": "mode_d",
+        "rf": "web_research",
+        "skill-dev": "implementation",
+        "skill_seekers": "_unclassified",
+        "skillmeat-cli": "mechanical",
+        "symbols": "mechanical",
+        "workflow-authoring": "implementation"
+      }
+    }
+  },
+  "router_guardrail_ownership": {
+    "_note": "Re-expressed in DISCRETE terms 2026-08-04 per routing-feedback-router-merge-handoff.md §2.4.6. The retired continuous vocabulary ('bounded_adjustment_cap' as a -0.15 magnitude, 'effective_score_floor') described an adjustment surface the resolver does not have: selection is by chain position and integer within-model priority, with no score to cap or floor. A magnitude cap is meaningless when there is exactly one available action, so boundedness comes from displacement limits and hysteresis instead. All rows below are IMPLEMENTED in routing-feedback.js and covered by tests/test-routing-feedback.js.",
+    "minimum_sample_gate": "implemented_defense_in_depth",
+    "max_rank_displacement": "implemented — 1 position, demotion-only; promotion is forbidden",
+    "never_empty_last_candidate_floor": "implemented — actuation is a permutation, so no candidate is ever removed; single-entry chains are a hard no-op",
+    "hysteresis_and_ttl": "implemented — demote at theta 0.15, restore below theta_restore 0.08, override expires after 1 window unless re-confirmed",
+    "human_override_wins": "absolute — structural, via physically separate channels: machine state is ~/.claude/state/routing-feedback-overrides.json and NEVER routing.local.toml",
+    "must_stay_primary_immunity": "absolute — enforced at the join validator, the actuation stage, and the record emitter",
+    "feature_flag_disable": "implemented — AOS_ROUTING_FEEDBACK=0|false|no|off, instant, plus this contract's live_consumption gate",
+    "routing_record_provenance": "implemented — RoutingRecord.routing_feedback carries rank_displacement (action) plus combined_signal and the §2.2 evidence block (reason)",
+    "retired_continuous_vocabulary": {
+      "bounded_adjustment_cap": "retired as a magnitude; |0.15| re-purposed as the demotion threshold theta",
+      "effective_score_floor": "retired as unsatisfiable; replaced by never_empty_last_candidate_floor",
+      "score_delta": "retired as a RoutingRecord field; replaced by rank_displacement"
+    }
+  },
+  "producer_guardrail_ownership": {
+    "deterministic_aggregation": "required",
+    "rolling_window_and_freshness": "required",
+    "mapping_coverage_reporting": "required",
+    "read_only_pull_surface": "required",
+    "no_model_on_compute_path": "absolute"
+  }
+}

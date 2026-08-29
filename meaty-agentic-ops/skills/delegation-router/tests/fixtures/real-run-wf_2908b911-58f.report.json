@@ -1,0 +1,57 @@
+{
+  "status": "complete",
+  "report": [
+    {
+      "wave": "wave-1",
+      "phases": [
+        {
+          "phase": "legs",
+          "fix_cycles": 0
+        }
+      ]
+    }
+  ],
+  "legs": [
+    {
+      "label": "leg-a-fails-over",
+      "failed": true,
+      "failureMode": "threw: agent({agentType}): agent type 'no-such-agent-type-wire-proof' not found. Available agents: agent-expert, ai-artifacts-e",
+      "text": "A"
+    },
+    {
+      "label": "leg-b-succeeds",
+      "failed": false,
+      "failureMode": null,
+      "text": "B"
+    }
+  ],
+  "routing_log": [
+    {
+      "task_ref": "leg-a-fails-over",
+      "kind": "decision",
+      "chosen_plugin_id": "ica",
+      "intended_model": "claude-sonnet-5[1m]",
+      "fallback_applied": false,
+      "reason": "offload leg-a-fails-over to no-such-agent-type-wire-proof"
+    },
+    {
+      "task_ref": "leg-a-fails-over",
+      "kind": "realization",
+      "chosen_plugin_id": "ica",
+      "intended_model": "claude-sonnet-5[1m]",
+      "actual_provider_used": "claude",
+      "realized_model": null,
+      "fallback_applied": true,
+      "realization_evidence": "orchestrator-observed: no-such-agent-type-wire-proof threw: agent({agentType}): agent type 'no-such-agent-type-wire-proof' not found. Available agents: agent-expert, ai-artifacts-e for leg-a-fails-over; this call is the workflow's own in-process re-dispatch to general-purpose on claude-primary",
+      "reason": "no-such-agent-type-wire-proof unavailable; escalated to primary claude immediately (no retry)"
+    },
+    {
+      "task_ref": "leg-b-succeeds",
+      "kind": "decision",
+      "chosen_plugin_id": "ica",
+      "intended_model": "claude-sonnet-5[1m]",
+      "fallback_applied": false,
+      "reason": "offload leg-b-succeeds to general-purpose"
+    }
+  ]
+}

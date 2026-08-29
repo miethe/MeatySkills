@@ -1,0 +1,342 @@
+# Provider Plugin Registry — .claude/config/provider-plugins.toml
+#
+# Authoritative registry of invocation mechanics and model↔provider bindings.
+# Routing rules, the routing decision tree, and effort thresholds live in:
+#   .claude/specs/provider-routing-spec.md  (routing policy + cost policy)
+#   .claude/config/multi-model.toml         (defaults + CI assertions)
+#
+# Schema: .claude/worknotes/delegation-router-multimodel/plugin-schema-spec.md
+# Feature: delegation-router-multimodel  |  Phase: P1  |  Version: 1.0.0
+#
+# Governance invariant: the `delegation-router` skill reads this registry at route time.
+# Adding a new provider = one section here + one plugin skill + one entry in [routing_rules].
+# Adding a new model to an existing provider = one [[providers.X.models]] block below.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER: claude  (native, on-primary Claude subscription)
+# ──────────────────────────────────────────────────────────────────────────────
+
+[providers.claude]
+id = "claude"
+binary_path = "~/.claude/local/claude"
+# No auth_env / auth_file — native session auth; no credential management needed.
+availability_check = "which claude || test -f ~/.claude/local/claude"
+
+[[providers.claude.models]]
+name = "opus"
+cost_tier = "standard"
+capabilities = [
+    "orchestration",
+    "planning",
+    "implementation",
+    "code-review",
+    "adversarial-review",
+    "debug-escalation",
+    "large-context",
+]
+max_context = 200000
+sampling = "deterministic"
+
+[[providers.claude.models]]
+name = "sonnet"
+cost_tier = "standard"
+capabilities = [
+    "implementation",
+    "planning",
+    "code-review",
+    "exploration",
+    "adversarial-review",
+]
+max_context = 200000
+sampling = "deterministic"
+
+[[providers.claude.models]]
+name = "haiku"
+cost_tier = "standard"
+capabilities = [
+    "mechanical-tasks",
+    "schema-recovery",
+    "doc-gen",
+    "exploration",
+]
+max_context = 200000
+sampling = "deterministic"
+
+[providers.claude.invocation_template]
+# Native Claude Code agent invocation — the Skill("delegation-router") path uses Task() API.
+# Shell-invocation form (for agent preamble / availability checks):
+base = 'claude -p "{prompt}" --model {model} --dangerously-skip-permissions'
+scope_flags = '--max-turns {max_turns}'
+# output_format_json: native schema support via Task() API (StructuredOutput parameter).
+# continuity: session-native — no flag needed; sessions persist across Task() calls.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER: ica  (mixed gateway, cost-shifted IBM Cloud API)
+# R2 note: ICA for Sonnet is an EXPLICIT PER-TASK OPT-IN. It is NOT the default
+# for core implementation work. Haiku mechanical work defaults to ICA (free-tier).
+# ──────────────────────────────────────────────────────────────────────────────
+
+[providers.ica]
+id = "ica"
+binary_path = "~/ica-claude.sh"
+auth_env = "ICA_CLAUDE_CODE_API_KEY"
+auth_file = "~/.dotfiles/ICA_CLAUDE"
+availability_check = "test -f ~/ica-claude.sh && test -f ~/.dotfiles/ICA_CLAUDE"
+
+[[providers.ica.models]]
+name = "haiku"
+cost_tier = "free"
+capabilities = [
+    "mechanical-tasks",
+    "schema-recovery",
+    "doc-gen",
+    "adversarial-review",
+    "exploration",
+]
+max_context = 200000
+sampling = "stochastic"
+
+[[providers.ica.models]]
+name = "sonnet"
+cost_tier = "standard"
+capabilities = [
+    "implementation",
+    "planning",
+    "exploration",
+    "adversarial-review",
+    "code-review",
+]
+max_context = 200000
+sampling = "stochastic"
+
+[[providers.ica.models]]
+name = "opus"
+cost_tier = "premium"
+capabilities = [
+    "orchestration",
+    "planning",
+    "implementation",
+    "adversarial-review",
+]
+max_context = 200000
+sampling = "stochastic"
+
+# ICA additionally serves Gemini — registered here so the router can fall back to
+# ICA when the gemini provider hits rate limits. Use the `[1m]` id: the plain
+# `gemini-3.5-flash` id is silently capped at 200k on the gateway. NOTE: the ICA
+# path is NOT Search-grounded (grounding is native-key-only), so `web-search` is
+# deliberately absent from these capabilities — route grounded work to provider gemini.
+[[providers.ica.models]]
+name = "gemini-3.5-flash[1m]"
+cost_tier = "free"
+capabilities = [
+    "large-context",
+    "exploration",
+    "adversarial-review",
+]
+max_context = 1000000
+sampling = "stochastic"
+
+[providers.ica.invocation_template]
+base = '~/ica-claude.sh -p "{prompt}" --model {model} --dangerously-skip-permissions'
+scope_flags = '--max-turns {max_turns}'
+output_format_json = '--json-schema "{schema}"'
+continuity = '--continue'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER: bob  (local, zero-cost, stateless shell delegate)
+# ──────────────────────────────────────────────────────────────────────────────
+
+[providers.bob]
+id = "bob"
+binary_path = "~/.local/share/mise/shims/node"
+# No auth_env / auth_file — local binary, no credentials.
+availability_check = "mise exec node@22 -- bob --version 2>/dev/null"
+
+[[providers.bob.models]]
+name = "bob-local"
+cost_tier = "free"
+capabilities = [
+    "drafting",
+    "exploration",
+    "mechanical-tasks",
+]
+max_context = 40000
+sampling = "deterministic"
+
+[providers.bob.invocation_template]
+base = 'mise exec node@22 -- bob -p "{prompt}"'
+scope_flags = '--yes'
+# output_format_json: absent — bob has no native JSON schema support.
+#   Mitigation: two-stage structuring via a downstream Stage B haiku validator.
+# continuity: absent — bob is strictly stateless; no session carry-over.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER: gemini  (gemini-cli, metered AI Studio key)
+# ──────────────────────────────────────────────────────────────────────────────
+# Model entries mirror the routing SoT: ~/.claude/config/model-registry.yaml
+# (`models.gemini-*`). The previously-pinned gemini-3-flash / gemini-3.1-pro ids
+# no longer exist — gemini-3-pro-preview is shut down and there is NO gemini-3.5-pro.
+# AUTH: the free Code Assist OAuth tier was SUNSET (IneligibleTierError) — do NOT
+# re-OAuth. Use an AI Studio `GEMINI_API_KEY` (~/.config/aos/secrets.env) with
+# settings.json selectedType=gemini-api-key. Google Search grounding is Gemini 3+
+# and native-key-only; the ICA gateway path is NOT Search-grounded.
+
+[providers.gemini]
+id = "gemini"
+binary_path = "~/.local/share/mise/shims/gemini"
+auth_env = "GEMINI_API_KEY"
+auth_file = "~/.gemini/settings.json"
+availability_check = "test -f ~/.gemini/settings.json && which gemini"
+
+# DEFAULT workhorse — 1M ctx without a suffix on native gemini-cli, Search-grounded.
+[[providers.gemini.models]]
+name = "gemini-3.5-flash"
+cost_tier = "standard"
+capabilities = [
+    "web-search",
+    "large-context",
+    "exploration",
+    "adversarial-review",
+    "code-review",
+    "svg-generation",
+]
+max_context = 1000000
+sampling = "stochastic"
+
+[[providers.gemini.models]]
+name = "gemini-3.1-pro-preview"
+cost_tier = "standard"
+capabilities = [
+    "web-search",
+    "large-context",
+    "exploration",
+    "planning",
+    "adversarial-review",
+    "deep-reasoning",
+]
+max_context = 1000000
+sampling = "stochastic"
+
+# Cheapest/fastest — trivial work only (formatting, one-liners).
+[[providers.gemini.models]]
+name = "gemini-3.1-flash-lite"
+cost_tier = "free"
+capabilities = [
+    "exploration",
+    "mechanical-tasks",
+]
+max_context = 1000000
+sampling = "stochastic"
+
+[providers.gemini.invocation_template]
+base = 'gemini "{prompt}" --model {model} --yolo'
+scope_flags = '--max-turns {max_turns}'
+output_format_json = '-o json'
+# continuity: gemini-cli is stateless per invocation; no resume flag.
+# For session continuity use --resume <index> per gemini-cli SKILL.md.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PROVIDER: codex  (OpenAI gpt-5.6 line via codex CLI, sandbox-gated)
+# ──────────────────────────────────────────────────────────────────────────────
+# Model entries mirror the global routing SoT: ~/.claude/config/model-registry.yaml
+# (`models.gpt-5.6-{sol,terra,luna}`) and docs/agentic-operator/MODEL-ROUTING.md.
+# The gpt-5.3-codex / -spark entries this block previously pinned are three
+# generations stale (5.3 → 5.5 → 5.6) and no longer exist as codex CLI targets.
+#   gpt-5.6-terra = workhorse, DEFAULT codex delegation tier
+#   gpt-5.6-sol   = frontier SOTA, escalation target when terra stalls
+#   gpt-5.6-luna  = cheaper/faster tier (lighter review, mechanical, quick fixes)
+# Reasoning efforts: none|minimal|low|medium|high|xhigh, plus `ultra` on Sol/Terra only.
+
+[providers.codex]
+id = "codex"
+binary_path = "~/.local/bin/codex"
+auth_file = "~/.codex/config.toml"
+availability_check = "test -f ~/.codex/config.toml && which codex"
+
+[[providers.codex.models]]
+name = "gpt-5.6-terra"
+cost_tier = "premium"
+capabilities = [
+    "agentic-coding",
+    "code-review",
+    "ac-validation",
+    "debug-escalation",
+    "implementation",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+[[providers.codex.models]]
+name = "gpt-5.6-sol"
+cost_tier = "premium"
+capabilities = [
+    "debug-escalation",
+    "deep-reasoning",
+    "agentic-coding",
+    "architecture",
+    "novel-algorithm-design",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+[[providers.codex.models]]
+name = "gpt-5.6-luna"
+cost_tier = "standard"
+capabilities = [
+    "code-review",
+    "ac-validation",
+    "mechanical-tasks",
+    "second-opinion",
+    "exploration",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+# Legacy gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, never a default.
+[[providers.codex.models]]
+name = "gpt-5.5"
+cost_tier = "premium"
+capabilities = [
+    "agentic-coding",
+    "code-review",
+    "ac-validation",
+    "schema-recovery",
+]
+max_context = 400000
+sampling = "deterministic"
+
+[providers.codex.invocation_template]
+base = 'codex exec --sandbox {sandbox_mode} "{prompt}"'
+scope_flags = '--max-turns {max_turns}'
+# output_format_json: absent — codex uses strict schema validation via --json-schema separately.
+#   Use two-stage structuring when structured output is required; never silently degrade.
+# continuity: resume via --last; use `codex exec --last "{prompt}"` for session resume.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ROUTING RULES — cross-provider fallback chains + determinism classification
+# ──────────────────────────────────────────────────────────────────────────────
+
+[routing_rules]
+# Fallback chains: ordered list of "provider_id/model_name" pairs.
+# The router walks this chain when the primary provider is unavailable or exhausted.
+# Rationale for each chain: .claude/specs/provider-routing-spec.md §9
+fallback_opus    = ["ica/opus", "claude/sonnet"]
+fallback_sonnet  = ["ica/sonnet", "claude/opus"]
+fallback_haiku   = ["ica/haiku", "claude/sonnet"]
+fallback_codex   = ["claude/sonnet", "claude/opus"]
+fallback_gemini  = ["ica/gemini-3.5-flash[1m]", "ica/sonnet"]
+# Note: gemini model names in fallback chains reference [[providers.gemini.models]] name values.
+# Current gemini models: gemini-3.5-flash (default workhorse), gemini-3.1-pro-preview
+# (heavy reasoning), gemini-3.1-flash-lite (cheapest). ICA bridge id: gemini-3.5-flash[1m].
+
+# Determinism classification — used by the resume-safety filter.
+# Deterministic: output reproducible for fixed prompt + model config.
+# Nondeterministic: output varies between runs (excluded from structural-stage ranking
+# when resume_active=true).
+# Schema invariant: no provider may appear in both lists.
+deterministic_providers    = ["claude", "codex", "bob"]
+nondeterministic_providers = ["gemini", "ica"]

@@ -1,0 +1,78 @@
+# recipe.toml — Bootstrap-on-Install for delegation-router
+#
+# WHY THIS EXISTS
+# ---------------
+# The resolver's canonical registry is read from ~/.claude/config/, NOT from the
+# skill directory:
+#
+#   resolver.js:216  GLOBAL_REGISTRY_YAML_PATH = <GLOBAL_CONFIG_DIR>/model-registry.yaml
+#   resolver.js:217  GLOBAL_REGISTRY_JSON_PATH = <GLOBAL_CONFIG_DIR>/model-registry.generated.json
+#
+# A plain `skillmeat deploy` lands artifact files under .claude/skills/delegation-router/,
+# which is one directory away from where the resolver looks. Before this recipe, the only
+# thing that bridged that gap was scripts/sync-to-global.sh — a hand-rolled deploy path
+# that ALSO copied the engine code, and whose symlink handling silently pinned the globally
+# deployed router to whatever branch a working tree happened to have checked out
+# (node_01KZS86MTR0WDPXT10EEXNVC2D).
+#
+# The engine-code half of that script is now retired in favour of `skillmeat deploy`. This
+# recipe carries the only part that genuinely needed doing after the copy: placing the
+# tracked registry + rankings where the resolver reads them.
+#
+# WHY THE TRACKED .generated.json RATHER THAN A REBUILD
+# ----------------------------------------------------
+# Recipe ops are declarative (file_copy / workspace_dir / claude_md_merge / hook registration);
+# there is deliberately no run-a-script op, so build-model-registry.py cannot run here. It does
+# not need to: model-registry.generated.json is TRACKED alongside the YAML, and was verified
+# byte-identical to a fresh regeneration from the tracked YAML (2026-08-12) apart from the
+# `_generated_from` absolute-path stamp. Copying the tracked JSON is therefore equivalent to
+# rebuilding it, and unlike a rebuild it is attributable to a commit.
+#
+# If you edit model-registry.yaml, regenerate and COMMIT the JSON in the same change:
+#   python3 scripts/build-model-registry.py --in model-registry.yaml \
+#                                           --out model-registry.generated.json
+
+schema_version = 1
+min_skillmeat_version = "0.46.0"
+
+[metadata]
+name = "delegation-router-global-config"
+description = "Place the tracked model registry + use-case rankings where resolver.js reads them."
+
+# --- The config directory the resolver reads (Tier 3 / global canonical) ---
+#
+# `version` is REQUIRED, not decorative: WorkspaceDirOp._get_version() raises
+# OpExecutionError('missing required payload key version') when absent, and plan() calls it.
+# Because RecipeApplier.apply() is all-or-nothing and runs ops in order, omitting it aborted
+# this recipe on op1 and the three FILE_COPY ops below NEVER ran — i.e. the bootstrap-on-install
+# this file exists to perform did not happen (node_01KZVRAF16P674E6868284654C).
+#
+# The value is a stamp written into the directory's .skillmeat-recipe.toml marker and compared
+# on re-apply: a CHANGED value marks the directory stale and refreshes the marker. Track the
+# skill's own `version` from SKILL.md so a config-layout change re-stamps.
+[[ops]]
+op_class = 3                       # WORKSPACE_DIR
+target = ".claude/config"
+version = "3.4"
+description = "Global config dir read by resolver.js (model registry + use-case rankings)."
+
+# --- Registry source of truth (YAML) ---
+[[ops]]
+op_class = 1                       # FILE_COPY
+source = "model-registry.yaml"
+target = ".claude/config/model-registry.yaml"
+overwrite = true
+
+# --- Derived lookup the resolver prefers when js-yaml is absent ---
+[[ops]]
+op_class = 1                       # FILE_COPY
+source = "model-registry.generated.json"
+target = ".claude/config/model-registry.generated.json"
+overwrite = true
+
+# --- Grounded-evidence layer, co-located with the registry by design ---
+[[ops]]
+op_class = 1                       # FILE_COPY
+source = "use-case-rankings.yaml"
+target = ".claude/config/use-case-rankings.yaml"
+overwrite = true

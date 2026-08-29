@@ -1,0 +1,1433 @@
+{
+  "_generated_from": "model-registry.yaml",
+  "_generator": "scripts/build-model-registry.py",
+  "_yaml_sha256": "fe28b05680af64f935a07883d7455c9e6f8ef47faace610e702174c16c01a8d5",
+  "version": 1,
+  "updated": "2026-07-31",
+  "routing_policy": {
+    "exploration": {
+      "chain": [
+        "ica/claude-haiku-4-5",
+        "claude/claude-haiku-4-5"
+      ],
+      "enabled": true
+    },
+    "documentation": {
+      "chain": [
+        "ica/claude-haiku-4-5",
+        "claude/claude-haiku-4-5"
+      ],
+      "enabled": true
+    },
+    "mechanical": {
+      "chain": [
+        "ica/claude-haiku-4-5",
+        "ica/gemma-4-26b-a4b-it",
+        "claude/claude-haiku-4-5"
+      ],
+      "enabled": true
+    },
+    "second_opinion": {
+      "chain": [
+        "codex/gpt-5.6-terra",
+        "ica/gemini-3.6-flash[1m]",
+        "ica/gemma-4-26b-a4b-it",
+        "ica/claude-haiku-4-5"
+      ],
+      "enabled": true
+    },
+    "implementation": {
+      "chain": [
+        "claude/claude-sonnet-5"
+      ],
+      "enabled": true
+    },
+    "web_research": {
+      "chain": [
+        "gemini/gemini-3.6-flash",
+        "gemini/gemini-3.5-flash",
+        "ica/gemini-3.1-pro-preview[1m]"
+      ],
+      "enabled": true
+    },
+    "code_review": {
+      "chain": [
+        "codex/gpt-5.6-terra",
+        "claude/claude-sonnet-5"
+      ],
+      "enabled": true
+    },
+    "image_generation": {
+      "chain": [
+        "nano-banana/nano-banana-2",
+        "nano-banana/nano-banana-pro"
+      ],
+      "enabled": true
+    },
+    "svg_generation": {
+      "chain": [
+        "claude/claude-fable-5",
+        "ica/gemini-3.1-pro-preview[1m]",
+        "gemini/gemini-3.5-flash",
+        "gemini/gemini-3.6-flash"
+      ],
+      "enabled": true
+    },
+    "video_generation": {
+      "chain": [
+        "sora/sora-2"
+      ],
+      "enabled": true
+    },
+    "orchestration": {
+      "chain": [
+        "claude/claude-opus-5"
+      ]
+    },
+    "mode_d": {
+      "chain": [
+        "claude/claude-opus-5"
+      ]
+    }
+  },
+  "must_stay_primary": [
+    "orchestration",
+    "verdict",
+    "mode_d",
+    "council_review",
+    "synthesis"
+  ],
+  "models": {
+    "claude-opus-5": {
+      "family": "claude",
+      "class": "opus",
+      "descriptor": "Claude Opus 5 (released 2026-07-24). The current flagship Opus and the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA: SERVABLE + VERIFIED 2026-07-31 — claude-opus-5[1m] is now the ICA spine-offload lane (claude-opus-4-8[1m] = fallback). On the ICA lane: 1M ctx via the [1m] id (plain id caps at 200k), maxOutputTokens reported 64,000 (ICA-side cap, below the 128K first-party ceiling), tool_use + adaptive thinking (output_config.effort) + legacy thinking.type:enabled + output_config.format (structured JSON) ALL work — Opus 5 has no structured-output gap on ICA, unlike Sonnet 5.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": 8,
+        "speed": 5
+      },
+      "when_to_use": [
+        "orchestration",
+        "deep-reasoning",
+        "architecture",
+        "verdicts",
+        "novel-algorithm-design",
+        "synthesis",
+        "mode-d",
+        "agentic-coding"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-opus-5",
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "related_skills": [],
+      "max_context": 1000000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-opus-5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-5[1m]",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000,
+          "max_output": 64000
+        }
+      ]
+    },
+    "claude-opus-4-8": {
+      "family": "claude",
+      "class": "opus",
+      "descriptor": "Claude Opus 4.8 — LEGACY as of 2026-07-24 (superseded by claude-opus-5 as the spine; Anthropic moved it to the legacy model list). Still selectable, and still an ICA [1m] lane — but as of 2026-07-31 it is the spine-offload FALLBACK, not the primary: ICA now serves claude-opus-5[1m] (verified), which takes the lane. Deep reasoning, orchestration, architecture. $5/$25 per M, 1M context, 128K max output.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": 8,
+        "speed": 5
+      },
+      "when_to_use": [
+        "deep-reasoning",
+        "architecture",
+        "planning",
+        "spine-offload-fallback"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-opus-4-8",
+      "superseded_by": "claude-opus-5",
+      "tools": [
+        "agent_tool",
+        "task_tool"
+      ],
+      "related_skills": [],
+      "max_context": 1000000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-opus-4-8",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-4-8[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        }
+      ]
+    },
+    "claude-opus-4-7": {
+      "family": "claude",
+      "class": "opus",
+      "descriptor": "Opus 4.7 — stronger reasoning than 4.6. Available via ICA (shared pool).",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "deep-reasoning",
+        "architecture",
+        "planning"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-opus-4-7",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-4-7[1m]",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-4-7",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2
+        }
+      ]
+    },
+    "claude-opus-4-6": {
+      "family": "claude",
+      "class": "opus",
+      "descriptor": "Opus 4.6 — deep reasoning, architecture decisions. Available via ICA (shared pool).",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "deep-reasoning",
+        "architecture",
+        "planning"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-opus-4-6",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-4-6[1m]",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-opus-4-6",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2
+        }
+      ]
+    },
+    "claude-sonnet-5": {
+      "family": "claude",
+      "class": "sonnet",
+      "descriptor": "Claude Sonnet 5 (released 2026-06-30). Near-Opus coding/agentic quality at Sonnet cost — the DEFAULT subscription implementation/workhorse tier. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $3/$15 per M (intro $2/$10 through 2026-08-31). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
+      "scores": {
+        "cost": 5,
+        "intelligence": 8,
+        "taste": 8,
+        "speed": 7
+      },
+      "reasoning_caveat": "ICA offload lane (ica/claude-sonnet-5[1m]) reasoning WORKS via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent offload is fine here. Only remaining gap: output_config.format (structured JSON) is dropped by the gateway — use a tool-call for structured output.",
+      "token_economy_note": "Sonnet 5's new tokenizer emits ~30% more tokens than Sonnet 4.6 for the same text, so its EFFECTIVE metered cost is ~$3.90/$19.50-equivalent at full price (intro $2/$10 through 2026-08-31). Capability/one-shot rate on coding+agentic work usually offsets this, and on the subscription lane token count doesn't affect $ (pooled). BUT on the ICA shared-pool lane and any metered lane, prefer claude-sonnet-4-6[1m] (older, token-efficient, free-to-us) or claude-haiku-4-5 for BOUNDED/MECHANICAL high-volume fan-out where 4.6-class capability suffices — reserve claude-sonnet-5[1m] offload for capability-sensitive bounded waves. Sonnet 5 stays the default execution workhorse (see MODEL-ROUTING.md §2).",
+      "when_to_use": [
+        "implementation",
+        "agentic-coding",
+        "code-review",
+        "multi-file-refactoring",
+        "planning",
+        "exploration",
+        "free-offload",
+        "extended-thinking",
+        "deep-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-sonnet-5",
+      "when_not_to_use_ica": [
+        "structured-json-output-schema"
+      ],
+      "tools": [
+        "one_million_context"
+      ],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-sonnet-5",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-5[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-5",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 3,
+          "cost_score": 8
+        }
+      ]
+    },
+    "claude-sonnet-4-6": {
+      "family": "claude",
+      "class": "sonnet",
+      "descriptor": "Previous-gen Sonnet (a generation behind Sonnet 5). Subscription billed; still available as an ICA offload lane (`claude-sonnet-4-6[1m]`, shared pool), but SUPERSEDED as the default ICA offload by claude-sonnet-5[1m] (same economics, current-gen) since 2026-07-08 — keep 4.6 only as an older fallback. Subscription real-implementation default is claude-sonnet-5.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 7,
+        "taste": 7,
+        "speed": 6
+      },
+      "when_to_use": [
+        "implementation",
+        "planning",
+        "code-review",
+        "exploration",
+        "multi-file-refactoring",
+        "free-offload"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-sonnet-4-6",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-sonnet-4-6",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "cost_score": 5
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-4-6[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-4-6",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 3
+        }
+      ]
+    },
+    "claude-sonnet-4-5": {
+      "family": "claude",
+      "class": "sonnet",
+      "descriptor": "Oldest-gen Sonnet still on the ICA gateway (two generations behind Sonnet 5, one behind 4-6). Present as an ICA offload FALLBACK only — prefer claude-sonnet-5 (subscription default) / claude-sonnet-4-6[1m] (older token-efficient offload) first. Surfaced by the 2026-07-27 gateway probe (was absent from the registry); ICA servability VERIFIED 2026-07-27 via ica-claude.sh. Not in any auto routing_policy chain; explicit-selectable only.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 6,
+        "taste": 6,
+        "speed": 6
+      },
+      "auto_select": false,
+      "when_to_use": [
+        "free-offload",
+        "exploration",
+        "bounded-implementation"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-sonnet-4-5",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "deterministic",
+      "status": "active",
+      "observed_ids": [
+        "claude-sonnet-4-5-20250929"
+      ],
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-4-5[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "claude-sonnet-4-5",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2
+        }
+      ]
+    },
+    "claude-haiku-4-5": {
+      "family": "claude",
+      "class": "haiku",
+      "descriptor": "Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 5,
+        "taste": 5,
+        "speed": 9
+      },
+      "when_to_use": [
+        "mechanical-tasks",
+        "doc-gen",
+        "adversarial-review",
+        "exploration"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-haiku-4-5",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "observed_ids": [
+        "claude-haiku-4-5-20251001"
+      ],
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "claude-haiku-4-5",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "claude",
+          "model_id": "claude-haiku-4-5",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 7
+        }
+      ]
+    },
+    "claude-fable-5": {
+      "family": "claude",
+      "class": "fable",
+      "descriptor": "Claude Fable 5 (Mythos-class frontier, released 2026-06-09). SOTA agentic coding (SWE-bench Verified 95%, SWE-bench Pro 80%) and long-horizon reasoning; lead over Opus 4.8 grows with task length/complexity. $10/$50 per M = 2× Opus 4.8 — explicit opt-in only, never auto-routed. 1M context, 128K max output.",
+      "scores": {
+        "cost": 1,
+        "intelligence": 10,
+        "taste": 9,
+        "speed": 4
+      },
+      "when_to_use": [
+        "orchestration",
+        "architecture",
+        "novel-algorithm-design",
+        "greenfield-jumpstart",
+        "long-horizon-autonomy",
+        "debug-escalation",
+        "high-stakes-verdict",
+        "deep-reasoning",
+        "planning"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-fable-5",
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "related_skills": [],
+      "max_context": 1000000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-fable-5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gemma-4-26b": {
+      "family": "open",
+      "class": "gemma",
+      "descriptor": "Google Gemma 4 26B (preview). Free open model via ICA. Simple extraction, classification, diversity votes.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 3,
+        "taste": 2,
+        "speed": 9
+      },
+      "when_to_use": [
+        "second-opinion",
+        "diversity-vote",
+        "simple-classification",
+        "mechanical-tasks"
+      ],
+      "playbook_ref": "model-playbook/routes/open-models.md#gemma-4-26b",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gemma-4-26b-a4b-it",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "llama-4-maverick": {
+      "family": "open",
+      "class": "llama",
+      "descriptor": "Meta Llama 4 Maverick 17B Instruct. Free open model via ICA. Fast, lightweight reasoning, cross-family votes.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 3,
+        "taste": 2,
+        "speed": 9
+      },
+      "when_to_use": [
+        "second-opinion",
+        "diversity-vote",
+        "mechanical-tasks",
+        "lightweight-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/open-models.md#llama-4-maverick",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "granite-4-small": {
+      "family": "open",
+      "class": "granite",
+      "descriptor": "IBM Granite 4 Small. Free open model via ICA. Smallest, fastest response. Simple Q&A / classification.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 2,
+        "taste": 2,
+        "speed": 10
+      },
+      "when_to_use": [
+        "simple-classification",
+        "mechanical-tasks",
+        "fast-response"
+      ],
+      "playbook_ref": "model-playbook/routes/open-models.md#granite-4-small",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "ibm/granite-4-h-small",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-4o": {
+      "family": "openai",
+      "class": "gpt-4o",
+      "descriptor": "OpenAI GPT-4o (multimodal) via ICA. Alternative reasoning style for second opinions.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 6,
+        "taste": 5,
+        "speed": 7
+      },
+      "when_to_use": [
+        "second-opinion",
+        "alternative-approach",
+        "multimodal"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-4o",
+      "tools": [
+        "vision"
+      ],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-4o",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.1": {
+      "family": "openai",
+      "class": "gpt-5",
+      "descriptor": "OpenAI GPT-5.1 (`gpt-5.1-chat-gus`) via ICA. ❌ REGRESSED / NOT SERVABLE (retested 2026-07-21): fails `LLM Provider NOT provided` on /chat/completions for BOTH the CC and CODEX keys (the deployment's litellm_params.model lost its provider prefix). Superseded on the gateway by gpt-5.5-gus. Disabled until it serves a fresh (cache-busted) request again.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 5
+      },
+      "when_to_use": [
+        "second-opinion",
+        "alternative-approach",
+        "complex-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.1",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "degraded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.1-chat-gus",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.4": {
+      "family": "openai",
+      "class": "gpt-5",
+      "descriptor": "OpenAI GPT-5.4 (`gpt-5.4-gus`) via ICA. ❌ REGRESSED / NOT SERVABLE (retested 2026-07-21): 404 `Resource not found` on /responses and `LLM Provider NOT provided` on /chat/completions for BOTH keys. Was enabled here but the gateway deployment no longer serves it. Superseded by gpt-5.5-gus. Disabled until it serves a fresh (cache-busted) request again.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 6,
+        "speed": 5
+      },
+      "when_to_use": [
+        "second-opinion",
+        "alternative-approach",
+        "complex-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.4",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "degraded",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.4-gus",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": false,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.5-gus": {
+      "family": "openai",
+      "class": "gpt-5",
+      "descriptor": "OpenAI GPT-5.5 (`gpt-5.5-gus`) via ICA — a NEW, genuinely-working reasoning-capable GPT model on the gateway (added ~2026-07, validated 2026-07-21). Supersedes the now-broken gpt-5.4-gus/gpt-5.1-chat-gus. Reachable with tool calls + reasoning on the RAW transports (both CC and CODEX keys): `/chat/completions` (honors `reasoning_effort`), `/responses` (honors `reasoning.effort` and it SCALES depth — effort=low→~24 reasoning_tokens, effort=high→~99), and Anthropic `/messages` (plain + tool_use). ⚠️ NOT reachable via `ica-claude.sh`/Claude Code as-is: CC auto-attaches `output_config` on /messages and the Azure backend rejects it with `400 Unknown parameter: 'output_config'` (the SAME reasoning-control-param-strip failure class as the gpt-5.6-luna-dzus `reasoning_effort` finding). WORKING OPT-IN LANES exist (2026-07-21): **Codex** reaches it directly via `/responses` with NO shim (`~/ica-codex.sh` / `codex --profile ica`, model gpt-5.5-gus — verified agentic w/ tool use, free ICA shared-pool lane); **Claude Code** reaches it via the `/messages` param-strip proxy (`agentic_meta_dev/infra/ica-gpt-shim/ica-gpt.sh`, which drops `output_config` — verified agentic w/ tool use). ENABLED 2026-07-21: the resolver's `buildRegistryInvocation` now routes `gpt-*` ICA models through `~/ica-gpt.sh` (the param-strip shim wrapper, which lazily self-starts the /messages proxy — no always-on daemon), instead of the raw-gateway `ica-claude.sh`. Explicit-selectable (`resolve({provider:'ica', model:'gpt-5.5-gus'})`); NOT added to any auto routing_policy chain. ⚠️ LAPTOP-ONLY: `~/ica-gpt.sh` + the proxy exist on the laptop; the node lacks the shim, so gpt-5.5-gus routing there is deferred until the shim is deployed to the node. Opt-in CLI lanes (`ica-gpt.sh` for CC, `~/ica-codex.sh` for Codex) remain the direct path.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 6,
+        "speed": 5
+      },
+      "reasoning_caveat": "Works with reasoning on raw /chat/completions (reasoning_effort), /responses (reasoning.effort, scales), and /messages (plain+tools). But 400s via Claude Code/ica-claude.sh because CC sends output_config on /messages and Azure rejects it. Strip the reasoning-control param (or use a raw client) and it completes; effort then defaults server-side.",
+      "when_to_use": [
+        "second-opinion",
+        "alternative-approach",
+        "complex-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.5-gus",
+      "when_not_to_use_ica": [
+        "claude-code-executor-path",
+        "output-config-effort"
+      ],
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 200000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.5-gus",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gemini-3.1-pro-preview-ica": {
+      "family": "google",
+      "class": "gemini-pro",
+      "descriptor": "Gemini 3.1 Pro Preview via ICA bridge. Long-context strength; bridge fallback for the native gemini provider (shared pool). Use the `[1m]` id — plain `gemini-3.1-pro-preview` is silently capped at 200k on the gateway (verified 2026-07-08).",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "web-research",
+        "large-context",
+        "exploration"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.1-pro-preview-ica",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.1-pro-preview[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.1-pro-preview",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2
+        }
+      ]
+    },
+    "gemini-3.6-flash": {
+      "family": "google",
+      "class": "gemini-flash",
+      "descriptor": "Gemini 3.6 Flash — NEWER-gen flash, the new DEFAULT fast cross-family lens (promoted ahead of 3.5-flash 2026-07-27). Native gemini-cli path: Google Search grounding (Gemini 3+ only), 1M ctx without a suffix. ALSO served via the ICA gateway (shared pool) — assume NO Search grounding on the ICA path, and use the `[1m]` id there (plain `gemini-3.6-flash` is silently capped at 200k on the gateway; `[1m]` unlocks 1M). ICA servability VERIFIED 2026-07-27 via ica-claude.sh (clean completion). Starting scores carried from 3.5-flash pending a head-to-head; treat as ≥ 3.5-flash. AUTH (native): AI Studio `GEMINI_API_KEY` at ~/.config/aos/secrets.env. Falls back to 3.5-flash when the native lane is unavailable (both share the free-tier key).",
+      "scores": {
+        "cost": 6,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 9
+      },
+      "when_to_use": [
+        "web-research",
+        "large-context",
+        "svg-generation",
+        "exploration",
+        "adversarial-review",
+        "code-review"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.6-flash",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli",
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "gemini",
+          "model_id": "gemini-3.6-flash",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.6-flash[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.6-flash",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 3,
+          "cost_score": 8
+        }
+      ]
+    },
+    "gemini-3.5-flash": {
+      "family": "google",
+      "class": "gemini-flash",
+      "descriptor": "Gemini 3.5 Flash via gemini-cli (previous-gen flash; the FALLBACK below gemini-3.6-flash as of 2026-07-27). Google Search grounding (Gemini 3+ only; grounding VERIFIED on the current free-tier key 2026-07-08), 1M ctx, ~65K output, thinking. AUTH: AI Studio `GEMINI_API_KEY` (metered) at ~/.config/aos/secrets.env + settings.json selectedType=gemini-api-key — the free Code Assist OAuth tier was sunset (IneligibleTierError), do NOT re-OAuth. ALSO served via the ICA gateway (shared pool) as of 2026-07-07 — assume NO Search grounding on the ICA path (ICA-first for non-grounded work), and use the `[1m]` id there (plain `gemini-3.5-flash` is silently capped at 200k on the gateway; native gemini-cli is 1M without a suffix — verified 2026-07-08).",
+      "scores": {
+        "cost": 6,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 9
+      },
+      "when_to_use": [
+        "web-research",
+        "large-context",
+        "svg-generation",
+        "exploration",
+        "adversarial-review",
+        "code-review"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.5-flash",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli",
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "gemini",
+          "model_id": "gemini-3.5-flash",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        },
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.5-flash[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000
+        },
+        {
+          "provider": "ica",
+          "model_id": "gemini-3.5-flash",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 3,
+          "cost_score": 8
+        }
+      ]
+    },
+    "gemini-3.1-pro-preview": {
+      "family": "google",
+      "class": "gemini-pro",
+      "descriptor": "Gemini 3.1 Pro Preview via gemini-cli. Heavy reasoning / deep analysis. (gemini-3-pro-preview is shut down; there is NO gemini-3.5-pro.)",
+      "scores": {
+        "cost": 5,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "web-research",
+        "large-context",
+        "planning",
+        "adversarial-review",
+        "deep-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.1-pro-preview",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "preview",
+      "providers": [
+        {
+          "provider": "gemini",
+          "model_id": "gemini-3.1-pro-preview",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gemini-3.1-flash-lite": {
+      "family": "google",
+      "class": "gemini-flash",
+      "descriptor": "Gemini 3.1 Flash Lite via gemini-cli. Cheapest/fastest for trivial work (formatting, one-liners).",
+      "scores": {
+        "cost": 9,
+        "intelligence": 4,
+        "taste": 3,
+        "speed": 10
+      },
+      "when_to_use": [
+        "exploration",
+        "mechanical"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-3.1-flash-lite",
+      "tools": [
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli"
+      ],
+      "max_context": 1000000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "gemini",
+          "model_id": "gemini-3.1-flash-lite",
+          "cost_tier": "free",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-sol": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Sol via codex CLI — the new FRONTIER SOTA model (released 2026-07). Hardest reasoning / deep problem analysis; the escalation target when gpt-5.6-terra stalls. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Global ~/.codex/config.toml default (sol @ xhigh). Supersedes gpt-5.5-pro.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": 7,
+        "speed": 4
+      },
+      "when_to_use": [
+        "debug-escalation",
+        "deep-reasoning",
+        "agentic-coding",
+        "architecture",
+        "novel-algorithm-design"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-sol",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-5.6-sol",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-terra": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
+      "scores": {
+        "cost": 4,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 6
+      },
+      "when_to_use": [
+        "agentic-coding",
+        "code-review",
+        "ac-validation",
+        "debug-escalation",
+        "implementation"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-terra",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-5.6-terra",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-luna": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). The free ICA lane now has its OWN routable entry `gpt-5.6-luna-dzus` (routes via `~/ica-codex.sh`); this metered `codex/gpt-5.6-luna` entry is unchanged. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
+      "scores": {
+        "cost": 6,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 8
+      },
+      "when_to_use": [
+        "code-review",
+        "ac-validation",
+        "mechanical-tasks",
+        "second-opinion",
+        "exploration"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-luna",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-5.6-luna",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-terra-dzus": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Terra via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "agentic-coding",
+        "code-review",
+        "ac-validation",
+        "implementation",
+        "second-opinion"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-terra-dzus",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.6-terra-dzus",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.6-luna-dzus": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.6 Luna via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — the cheaper/faster dzus tier. Same routing as gpt-5.6-terra-dzus (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable.",
+      "scores": {
+        "cost": 8,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 6
+      },
+      "when_to_use": [
+        "code-review",
+        "ac-validation",
+        "mechanical-tasks",
+        "second-opinion",
+        "exploration"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-luna-dzus",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "model_id": "gpt-5.6-luna-dzus",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.5": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.5 via codex CLI — SUPERSEDED by the gpt-5.6 line (2026-07). Still selectable for compatibility but no longer a default; prefer gpt-5.6-terra (workhorse) / gpt-5.6-sol (hardest) / gpt-5.6-luna (cheap). Reasoning efforts: minimal|low|medium|high|xhigh|ultra.",
+      "scores": {
+        "cost": 4,
+        "intelligence": 8,
+        "taste": 6,
+        "speed": 6
+      },
+      "superseded_by": "gpt-5.6-terra",
+      "when_to_use": [
+        "agentic-coding",
+        "debug-escalation",
+        "code-review",
+        "ac-validation"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.5",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-5.5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "gpt-5.5-pro": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-5.5 Pro via codex CLI — SUPERSEDED by gpt-5.6-sol (2026-07). Retained for compatibility; prefer gpt-5.6-sol for the hardest reasoning.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": 6,
+        "speed": 4
+      },
+      "superseded_by": "gpt-5.6-sol",
+      "when_to_use": [
+        "debug-escalation",
+        "deep-reasoning",
+        "agentic-coding"
+      ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.5-pro",
+      "tools": [],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 400000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-5.5-pro",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "bob-local": {
+      "family": "local",
+      "class": "bob",
+      "descriptor": "Bob Shell local delegate. Zero-cost, stateless. Drafting, scaffolding, bounded exploration, fix-cycle (non-Mode-D).",
+      "scores": {
+        "cost": 10,
+        "intelligence": 4,
+        "taste": 3,
+        "speed": 7
+      },
+      "when_to_use": [
+        "drafting",
+        "exploration",
+        "mechanical-tasks",
+        "fix-cycle"
+      ],
+      "playbook_ref": "model-playbook/routes/open-models.md#bob-local",
+      "tools": [],
+      "related_skills": [
+        "bob-shell-delegate"
+      ],
+      "max_context": 40000,
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "bob",
+          "model_id": "bob-local",
+          "cost_tier": "free",
+          "allowance": "local",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "nano-banana-2": {
+      "family": "google",
+      "class": "image",
+      "descriptor": "Nano Banana 2 (Gemini 3.1 Flash Image). Fast, cheap (~$0.067/1K). Default image generation — UI mockups, sprites, assets.",
+      "when_to_use": [
+        "image-generation",
+        "ui-mockup",
+        "sprite",
+        "draft-asset"
+      ],
+      "tools": [
+        "imagegen"
+      ],
+      "related_skills": [
+        "nano-banana"
+      ],
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "nano-banana",
+          "model_id": "nano-banana-2",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "nano-banana-pro": {
+      "family": "google",
+      "class": "image",
+      "descriptor": "Nano Banana Pro (Gemini 3 Pro Image). Highest quality (~$0.134/1K). Final assets; 1K/2K/4K, image-to-image edits.",
+      "when_to_use": [
+        "image-generation",
+        "final-asset",
+        "high-quality-image",
+        "image-edit"
+      ],
+      "tools": [
+        "imagegen"
+      ],
+      "related_skills": [
+        "nano-banana-pro"
+      ],
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "nano-banana",
+          "model_id": "nano-banana-pro",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "sora-2": {
+      "family": "openai",
+      "class": "video",
+      "descriptor": "Sora 2 video generation. Walkthrough videos, animations, marketing clips.",
+      "when_to_use": [
+        "video-generation",
+        "animation",
+        "marketing-clip"
+      ],
+      "tools": [
+        "videogen"
+      ],
+      "related_skills": [
+        "sora"
+      ],
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "sora",
+          "model_id": "sora-2",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    }
+  }
+}

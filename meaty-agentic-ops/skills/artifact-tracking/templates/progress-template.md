@@ -40,7 +40,7 @@ contributors: ["[AGENT_NAME]"]           # Secondary agents, e.g., ["code-review
 # These fields enable multi-model orchestration (see .claude/config/multi-model.toml)
 model_usage:
   primary: "sonnet"                      # Most tasks use this model (default)
-  external: []                           # Optional: list any external models used, e.g., ["gemini-3.1-pro"]
+  external: []                           # Optional: list any external models used, e.g., ["gemini-3.1-pro-preview"]
 
 # === TASKS (SOURCE OF TRUTH) ===
 # Machine-readable task definitions with assignments and dependencies

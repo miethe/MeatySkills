@@ -51,7 +51,7 @@ allOf:
 
       report_category:
         type: string
-        enum: [finding, investigation, audit, refactor, post-mortem, performance-analysis, architecture-analysis, other]
+        enum: [finding, investigation, audit, refactor, post-mortem, performance-analysis, architecture-analysis, feasibility, other]
         description: "Report subtype for subdir routing"
 
       promoted_to:

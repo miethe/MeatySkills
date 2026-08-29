@@ -12,8 +12,8 @@ This reference defines how to populate frontmatter fields across CCDash-aligned 
 | `status` | string | `draft`, `planning`, `in-progress`, `review`, `completed`, etc. | Most doc types | Lifecycle state changes | `draft` |
 | `feature_slug` | string | kebab-case | Recommended all docs | Set from feature name once | `ccdash-frontmatter-alignment` |
 | `feature_version` | string | e.g. `v1`, `v2` | Optional | Set when feature uses versioned docs | `v1` |
-| `prd_ref` | string or `null` | file path | Required for implementation plans; optional elsewhere | Link to parent PRD | `docs/project_plans/PRDs/enhancements/foo-v1.md` |
-| `plan_ref` | string or `null` | file path | Required for phase plans; optional elsewhere | Link to parent implementation plan | `docs/project_plans/implementation_plans/enhancements/foo-v1.md` |
+| `prd_ref` | string or `null` | file path | Required for implementation plans; optional elsewhere | Link to parent PRD | `docs/project_plans/PRDs/foo-v1.md` |
+| `plan_ref` | string or `null` | file path | Required for phase plans; optional elsewhere | Link to parent implementation plan | `docs/project_plans/implementation_plans/foo-v1.md` |
 | `human_brief_ref` | string or `null` | file path | Optional; valid on `prd` and `implementation_plan` doc_types | Link to associated human brief when one exists | `docs/project_plans/human-briefs/agent-artifact-discovery.md` |
 | `intent_ref` | string or `null` | file path | Optional; forward-compat seam — leave null until INTENT.md system is designed | Link to associated INTENT.md; valid on `human_brief` (other doc_types may adopt later) | `null` |
 | `epic_ref` | string or `null` | file path | Optional; forward-compat seam — leave null until Epic-level INTENT.md is designed | Link to associated epic artifact; valid on `human_brief` (other doc_types may adopt later) | `null` |
@@ -187,7 +187,7 @@ unless the task prompt explicitly names the brief. Authoritative spec:
 
 Tier 1 planning artifact (3–8 pt features). Replaces the PRD + Implementation Plan pair.
 Schema: `.claude/skills/artifact-tracking/schemas/feature-contract.schema.yaml`
-Canonical location: `docs/project_plans/feature_contracts/[category]/[feature-slug].md`
+Canonical location: `docs/project_plans/feature_contracts/[feature-slug].md`
 
 ### Required Fields
 

@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0",
+  "report": {
+    "route": "program",
+    "title": "Eight days in: the safety substrate is built, the product is still one module.",
+    "subject": "Pediatric CDS Platform",
+    "revision": 2,
+    "generated_from": {
+      "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+      "ref": "origin/main",
+      "commit": "263120b"
+    },
+    "truth_status": "verified",
+    "generated_by": "delivery-report 0.1.0",
+    "generated_at": "2026-07-22",
+    "scope_note": "Every line of clinical governance machinery the platform needs to be defensible now exists. Almost none of it is visible to a clinician, and no second module has reached the browser. This is the map of what shipped, what's blocked on humans, and what isn't — with a copyable handoff on every item.",
+    "constraints": "UNVALIDATED RESEARCH PROTOTYPE. Never populate approvedBy[] or clinicalApprovers[]. No generative model in the clinical decision path. No invented thresholds. `npm run check` must be green before commit (currently RED on main)."
+  },
+  "vitals": [
+    { "key": "Elapsed", "value": "8", "sub": "days · Jul 15 → Jul 22", "severity": "neutral", "measured_by": "git log --reverse --format=%ci on origin/main" },
+    { "key": "Merged", "value": "24", "sub": "PRs · 52 commits on main", "severity": "neutral", "measured_by": "gh pr list --state merged --limit 100 | wc -l" },
+    { "key": "Unmerged", "value": "30", "sub": "commits on the review-workflow branch", "severity": "warn", "measured_by": "git rev-list --count main..worktree-exec-clinical-review-workflow" },
+    { "key": "Modules", "value": "4", "sub": "1 reaches the browser", "severity": "warn", "measured_by": "ls modules/ vs src/modules/registry.js DEFAULT_MODULE_ID" },
+    { "key": "Grounded", "value": "0", "sub": "of 91 rules · ledger empty by design", "severity": "critical", "measured_by": "jq over rights/rights-ledger.json against modules/*/rules.json" },
+    { "key": "check gate", "value": "FAIL", "sub": "25 of 2,412 tests red on main", "severity": "critical", "measured_by": "npm run check on a clean tree at 263120b" }
+  ],
+  "corrections": [
+    {
+      "revision": 1,
+      "claimed": "DF-E1-01 had zero of five phases executed.",
+      "actual": "Branch worktree-exec-clinical-review-workflow is 30 commits ahead; phases 1, 2 and 4 complete, phase 3 in progress, phase 5 pending. Main's trackers read 0/5 only because none of it is merged.",
+      "verified_by": "git rev-list --count main..worktree-exec-clinical-review-workflow"
+    },
+    {
+      "revision": 1,
+      "claimed": "G0 spans ADR-0004/0005/0006 (three ADRs).",
+      "actual": "docs/adr/ holds eight ADRs (0001–0008), every one still `proposed`; G0 is wider and each ADR clears independently.",
+      "verified_by": "grep -l 'status: proposed' docs/adr/*.md"
+    }
+  ],
+  "domains": {
+    "UI": "build", "Engine": "build", "Interop": "build", "Infra": "build",
+    "Evidence": "knowledge", "Research": "knowledge", "Validation": "knowledge",
+    "Governance": "governance", "Compliance": "governance", "Legal": "governance", "Release": "governance"
+  },
+  "visuals": {
+    "flowsheet": {
+      "title": "Where the eight days went",
+      "caption": "commits per workstream per day, on main",
+      "columns": ["Jul 15", "Jul 16", "Jul 17", "Jul 18", "Jul 19", "Jul 20", "Jul 21", "Jul 22"],
+      "rows": [
+        { "label": "Clinician-facing SPA", "tag": "index.html · app.js", "cells": [4, 0, 0, 0, 0, 0, 0, 0] },
+        { "label": "P0 — platform foundation", "tag": "modules/<id>/ contract", "cells": [0, 0, 1, 1, 1, 0, 0, 0] },
+        { "label": "P1 — Wave-0 safety", "tag": "EP-0 … EP-7", "cells": [0, 0, 0, 0, 3, 4, 3, 0] },
+        { "label": "ARC clinical council", "tag": "P0 … P7 adoption", "cells": [0, 0, 0, 0, 4, 6, 6, 0] },
+        { "label": "Evidence Foundry E0/E1", "tag": "converter · review · release", "cells": [0, 0, 0, 0, 1, 0, 3, 3] },
+        { "label": "Rights-aware capture", "tag": "rights/ ledger + taxonomy", "cells": [0, 0, 0, 0, 0, 0, 4, 1] },
+        { "label": "rf evidence runs", "tag": "7 verified bundles", "cells": [1, 0, 0, 0, 0, 0, 0, 0] },
+        { "label": "Clinical review workflow", "tag": "DF-E1-01 · mostly unmerged", "cells": [0, 0, 0, 0, 0, 0, 0, 1] }
+      ],
+      "legend": ["1 commit", "2–3", "4+", "· = no activity", "excludes the 30 unmerged review-workflow commits"]
+    },
+    "ladder": {
+      "title": "The two tracks, and where you are on them",
+      "caption": "every item carries domains + a copyable handoff",
+      "tracks": [
+        {
+          "title": "Product track",
+          "note": "docs/…/01-roadmap",
+          "steps": [
+            { "code": "P0", "state": "done", "label": "Platform foundation refactor.", "body": "Module-agnostic runtime, modules/<id>/ package contract, anemia output byte-equivalent.", "domains": ["Engine", "Infra"], "ev": "7/7 phases · PR #1 → merged 2026-07-18 · no next step" },
+            { "code": "P1", "state": "done", "label": "Wave-0 safety surfaces.", "body": "Documented-default-units notice, range-source tile, evidence-ID citation chips.", "domains": ["Engine", "Evidence", "Validation"], "ev": "EP-0 … EP-7 · merged 2026-07-21" },
+            { "code": "P2", "state": "none", "label": "CBC suite authoring.", "body": "Only E0's 4-rule vertical slice ships; six work packages, none UI.", "domains": ["Engine", "Evidence"], "ev": "not started · the front-end gap begins here" }
+          ]
+        },
+        {
+          "title": "Platform track",
+          "note": "governance + evidence + release",
+          "steps": [
+            { "code": "E1", "state": "part", "label": "Clinical review workflow.", "body": "30 commits ahead on a branch; phases 1/2/4 done, 3 in progress.", "domains": ["Governance", "Infra"], "ev": "unmerged · DF-E1-01" },
+            { "code": "G0", "state": "blocked", "label": "ADR ratification.", "body": "Eight ADRs, all proposed; each clears independently by its named deciders.", "domains": ["Governance", "Compliance"], "ev": "human-only · no agent path" }
+          ]
+        }
+      ],
+      "here": { "label": "You are here", "detail": "safety built · product still one module" }
+    }
+  },
+  "items": [
+    {
+      "id": "fix-gate", "title": "Repair the red check gate", "kind": "finding",
+      "domains": ["Validation", "Infra"], "status_label": "blocking", "verified_by": "self",
+      "note": "All 11 growth + 12 kidney evidence passages miss six EPR3 schema fields; rights ledger empty for both modules.",
+      "handoff": {
+        "command": "/dev:autopilot",
+        "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+        "paths": ["modules/growth_suite_v1/evidence.json", "schemas/evidence.schema.json"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": null,
+        "prompt": "Regenerate growth_suite_v1 and kidney_suite_v1 evidence.json against the current evidence.schema.json and backfill rights/rights-ledger.json. Never invent field values — mark unresolved fields explicitly. npm run check must be green before commit."
+      }
+    },
+    {
+      "id": "df-e1-01", "title": "Land the git-signed clinical review workflow", "kind": "partial",
+      "domains": ["Governance", "Infra"], "status_label": "built · unmerged",
+      "note": "Branch is 30 commits ahead: phases 1, 2, 4 complete, 3 in progress, 5 pending. Main reads 0/5 only because it is unmerged.",
+      "handoff": {
+        "command": "/execute-plan",
+        "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+        "paths": ["docs/project_plans/implementation_plans/clinical-review-workflow-v1.md"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": "node_01KXQ7XCJ44733CEGXJ00CKNFK — P1-WP7 Clinical-review portal concept",
+        "prompt": "From worktree-exec-clinical-review-workflow, finish phase 3 (render queue/turn-state) and phase 5, then open a PR to main. Re-run npm run check against current main before merging."
+      }
+    },
+    {
+      "id": "module-switcher", "title": "Module switcher — render any module in the SPA", "kind": "not_started",
+      "domains": ["UI", "Engine"], "status_label": "not built",
+      "note": "The gap. Runtime has been module-agnostic since P0; the browser has never used it.",
+      "handoff": {
+        "command": "/plan-feature",
+        "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+        "paths": ["src/modules/registry.js"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": null,
+        "prompt": "Scope a module selector that renders any modules/<id>/ package behind an unmissable 'unsigned proposal · not clinically reviewed' banner. This is the highest-leverage screen: it makes eight days of invisible platform work perceptible."
+      }
+    },
+    {
+      "id": "gates-g0", "title": "G0 — ADR ratification (8 ADRs, none accepted)", "kind": "blocked_external",
+      "domains": ["Governance", "Compliance"], "status_label": "human-only",
+      "note": "Each ADR clears G0 on its own; partial ratification is real. No agent, council, or /create-adr invocation can perform this act.",
+      "handoff": {
+        "command": null,
+        "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+        "paths": ["docs/governance/gates-registry.md"],
+        "requirement_ids": [],
+        "gates": ["G0"],
+        "tracker": "node_01KXRTYNJ9NFGFFYV1617726KY — XC-3 E1-unblocking ADRs",
+        "prompt": "Each ADR's named deciders (clinical-governance and platform-engineering leads) must independently change status to accepted in the ADR file itself. No agent may perform this. Route the cleared decision through op."
+      }
+    },
+    {
+      "id": "local-longitudinal", "title": "Browser-local longitudinal workspace + referral packet", "kind": "deferred",
+      "domains": ["UI", "Engine"], "status_label": "deferred",
+      "note": "The monetizable layer. A browser-local slice needs no gate; server-side state opens HIPAA scope.",
+      "handoff": {
+        "command": "/plan-feature",
+        "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
+        "paths": ["docs/architecture.md"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": null,
+        "trigger": "Deferred until the module switcher lands and a second module renders; re-enter to test the commercial thesis before committing to the clinical-review pipeline.",
+        "prompt": "Scope a localStorage-only case timeline, unresolved-abnormality list, and printable referral packet. Preserve the browser-only invariant in docs/architecture.md section 4 — no server, no PHI."
+      }
+    },
+    {
+      "id": "spa-shell", "title": "Anemia assessment SPA shell", "kind": "shipped",
+      "domains": ["UI"], "status_label": "shipped", "verified_by": "self",
+      "note": "v0.3.1. Five tabs, unchanged in structure since day 1."
+    }
+  ],
+  "media": [],
+  "no_visual_reason": "Screenshots are omitted from this committed example to keep the repository lightweight; the flowsheet and two-track ladder carry the visual story. A live report should embed downscaled, redacted screenshots.",
+  "evidence": [
+    { "id": "clean-tree-check", "label": "npm run check on a clean tree at 263120b", "kind": "test", "note": "25 of 2,412 tests red" },
+    { "id": "branch-count", "label": "git rev-list --count main..worktree-exec-clinical-review-workflow", "kind": "branch", "note": "30 commits" }
+  ]
+}

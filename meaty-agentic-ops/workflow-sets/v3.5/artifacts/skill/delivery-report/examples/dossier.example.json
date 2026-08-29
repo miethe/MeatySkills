@@ -1,0 +1,177 @@
+{
+  "schema_version": "1.0",
+  "report": {
+    "route": "dossier",
+    "title": "Silent session refresh — the living record",
+    "project": "acme-web-auth",
+    "revision": 3,
+    "generated_from": {
+      "repo": "/ABSOLUTE/PATH/TO/acme-web-auth",
+      "ref": "feature/silent-session-refresh",
+      "commit": "a1b2c3d"
+    },
+    "truth_status": "partially_verified",
+    "generated_by": "delivery-report 0.1.0",
+    "generated_at": "2026-07-27T16:20:00Z",
+    "scope_note": "Mid-execution snapshot: research and planning are locked, the auth store and silent-refresh path are in, and the session-expiry UX is blocked on OQ-1. Regenerated at each phase close; the manifest is canonical.",
+    "constraints": "Never log refresh tokens or persist them in localStorage. Every auth flow must clear the security-review gate before merge. No third-party analytics on the token path."
+  },
+  "report_policy": {
+    "tier_system": "dev-execution",
+    "tier": 2,
+    "estimated_points": 8,
+    "explicit_request": true,
+    "signals": ["security", "cross_component"]
+  },
+  "vitals": [
+    { "key": "Stages", "value": "3/6", "sub": "lifecycle stages done", "severity": "neutral",
+      "measured_by": "stages[] with state==done vs total" },
+    { "key": "Open questions", "value": "1", "sub": "of 2 raised", "severity": "warn",
+      "measured_by": "open_questions[] with status==open" },
+    { "key": "Blocking", "value": "1", "sub": "blocks phase-3 UX", "severity": "critical",
+      "measured_by": "open_questions[] where blocking && status==open" },
+    { "key": "Last commit", "value": "a1b2c3d", "sub": "phase-2 work in progress", "severity": "neutral",
+      "measured_by": "git log -1 --format=%h on feature/silent-session-refresh" }
+  ],
+  "domains": {
+    "UI": "build", "Engine": "build", "Interop": "build", "Infra": "build",
+    "Research": "knowledge", "Validation": "knowledge",
+    "Compliance": "governance", "Release": "governance"
+  },
+  "stages": [
+    {
+      "id": "research", "label": "Refresh-strategy spike", "kind": "research", "state": "done",
+      "narrative": "Compared silent refresh, refresh-on-focus, and prompt-on-expiry against the security constraint. Silent refresh with a bounded re-auth ceiling scored best on UX without widening token exposure.",
+      "outcome": "Silent refresh chosen as the default direction; expiry UX left open.",
+      "started": "2026-07-21T09:00:00Z", "completed": "2026-07-21T15:30:00Z",
+      "domains": ["Research"], "evidence_refs": ["spike"]
+    },
+    {
+      "id": "plan", "label": "Implementation plan", "kind": "plan", "state": "done",
+      "narrative": "Broke the work into three execute phases: (1) auth store + session model, (2) the silent-refresh transport, (3) the session-expiry UX. Validation closes the record.",
+      "outcome": "Three-phase plan approved at the plan gate.",
+      "started": "2026-07-22T10:00:00Z", "completed": "2026-07-22T12:00:00Z",
+      "domains": ["Engine"], "evidence_refs": ["plan"]
+    },
+    {
+      "id": "phase-1", "label": "Auth store + session model", "kind": "execute", "state": "done",
+      "narrative": "Introduced a typed session store and moved the refresh token into an httpOnly, Secure, SameSite=Lax cookie. The login shell now reads session state from the store rather than ad-hoc globals.",
+      "outcome": "Session model shipped behind the existing login screen; no user-visible change yet.",
+      "started": "2026-07-23T09:00:00Z", "completed": "2026-07-24T17:00:00Z",
+      "domains": ["Engine", "UI"], "evidence_refs": ["pr-118", "screenshot-login"],
+      "commits": ["9f21ac4", "c0d3e11"]
+    },
+    {
+      "id": "phase-2", "label": "Silent-refresh transport", "kind": "execute", "state": "active",
+      "narrative": "Building the background refresh: a single-flight refresh call that dedupes concurrent 401s, retries once, and hard-fails to the login route on rotation mismatch. Currently wiring the single-flight guard and its tests.",
+      "started": "2026-07-27T14:02:00Z", "completed": null,
+      "domains": ["Engine", "Interop"], "evidence_refs": ["test-refresh"],
+      "deviations": "Added a single-flight lock not in the original plan — concurrent tab refreshes were double-rotating the token.",
+      "commits": ["a1b2c3d"]
+    },
+    {
+      "id": "phase-3", "label": "Session-expiry UX", "kind": "execute", "state": "blocked",
+      "narrative": "The user-facing behaviour when a silent refresh cannot recover. Blocked on OQ-1: silent drop to a re-auth modal, or an explicit 'session expired' interstitial.",
+      "domains": ["UI", "Engine"], "evidence_refs": []
+    },
+    {
+      "id": "validate", "label": "End-to-end validation", "kind": "validate", "state": "pending",
+      "narrative": "Full auth E2E suite, the security-review gate, and captured screenshots of every expiry path before the feature report closes the record.",
+      "domains": ["Validation"], "evidence_refs": []
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "oq-1",
+      "question": "When a silent refresh fails, should the session-expiry path drop silently to a re-auth modal, or show an explicit 'session expired' interstitial first?",
+      "context": "Blocks phase-3. The modal is faster but can surprise a user mid-task; the interstitial is clearer but adds a click.",
+      "status": "open", "blocking": true, "raised_in_stage": "phase-2", "raised_at": "2026-07-27T14:20:00Z",
+      "answer": null, "answered_by": null, "answered_at": null,
+      "channel": {
+        "type": "intenttree_request",
+        "detail": "Answer via `itt request answer <id>` or the op gate; the answer is folded in at the next phase close.",
+        "request_id": "req_01KYEXAMPLE0OQ1"
+      }
+    },
+    {
+      "id": "oq-2",
+      "question": "What rotation window should the refresh token use?",
+      "context": "Raised while designing the cookie in phase-1.",
+      "status": "answered", "blocking": false, "raised_in_stage": "phase-1", "raised_at": "2026-07-23T11:00:00Z",
+      "answer": "A 7-day sliding window, revoked immediately on password change or explicit sign-out.",
+      "answered_by": "nick", "answered_at": "2026-07-23T13:30:00Z",
+      "channel": { "type": "instruction", "detail": "Answered in chat and recorded here.", "request_id": null }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "dec-1",
+      "decision": "Refresh token uses a 7-day sliding window; revoke on password change and explicit sign-out.",
+      "rationale": "Balances a low-friction return experience against the security constraint on token lifetime; revocation on credential change caps the blast radius.",
+      "alternatives": ["fixed 24h expiry", "30-day non-sliding window"],
+      "decided_in_stage": "phase-1", "decided_at": "2026-07-23T13:30:00Z", "decided_by": "nick",
+      "answers": "oq-2", "evidence_refs": ["review-1"]
+    },
+    {
+      "id": "dec-2",
+      "decision": "Store the refresh token in an httpOnly, Secure, SameSite=Lax cookie — never in JS-reachable storage.",
+      "rationale": "Keeps the token out of XSS reach and satisfies the report constraint against localStorage persistence.",
+      "alternatives": ["in-memory token with silent iframe refresh"],
+      "decided_in_stage": "phase-1", "decided_at": "2026-07-24T10:00:00Z", "decided_by": "nick",
+      "evidence_refs": ["pr-118"]
+    }
+  ],
+  "items": [
+    {
+      "id": "phase-3-ux", "title": "Session-expiry UX (silent modal vs interstitial)", "kind": "not_started",
+      "domains": ["UI", "Engine"], "status_label": "blocked on OQ-1",
+      "note": "Cannot start until OQ-1 is answered; the transport (phase-2) lands first regardless.",
+      "handoff": {
+        "command": "/dev:execute-phase",
+        "repo": "/ABSOLUTE/PATH/TO/acme-web-auth",
+        "paths": ["src/auth/session-store.ts", "docs/plans/silent-session-refresh.md"],
+        "requirement_ids": ["FR-7"],
+        "gates": [],
+        "tracker": "node_01KYAUTHDOSSIERPHASE3UX0000",
+        "prompt": "Implement the session-expiry UX per the OQ-1 answer recorded in this dossier. Route a failed silent refresh to the chosen surface. Never log or expose the refresh token; clear the security-review gate before merge."
+      }
+    },
+    {
+      "id": "refresh-analytics", "title": "Refresh-failure analytics", "kind": "deferred",
+      "domains": ["Infra", "Validation"], "status_label": "deferred",
+      "note": "Useful for tuning the rotation window, but out of scope until the UX ships and the token path is stable.",
+      "handoff": {
+        "command": "/plan-feature",
+        "repo": "/ABSOLUTE/PATH/TO/acme-web-auth",
+        "paths": ["src/auth/refresh.ts"],
+        "requirement_ids": [],
+        "gates": [],
+        "tracker": null,
+        "trigger": "Re-enter once phase-3 ships and the silent-refresh path has a week of production data.",
+        "prompt": "Scope first-party refresh-failure telemetry (counts and reason codes only, no token material) to tune the rotation window. Honor the no-third-party-analytics constraint on the token path."
+      }
+    },
+    {
+      "id": "login-shell", "title": "Login screen shell", "kind": "shipped",
+      "domains": ["UI"], "status_label": "shipped", "verified_by": "self",
+      "note": "Unchanged structurally; now reads session state from the phase-1 store."
+    }
+  ],
+  "media": [
+    {
+      "type": "screenshot", "path": "dossier-timeline.png",
+      "alt": "The login screen reading session state from the new auth store.",
+      "caption": "Phase-1 result: the login shell backed by the typed session store (placeholder mock).",
+      "evidence_ref": "screenshot-login"
+    }
+  ],
+  "no_visual_reason": "",
+  "evidence": [
+    { "id": "spike", "label": "Refresh-strategy spike report", "kind": "plan", "path": "docs/spikes/refresh-strategy.md" },
+    { "id": "plan", "label": "Silent-session-refresh implementation plan", "kind": "plan", "path": "docs/plans/silent-session-refresh.md" },
+    { "id": "pr-118", "label": "Auth store + session cookie", "kind": "commit", "commit": "c0d3e11", "note": "PR #118, merged into the feature branch" },
+    { "id": "test-refresh", "label": "Silent-refresh single-flight tests", "kind": "test", "path": "src/auth/refresh.test.ts", "note": "in progress on phase-2" },
+    { "id": "screenshot-login", "label": "Login shell on the new session store", "kind": "screenshot" },
+    { "id": "review-1", "label": "Security review of the rotation-window decision", "kind": "review", "note": "sign-off on dec-1" }
+  ]
+}

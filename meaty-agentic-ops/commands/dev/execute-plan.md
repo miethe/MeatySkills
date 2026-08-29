@@ -88,6 +88,23 @@ Opus is responsible **between and after** waves (never inside the script):
 
 ### Post-run
 
+**First, on EVERY outcome — drain the routing log.** Before the status-specific steps below, and
+regardless of `status`: a run that blocked or escalated is exactly when you want to know where its legs
+actually ran. The workflow cannot write this itself (no FS access, constraint 1), so skipping this hop
+discards the run's routing decisions and leaves `skillmeat routing audit` reporting *nothing* — which
+reads identically to *clean*. That was this estate's live state until 2026-08-12
+(`node_01KZVV9R3EK13DJXS44VCQ8E9C`).
+
+```bash
+# Write the ExecutionReport (or just its routing_log array) to a file, then:
+node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id "${ITT_NODE_ID:-$PLAN_SLUG}"
+# Verify it landed — decision entries should read unconfirmed, fallback hops confirmed:
+skillmeat routing audit --unconfirmed
+```
+
+Skip only when `report.routing_log` is absent or empty — and **say so** rather than staying silent, because
+empty means nothing routed, not that routing was clean.
+
 When the workflow returns `status: 'complete'`:
 - Perform final `git commit` / push from the merged working tree.
 - Run `manage-plan-status.py --status completed`.

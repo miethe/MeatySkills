@@ -38,6 +38,21 @@ Workflows are **plain JavaScript** (not TypeScript). The script body uses only t
 | `budget` | `{total, spent(), remaining()}` — token ceiling derived from the plan. Hard ceiling; fix-loops and any loop-until-dry patterns must guard on `budget.remaining()`. |
 | `workflow(name, args)` | Run another saved workflow inline as a sub-step. **One level of nesting only.** |
 
+### The `opts` bag is CLOSED — unknown keys are silently discarded
+
+`agent()` accepts exactly `{label, phase, schema, model, isolation, agentType}`. Anything else is
+dropped without a warning, at runtime, in a way no test of the calling code can see.
+
+**This is not hypothetical, and the failure was expensive.** Five workflows passed their routing
+audit payloads to `agent()` as a `_routing_log` key — 14 sites, all schema-correct, with a test
+proving they were schema-correct. `_routing_log` is not in the list above, so the runtime threw every
+one of them away. The consequence was not a missing feature but a **false clean bill of health**:
+`skillmeat routing audit` over a workflow run returned nothing, and nothing is indistinguishable from
+clean. Measured 2026-08-12 (`node_01KZVV9R3EK13DJXS44VCQ8E9C`).
+
+So: **never invent an opts key to carry data out of a workflow.** A script has exactly one channel
+out — its return value (§6). If you want a new opts key, what you actually want is a report field.
+
 ---
 
 ## §2 — `meta` Conventions
@@ -212,6 +227,7 @@ Top-level shape:
   reason?:       'mode_d' | 'reviewer_unresolved' | 'budget_exhausted'
   blocked_phase?: string    // present when status == 'blocked'
   report:        WaveResult[]
+  routing_log?:  RoutingLogEntry[]   // routing-aware workflows only — see §6.1
 }
 ```
 
@@ -223,6 +239,67 @@ Status semantics:
 Per-phase result includes: `tasks` (TaskResult with `id`, `assigned_to`, `status`, `commit_sha`, `summary`), `verdict` (ReviewerVerdict with `approved`, `reviewer_type`, optional `required_fixes`), `fix_cycles`, `escalate`, `files_touched`, `blockers`.
 
 When `verdict.reviewer_type === 'council-review'`, the `verdict` includes a `council_artifacts` object with paths to all ARC run artifacts: `run_dir`, `findings_yaml`, `scorecard_json`, `risk_register_yaml`, `decision_record_md`, `validation_plan_md`.
+
+### §6.1 — `routing_log`: how routing decisions leave a workflow
+
+A routing-aware workflow returns a **`routing_log`** array alongside `report`. It is the only wire
+between a workflow's routing decisions and `.claude/logs/routing-decisions.jsonl`, and it exists
+because of the constraint in §5: a script cannot `require()` `audit-log.js` or write a file, so it
+**cannot log its own decisions**. It accumulates them and returns them; the caller writes them.
+
+**Author side — three rules.**
+
+1. **Accumulate in a plain array.** Declare the accumulator once, after `meta`:
+
+   ```js
+   const __routingLog = []
+   const routeLog = entry => { __routingLog.push(entry); return entry }
+   const withRouting = result => ({ ...result, routing_log: __routingLog })
+   ```
+
+   An array push is neither FS access nor a `require()`, so this is inside the four constraints.
+
+2. **Call `routeLog({...})` immediately before the `agent()` call it describes** — never as an
+   `agent()` opts key (§1). Entry shape: `RoutingLogEntry` in the report schema, which is
+   `audit-log.js` schema v2. A `decision` carries the intent and **omits** the realized fields
+   (omitted means UNCONFIRMED); a `realization` carries a measured hop and **must** name what
+   measured it in `realization_evidence` — the executing leg's own self-report is not a measurement.
+   Entries carry **no `task_id`**: the script does not know it, and the caller supplies it at ingest.
+
+   **Every entry MUST carry a `task_ref`** — a stable per-leg discriminator, normally the label the
+   dispatch site already has (`${p.id}:ac-validate`, `fix-cycle-2`, `evidence-scribe:stage-a`). A
+   decision and the realization that measures it use the **same** ref, so they join; different legs
+   use **different** refs, so they never cross-settle. This is not bookkeeping.
+   `findUnconfirmedEntries()` settles a decision by joining on `task_id`, so if a whole run shared
+   one id, a single measured fallback would mark **every** decision in that run confirmed — and
+   `routing audit --unconfirmed` would read clean over legs nothing ever measured. That is the same
+   false-assurance shape as the empty audit log this wire exists to fix, one layer further in; it
+   was measured on 2026-08-12 in the first cut of the ingest, before it shipped.
+
+3. **Wrap every exit in `withRouting(...)`** — including the pre-flight validation bail-outs, where
+   the array is legitimately empty. The rule is deliberately exceptionless: the exits whose routing
+   you most want to see are mid-run bail-outs immediately after a fallback fired, and those are
+   exactly the ones a per-exit reachability judgement talks itself out of. Because `withRouting`
+   captures the array **by reference**, a `routeLog()` call after the wrap still appears in the
+   returned object.
+
+`tests/test-workflow-routing-log-shape.js` CASE 4 enforces all three against the shipped source, so
+a new exit added without the wrapper fails a test rather than silently dropping a run's audit trail.
+
+**Caller side — one command, and it is not optional.**
+
+After the workflow returns, drain the log. Without this hop the accumulator is just a nicer-looking
+version of the inert key it replaced:
+
+```bash
+node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <node_or_plan_id>
+```
+
+`--task-id` is what stamps the entries; omit it and every entry is skipped (loudly — the CLI exits
+non-zero and names each one). `--dry-run` validates without writing. Confirm the write landed with
+`skillmeat routing audit --unconfirmed`: decision entries **should** read unconfirmed, and each
+fallback hop should read confirmed against its evidence. An empty result means nothing routed, not
+that routing was clean — check the report's `routing_log` length before concluding either.
 
 ---
 
@@ -293,6 +370,55 @@ return { ...phaseResult, fix_cycles: cycles, escalate: !verdict.approved }
 ```
 
 Fix-loop caps at 2 cycles. If `verdict.approved` is still false after 2 cycles, `escalate: true` propagates to the wave result and triggers `status: 'needs_opus'`.
+
+### §8b — Verdict robustness: a gate that could not run is not a gate that passed
+
+Every reviewer dispatch in every workflow MUST satisfy all five:
+
+1. **The verdict is a validated tool call** — `schema:` on the reviewer `agent()` call, always. Never
+   accept a free-text `APPROVED` / `CHANGES_REQUESTED` string and parse it. Without a schema nothing
+   forces a decision to exist, so the reviewer can end mid-thought and the caller infers approval
+   from tone.
+2. **A null verdict is converted, loudly.** `agent()` returns `null` when the subagent dies after
+   retries or the user skips it. `verdict?.approved` correctly reads false — but `?? {approved:false}`
+   alone loses *why*. Synthesize a verdict tagged `verdict_source: 'gate_failure'` with a named
+   reason and `log()` it.
+3. **"Did not run" is distinguishable from "said no."** They are different next actions: a rejection
+   goes to the fix loop, a gate failure goes to re-dispatch or an explicit operator override. Sending
+   a fix loop after a phantom defect burns a fix cycle on nothing and then re-reviews the unchanged
+   code.
+4. **No `||` fallback reviewer.** An unmapped lens/intensity resolves to a gate failure, not a default
+   agent. A `||` fallback to a non-existent agent is how a "5-lens" council silently reviewed 4
+   (2026-08-03 agent-roster-drift AAR); `tests/test_workflow_agent_roster.py` now catches the phantom,
+   but the silent-fallback *shape* is what let one name take out two lenses.
+
+5. **An unverified approval is not an approval** (R3, 2026-08-06 workflow-v41 delegate retro).
+   `VERDICT_SCHEMA` MUST require a `verification_path` object (`established`, `kind`,
+   `production_entrypoint`, `evidence`), and the workflow MUST convert an approving verdict whose
+   path is not established — or whose `kind` is not one of `live-smoke`, `path-equivalence`,
+   `real-endpoint-field-check`, `production-callsite-trace` — into a
+   `verdict_source: 'gate_integrity_failure'` with `gate_ran: false`. Its next action matches
+   clause 3's gate failure (re-dispatch or an explicit override, never a fix cycle): the verdict
+   exists but cannot be trusted, and what did not finish is the reviewer. Separately, any entry in
+   `self_reported_claims` MUST downgrade an approval to an ordinary rejection — that one IS
+   fix-loop work, because the missing artifact is the implementer's to produce. Enforcement must sit
+   at **every** point a verdict lands, including each fix-cycle re-review; a gate that enforces only
+   the first pass lets a fix cycle end on an unverified approval. Rationale: in the seven days to
+   2026-08-06 the dominant delegate defect was a green suite exercising a path production does not
+   take (8 findings, five with the same signature in one program) and the second was legs
+   self-reporting side effects they never performed (5 findings). Both classes produce reports that
+   satisfy every instruction they were given, so prompt text alone cannot gate them.
+
+**What this does not provide: a wall-clock timeout.** `agent()` exposes no deadline and a script
+cannot impose one. What the workflow form buys against a slow reviewer is that the wait is
+*observable and out-of-line* — a stalled stage sits in `/workflows` progress under a named phase
+instead of freezing the main loop — not that it is bounded. Do not write specs, docs, or prompts
+that imply a reviewer is killed after N seconds.
+
+The reference implementation is `.claude/workflows/reviewer-gate.js` (spec:
+`reviewer-gate-workflow-spec.md`). Any gate outside `execute-plan`/`execute-contract` should invoke
+it rather than re-deriving the pattern; those two keep their own inline reviewer stages, which
+already satisfy this section.
 
 ---
 
@@ -428,6 +554,7 @@ All SkillMeat workflows are registered in `.claude/specs/workflows/workflow-regi
 | `explore` | `.claude/workflows/explore.js` | `explore-spike-workflow-spec.md` | active |
 | `spike` | `.claude/workflows/spike.js` | `explore-spike-workflow-spec.md` | active |
 | `review-council` | `.claude/workflows/review-council.js` | `review-council-workflow-spec.md` | active |
+| `reviewer-gate` | `.claude/workflows/reviewer-gate.js` | `reviewer-gate-workflow-spec.md` | active |
 
 See registry for future candidates (`release`, `migrate-sweep`, `audit`, `docs-sync`, `symbols-refresh`).
 
@@ -491,6 +618,9 @@ During authoring:
 [ ] All implementation agent prompts include "Do NOT git add/commit/push/stash"
 [ ] agentType used for all agents (not inline prompts for known agent types)
 [ ] If a workflow agent nests (§18), read-only enforcement is in the child's disallowedTools, not prompt text
+[ ] No invented agent() opts key — the bag is closed and unknown keys are silently dropped (§1)
+[ ] If the workflow routes to any provider: routeLog() accumulator declared, every exit wrapped in
+    withRouting(), and the caller's post-run ingest documented (§6.1)
 
 Post-authoring:
 [ ] Syntax check passed: node .claude/skills/workflow-authoring/syntax-check-helper.js .claude/workflows/<name>.js

@@ -285,8 +285,23 @@ Mirrors the `feasibility-brief-template.md` shape. Machine-readable fields:
   legs_partial: integer,
   verified_findings_count: integer,
   budget_remaining: integer,
+  routing_log: RoutingLogEntry[],                  // see workflow-authoring-spec.md §6.1
 }
 ```
+
+**`routing_log` must be drained after the run, on every outcome.** Both workflows offload legs and the
+completeness critic to `gemini-executor` / `ica-executor` and re-dispatch to claude-primary on failure —
+exactly the hops the audit log exists to see — and the script cannot write them itself (constraint 1).
+Neither `/plan:explore` nor `/plan:spike` invokes these workflows through the Workflow tool today, so
+whoever does invoke one owns this hop:
+
+```bash
+node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <node_or_charter_slug>
+skillmeat routing audit --unconfirmed
+```
+
+Skipping it discards the run's routing decisions and leaves the audit reporting *nothing*, which reads
+identically to *clean* (`node_01KZVV9R3EK13DJXS44VCQ8E9C`).
 
 Opus receives this envelope, reviews `synthesis.verdict` and `synthesis.verdict_rationale`, presents
 the recommendation to the user, obtains sign-off, and records the verdict via CLI:

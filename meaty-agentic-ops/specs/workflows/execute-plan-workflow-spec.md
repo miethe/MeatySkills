@@ -66,6 +66,7 @@ it calls `JSON.parse` at the top before any destructuring.
 | `budget_total` | `integer` | no | Token ceiling, derived from plan `effort_estimate`. |
 | `dry_run` | `boolean` | no | When `true`, return parsed+validated graph immediately, no agents spawned. |
 | `progressFile` | `string` | no | Resolved path to the per-phase progress YAML. Set by Opus pre-flight. |
+| `orchestrator_model` | `string` | no | Plan-level default for the orchestration-loop (session / main-loop) model, distinct from a phase's delegate `model`. Registry short form (`opus-4-8`, `fable-5`, `sonnet-5`). Cascades to all phases; overridable per-phase. **Advisory** — echoed in the startup banner and carried in the graph; the workflow cannot switch its own main-loop model mid-run. |
 
 ### Wave, Phase, Task shape
 
@@ -80,6 +81,8 @@ See `execution-graph.schema.json` for the full nested definition. Key fields the
 | `isolation` | `shared` | `'worktree'` → `isolation:'worktree'` on each task agent. |
 | `phase_strategy` | `static` | `'adaptive'` → single `agentType:'phase-owner'` for the whole phase. |
 | `fix_agent` | — | Override agentType for fix-loop; falls back to first task's `assigned_to`. |
+| `model` | — | Delegate/implementer model default for the phase — passed as `model:` on `agent()` dispatches (e.g. the phase-owner). Distinct from `orchestrator_model`. Omit to inherit the session model. |
+| `orchestrator_model` | plan default | Per-phase override of the plan-level orchestration-loop model. Registry short form (`opus-4-8`, `fable-5`, `sonnet-5`). Use sparingly (Tier 3 / large Tier 2). **Advisory** — surfaced in the startup banner; does NOT change the delegate `model:` on any `agent()` call. |
 | `batches` | — | Precomputed by Opus. Serial outer loop; `parallel()` inner loop per batch. |
 
 **Task-level** (`phases[].tasks[]` and `phases[].batches[][]`):
@@ -214,7 +217,10 @@ From the frontmatter, construct the `ExecutionGraph` JSON:
 
 1. **Map waves**: each `wave_plan.waves[]` entry → `Wave { id, phases[] }`.
 2. **Map phases**: each phase entry → `Phase { id, title, mode, review_intensity, isolation,
-   phase_strategy, fix_agent, tasks[], batches[] }`.
+   phase_strategy, fix_agent, tasks[], batches[] }`. Also carry the plan-level
+   `wave_plan.orchestrator_model` onto the graph's top-level `orchestrator_model`, and map each
+   `wave_plan.phases[].orchestrator_model` onto its phase object (per-phase override of the plan
+   default — advisory; drives the startup banner only).
 3. **Compute batches**: for each phase, group `tasks[]` by `files_affected` disjointness. Tasks
    sharing at least one file go into separate batches (must run serially). Fully disjoint tasks
    go into the same batch (may run in parallel). Result: `batches: Task[][]`.

@@ -4,18 +4,41 @@
   "title": "ExecutionReport",
   "description": "Structured return value from every execution-style workflow. Consumed by Opus post-run for cross-wave merges, progress YAML updates, plan-completion artifact, and Mode D escalation handling.",
   "type": "object",
-  "required": ["status", "report"],
+  "required": [
+    "status",
+    "report"
+  ],
   "additionalProperties": false,
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["complete", "blocked", "needs_opus"],
-      "description": "'complete': all waves finished, all reviewers approved. 'blocked': a Mode D boundary was hit — Opus must run that phase interactively. 'needs_opus': reviewer escalation unresolved, budget exhausted, or a human-assigned (HITL) task gates the next wave — Opus must adjudicate."
+      "enum": [
+        "complete",
+        "blocked",
+        "needs_opus"
+      ],
+      "description": "'complete': all waves finished, all reviewers approved. 'blocked': a Mode D boundary was hit \u2014 Opus must run that phase interactively. 'needs_opus': reviewer escalation unresolved, budget exhausted, or a human-assigned (HITL) task gates the next wave \u2014 Opus must adjudicate."
     },
     "reason": {
       "type": "string",
-      "description": "Present when status is 'blocked' or 'needs_opus'. Indicates the specific cause. 'hitl_required': the wave's agent work + reviewer gates completed but one or more human-assigned tasks must be signed off before advancing (see hitl_tasks). 'scope_exceeds_single_pass' / 'spike_required' / 'plan_only' / 'plan_structure_failed' are autopilot-lane reasons (auto-feature workflow): respectively, the planned work exceeds single-pass capacity and needs full planning; unresolved research unknowns require a SPIKE/exploration first; planning ran with plan_only=true and awaits a go-ahead to execute; or the plan-structuring stage failed and Opus must read the plan artifact on disk.",
-      "enum": ["mode_d", "reviewer_unresolved", "budget_exhausted", "hitl_required", "scope_exceeds_single_pass", "spike_required", "plan_only", "plan_structure_failed"]
+      "description": "Present when status is 'blocked' or 'needs_opus'. Indicates the specific cause. 'hitl_required': the wave's agent work + reviewer gates completed but one or more human-assigned tasks must be signed off before advancing (see hitl_tasks). 'gate_failure': the reviewer gate DID NOT RUN \u2014 the reviewer returned no structured verdict (died after retries, or was skipped), so the scope is unreviewed rather than rejected. Distinct from 'reviewer_unresolved' on purpose, because the next action differs: a gate failure needs the reviewer re-dispatched (or an explicit operator override), NOT a fix cycle \u2014 there is no finding to act on, and fixing blind then re-reviewing unchanged code is how a phantom rejection burns a budget (authoring-spec \u00a78b). 'scope_exceeds_single_pass' / 'spike_required' / 'plan_only' / 'plan_structure_failed' are autopilot-lane reasons (auto-feature workflow): respectively, the planned work exceeds single-pass capacity and needs full planning; unresolved research unknowns require a SPIKE/exploration first; planning ran with plan_only=true and awaits a go-ahead to execute; or the plan-structuring stage failed and Opus must read the plan artifact on disk. 'wrong_branch': the session working tree was NOT on the assigned run_branch, so agent commits would have landed off the branch the run may merge from \u2014 the PR/review/squash gates would have been bypassed silently. Detected pre-dispatch (nothing committed) or after a fix cycle moved HEAD. 'nothing_on_run_branch': the run finished with ZERO commits on the run branch since branch_base \u2014 every past-tense claim in the completion report is unproven, and this is never reported as 'complete'. 'cross_repo_target' / 'cross_repo_unverified': the graph targeted a different repo than the session, or could not be confirmed to match. 'invalid_graph': the ExecutionGraph failed validation before any agent spawned. 'post_verify_failed': the autopilot Phase-4 adversarial claims-vs-code pass found a confirmed critical/high defect, or produced no verdicts at all (unverified, not passed).",
+      "enum": [
+        "mode_d",
+        "reviewer_unresolved",
+        "budget_exhausted",
+        "gate_failure",
+        "hitl_required",
+        "scope_exceeds_single_pass",
+        "spike_required",
+        "plan_only",
+        "plan_structure_failed",
+        "cross_repo_target",
+        "cross_repo_unverified",
+        "invalid_graph",
+        "post_verify_failed",
+        "wrong_branch",
+        "nothing_on_run_branch"
+      ]
     },
     "blocked_phase": {
       "type": "string",
@@ -26,19 +49,35 @@
       "description": "Present when reason is 'hitl_required'. The pending human-assigned tasks gating progression. Opus coordinates the human review (future: external task-tracker / intent-tree review request), then relaunches with these tasks marked complete / trimmed.",
       "items": {
         "type": "object",
-        "required": ["phase", "id", "assigned_to"],
+        "required": [
+          "phase",
+          "id",
+          "assigned_to"
+        ],
         "additionalProperties": false,
         "properties": {
-          "phase": { "type": "string", "description": "Phase id the HITL task belongs to." },
-          "id": { "type": "string", "description": "Task id from the ExecutionGraph." },
-          "assigned_to": { "type": "string", "description": "The human assignee (non-agent), e.g. a username." },
-          "prompt": { "type": "string", "description": "What the human is asked to validate / sign off." }
+          "phase": {
+            "type": "string",
+            "description": "Phase id the HITL task belongs to."
+          },
+          "id": {
+            "type": "string",
+            "description": "Task id from the ExecutionGraph."
+          },
+          "assigned_to": {
+            "type": "string",
+            "description": "The human assignee (non-agent), e.g. a username."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "What the human is asked to validate / sign off."
+          }
         }
       }
     },
     "report": {
       "type": "array",
-      "description": "Per-wave results in execution order. Partial — may contain only completed waves if the run was interrupted.",
+      "description": "Per-wave results in execution order. Partial \u2014 may contain only completed waves if the run was interrupted.",
       "items": {
         "$ref": "#/$defs/WaveResult"
       }
@@ -48,21 +87,231 @@
       "description": "Present only on returns from the auto-feature (autopilot) workflow. Carries the classification + the durable plan artifact location so Opus can act on escalations or merge on success. Other execution workflows omit this field.",
       "additionalProperties": false,
       "properties": {
-        "tier": { "type": "integer", "minimum": 0, "maximum": 3, "description": "Tier the planner classified the request into." },
-        "effort_points": { "type": "number", "description": "Story-point estimate from the planner." },
-        "wave_count": { "type": "integer", "description": "Sequential dependency depth of the planned ExecutionGraph." },
-        "phase_count": { "type": "integer", "description": "Total phases across all waves." },
-        "file_count": { "type": "integer", "description": "Estimated count of files affected." },
-        "plan_artifact_path": { "type": "string", "description": "Repo-relative path to the durable plan/contract artifact the planner wrote. Survives escalation so full planning gets a head start." },
-        "execution_target": { "type": "string", "enum": ["execute-contract", "execute-plan", "none"], "description": "Which engine the autopilot dispatched to (or 'none' when it escalated before executing)." },
-        "escalation_recommendation": { "type": "string", "description": "Human-readable next-step recommendation when the feasibility gate escalated." }
+        "tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Tier the planner classified the request into."
+        },
+        "effort_points": {
+          "type": "number",
+          "description": "Story-point estimate from the planner."
+        },
+        "wave_count": {
+          "type": "integer",
+          "description": "Sequential dependency depth of the planned ExecutionGraph."
+        },
+        "phase_count": {
+          "type": "integer",
+          "description": "Total phases across all waves."
+        },
+        "file_count": {
+          "type": "integer",
+          "description": "Estimated count of files affected."
+        },
+        "plan_artifact_path": {
+          "type": "string",
+          "description": "Repo-relative path to the durable plan/contract artifact the planner wrote. Survives escalation so full planning gets a head start."
+        },
+        "execution_target": {
+          "type": "string",
+          "enum": [
+            "execute-contract",
+            "execute-plan",
+            "none"
+          ],
+          "description": "Which engine the autopilot dispatched to (or 'none' when it escalated before executing)."
+        },
+        "escalation_recommendation": {
+          "type": "string",
+          "description": "Human-readable next-step recommendation when the feasibility gate escalated."
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "description": "Structured reasons the run halted, each with a concrete next action. Emitted by every non-complete engine return; previously absent from this schema even though the engines have always returned it.",
+      "items": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "resolution_hint": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "run_placement": {
+      "type": "object",
+      "description": "Where this run's work actually landed, and how to re-find it if the SHA moves. Present on EVERY outcome including 'complete' \u2014 provenance that appears only on failure is provenance consumers learn to ignore. Exists because a bare commit_sha cannot distinguish 'rebased away' from 'never existed': `git show <sha>` keeps working locally while the object survives gc, so a stale SHA reads as live right up until a fresh clone or CI resolves nothing. Consumers copying commit_sha forward (plan commit_refs, IntentTree nodes, delivery reports) should carry patch_id too.",
+      "additionalProperties": false,
+      "properties": {
+        "run_branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The branch the run was assigned. null when the caller did not name one."
+        },
+        "parent_branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The PR base / squash-merge target."
+        },
+        "base_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The pre-run checkpoint every diff and commit range was computed against."
+        },
+        "current_branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The branch the working tree was on when the report was assembled."
+        },
+        "commit_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Commits on the run branch since base_sha. 0 means nothing durable was produced."
+        },
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "HEAD at report-assembly time, re-resolved after any fix cycle rather than captured at commit time."
+        },
+        "patch_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "`git patch-id --stable` over base_sha..HEAD. Survives rebase, so it re-finds the work when commit_sha no longer resolves."
+        },
+        "parent_tip_at_start": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Parent-branch tip when the run began."
+        },
+        "parent_tip_at_report": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Parent-branch tip when the report was written."
+        },
+        "parent_moved": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "True when the parent branch advanced mid-run (so a rebase may have changed commit_sha). null when either tip is unknown \u2014 never false on absent evidence."
+        }
+      }
+    },
+    "verify_findings": {
+      "type": "array",
+      "description": "Autopilot Phase-4 adversarial verify findings. Advisory when status stays complete; the cause when reason is post_verify_failed.",
+      "items": {
+        "type": "object"
+      }
+    },
+    "graph_errors": {
+      "type": "array",
+      "description": "ExecutionGraph validation errors when reason is invalid_graph.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "routing_log": {
+      "type": "array",
+      "description": "Routing decisions and measured realizations accumulated during the run, in call order. This is the WIRE between a workflow and .claude/logs/routing-decisions.jsonl: a workflow script cannot require() or write files (constraint 1), so it accumulates entries and returns them here, and the post-run caller drains them with `node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <id>`. Present (possibly empty) on every exit of a routing-aware workflow; an empty array means nothing was routed, NOT that routing went unrecorded. Entries omit task_id — the workflow does not know it; the caller supplies it at ingest.",
+      "items": {
+        "$ref": "#/$defs/RoutingLogEntry"
       }
     }
   },
   "$defs": {
+    "RoutingLogEntry": {
+      "type": "object",
+      "description": "One routing audit entry, matching audit-log.js schema v2. A `decision` records the INTENT at resolve time and deliberately omits the realized fields, because omitted means UNCONFIRMED — copying the intent into actual_provider_used is what made v1 unable to audit anything. A `realization` records a MEASURED hop and must name what measured it: an executing leg's self-report is not a measurement.",
+      "required": [
+        "kind",
+        "chosen_plugin_id",
+        "task_ref"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "task_ref": {
+          "type": "string",
+          "description": "Stable per-leg discriminator (the dispatch site's own label, e.g. 'P2:ac-validate', 'fix-cycle-2', 'evidence-scribe:stage-a'). A decision and the realization that MEASURES it must share a task_ref so they join; different legs must differ so they never cross-settle. At ingest this composes the stored task_id as `<batch task_id>::<task_ref>`. REQUIRED because the alternative — one task_id for a whole run — makes a single leg's evidence confirm every other decision in that run, and `routing audit --unconfirmed` then reads clean over decisions nothing measured."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "decision",
+            "realization"
+          ]
+        },
+        "chosen_plugin_id": {
+          "type": "string",
+          "description": "Provider the resolver selected (the INTENT)."
+        },
+        "intended_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Model the resolver selected. null when the call pinned none — unknowable, never guessed."
+        },
+        "actual_provider_used": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Provider that actually ran, IF MEASURED. Never set on a decision entry."
+        },
+        "realized_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Model that actually ran, IF MEASURED."
+        },
+        "realization_evidence": {
+          "type": "string",
+          "description": "What established the realized hop — required on a realization, and the only thing that can make it confirmed."
+        },
+        "fallback_applied": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Routing rationale. Also where a rejected provider is named when a guard overrode the intent before dispatch."
+        }
+      }
+    },
     "WaveResult": {
       "type": "object",
-      "required": ["wave", "phases"],
+      "required": [
+        "wave",
+        "phases"
+      ],
       "additionalProperties": false,
       "properties": {
         "wave": {
@@ -79,7 +328,11 @@
     },
     "PhaseResult": {
       "type": "object",
-      "required": ["phase", "tasks", "verdict"],
+      "required": [
+        "phase",
+        "tasks",
+        "verdict"
+      ],
       "additionalProperties": false,
       "properties": {
         "phase": {
@@ -124,13 +377,25 @@
           "description": "Pending human-assigned (HITL) tasks in this phase. Aggregated at wave level into the top-level hitl_tasks field, which triggers reason:'hitl_required'.",
           "items": {
             "type": "object",
-            "required": ["phase", "id", "assigned_to"],
+            "required": [
+              "phase",
+              "id",
+              "assigned_to"
+            ],
             "additionalProperties": false,
             "properties": {
-              "phase": { "type": "string" },
-              "id": { "type": "string" },
-              "assigned_to": { "type": "string" },
-              "prompt": { "type": "string" }
+              "phase": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "assigned_to": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              }
             }
           }
         }
@@ -138,7 +403,11 @@
     },
     "TaskResult": {
       "type": "object",
-      "required": ["id", "assigned_to", "status"],
+      "required": [
+        "id",
+        "assigned_to",
+        "status"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -151,7 +420,11 @@
         },
         "status": {
           "type": "string",
-          "enum": ["completed", "skipped", "failed"],
+          "enum": [
+            "completed",
+            "skipped",
+            "failed"
+          ],
           "description": "'skipped' when agent() returned null (user skipped). 'failed' when the agent threw and was dropped by parallel()."
         },
         "commit_sha": {
@@ -167,7 +440,10 @@
     },
     "ReviewerVerdict": {
       "type": "object",
-      "required": ["approved", "reviewer_type"],
+      "required": [
+        "approved",
+        "reviewer_type"
+      ],
       "additionalProperties": false,
       "properties": {
         "approved": {
@@ -201,7 +477,9 @@
     "CouncilArtifacts": {
       "type": "object",
       "description": "Paths to the ARC run artifacts produced by a council-review gate. All paths are relative to repo root.",
-      "required": ["run_dir"],
+      "required": [
+        "run_dir"
+      ],
       "additionalProperties": false,
       "properties": {
         "run_dir": {
@@ -232,7 +510,9 @@
     },
     "Blocker": {
       "type": "object",
-      "required": ["description"],
+      "required": [
+        "description"
+      ],
       "additionalProperties": false,
       "properties": {
         "description": {

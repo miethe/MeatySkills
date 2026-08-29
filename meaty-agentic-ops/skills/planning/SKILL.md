@@ -1,23 +1,40 @@
 ---
 name: planning
 description: >
-  Generate and optimize PRDs, Implementation Plans, and Progress Tracking
-  documents optimized as AI artifacts for development agents. Use when
-  creating new feature plans, breaking down long planning docs (>800 lines),
-  or setting up progress tracking. Supports: 1) Create PRD from feature
-  request, 2) Create Implementation Plan from PRD with phase breakdown and
-  subagent assignments, 3) Optimize existing plans by breaking into
-  phase-specific files, 4) Create progress tracking with task assignments.
-  Example: "Create a PRD for user authentication feature" or "Break down the
-  sidebar-polish implementation plan into phase files" or "Create progress
-  tracking for data-layer-fixes PRD".
+  Generate and optimize PRDs, milestone-based Implementation Plans, and
+  Progress Tracking documents optimized as AI artifacts for development
+  agents. Use when creating new feature plans, authoring thin Tier 2/3
+  milestone plans, breaking down long planning docs, or setting up progress
+  tracking. Supports: 1) Create PRD from feature request, 2) Create a
+  milestone-based Implementation Plan from a PRD — 3-4 reviewable-state
+  milestones with acceptance criteria and routing constraints, not a
+  phase-task breakdown with plan-time agent/model pins, 3) Optimize existing
+  plans by breaking into phase-specific files, 4) Create progress tracking
+  with task assignments. Example: "Create a PRD for user authentication
+  feature" or "Create an implementation plan for the advanced-filtering PRD"
+  or "Create progress tracking for data-layer-fixes PRD".
+version: 2.2
+app_version: "2026-08-06"
+updated: 2026-08-06
 ---
 
 # Planning Skill
 
+**AOS correlation:** new PRDs, implementation plans, and progress trackers for AOS-managed work
+should preserve `aos_feature_uuid` once assigned and keep native slugs as aliases. Contract:
+`docs/agentic-operator/contracts/aos-correlation.md`.
+
 ## About This Skill
 
 The Planning Skill generates and optimizes Product Requirements Documents (PRDs) and Implementation Plans as AI artifacts - file-based context caches optimized for AI agent consumption rather than human reading.
+
+> **Plan doctrine (Claude-5 generation, new Tier 2/3 plans).** Milestones not phases, no
+> plan-time model/agent pins, thin plan mass, context-class sizing — and a milestone is the unit a
+> plan is *written in*, never necessarily the unit one agent is *handed* (the leg contract is a
+> dispatch-time render: `dev-execution/references/execution-doctrine.md` rule 6) —
+> [`references/plan-doctrine.md`](references/plan-doctrine.md) is the single authoring
+> rule set; this file wires it into the workflow steps below and does not restate it.
+> In-flight plans finish under the rules they were authored on.
 
 ### Purpose
 
@@ -28,7 +45,8 @@ The Planning Skill generates and optimizes Product Requirements Documents (PRDs)
 
 ### Key Benefits
 
-- **Token Efficiency**: Max ~800 lines per file for optimal AI context loading
+- **Token Efficiency**: ~800 lines/file is the hard ceiling for any planning doc; Tier 2/3
+  Implementation Plans target a tighter **<=150-line** mass budget (`references/plan-doctrine.md`)
 - **Progressive Disclosure**: Summary → Detail pattern with linked files
 - **Subagent Integration**: Automatic task assignment to appropriate specialists
 - **MP Architecture Compliance**: Plans follow layered architecture (routers → services → repositories → DB)
@@ -61,11 +79,62 @@ The Planning Skill generates and optimizes Product Requirements Documents (PRDs)
 ### When to Use This Skill
 
 - Creating PRDs for new features or enhancements
-- Generating detailed implementation plans from PRDs
+- Generating milestone-based implementation plans from PRDs
 - Breaking down long planning documents (>800 lines) into manageable files
 - Setting up progress tracking for multi-phase work
 - Optimizing existing plans for better AI agent consumption
 - **Generating Planning Review Boards** to visualize all planning artifacts for a feature
+
+### When NOT To Use This Skill
+
+- A Feature Contract or plan already exists for the work — extend or re-scope the existing
+  artifact instead of authoring a parallel one (see Cross-Reference Policy below).
+- Tier 0 trivial work (1–3 pts, single file) — route straight to `/dev:quick-feature`; no
+  planning artifact is warranted.
+- The request is an idea to capture, not work to plan yet — route it through `op capture` /
+  `op new` instead of drafting a PRD or plan prematurely.
+
+### Before You Scope — Check MeatyWiki, SkillMeat, and the Deferred Backlog (and IntentTree)
+
+Before authoring a PRD or implementation plan, run these look-first checks, in this order —
+concrete commands, not a "remember to check" reminder (per the look-first/save-after doctrine in
+`.claude/rules/aos-operating-rules.md`):
+
+**1. MeatyWiki — has this already been researched or decided?**
+```bash
+meatywiki search "<feature-topic-or-keywords>" --mode hybrid
+```
+Scan the top hits for prior architecture decisions, design specs, or research findings on the same
+surface. Pull a relevant hit into the PRD's `related_documents` instead of re-deriving the finding.
+Use `meatywiki query "<question>" --file-back` for a direct Q&A pass when a search alone doesn't
+resolve the question.
+
+**2. SkillMeat — does a reusable artifact already cover this?**
+```bash
+skillmeat search "<feature-keywords>" --type skill --json | jq '.results[] | {name, type, description}'
+skillmeat list --project <this-repo-slug> --json | jq '.results[] | select(.name | test("<keyword>"; "i"))'
+```
+If an existing skill/agent/workflow/context artifact already covers the capability being planned,
+scope the PRD as an **extension** of that artifact (name it explicitly) rather than a net-new build.
+This same look-first check gets formalized later as the plan's `required_artifacts` set — see
+**Required Artifacts Resolution** in Workflow 2, step 5.5.
+
+**3. Deferred backlog — is this already tracked?**
+Scan the **deferred items backlog** (`.claude/rules/deferred-backlog.md` →
+`docs/project_plans/deferred-items-backlog.md`) for items on the same surface or higher-priority
+adjacent items. Pull related `DI-` rows into the plan when they fit — landing neighboring deferrals
+together is the cheapest time to clear them, and the backlog's "Next Polish Pass" section names the
+current recommended track. Reference pulled items by `DI-` ID in the plan, and flip their Status to
+`in-progress` when the plan commits.
+
+**Also check IntentTree first** (default-on, best-effort — per the one-gate contract in
+**`.claude/rules/intenttree-integration.md`**: unset/`1`/`true`/`auto` all mean enabled, only an
+explicit falsy value disables it, and it is a no-op when no binding exists). Query the bound tree
+for related/in-flight nodes so the plan reuses or links existing work instead of duplicating it,
+per the LOOKUP recipe in that rule file
+(`itt --json tree graph <id>` then filter `backlog`/`in_progress` over `.nodes[]` in jq — `node list`
+requires an off-tree/workspace scope, so the tree-scoped graph is the in-tree lookup). The markdown backlog stays the
+canonical "check first" source; the node query is the queryable complement.
 
 ## Quick Start
 
@@ -76,7 +145,7 @@ The Planning Skill generates and optimizes Product Requirements Documents (PRDs)
 User: "Create a PRD for advanced filtering on the prompts page"
 
 # Skill generates PRD at:
-# docs/project_plans/PRDs/[category]/advanced-filtering-v1.md
+# docs/project_plans/PRDs/advanced-filtering-v1.md
 ```
 
 ### Create Implementation Plan from PRD
@@ -102,7 +171,7 @@ python scripts/generate-planning-board.py \
 
 # Or from a specific implementation plan path
 python scripts/generate-planning-board.py \
-  --plan docs/project_plans/implementation_plans/features/some-feature-v1.md
+  --plan docs/project_plans/implementation_plans/some-feature-v1.md
 
 # Preview what would be discovered without generating
 python scripts/generate-planning-board.py --feature-slug xyz --dry-run
@@ -138,17 +207,17 @@ User: "Create progress tracking for data-layer-fixes PRD"
 ```bash
 # Mark PRD approved
 python .claude/skills/artifact-tracking/scripts/manage-plan-status.py \
-  --file docs/project_plans/PRDs/features/feature-name-v1.md \
+  --file docs/project_plans/PRDs/feature-name-v1.md \
   --status approved
 
 # Mark implementation in progress
 python .claude/skills/artifact-tracking/scripts/manage-plan-status.py \
-  --file docs/project_plans/implementation_plans/features/feature-name-v1.md \
+  --file docs/project_plans/implementation_plans/feature-name-v1.md \
   --status in-progress
 
 # Mark implementation completed
 python .claude/skills/artifact-tracking/scripts/manage-plan-status.py \
-  --file docs/project_plans/implementation_plans/features/feature-name-v1.md \
+  --file docs/project_plans/implementation_plans/feature-name-v1.md \
   --status completed
 ```
 
@@ -156,16 +225,26 @@ Status values: `draft` → `approved` → `in-progress` → `completed`
 
 **Reference**: See `.claude/skills/artifact-tracking/plan-status-management.md` for full status management guide.
 
+> **Model policy:** [`docs/agentic-operator/MODEL-ROUTING.md`](../../../docs/agentic-operator/MODEL-ROUTING.md) (§1.5 scorecard) is canonical. Model/effort tables in this file are derived convenience copies — when they disagree, MODEL-ROUTING wins; update it first, then re-derive here. Resolve provider/model per leg via the `delegation-router` skill; the platform skills (`ica-delegate`, `codex`, `gemini-cli`) only execute the decision.
+
 ## Tier Matrix (Routing Decision Tree)
 
 Before authoring any planning artifact, determine the feature's tier. Tier drives artifact type, execution model, reviewer requirement, and model routing. Use the table below.
 
 | Tier | Size | Pre-commitment exploration | Planning artifact | Execution model | Reviewer | Model routing |
 |------|------|---------------------------|-------------------|-----------------|----------|---------------|
-| **0** | 1–3 pts, single file | skip | none | `/dev:quick-feature` | optional | sonnet executor |
+| **0** | 1–3 pts, single file | skip | none | `/dev:quick-feature` | mandatory `task-completion-validator` (one pass) | sonnet executor |
 | **1** | 3–8 pts | optional (use when ambiguity exists, skip when outcome is clear) | **Feature Contract** (~200–400 lines) | one autonomous sprint per contract | **mandatory** `task-completion-validator` | sonnet executor + sonnet contract writer + Opus design block |
-| **2** | 8–13 pts | **strongly suggested** — required when no comparable past-feature anchor exists or `risk_level: high` | PRD + Implementation Plan | phase-by-phase orchestration | mandatory `task-completion-validator` per phase; `karen` at feature end | sonnet executor + sonnet `implementation-planner` + Opus decisions block |
-| **3** | 13+ pts | **strongly suggested** — required when no comparable past-feature anchor exists or `risk_level: high` | SPIKE + PRD + Implementation Plan | phase-by-phase orchestration | mandatory `karen` per phase milestone + end of feature | sonnet executor + sonnet `implementation-planner` + Opus decisions block |
+| **2** | 8–13 pts | **strongly suggested** — required when no comparable past-feature anchor exists or `risk_level: high` | PRD + milestone Implementation Plan | milestone-by-milestone execution | mandatory `task-completion-validator` per milestone; one `karen` final-tree pass at feature end | `routing_constraints` (MUST-stay classes, offload-eligibility, capability bar) — resolved at dispatch by `delegation-router`, never plan-time model ids |
+| **3** | 13+ pts | **strongly suggested** — required when no comparable past-feature anchor exists or `risk_level: high` | SPIKE + PRD + milestone Implementation Plan | milestone-by-milestone execution | mandatory `task-completion-validator` per milestone; one `karen` final-tree pass at feature end (+ a per-milestone `karen` only for `context_class` C3/C4) | `routing_constraints` (MUST-stay classes, offload-eligibility, capability bar) — resolved at dispatch by `delegation-router`, never plan-time model ids |
+
+> **The Reviewer column is the base gate — one lens — not the whole gate set.** A **second** lens is
+> added per-milestone only when that milestone's surface matches one of three triggers: it **parses
+> untrusted input**, it **is an authorization/identity boundary**, or its effect is **irreversible or
+> leaves the system**. **Tier does not add lenses** — a Tier 3 CRUD milestone gets one; a Tier 2
+> authorization milestone gets two. Classify per milestone and record `gate_lens` +
+> `gate_lens_reason` in `wave_plan.phases[]` (§5.4). Ruleset:
+> [`dev-execution/references/gate-risk-classes.md`](../dev-execution/references/gate-risk-classes.md) §2.
 
 **Large-file override (capacity, not points)**: Story points size *behavior*; they don't size *agent context*. Any refactor that **deletes, relocates, splits, or substantially rewrites a single file >~2K lines** (>5K = always) is **Tier 2 minimum regardless of point estimate**. A Tier 1 single-agent sprint cannot hold the large source + its call-sites + edit targets at once and will blow context mid-sprint (observed: a 10,156-line deletion crashed a Tier 1 sprint with all wiring undone). Classify it as Tier 2 up front and decompose file-ownership-first per `.claude/specs/workflows/large-file-refactor-decomposition-spec.md`. Localized edits *inside* a large file (a few functions) are exempt.
 
@@ -179,6 +258,40 @@ Before authoring any planning artifact, determine the feature's tier. Tier drive
 
 **Source**: `.claude/plans/tiered-workflow-overhaul.md` §2.1
 
+> **Execution-time git + model policy.** Plans authored here execute under the canonical git workflow —
+> a git worktree → PR to the **parent branch** → squash-merge on approval — defined in
+> [`../dev-execution/git-worktree-pr-protocol.md`](../dev-execution/git-worktree-pr-protocol.md). Tier
+> 2/3 plans carry `routing_constraints` (MUST-stay-claude-primary classes, offload-eligibility, the
+> capability bar per milestone) per `references/plan-doctrine.md`, never a plan-time `model`/`effort`
+> pin — `delegation-router` resolves the actual provider + model at dispatch time against the live
+> registry ([`docs/agentic-operator/MODEL-ROUTING.md`](../../../docs/agentic-operator/MODEL-ROUTING.md)
+> is the underlying policy the router reads). Tier 0/1 artifacts (Feature Contract, quick-feature) may
+> still set a `model`/`effort` default directly — the pin-free rule is scoped to Tier 2/3 milestone
+> plans, where the plan outlives any single day's model roster.
+
+### Research Routing — Bounded Research Through `rf`
+
+Route SPIKE-substitute questions, H5 estimation anchors, and prior-art checks through Research
+Foundry (`rf`) instead of ad hoc WebSearch/WebFetch — it produces a citable, evidence-backed run
+instead of an unlogged web pass. Referenced from the Estimation Sanity Check (H5) below.
+
+**Local CLI** (file-backed, workspace-discovery, CWD-sensitive):
+```bash
+rf capture "<bounded research question>" --sensitivity personal
+rf triage inbox/raw_ideas/raw_<id>.md --create-intent --create-ibom
+rf plan <intent_id> --depth medium --audience technical --max-cost 2
+```
+
+**Node API** (shared, `:7432` — launch without a local `rf` checkout):
+```bash
+set -a; . ~/.config/research-foundry/serve.env; set +a
+curl -s -X POST "$RF_API_URL/api/runs" -H "Authorization: Bearer $RF_TOKEN_AGENT" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "<bounded research question>", "depth": "medium"}'
+```
+
+This is a look-first, advisory routing — never a blocking gate. Full contract: `.claude/skills/rf/SKILL.md`.
+
 ## CCDash Frontmatter Requirements
 
 Use CCDash-aligned frontmatter for all planning artifacts.
@@ -186,7 +299,7 @@ Use CCDash-aligned frontmatter for all planning artifacts.
 - Reference: `.claude/skills/artifact-tracking/schemas/field-reference.md`
 - Baseline fields for all planning docs: `schema_version`, `doc_type`, `title`, `status`, `created`, `updated`, `feature_slug`
 - Linkage fields: `prd_ref`, `plan_ref`, `related_documents`
-- Lifecycle fields to update after implementation: `commit_refs`, `pr_refs`, `files_affected`
+- Lifecycle fields to update after implementation: `commit_refs`, `pr_refs`, `files_affected`; on merge to the destination branch: `merge_commit`, `merge_branch`
 
 ### Canonical Paths Table
 
@@ -196,9 +309,9 @@ All planning documents follow a canonical location pattern by doc type, enabling
 |----------|---------|-------------------|-------------------|
 | `exploration_charter` | Pre-commitment exploration boundary contract; contains hypothesis, deal_killer, timebox, legs, verdict | `docs/project_plans/exploration/[idea-slug]/[idea-slug]-charter.md` | `report` (feasibility_brief), proposed ADR, `prd` (on go verdict) |
 | `design_spec` | Pre-PRD ideation and design, varying maturity | `docs/project_plans/design-specs/[name].md` | `prd` |
-| `prd` | Formal product requirements | `docs/project_plans/PRDs/[category]/[name]-v1.md` | `implementation_plan` |
-| `implementation_plan` | Phased technical breakdown | `docs/project_plans/implementation_plans/[category]/[name]-v1.md` | `phase_plan`, `progress` |
-| `phase_plan` | Single phase (if parent plan >800 lines) | `docs/project_plans/implementation_plans/[category]/[name]-v1/phase-[N]-[title].md` | `progress` |
+| `prd` | Formal product requirements | `docs/project_plans/PRDs/[name]-v1.md` | `implementation_plan` |
+| `implementation_plan` | Milestone-based technical plan (`references/plan-doctrine.md`) | `docs/project_plans/implementation_plans/[name]-v1.md` | `phase_plan`, `progress` |
+| `phase_plan` | Single phase (if parent plan >800 lines) | `docs/project_plans/implementation_plans/[name]-v1/phase-[N]-[title].md` | `progress` |
 | `progress` | Phase task tracking and orchestration | `.claude/progress/[feature-slug]/phase-[N]-progress.md` | — |
 | `spike` | Formal research investigation with charter | `docs/project_plans/SPIKEs/[name]-charter.md` or `docs/project_plans/SPIKEs/[name].md` | `design_spec`, `prd`, ADR |
 | `report` | Investigation, audit, finding, post-mortem | `docs/project_plans/reports/[category]/[name].md` or `.claude/findings/[name].md` | `design_spec`, `prd` |
@@ -231,14 +344,14 @@ All planning documents follow a canonical location pattern by doc type, enabling
 ```yaml
 # OLD (avoid):
 related_prds:
-  - docs/project_plans/PRDs/features/xyz-v1.md
+  - docs/project_plans/PRDs/xyz-v1.md
 
 # NEW (correct):
-prd_ref: docs/project_plans/PRDs/features/xyz-v1.md
+prd_ref: docs/project_plans/PRDs/xyz-v1.md
 
 # Multiple related docs:
 related_documents:
-  - docs/project_plans/PRDs/features/xyz-v1.md
+  - docs/project_plans/PRDs/xyz-v1.md
   - docs/dev/architecture/adr-123.md
   - .claude/context/some-pattern.md
 ```
@@ -254,6 +367,8 @@ related_documents:
 - `implementation_plan`
   - Required now: `schema_version`, `doc_type: implementation_plan`, `title`, `status`, `created`, `prd_ref`
   - Populate early: `scope`, `effort_estimate`, `feature_slug`, `priority`, `risk_level`
+  - Milestone-based plans (default, `milestone-plan-template.md`) additionally set `context_class`
+    (C1-C4) and `routing_constraints` — see `references/plan-doctrine.md`
   - Set `plan_ref: null` for root implementation plan
   - If plan includes deferred items or research-needed items: populate `deferred_items_spec_refs` as design specs are authored in the final phase; populate `findings_doc_ref` if a findings doc is created lazily during execution
   - Optional: `changelog_required: true` — inherit from the parent PRD or set independently when the implementation scope confirms user-facing changes. When set, Phase 7 Documentation Finalization **must** include a CHANGELOG `[Unreleased]` entry. Default: unset (false). See `.claude/specs/changelog-spec.md`.
@@ -296,13 +411,15 @@ Planning artifacts follow a structured lifecycle as they move through the SDLC. 
 | `commit_refs` | [] | [] | [refs...] | [refs...] |
 | `pr_refs` | [] | [] | [refs...] | [refs...] |
 | `files_affected` | [] | [] | [files...] | [files...] |
+| `merge_commit` | null | null | null | `<post-squash sha>` |
+| `merge_branch` | null | null | null | `main` (or destination) |
 
 **Lifecycle Phases**:
 
 - **Draft**: Initial creation with title, description, author. Status defaults to `draft`.
 - **Approved**: PRD/plan review complete. Set status to `approved` and populate cross-references (`prd_ref` / `plan_ref`).
 - **In-Progress**: Execution begins. Add implementation team to `contributors`, set `milestone` target, track `commit_refs` as work commits.
-- **Completed**: All tasks done. Finalize `commit_refs`, `pr_refs`, and `files_affected` list for audit trail.
+- **Completed**: All tasks done. Finalize `commit_refs`, `pr_refs`, and `files_affected` list, and — once merged to the destination branch — set `merge_commit` + `merge_branch` to the canonical landing SHA. For direct squash-merges with no PR, `merge_commit` is the only in-repo way to resolve where the feature actually landed (the branch SHA becomes an orphan).
 
 **Status Management**:
 
@@ -310,17 +427,25 @@ Use `manage-plan-status.py` to advance status lifecycle:
 
 ```bash
 python .claude/skills/artifact-tracking/scripts/manage-plan-status.py \
-  --file docs/project_plans/PRDs/features/feature-name-v1.md \
+  --file docs/project_plans/PRDs/feature-name-v1.md \
   --status approved
 ```
 
-Use `update-field.py` to append to list fields (`contributors`, `commit_refs`, `pr_refs`, `files_affected`):
+Use `update-field.py` to append to list fields (`--append "key=value"`; lists: `contributors`, `commit_refs`, `pr_refs`, `files_affected`) or set scalar fields (`--set "key=value"`, both repeatable):
 
 ```bash
+# Append to a list field
 python .claude/skills/artifact-tracking/scripts/update-field.py \
-  --file docs/project_plans/implementation_plans/features/feature-name-v1.md \
-  --field pr_refs \
-  --append "https://github.com/owner/repo/pull/123"
+  -f docs/project_plans/implementation_plans/feature-name-v1.md \
+  --append "pr_refs=https://github.com/owner/repo/pull/123"
+
+# On merge to the destination branch, set the landing SHA + branch (scalar fields).
+# For direct squash-merges with no PR, merge_commit is the only in-repo way to
+# resolve where the feature landed (the branch SHA becomes an orphan).
+python .claude/skills/artifact-tracking/scripts/update-field.py \
+  -f docs/project_plans/implementation_plans/feature-name-v1.md \
+  --set "merge_commit=4e64e630" \
+  --set "merge_branch=main"
 ```
 
 **Full field lifecycle details**: `.claude/skills/artifact-tracking/schemas/field-reference.md`
@@ -403,10 +528,10 @@ maturity: ready           # Ready to promote to PRD
 **When**: The design_spec is at `maturity: ready` and you're ready to formalize as a product requirement.
 
 **What to do**:
-1. Create a new PRD at `docs/project_plans/PRDs/[category]/[name]-v1.md`
+1. Create a new PRD at `docs/project_plans/PRDs/[name]-v1.md`
 2. Update the design_spec:
    - Set `maturity: promoted`
-   - Add `prd_ref: docs/project_plans/PRDs/[category]/[name]-v1.md`
+   - Add `prd_ref: docs/project_plans/PRDs/[name]-v1.md`
 3. Reference the design_spec in the PRD as context/background
 4. Move forward with PRD lifecycle and implementation planning
 
@@ -414,7 +539,7 @@ maturity: ready           # Ready to promote to PRD
 ```yaml
 # In design_spec:
 maturity: promoted
-prd_ref: docs/project_plans/PRDs/features/realtime-sync-v1.md
+prd_ref: docs/project_plans/PRDs/realtime-sync-v1.md
 ```
 
 ### Workflow/Process/Tooling Change → `meta_plan`
@@ -473,8 +598,8 @@ title: "SQLAlchemy Comparator Cache Poisoning"
 status: accepted
 source: agent
 created: 2026-04-08
-prd_ref: docs/project_plans/PRDs/features/enterprise-database-v1.md
-promoted_to: [docs/project_plans/implementation_plans/features/enterprise-database-v1.md]
+prd_ref: docs/project_plans/PRDs/enterprise-database-v1.md
+promoted_to: [docs/project_plans/implementation_plans/enterprise-database-v1.md]
 outcome: "Implemented manual cache refresh in enterprise repository tests"
 ---
 ```
@@ -614,7 +739,7 @@ Human sign-off is required for `go` and `no-go` verdicts. Opus recommendation al
 
 **Applies to**: Features estimated at 3–8 story points with a clear, bounded scope and enumerable acceptance criteria. Single-feature scope; does not require multi-phase orchestration.
 
-**Artifact**: `docs/project_plans/feature_contracts/[category]/[feature-slug].md`
+**Artifact**: `docs/project_plans/feature_contracts/[feature-slug].md`
 
 **Template**: `.claude/skills/planning/templates/feature-contract-template.md`
 
@@ -668,11 +793,13 @@ Human sign-off is required for `go` and `no-go` verdicts. Opus recommendation al
    - Extract feature name, scope, goals
    - Identify related systems and components
    - Determine priority and complexity
+   - Run the "Before You Scope" checks above (MeatyWiki → SkillMeat → deferred backlog → IntentTree) before drafting
 
 2. **Structure PRD**
    - Use template: `./templates/prd-template.md`
    - Follow MP architecture patterns (see `./references/mp-architecture.md`)
-   - Include frontmatter with proper metadata
+   - Include frontmatter with proper metadata — author the canonical plan frontmatter (`it_schema: 1`) per `./references/plan-frontmatter-schema.md`: the templates emit the MUST set + `open_questions`/`decisions` (YAML lists) + `agent_*`/`execution_mode`/`scores`; lint with `artifact-tracking/scripts/validate-plan-frontmatter.py` (advisory). When IntentTree sync is in use, also carry the binding (`intenttree_workspace` / `intenttree_tree`) so capture resolves to the bound human workspace/tree (see `.claude/rules/intenttree-integration.md`)
+   - Run the authoring-time gate — `python .claude/skills/artifact-tracking/scripts/check-plan-authoring.py <this-file>` — right after writing the frontmatter. **Advisory (FR-12/D-M4-1)**: it exits non-zero and names the file + field on a bad `status` or a missing `feature_slug`, but nothing consumes that exit code to block a commit or CI; treat it the same way as the status linter above. A missing `itt_node_id`/`intenttree_tree` is only a warning at this point — the tree may not exist yet
    - Organize into standard PRD sections
 
 3. **Add Implementation Context**
@@ -682,7 +809,7 @@ Human sign-off is required for `go` and `no-go` verdicts. Opus recommendation al
    - Define success criteria and acceptance tests
 
 4. **Determine Location**
-   - Category: `docs/project_plans/PRDs/[category]/`
+   - Category: `docs/project_plans/PRDs/`
    - Categories: `harden-polish`, `features`, `enhancements`, `refactors`
    - Naming: `[feature-name]-v1.md` (kebab-case)
 
@@ -693,7 +820,7 @@ Human sign-off is required for `go` and `no-go` verdicts. Opus recommendation al
    - Add to project tracking if needed
 
 **Output**:
-- PRD file at: `docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
+- PRD file at: `docs/project_plans/PRDs/[feature-name]-v1.md`
 - Follows template structure
 - Ready for implementation planning
 
@@ -702,7 +829,7 @@ Human sign-off is required for `go` and `no-go` verdicts. Opus recommendation al
 ```markdown
 Input: "Add real-time collaboration features to prompt editing"
 
-Output Location: docs/project_plans/PRDs/features/realtime-collaboration-v1.md
+Output Location: docs/project_plans/PRDs/realtime-collaboration-v1.md
 
 Sections:
 1. Executive Summary - Real-time collaborative editing
@@ -724,85 +851,122 @@ Sections:
    - Read full PRD content
    - Extract key requirements
    - Identify architectural layers needed
-   - Determine phase breakdown strategy
+   - Determine milestone structure — which 3-4 reviewable end-states the work passes through
+   - Re-run the "Before You Scope" checks above if the PRD is new to this session (MeatyWiki → SkillMeat → deferred backlog → IntentTree)
 
-2. **Plan Phase Structure**
-   - Follow MP layered architecture: routers → services → repositories → DB
-   - Group related tasks into phases
-   - Common phases: Database → Repository → Service → API → UI → Testing → Docs → Deployment
-   - Consider parallel work opportunities
-   - Identify critical path
-   - **Populate the Phase Summary table** in Implementation Strategy (after Critical Path) with every phase, point estimate, target subagents, and model designation. This table is mandatory — it is the canonical orchestration index executors use to plan delegation. Keep it synced with detailed phase breakdowns. Use Claude models by default (`sonnet` / `haiku`); note external models (e.g., `gemini-3.1-pro`, `nano-banana-pro`, `gpt-5.3-codex`) per `references/multi-model-guidance.md`.
+2. **Structure Milestones** (default path — `references/plan-doctrine.md` rule 2)
+   - Structure the plan around **3-4 coarse milestones**. A milestone is a reviewable state of
+     the system with checkable AC, not a batch of tasks — hand the executor the whole milestone.
+   - Enumerate tasks inside a milestone **only** where sequencing is load-bearing (migrations,
+     serialization barriers, cross-repo handshakes) and name the reason at the point of
+     enumeration. If you cannot name why the order matters, do not order it.
+   - Identify the critical path across milestones, if one genuinely exists — omit the section
+     otherwise (see the template's `## Sequencing` guard).
+   - The Phase Summary table and MP layered-architecture phase sequence (Database → Repository →
+     Service → API → UI → Testing → Docs → Deployment) are **retired for new plans** — deleted,
+     not deprecated; they duplicated what the milestones + AC matrix now own. In-flight plans that
+     already carry a Phase Summary table finish under the rules they were authored on.
 
-2.5 **Opus Decisions Block (Tier 2/3 mandatory)** — author before delegating to `implementation-planner`:
-   - Opus authors a ~200-line decisions block using `./templates/decisions-block-template.md`.
-   - Decisions block covers: phase boundaries, agent routing per phase, risk hotspots (severity + mitigation), estimation anchors with comparable past features, dependency map (critical path + parallelizable slices), and model routing per phase per agent.
-   - This is Opus-direct (not delegated) — it is the architectural judgment scaffold that earns Opus its premium on Tier 2/3 features.
-   - Target ~200 lines; do not expand into full template prose — that is `implementation-planner`'s job.
-   - Write the decisions block to `.claude/worknotes/[feature-slug]/decisions-block.md` (temporary working file).
+2.5 **Opus Decisions Block — legacy/expanded path only.** The default milestone path (step 2
+   above → template in step 3) does not use this step; a plan-doctrine-conformant plan is authored
+   directly against `milestone-plan-template.md`, no separate decisions-block/expansion pass.
+   Reserve this step for `implementation-plan-template.md` (in-flight plans, or an economy-class
+   executor that genuinely needs a pre-rendered task list rather than the dispatch-time render the
+   doctrine's "Model-conditional expansion" section describes):
+   - Opus authors a ~200-line decisions block using `./templates/decisions-block-template.md`,
+     covering phase boundaries, risk hotspots (severity + mitigation), estimation anchors, and
+     dependency map. State routing as **constraints** (MUST-stay classes, offload-eligibility, per-
+     phase capability bar) — never a model id or agent name; `delegation-router` resolves both at
+     dispatch (see `routing_constraints` in step 5 below).
+   - Delegate expansion to `implementation-planner` (sonnet): decisions block path + PRD path +
+     `implementation-plan-template.md` path → detailed phase descriptions, task breakdowns, batch
+     definitions, task tables, success criteria.
+   - Opus sanity review post-expansion (~3K tokens): phase boundaries match the decisions block,
+     no critical risks dropped, approve or send back for targeted revision.
+   - **Source**: `.claude/plans/tiered-workflow-overhaul.md` §4.2
 
-   Then delegate expansion to `implementation-planner` (sonnet):
-   - Provide: decisions block path + PRD path + implementation-plan-template.md path.
-   - The agent expands the decisions block into the full plan template: detailed phase descriptions, task breakdowns, batch definitions, task tables, success criteria, and model/effort columns.
-   - `implementation-planner` runs on **sonnet** (not haiku) — plans drive 200K+ tokens of downstream execution; this is the highest-leverage model routing call in the planning workflow.
-
-   Opus sanity review post-expansion (~3K tokens):
-   - Verify phase boundaries match decisions block.
-   - Verify agent routing is correctly propagated to task table.
-   - Verify no critical risks were dropped.
-   - Approve or send back for targeted revision.
-
-   **Source**: `.claude/plans/tiered-workflow-overhaul.md` §4.2
-
-3. **Generate Task Breakdown**
-   - Use template: `./templates/implementation-plan-template.md`
-   - Create tasks for each phase
-   - Format: Task tables with ID, Name, Description, Acceptance Criteria, Estimate
-   - Include quality gates for each phase
+3. **Author the Plan**
+   - **Default**: `./templates/milestone-plan-template.md` — the doctrine-conformant Tier 2/3
+     template (milestones + AC-matrix + routing constraints; target <=150 lines, see "Prompt and
+     Artifact Sizing" below). Use for every new plan.
+   - **Legacy/expanded**: `./templates/implementation-plan-template.md` — the 8-phase, task-table
+     template. Reserve for in-flight plans continuing under their original rules, or an
+     economy-class executor session per step 2.5. Do not choose it for a new plan by default.
 
 3.5 **Run Estimation Sanity Check (mandatory) — write output to Human Brief, not the plan**
    - Use reference: `./references/estimation-heuristics.md`
    - Determine if a Human Brief applies (see §4 creation heuristic in `.claude/specs/artifact-structures/human-brief-spec.md`).
-   - If brief applies: scaffold `docs/project_plans/human-briefs/[feature-slug].md` using `./templates/human-brief-template.md`, then populate **§2 Estimation Sanity Check** in the brief with the H1–H6 output.
-   - If brief does not apply (feature too small): populate the H1–H6 check in a comment or scratchpad for your own reference; do not add the full block to the plan.
-   - Apply heuristics H1–H6 **bottom-up**:
+   - If brief applies: scaffold `docs/project_plans/human-briefs/[feature-slug].md` using `./templates/human-brief-template.md`, then populate **§2 Estimation Sanity Check** in the brief with the H1–H7 output.
+   - If brief does not apply (feature too small): populate the H1–H7 check in a comment or scratchpad for your own reference; do not add the full block to the plan.
+   - Apply heuristics H1–H7 **bottom-up**:
      - H1: noun-counting (≥2 pts per new CRUD-with-RBAC table)
      - H2: dual-implementation multiplier (~1.8× repo subtotal when local+enterprise)
      - H3: algorithmic service flag (≥3 pts for any service whose description includes dependency / resolution / graph / conflict / cycle / solver / inference / ranking / scheduling / merge / diff / transform; SPIKE first if test scenarios cannot be enumerated)
      - H4: bundle-vs-sum (per-area estimates summed = floor for plan total when ≥3 capability areas)
-     - H5: anchor reference (cite a comparable completed feature, justify any delta >30%)
+     - H5: anchor reference (cite a comparable completed feature, justify any delta >30%; when no comparable feature exists, route the anchor question through `rf` per the "Research Routing" subsection above rather than guessing)
      - H6: hidden plumbing budget (~15–20% line item for DTOs / DI / OpenAPI / RLS / inventory updates / CHANGELOG)
+     - H7: huge-file touch multiplier (≥2× a task's point estimate for any task whose
+       `files_affected` includes a file >2K lines — see `references/estimation-heuristics.md` H7)
    - If bottom-up total disagrees with top-down intuition, **trust bottom-up** or write justification.
    - Set `**Human Brief**` pointer line near the top of the plan (the template provides the field).
 
-4. **Assign Subagents**
-   - Use reference: `./references/subagent-assignments.md`
-   - Assign based on task type:
-     - Database: `data-layer-expert`
-     - Backend API: `python-backend-engineer`, `backend-architect`
-     - Frontend: `ui-engineer-enhanced`, `frontend-developer`
-     - UI Components: `ui-designer`, `ui-engineer`
-     - Testing: appropriate testing agents
-     - Docs: `documentation-writer`, `documentation-complex`
-   - Add to each task: "Assigned Subagent(s): agent-1, agent-2"
+3.6 **Assign Context Class per Milestone (mandatory, Tier 2/3)**
+   - Points size human-scale scope; they do not size agent context. Assign each milestone a
+     **context class C1–C4** — what actually predicts burn — per `references/plan-doctrine.md`
+     § "Context class" (weigh write-risk surfaces, shared hot files, validation fan-out, design
+     uncertainty, expected context footprint, and retry probability); the per-task analog is H7 in
+     `references/estimation-heuristics.md`.
+   - Record it in the milestone plan's `context_class` frontmatter field (single dominant class) or
+     per-milestone in body prose when milestones span more than one class.
+   - H7 above is the single-task instance of the same driver the context-class table generalizes —
+     apply both; they are not redundant.
 
-5. **Model Assignment**
-   - Evaluate each task for the appropriate model:
-     - Default: `sonnet` for implementation, `haiku` for docs/exploration
-     - Route image generation → `nano-banana-pro`
-     - Route UI wireframing/design → `gemini-3.1-pro`
-     - Route web research → `gemini-3.1-pro`
-     - Route debug escalation → `gpt-5.3-codex`
-   - Assign effort levels per model using the **Canonical Effort Vocabulary** in `./references/multi-model-guidance.md`. Effort is a model-keyed reasoning budget, not a size estimate — use the `Estimate` column for story points or hours.
-     - claude (opus/sonnet/haiku): `adaptive` (default) or `extended` only
-     - codex (gpt-5.3-codex): `none` | `low` | `medium` | `high` | `xhigh`
-     - gemini (3.1-pro/3.1-flash): `none` | `low` | `medium` | `high`
-     - nano_banana (nano-banana-pro): `standard` | `quality`
-   - **Forbidden**: putting story points (e.g., `"3pts"`) or hours in the `Effort` column. Those belong in `Estimate`.
-   - **Phase-level defaults**: Set `wave_plan.phases[].model` and `wave_plan.phases[].effort` as phase-wide defaults. Per-task `Model`/`Effort` cells override these defaults. Both are optional; absence means "use the model's own default."
-   - Group external model tasks as pre-work (batch_0) when possible
-   - Add to each task: "Model: [model]; Effort: [level]"
-   - Reference: See `./references/multi-model-guidance.md` → **Canonical Effort Vocabulary** for authoritative values
+4-5. **Declare Routing Constraints** (default path — retires plan-time agent/model pins; `references/plan-doctrine.md` rule 3)
+   - Plans carry **constraints**, not identities. Author one `routing_constraints` list (plan-level
+     frontmatter, or per-milestone when milestones differ) naming: which task classes MUST stay
+     claude-primary (contractual, never a model id — e.g., "merge-path correctness MUST stay
+     claude-primary"), which are offload-eligible, and the capability bar per milestone.
+   - `delegation-router` resolves the actual provider + model per leg at dispatch time against the
+     live registry ([`docs/agentic-operator/MODEL-ROUTING.md`](../../../docs/agentic-operator/MODEL-ROUTING.md)).
+     Do not pre-assign `Assigned Subagent(s)` or `Model: [model]; Effort: [level]` per task in a new
+     plan — a plan that pinned models was obsolete within days of authoring (the burn evidence
+     behind this rule: `docs/project_plans/design-specs/claude5-plan-doctrine-v1.md`).
+   - **Deprecated, not deleted**: `assigned_to` (per-task subagent) and `phases[].model`/`effort`
+     still parse for in-flight plans authored under the old rules — do not strip them from a plan
+     mid-execution. New plans simply do not emit them.
+   - **Legacy/expanded path** (step 2.5 / `implementation-plan-template.md` only): the old
+     per-task `Assigned Subagent(s)` (`./references/subagent-assignments.md` mapping) and
+     `Model: [model]; Effort: [level]` cells (`./references/multi-model-guidance.md` → Canonical
+     Effort Vocabulary) remain the authoring convention there — that template's task tables are
+     rendered ahead of dispatch, so the cells still need filling in.
+
+5.5. **Required Artifacts Resolution**
+   - **Enumerate.** From the routing constraints (step 4-5) above, plus any MCP/workflow/context
+     the plan needs, build the `required_artifacts` list — plan-level frontmatter and/or per-
+     milestone. Schema: `./references/plan-frontmatter-schema.md` §5.7.
+   - **Resolve against SkillMeat enterprise** (look-first, per `.claude/rules/aos-operating-rules.md`):
+     `skillmeat search "<name>" --json` / `skillmeat show <name> --type <t>`. Set `status`:
+     `available` (in catalog or already on-disk — fill `skillmeat_ref`), `needs_creation` (not found
+     anywhere), or `needs_enhancement` (found but insufficient for the task).
+   - **Route every non-`available` entry.** Mirror the External Model Pre-Work Batching `batch_0`
+     pattern above: insert an explicit `batch_0` authoring/enhancement task *before* the milestone
+     that consumes it, or — if it can't be resolved in-plan — a named blocker that halts the execute
+     handoff below. Never leave a `needs_creation`/`needs_enhancement` entry implicit.
+   - **Tag lifecycle + scope.** `permanent` (durable, project-wide — add to `.claude/aos-artifacts.yaml`
+     if the project doesn't already carry it) or `ephemeral` (`scope: epic:<id>` or
+     `plan:<feature_slug>`, torn down by the dev-execution provisioning gate on completion).
+   - Full authoring guide + worked example: `./references/required-artifacts-guidance.md` — this step
+     is the recipe, that doc is the reference; don't duplicate its content here.
+
+   **Execute (Tier 2/3 handoff)** — once the plan file is written and every `required_artifacts`
+   entry is `available` or covered by a `batch_0` task / named blocker (step 5.5), emit the
+   execution-command handoff. Provider/model is a dispatch-time `delegation-router` decision, not a
+   plan-time field — the handoff no longer names an orchestrator model:
+
+   > Execute: `/dev:execute-plan <plan-path>`
+
+   Note any `routing_constraints` the operator should know before dispatch (MUST-stay classes,
+   named blockers) as a short follow-on line only when the plan carries any of note.
 
 6. **UI Extraction Evaluation** (UI-Heavy Phases Only)
    - For phases with React/UI component work, evaluate against extraction criteria
@@ -825,7 +989,7 @@ Sections:
      - **README**: Include if features, CLI commands, screenshots, or version change
      - **User/dev docs**: Include if behavior changes requiring user/developer knowledge
      - **Context files**: Include if changes affect agent behavior or architectural patterns
-     - **Project-level custom skills**: Include if changes affect domain of a custom skill (new CLI commands, capability changes, workflow shifts); check `.claude/specs/skills-index.md` for domain ownership
+     - **Project-level custom skills**: Include if changes affect domain of a custom skill (new CLI commands, capability changes, workflow shifts); check the repo's skill roster for domain ownership (`.claude/specs/skills-index.md` in skillmeat; the skills dir + `docs/ARTIFACT-UPSTREAM-REGISTRY.md` in AOS repos)
    - Create doc tasks for the Documentation Finalization phase:
      - CHANGELOG → `changelog-generator` agent with `changelog-generator` skill
      - README/docs → `documentation-writer` agent with `managing-readmes` skill
@@ -835,47 +999,148 @@ Sections:
    - Reference: `./references/doc-finalization-guidance.md` for detailed heuristics
    - Add "Model: haiku; Effort: adaptive" to doc tasks (or "Model: sonnet; Effort: adaptive" for skill SPEC updates — use `extended` only if the SPEC authoring is unusually complex)
 
-8. **Optimize for Token Efficiency**
-   - If total plan >800 lines: break into phase-specific files
-   - Pattern: `[feature-name]-v1/phase-[N]-[name].md`
-   - Parent plan links to phase files
-   - Each phase file <800 lines
-   - See `./references/optimization-patterns.md`
+8. **Check Plan Mass**
+   - A doctrine-conformant milestone plan targets **<=150 lines total** (frontmatter included —
+     see "Prompt and Artifact Sizing" below); if you're over, cut prose, not AC. This is a target,
+     not a hard cap.
+   - **800 lines/file remains the hard ceiling** for any planning doc (unchanged rule, scoped): if
+     a legacy-template plan or an unusually large milestone plan exceeds it, break into phase- or
+     milestone-specific files (`[feature-name]-v1/phase-[N]-[name].md`, each <800 lines, parent
+     links to them). See `./references/optimization-patterns.md`.
 
 9. **Generate Files**
-   - Main plan: `docs/project_plans/implementation_plans/[category]/[feature-name]-v1.md`
-   - Phase files (if needed): `docs/project_plans/implementation_plans/[category]/[feature-name]-v1/phase-[N]-[name].md`
+   - Main plan: `docs/project_plans/implementation_plans/[feature-name]-v1.md`
+   - Phase files (if needed): `docs/project_plans/implementation_plans/[feature-name]-v1/phase-[N]-[name].md`
    - Link phase files from parent plan
 
+9.5. **Run the Authoring-Time Gate (advisory — FR-12/D-M4-1)**
+   - `python .claude/skills/artifact-tracking/scripts/check-plan-authoring.py <main-plan-file>`
+   - Checks two things at the moment of authoring: the top-level `status` is a NodeStatus or a
+     resolvable alias, and the plan carries `feature_slug` (the join key). Exit 2 names the
+     file + field on a bad status or a missing `feature_slug` — fix it before moving on.
+   - **Advisory only**: this does not block a commit or CI, and no hook consumes its exit code.
+     A missing `itt_node_id`/`intenttree_tree` is a warning, not a violation — the plan may
+     legitimately be authored before its IntentTree binding exists (step 11 below creates it).
+
+10. **Seed the Delivery Dossier (default-on; Tier 2/3; non-blocking)**
+
+    Create the feature's **living dossier** manifest now, from the plan you just wrote. This is the
+    first link in the dossier lifecycle: the phase-boundary regeneration hook is *binding-gated on
+    this manifest existing*, so a feature planned without a seed accretes no record at all.
+
+    ```bash
+    DOSSIER_PLAN_FILE="docs/project_plans/implementation_plans/[feature-name]-v1.md" \
+      .claude/skills/dev-execution/hooks/seed-dossier.sh
+    ```
+
+    - **Deterministic — never author this by hand and never spend a model call on it.** The hook
+      derives the stage spine (`research` → `plan` → one `execute` stage per plan phase → `validate`)
+      from `wave_plan.phases[]` + the plan's `### Phase P1: …` headings, and carries the plan's
+      `open_questions` / `decisions` frontmatter into the dossier's OQ and decision logs.
+    - **Default-on, binding-gated, non-fatal, always exit 0** — same contract as the SDLC sync
+      (`.claude/rules/intenttree-integration.md`). No plan file → silent no-op. Disable with
+      `AOS_DELIVERY_DOSSIER=0`.
+    - **Tier 2/3 auto-seeds; Tier 0/1 on explicit request only** (spec OD-4) — add
+      `DOSSIER_SEED_FORCE=1` when a smaller feature genuinely wants a longitudinal record.
+    - **Idempotent and safe to re-run**: an existing manifest is left untouched, because it is the
+      *accreting* record — re-seeding would discard narratives authored during execution
+      (`DOSSIER_SEED_RESEED=1` overrides, deliberately).
+    - Output: `.claude/reports/dossier/<feature_slug>/{report.json,index.html}`. Mention the path in
+      your Next Actions table; execution takes it from there at each phase close.
+
+    Spec: `docs/skill-development/delivery-dossier/spec.md` §A.1. Route detail: the `dossier` row in
+    "Status & Readiness Reporting" below.
+
+11. **IntentTree SDLC Sync (default-on; binding-exists gate)**
+
+    > Workspace/tree resolution, the one-gate contract, and the human-vs-agent workspace rule are
+    > defined once in **`.claude/rules/intenttree-integration.md`** — the single config-story
+    > indirection point. This section is the planning-time *capture* recipe that consumes that
+    > binding; do not re-derive the config here.
+
+    This sync is **enabled by default**: unset, `1`, `true`, or `auto` all mean enabled; only an
+    explicit falsy value (`0`/`false`/`no`/`off`, case-insensitive) disables it. It is also a true
+    no-op when no binding exists (no `ITT_NODE_ID`/`INTENTTREE_TREE` and no plan-frontmatter
+    binding) — so default-on never becomes noise in a repo with no IntentTree presence. When a
+    binding exists and the sync is not explicitly disabled, run the following two-step sync after
+    writing the plan file to disk. This applies equally to PRDs, Implementation Plans, and Feature
+    Contracts.
+
+    **Binding in plan frontmatter (P1-T2).** Author plans carry the binding so it is traceable and
+    overrides the project default (D2): set `intenttree_workspace` / `intenttree_tree` in the plan's
+    frontmatter (per `./references/plan-frontmatter-schema.md` §5.1). When absent, capture resolves to
+    the project default in the integration rule (this repo: workspace `agentic-os`, tree
+    `aos-intenttree`).
+
+    **Target the HUMAN/PROJECT workspace (D3).** Project plans capture into the project's
+    human/project workspace (`kind != agent`; `agentic-os`, `kind=project`, for this repo) — **not**
+    an agent-kind scratch workspace. Ensure `INTENTTREE_WORKSPACE` resolves to it before applying.
+
+    **Step A — dry-run preview** (always run first):
+    ```bash
+    itt sync import <plan-file>
+    ```
+    Parses the artifact's YAML frontmatter (`tasks[]`, `feature_slug`, `doc_type`) and prints what
+    would be registered and imported — no writes occur. Review the task count and frontmatter keys
+    before proceeding.
+
+    **Step B — apply** (after reviewing the preview):
+    ```bash
+    # --tree resolves per the integration rule: plan frontmatter intenttree_tree →
+    # project default (aos-intenttree / tree_01KVTH95FEG7Y23CA39T7BBSZJ) → $INTENTTREE_TREE.
+    itt sync import <plan-file> --apply --tree "${INTENTTREE_TREE:-<repo-intenttree-tree-id>}"
+    ```
+    Registers the plan file as a `SourceArtifact` and projects its `tasks[]` subtree onto the shared
+    node in the repo's IntentTree tree. The CLI stamps the resulting `intenttree_node` (the bound node
+    ID) and `intenttree_tree` (the target tree ID) back into the artifact's YAML frontmatter so the
+    binding is traceable from the markdown file itself.
+
+    **Invariants** (from the AWPR v2 contract):
+    - Markdown stays canonical — source→node only. The node tree is a derived projection.
+      Manual writeback (`WritebackPolicy: MANUAL`) is the default; the node never overwrites the file.
+    - Every import is idempotent: re-running with unchanged source is a no-op (no duplicate nodes).
+    - The step is **best-effort / non-fatal when offline** — if the IntentTree API is unreachable
+      (e.g., rocket-fedora node is down), log the error and continue. Do not block plan authoring.
+    - Unknown frontmatter fields survive verbatim in `binding.raw_source_task`.
+
+    **References**:
+    - Contract: `docs/project_plans/implementation_plans/awpr-v2-task-node-contract.md`
+    - CLI source: `client/src/intenttree_client/cli/commands/sync_cmd.py`
+    - Plan task: TASK-6.1 (FR-10, skill-wiring phase of AWPR v2)
+
 **Output**:
-- Implementation Plan at determined location
-- Phase breakdown with subagent assignments
-- Linked phase files if plan >800 lines
-- Quality gates and success criteria per phase
+- Implementation Plan at determined location (milestone-based by default; <=150 lines)
+- 3-4 milestones, each with checkable AC and a `routing_constraints` block
+- Linked phase files only if a legacy-template or oversized plan exceeds 800 lines
+- AC -> command -> evidence matrix and success criteria per milestone
+- Seeded delivery dossier (Tier 2/3): `.claude/reports/dossier/<feature_slug>/{report.json,index.html}`
 
 **Example**:
 
 ```markdown
-Input PRD: docs/project_plans/PRDs/features/realtime-collaboration-v1.md
+Input PRD: docs/project_plans/PRDs/realtime-collaboration-v1.md
 
 Output:
-Main Plan: docs/project_plans/implementation_plans/features/realtime-collaboration-v1.md
+Main Plan: docs/project_plans/implementation_plans/realtime-collaboration-v1.md
+(milestone-plan-template.md; ~130 lines)
 
-Phase Breakdown:
-- Phase 1: Database Layer (websocket_sessions, edit_locks tables) - data-layer-expert
-- Phase 2: Repository Layer (session management, lock management) - python-backend-engineer
-- Phase 3: Service Layer (operational transforms, conflict resolution) - backend-architect
-- Phase 4: API Layer (WebSocket endpoints, presence API) - python-backend-engineer
-- Phase 5: UI Layer (collaborative editor, presence indicators) - ui-engineer-enhanced, frontend-developer
-- Phase 6: Testing (unit, integration, E2E conflict scenarios) - testing agents
-- Phase 7: Documentation (API docs, user guides) - documentation-writer
-- Phase 8: Deployment (feature flags, monitoring) - DevOps
+Milestones:
+- M1 — Sessions and locks are durable: websocket_sessions + edit_locks tables, repository +
+  service layer land; a session survives a reconnect and a lock cannot be double-acquired.
+  AC: reconnect test passes; concurrent-lock test rejects the second acquirer.
+- M2 — Edits converge under concurrency: operational-transform service + WebSocket/presence API
+  land; two concurrent editors on the same document converge to the same final state.
+  AC: N-client fuzz scenario (diamond-edit, out-of-order delivery) converges; no dropped ops.
+- M3 — Reviewable in the product: collaborative editor UI + presence indicators land behind a
+  feature flag; a reviewer can drive the full flow end-to-end.
+  AC: manual E2E script passes; feature flag defaults off; CHANGELOG entry present.
 
-Phase Files (if plan >800 lines):
-- realtime-collaboration-v1/phase-1-database.md
-- realtime-collaboration-v1/phase-2-repository.md
-- realtime-collaboration-v1/phase-3-5-backend.md (grouped related phases)
-- realtime-collaboration-v1/phase-6-8-validation.md (grouped related phases)
+routing_constraints:
+  - "Operational-transform correctness (M2) MUST stay claude-primary — no offload"
+  - "UI presence-indicator styling (M3) is offload-eligible"
+
+Sequencing: M1 -> M2 (M2's service layer depends on M1's lock primitives) -> M3. Named because
+the lock primitives are a real dependency, not because "database before UI" is a house style.
 ```
 
 ### Workflow 3: Optimize Existing Plans
@@ -1021,10 +1286,16 @@ Do not restate what is already in durable docs. Provide a path reference instead
 | What | Target |
 |------|--------|
 | Task prompts to subagents | < 500 words |
-| Opus decisions block | ~200 lines |
+| **Implementation Plan (Tier 2/3, milestone-based)** | **<=150 lines total, frontmatter included** — `references/plan-doctrine.md` rule 4 |
+| Opus decisions block (legacy/expanded path only) | ~200 lines |
 | Tier 1 Feature Contract | 200–400 lines |
 | PRD (per doc) | ≤ 800 lines; split into phase files if exceeded |
 | Context passed to subagents | File paths, not file contents |
+
+The 800-line figure elsewhere in this file (Key Benefits, Best Practices, optimization patterns)
+is the **hard ceiling** for any planning doc — the fallback that triggers a split. The 150-line
+figure above is the **target** specifically for Tier 2/3 milestone plans, reached by thinness
+(constraints and AC, not enumeration), not by splitting a large plan into smaller files.
 
 ### Progressive Disclosure for Planners
 
@@ -1046,21 +1317,140 @@ When authoring contracts or decisions blocks, load context in this order — sto
 
 ## Reviewer Gates (Summary Pointer)
 
-Reviewer-agent passes are **mandatory at tier-appropriate checkpoints**. Planning artifacts are not complete until the matching reviewer has signed off.
+Reviewer-agent passes are **mandatory at tier-appropriate checkpoints**. Planning artifacts are not
+complete until the matching reviewer has signed off. **What is mandatory is that a gate fires — not
+that a fixed set of lenses fires at it.**
+
+The base gate — **one lens, every tier**:
 
 | Tier | Gate | Reviewer |
 |------|------|----------|
+| 0 | End of the change | `task-completion-validator` |
 | 1 | End of autonomous sprint | `task-completion-validator` |
 | 2 | End of each phase | `task-completion-validator` |
-| 2 | End of feature | `karen` |
+| 2 | End of feature | `karen` (final tree, once) |
 | 3 | End of each phase | `task-completion-validator` |
-| 3 | Mid-feature milestones + end of feature | `karen` |
+| 3 | End of feature | `karen` (final tree, once) |
+| 3 | Plan-milestone boundary — **`context_class` C3/C4 only** | `karen` |
 
 A phase or sprint is not "complete" until the reviewer passes it. Do not commit before the gate clears.
+
+**Author for one lens.** The ordinary plan is *implement → tests → one review → ship*: no pre-gate, no
+second lens, no per-milestone `karen`. When authoring, only reach for the second lens where you can
+name the trigger below — that is a planning-time judgment the plan records, not something execution
+adds defensively.
+
+### The second lens — three triggers, nothing else
+
+Add a **second** lens (`security`) to a milestone only when its surface matches one of exactly three
+triggers. Record it in `wave_plan.phases[]` as `gate_lens` plus a **mandatory** `gate_lens_reason`:
+
+| `gate_lens_reason` | The milestone's surface… |
+|---|---|
+| `untrusted-input` | **parses input the caller controls** — deserialization, request/query parsing, path or filename handling, template rendering with caller data, regex over caller input, uploads, URL/host parsing, archive extraction |
+| `authz-boundary` | **is an authorization or identity boundary** — authorize/RBAC/policy/permission/guard, identity/principal/actor/session/tenant, tokens/nonces/confirmation/replay, isolation/sandbox/subprocess/tool-permission, secrets/credentials/redaction |
+| `irreversible-outward` | **has an irreversible effect, or leaves the system** — publish/deploy, send to an external service, PR or issue creation, force-push, schema migration, secret rotation, data deletion, preview/writeback "must-not-execute" surfaces, CAS/atomicity/single-writer durability |
+
+A two-lens milestone with no named trigger is a **classification error, not a cautious default**.
+Once a trigger assigns the `security` lens it is **never removable** by budget or cost pressure.
+Note the overlap with the Mode-D halt list (auth · payments/billing · schema migrations · data
+deletion · secret rotation · infrastructure): Mode-D governs whether a **human approves**, these
+triggers govern whether a **second reviewer runs**. They are different gates; a milestone can hit one
+without the other.
+
+Full ruleset and row-level signals:
+[`dev-execution/references/gate-risk-classes.md`](../dev-execution/references/gate-risk-classes.md) §2.
+
+### Council Routing — ARC is the second lens, not a third pass
+
+**ARC *is* the `security` lens.** When a milestone matches a trigger above — or a plan explicitly sets
+`review_intensity: council` — the Agent Review Council pass **is** that milestone's second lens:
+
+```
+Skill("council-review")
+```
+
+Target the plan/PRD file as the council's object; write the run to `runs/<date>-<feature-slug>/`
+per the skill's workflow, and record the run path in the plan's `related_documents`.
+
+> **Changed 2026-07-31 (gate-tiering v4.1).** This section previously made ARC **additive** — "both
+> `task-completion-validator` and `karen` still run at their normal checkpoints; ARC is an extra
+> pass." On `risk_level: high` that produced three lenses per gate. ARC now *occupies* the second-lens
+> slot rather than stacking on top of a full base set. `risk_level: high` alone no longer triggers it
+> — the three surface triggers do. Risk level sizes the *plan*; the triggers classify the *surface*,
+> and only the surface determines the lens count.
+>
+> The `validator` still runs at its own checkpoint where the milestone genuinely has heavy AC
+> bookkeeping *in addition to* a triggered surface — that is a deliberate judgment call recorded as
+> `gate_lens: [security, validator]`, not the default.
 
 **Full gate definitions and reviewer output format**: `.claude/skills/dev-execution/validation/completion-criteria.md`
 
 **Source**: `.claude/plans/tiered-workflow-overhaul.md` §4.5
+
+## Status & Readiness Reporting (`delivery-report` — forward routes + the dossier seed)
+
+Planning is where the **forward-looking** report routes belong: `program` for epic/meta-plan status
+and `readiness` for a go/no-go decision. These produce a rich, evidence-backed, shareable HTML
+artifact where every open item carries a copyable agent handoff. They are **recommended / on-request,
+never blocking** — a status snapshot is not a planning gate; skip it for a quick conversational
+answer. Invoke `Skill("delivery-report")` and pick the route; the skill owns manifest → render →
+validate. Route policy: `.claude/skills/delivery-report/references/route-policy.md`.
+
+Planning also **starts** the one longitudinal route: `dossier` is *seeded here* and then accretes
+through execution.
+
+| Route | Planning moment | What it answers |
+|---|---|---|
+| `dossier` | **Plan time, Tier 2/3** — seeded automatically by Workflow 2 step 10 (`hooks/seed-dossier.sh`), then written at each phase close | "Where does this feature stand across its whole life — what's being done now, what's blocked, what was decided?" |
+| `program` | An **epic / meta-plan** spanning multiple PRDs or waves — at kickoff, a milestone, or on a status ask | "Where is this whole initiative? What's blocked, what isn't, what's next on each open item?" |
+| `readiness` | A **go/no-go** decision — the `/plan:explore` verdict (below), a tier-classification gate, or an epic investment checkpoint | "Should we invest further — go or no-go?" |
+
+- **Living per-feature record → `dossier`, seeded at plan time.** Do not hand-author the manifest and
+  do not invoke `Skill("delivery-report")` for the seed — the deterministic hook derives it from the
+  plan (Workflow 2 step 10). Skipping the seed is what leaves the execution-side regeneration hooks
+  dormant, so the feature ends with no living record. Seeding it is *not* a gate: the enforced
+  end-of-feature artifact stays the `feature` route DoD report.
+
+- **Epic / meta-plan status → `program`.** For a multi-PRD initiative (see "Multi-PRD Planning" below)
+  or an active `meta_plan`, a `program` report is the shareable rollup that complements the raw
+  `plan-status` markdown aggregation (`plan-status` stays the canonical data source; delivery-report
+  renders the stakeholder view). Subject = the epic/meta-plan slug.
+- **Go/no-go → `readiness`.** When a `/plan:explore` run concludes (Phase 4 verdict) and a
+  stakeholder-facing go/no-go artifact is wanted, produce a `readiness` report. The `feasibility_brief`
+  stays canonical; the report is the shareable presentation of the same verdict + evidence. See
+  `/plan:explore` § "Verdict & Handoff".
+
+The **backward** `feature` route (a completed feature) is a *dev-execution* end-of-feature DoD gate,
+not a planning-time artifact — see `dev-execution/validation/completion-criteria.md`.
+
+**Hosting/linking composes with, and is distinct from, the dossier.** Once any route's HTML is
+rendered, `dev-execution/hooks/publish-report.sh` (PF-3 M3) MAY host it in the atlas capsule store
+and link it onto the bound IntentTree node — recommended/non-blocking, never a planning gate. The
+dossier is the **ONE** living per-feature record (seeded here, accreted through execution, one
+manifest per feature); publish+link is **N per-scope hosted artifacts** (one per `feature`/
+`program`/`phase`/`readiness`/`dossier` report actually rendered) plus their IntentTree pointers —
+a browsable index layer one level up, not a second dossier. Today only the `dossier` route's close
+fires this automatically (`dev-execution/modes/plan-execution.md` §8); the forward routes above are
+manually publishable via `scripts/publish_report.py` until their own close-hooks are wired. See
+`dev-execution/SKILL.md` and `.claude/rules/aos-operating-rules.md` for the look-first/save-after
+posture.
+
+## Next Actions Table (the standard close — every planning output)
+
+Every planning response ends with a **Next Actions table**: the compact, copy-pasteable map of what
+to do next — target command · path / ITT node / project · what it achieves · gates/blockers ·
+recommended model · priority order. It is the always-on, inline projection of the `delivery-report`
+handoff vocabulary (no HTML render required), and it is where the execute handoff you already emit
+(the `Execute: /dev:execute-plan <plan>` string, the `/plan:plan-feature --tier=N` recommendation)
+becomes a **row** — alongside a row per prerequisite spike and a `deferred` row per item the plan
+parked (DOC-006 spec tasks; see `references/deferred-items-and-findings.md`). Emit the one-line empty
+state when nothing follows. When a `program` / `readiness` `delivery-report` is also produced, keep
+the table front-and-center in the response and list the report path as an artifact — the table is
+not absorbed into the HTML.
+
+Full format + per-command row semantics: `dev-execution/references/next-actions-table.md` (the
+canonical spec, shared with the execution engine).
 
 ## Templates Reference
 
@@ -1088,25 +1478,50 @@ A phase or sprint is not "complete" until the reviewer passes it. Do not commit 
 
 **When to Use**: Creating any new PRD
 
-### implementation-plan-template.md
+### milestone-plan-template.md — **default for new Tier 2/3 plans**
+
+**Location**: `./templates/milestone-plan-template.md`
+
+**Doctrine**: `references/plan-doctrine.md`
+
+**Purpose**: Thin, pin-free Tier 2/3 implementation plan — the doctrine-conformant default.
+Target <=150 lines total, frontmatter included.
+
+**Key Sections**:
+- Scope boundary (in / out, stated not silently dropped)
+- Rubric ("what good looks like" — replaces step-by-step prescription)
+- Named risks
+- Milestones (3-4, each a reviewable state of the system with AC)
+- AC -> command -> evidence matrix
+- Sequencing (only if load-bearing — deleted otherwise)
+- `routing_constraints` frontmatter (MUST-stay classes, offload-eligibility) — no model ids
+- `context_class` frontmatter (C1-C4, sizes agent context, not behavior)
+
+**When to Use**: Any new Tier 2/3 implementation plan. See Workflow 2 step 3.
+
+### implementation-plan-template.md — legacy/expanded (in-flight plans, economy-executor path)
 
 **Location**: `./templates/implementation-plan-template.md`
 
 **Based On**: `/claude-export/templates/pm/implementation-plan-template.md`
 
-**Purpose**: Detailed phased implementation with task breakdown
+**Purpose**: Detailed phased implementation with task breakdown. Superseded by
+`milestone-plan-template.md` for new plans (`references/plan-doctrine.md`) — retained for plans
+already in flight under the old rules, and for the economy-class-executor expansion path
+(Workflow 2 step 2.5).
 
 **Key Sections**:
 - Executive Summary (approach, milestones, success criteria)
 - Implementation Strategy (architecture sequence, parallel work, critical path)
-- Phase Breakdown (8 standard phases with task tables)
+- Phase Breakdown (8 standard phases with task tables — retired for new plans)
 - Risk Mitigation (technical and schedule risks)
 - Resource Requirements (team composition, skills, infrastructure)
 - Success Metrics (delivery, business, technical)
 - Communication Plan (status reporting, escalation)
 - Post-Implementation Plan (monitoring, maintenance)
 
-**When to Use**: Creating implementation plan from PRD
+**When to Use**: In-flight plans continuing under their original rules; a decisions-block →
+`implementation-planner` expansion pass per step 2.5. Not the default for a new plan.
 
 ### phase-breakdown-template.md
 
@@ -1176,7 +1591,7 @@ All scripts are in `./scripts/` directory and use Node.js (NOT Python).
 2. Determine category and filename
 3. Load PRD template
 4. Generate PRD content
-5. Write to `docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
+5. Write to `docs/project_plans/PRDs/[feature-name]-v1.md`
 
 **Output**: PRD file path
 
@@ -1222,7 +1637,7 @@ All scripts are in `./scripts/` directory and use Node.js (NOT Python).
 ### estimation-heuristics.md
 
 **Location**: `./references/estimation-heuristics.md`
-**Purpose**: Bottom-up sizing rules to prevent under-estimation. Codifies six heuristics — noun-counting (H1), dual-implementation multiplier (H2), algorithmic service flag (H3), bundle-vs-sum check (H4), anchor reference comparison (H5), hidden plumbing budget (H6) — and the mandatory "Estimation Sanity Check" template every implementation plan must populate.
+**Purpose**: Bottom-up sizing rules to prevent under-estimation. Codifies seven heuristics — noun-counting (H1), dual-implementation multiplier (H2), algorithmic service flag (H3), bundle-vs-sum check (H4), anchor reference comparison (H5), hidden plumbing budget (H6), huge-file touch multiplier (H7) — and the mandatory "Estimation Sanity Check" template every implementation plan must populate.
 **Used By**: Implementation plan authoring (mandatory sanity check), `plan-review` skill (post-mortem heuristic tuning).
 **When to load**: Always, when creating or reviewing an implementation plan estimate.
 
@@ -1314,7 +1729,10 @@ For the full AC schema reference and examples, see `./references/ac-schema.md`.
 
 ### File Size Management
 
-**Guideline**: No file should exceed ~800 lines
+**Guideline**: No file should exceed ~800 lines (hard ceiling, all planning docs). Tier 2/3
+Implementation Plans additionally target **<=150 lines** from the start — see
+`references/plan-doctrine.md` rule 4 and "Prompt and Artifact Sizing" above; that target is
+reached by thinness, not by pre-emptively planning a split.
 
 **Rationale**:
 - Optimal token efficiency for AI context loading
@@ -1348,11 +1766,11 @@ For the full AC schema reference and examples, see `./references/ac-schema.md`.
 ### Directory Organization
 
 **PRDs**:
-- `docs/project_plans/PRDs/[category]/`
+- `docs/project_plans/PRDs/`
 - Categories: `harden-polish`, `features`, `enhancements`, `refactors`
 
 **Implementation Plans**:
-- `docs/project_plans/implementation_plans/[category]/`
+- `docs/project_plans/implementation_plans/`
 - Match PRD category
 - Phase breakouts in subdirectory: `[plan-name]/`
 
@@ -1436,7 +1854,7 @@ prd_ref: null
 ---
 ```
 
-**Maturity progression**: Update `maturity` field as design_spec evolves: `idea` → `shaping` → `ready`. When promoting to PRD, set `maturity: promoted` and add `prd_ref: docs/project_plans/PRDs/[category]/[name]-v1.md`.
+**Maturity progression**: Update `maturity` field as design_spec evolves: `idea` → `shaping` → `ready`. When promoting to PRD, set `maturity: promoted` and add `prd_ref: docs/project_plans/PRDs/[name]-v1.md`.
 
 **Meta Plans** (schema v2, process/tooling/workflow changes):
 ```yaml
@@ -1481,13 +1899,13 @@ User: "Create a PRD for adding advanced filtering to the prompts page. Users nee
 
 **Output**:
 ```
-File: docs/project_plans/PRDs/features/advanced-filtering-v1.md
+File: docs/project_plans/PRDs/advanced-filtering-v1.md
 
 # Advanced Filtering - PRD
 
 **Feature Name**: Advanced Filtering
 **Date**: 2025-11-11
-**Author**: Claude (Sonnet 4.5)
+**Author**: Claude
 **Related**: Filtering guides, search ADRs
 
 ## 1. Executive Summary
@@ -1499,11 +1917,15 @@ Current filtering supports single criteria only. Users frequently need to filter
 ... (full PRD structure)
 ```
 
-### Example 2: Create Implementation Plan with Phase Breakout
+### Example 2: Create Implementation Plan with Phase Breakout (legacy/expanded path)
+
+> This example predates `references/plan-doctrine.md` and illustrates the legacy phase-breakout
+> path (in-flight plans / economy-executor use). For a new plan, see the milestone-based worked
+> example in Workflow 2 above — default output is a single <=150-line file, no phase files.
 
 **Input**:
 ```
-User: "Create implementation plan for docs/project_plans/PRDs/features/advanced-filtering-v1.md"
+User: "Create implementation plan for docs/project_plans/PRDs/advanced-filtering-v1.md"
 ```
 
 **Process**:
@@ -1520,7 +1942,7 @@ User: "Create implementation plan for docs/project_plans/PRDs/features/advanced-
 
 **Output**:
 ```
-Main Plan: docs/project_plans/implementation_plans/features/advanced-filtering-v1.md (200 lines)
+Main Plan: docs/project_plans/implementation_plans/advanced-filtering-v1.md (200 lines)
 
 # Implementation Plan: Advanced Filtering
 
@@ -1615,8 +2037,8 @@ Follows CLAUDE.md documentation policy:
 
 ### File Organization
 
-**PRDs**: `/docs/project_plans/PRDs/[category]/[feature-name]-v1.md`
-**Plans**: `/docs/project_plans/implementation_plans/[category]/[feature-name]-v1.md`
+**PRDs**: `/docs/project_plans/PRDs/[feature-name]-v1.md`
+**Plans**: `/docs/project_plans/implementation_plans/[feature-name]-v1.md`
 **Phase Files**: `[plan-name]/phase-[N]-[name].md`
 
 ## Advanced Usage
@@ -1648,6 +2070,8 @@ For complex initiatives spanning multiple PRDs:
 2. Generate individual PRDs for each component
 3. Link PRDs to parent epic
 4. Create unified progress tracking across PRDs
+5. For a shareable status rollup across the epic's PRDs/waves, produce a `program` delivery-report
+   (see "Status & Readiness Reporting" above) — recommended at kickoff/milestones, not a gate.
 
 ### Spike Integration
 
@@ -1686,9 +2110,4 @@ Regularly optimize plans as work progresses:
 
 ## Version History
 
-- **2025-11-11**: Initial skill creation
-  - 4 core workflows (PRD, Plan, Optimize, Progress)
-  - 4 templates (PRD, Plan, Progress, Phase)
-  - 5 scripts (generate-prd, generate-impl-plan, optimize-plan, assign-subagents, create-progress-tracking)
-  - 4 references (architecture, subagents, file-structure, optimization-patterns)
-- **2025-12-01**: Remove Tracking Creation from this skill; delegate to artifact-tracking skill
+See [`CHANGELOG.md`](CHANGELOG.md) for the versioned history of this skill.

@@ -1,0 +1,198 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Use-Case Rankings — grounded evidence layer under routing_policy
+#
+# PURPOSE
+#   model-registry.yaml's scores{cost,intelligence,taste,speed} is a fast, hand-asserted
+#   MODEL-LEVEL prior — one 4-axis scorecard per model, the same for every task. This file
+#   is the second, SHARPER evidence layer: research-grounded per-USE-CASE rankings, each
+#   with provenance (an rf run id / evidence bundle), a confidence score, and a freshness
+#   date. Per the model-use-case-grounding spec (Thread 1):
+#     agentic_meta_dev/docs/agentic-operator/analysis/model-use-case-grounding-and-per-model-skills-spec.md
+#
+# INVARIANTS (do not regress)
+#   - FILE-CANONICAL. This YAML is the tracked, human-reviewed source of truth for
+#     grounded rankings, same "edit upstream, PR-reviewed" posture as model-registry.yaml.
+#   - NEVER read on the resolve path. resolve() stays a pure, clockless oracle (AOS
+#     constraint 4 — no model call, no network, no wall-clock read at route time). This
+#     file is an ADVISORY layer that informs human-gated routing_policy chain tuning; it
+#     is not consumed by resolver.js and must not become an implicit ranking input without
+#     a separate, deliberate resolver upgrade (mirrors the existing scores{} Do-Not-Say).
+#   - Rankings DECAY to the base scorecard as evidence ages. A grounded rank is only
+#     authoritative while confidence is high AND the evidence is fresh; past the half-life
+#     it fades back toward model-registry.yaml's scores{} prior. See composition_rule below.
+#   - MUST-stay classes are NEVER overridden by anything in this file. orchestration,
+#     verdict, mode_d, council_review, synthesis (+ schema_recovery, cross_wave_merge per
+#     the resolver's 7-string MUST_STAY_PRIMARY_CLASSES list) resolve to claude
+#     unconditionally, independent of and prior to any ranking/availability filter — this
+#     file carries no ranking data for those use-cases beyond description/source mapping.
+#
+# HOW THIS RELATES TO routing_policy
+#   Task-class chains in model-registry.yaml are today hand-tuned by intuition (see that
+#   file's 2026-07-27 header note on the unverified gemini-3.6-flash promotion). The
+#   long-term direction (spec Thread 1) is for chains to become GENERATED from grounded
+#   rankings rather than hand-edited. Until that resolver upgrade ships, a grounding pass
+#   here is advisory: a human reviews `ranking` + `chain_recommendation`, decides whether
+#   to adopt it, and hand-writes the result into model-registry.yaml's routing_policy in
+#   the SAME PR that updates this file (the human writeback gate — see
+#   references/use-case-rankings.md).
+#
+# See references/use-case-rankings.md for the full schema walkthrough, a worked
+# composition-rule example, and the run-a-new-grounding-pass procedure.
+# ──────────────────────────────────────────────────────────────────────────────
+
+version: 1
+updated: 2026-07-28
+
+composition_rule:
+  form: "effective_rank(model, use_case) = blend(base_scorecard, grounded_rank, confidence, freshness_decay)"
+  half_life_days: 45   # OQ-2 interim default; tie to drift-detector cadence later
+  note: "grounded rank is authoritative when confidence is high and fresh; decays to base scores{} as evidence ages"
+
+use_cases:
+
+  exploration:
+    description: "Open-ended investigation, spikes, and bounded discovery work before a plan or approach is locked in."
+    source_task_classes: [exploration]
+    status: unmeasured
+
+  writing:
+    description: "Generating or updating documentation, READMEs, changelogs, and other written explanatory artifacts."
+    source_task_classes: [documentation]
+    status: unmeasured
+
+  mechanical-edit:
+    description: "Fast, low-judgment mechanical edits, boilerplate, simple classification, and formatting/cleanup work."
+    source_task_classes: [mechanical]
+    status: unmeasured
+
+  second-opinion:
+    description: "An independent alternative take, diversity vote, or cross-family lens on an existing answer/approach — not the primary author."
+    source_task_classes: [second_opinion]
+    status: measured
+    confidence: 0.6
+    freshness: 2026-07-28
+    provenance:
+      rf_run_id: rf_run_20260728_pilot_re_eval_second_opinion_routing
+      method: "web-evidence sweep (public benchmarks + practitioner evals), 2 parallel research agents, adjudicated by spine"
+      evidence_refs:
+        - https://www.researchgate.net/publication/385353198_Self-Preference_Bias_in_LLM-as-a-Judge
+        - https://arxiv.org/pdf/2508.06709
+        - https://arxiv.org/html/2605.29800
+        - https://artificialanalysis.ai/models/gpt-5-6-terra-medium
+        - https://artificialanalysis.ai/models/gemini-3-6-flash
+        - https://artificialanalysis.ai/models/comparisons/gpt-5-vs-llama-4-maverick
+    ranking:
+      - { model: gpt-5.6-terra, rank: 1, score_hint: 9,   rationale: "Closes a real zero-GPT-representation gap (chain is otherwise 3/5 Google-family + 1 same-family Claude leg); matches/beats Gemini 3.6 Flash at higher effort; org doctrine already treats gpt-5.6 as the review/validation workhorse." }
+      - { model: gpt-5.6-sol, rank: 2, score_hint: 8.7, rationale: "Highest raw capability GPT-line lens (AA Index 54-59); reserve for escalation on terra disagreement or highest-stakes critique passes, not the default per-call leg (cost + latency)." }
+      - { model: gpt-5.6-luna, rank: 3, score_hint: 7.8, rationale: "Cheapest GPT-line tier; secondary-source reports it beating Claude Fable 5 on a long-horizon eval at ~1/16 the cost — moderate-strength evidence, promising for high-volume calls." }
+      - { model: gemini-3.6-flash, rank: 4, score_hint: 7,   rationale: "Solid capability but the THIRD Gemini-family leg already present in this chain (plus 100% of web_research and svg_generation) — low marginal error-decorrelation value; keep as secondary/majority-vote leg, not primary." }
+      - { model: gpt-5.5-gus, rank: 5, score_hint: 6.3, rationale: "The one GPT-family model with CONFIRMED ICA servability today (2026-07-21); pragmatic interim GPT-line lens until gpt-5.6's ICA servability is verified." }
+      - { model: claude-sonnet-5, rank: 6, score_hint: 6,   rationale: "Capable, but same family as the primary authoring agent — self-preference/family-bias literature shows same-family judges systematically inflate same-family outputs, the opposite of what an adversarial check needs." }
+      - { model: claude-sonnet-4-6, rank: 7, score_hint: 5.8, rationale: "Same same-family concern as sonnet-5; cheap ICA-offloadable fallback leg, not a diversity leg." }
+      - { model: claude-haiku-4-5, rank: 14, score_hint: 4.3, rationale: "Already the chain's last leg. Cheap/fast, but same family as the primary agent AND a small model — weak critique depth. Keep only as a last-resort availability fallback, not a real adversarial lens." }
+      - { model: llama-4-maverick, rank: 20, score_hint: 2.5, rationale: "NOTABLE EXCLUSION — cross-family (Meta) but AA Intelligence Index only 14, the lowest measured here; LMArena history is contested (Meta's non-public 'experimental chat' variant vs ~32nd-place public weights). Adds noise more than adversarial signal; drop despite being the current chain's only non-Google/non-Claude leg." }
+      - { model: gemini-3.5-flash, rank: 15, score_hint: 4.2, rationale: "NOTABLE EXCLUSION — redundant with gemini-3.6-flash (same family, older, already the demoted fallback in the current chain note); low marginal diversity or capability value." }
+      - { model: granite-4-small, rank: 19, score_hint: 3,   rationale: "NOTABLE EXCLUSION — no task-relevant public benchmark evidence surfaced this pass; would add genuine 4th-family diversity but capability for adversarial-critique work is unproven, not confidently ranked." }
+    chain_applied: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash[1m]", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"]
+    caveats:
+      - "gpt-5.6-sol is ESCALATION-ONLY, not a default round-robin leg — invoke on a terra-tier disagreement or after ~2 flagged misses at terra tier, per org escalation doctrine; it is deliberately absent from chain_applied above."
+      - "llama-4-maverick and gemini-3.5-flash were DROPPED from the prior chain — Maverick for weak + trust-compromised benchmark standing, 3.5-flash for redundancy with 3.6-flash already present in this and every other Gemini-saturated chain."
+      - "No public benchmark measures the exact task ('adversarially critique Claude Sonnet 5's output') — evidence is triangulated from general reasoning/coding benchmarks (AA Intelligence Index) plus adjacent LLM-as-judge self-preference/family-bias literature, not a direct eval. Confidence (0.6) reflects that gap."
+      - "GPT-5.6 (terra/sol/luna) ICA servability was NOT independently confirmed this pass — only gpt-5.5-gus is confirmed ICA-enabled+auto-routable (2026-07-21). Verify gpt-5.6-terra's ICA path before wiring it into an ICA-array chain, or route it via the codex CLI/skill instead (as chain_applied does above)."
+      - "AA Intelligence Index scores for GPT-5.6 vary substantially by reasoning-effort setting; at matched low/medium effort the raw-score gap vs. Gemini 3.6 Flash narrows, so family-diversity (not raw superiority) is the primary justification at low/medium effort."
+
+  agentic-coding:
+    description: "Multi-file implementation, refactoring, and bounded drafting/fix-cycle work — writing and modifying code end to end."
+    source_task_classes: [implementation]
+    status: unmeasured
+
+  web-grounded-research:
+    description: "Search-grounded lookups and large-context web research that pull in current external information."
+    source_task_classes: [web_research]
+    status: unmeasured
+
+  code-review:
+    description: "Reviewing code/diffs for correctness, acceptance-criteria validation, and adversarial critique from a second perspective."
+    source_task_classes: [code_review]
+    status: unmeasured
+
+  image-generation:
+    description: "Generating or editing raster images — UI mockups, sprites, draft assets, and final high-quality visuals."
+    source_task_classes: [image_generation]
+    status: unmeasured
+
+  svg-generation:
+    description: "Generating vector graphics/SVG and lightweight animations."
+    source_task_classes: [svg_generation]
+    status: measured
+    confidence: 0.6
+    freshness: 2026-07-28
+    provenance:
+      rf_run_id: rf_run_20260728_pilot_re_eval_svg_generation_routing
+      method: "web-evidence sweep (public benchmarks + practitioner evals), 2 parallel research agents, adjudicated by spine"
+      evidence_refs:
+        - https://www.designarena.ai/models/claude-fable-5
+        - https://x.com/Designarena/status/2024953281051787279
+        - https://x.com/Designarena/status/2076391367446860249
+        - https://simonwillison.net/2025/Nov/25/llm-svg-generation-benchmark/
+        - https://dylancastillo.co/posts/pelicanmaxxing.html
+        - https://www.designarena.ai/models
+    ranking:
+      - { model: claude-fable-5, rank: 1, score_hint: 9.5, rationale: "Only model in this registry with a direct, current, primary-source #1 ranking on an SVG-specific crowdsourced arena (Design Arena SVG Arena: #1, 69% win rate, Elo 1353). Best direct evidence for the taste-dominated case." }
+      - { model: gpt-5.6-sol, rank: 2, score_hint: 9,   rationale: "OpenAI's flagship reported #1 on Design Arena's general/frontend index (Elo 1353), edging Fable 5 — ambiguous whether this is the SVG sub-arena specifically or the broader frontend index, but a credible frontier-taste contender." }
+      - { model: gemini-3.1-pro-preview, rank: 3, score_hint: 8.8, rationale: "Took #1 on Design Arena's SVG Arena (Elo 1421, an 87-point lead) in an earlier 2026 snapshot; Gemini 3.0 Pro Preview also won Simon Willison's independent 9-model human-judged SVG benchmark. Google's SVG 'taste' historically lives in the Pro tier, not Flash." }
+      - { model: claude-opus-5, rank: 4, score_hint: 8.6, rationale: "Current Anthropic flagship/spine — no direct SVG-specific benchmark found (too new for the indexed arenas), but reasoning-derived from Anthropic frontier-tier's consistent SVG/design-arena strength (Fable 5, prior Opus 4.6 #1 on Coding Arena). Weak-to-moderate inference strength." }
+      - { model: gemini-3.1-pro-preview-ica, rank: 5, score_hint: 8.5, rationale: "Same underlying weights as gemini-3.1-pro-preview via the ICA proxy; inherits the same SVG-arena evidence, ranked slightly below the native leg since ICA proxying can degrade behavior for some capabilities." }
+      - { model: claude-opus-4-8, rank: 6, score_hint: 8.3, rationale: "Prior Anthropic flagship, now legacy but still frontier-class; no direct SVG data, inference from the Anthropic-frontier pattern above." }
+      - { model: gpt-5.6-terra, rank: 7, score_hint: 8,   rationale: "OpenAI's workhorse tier is reported highly competitive on design/frontend tasks generally, but no SVG-specific leaderboard entry distinct from Sol was found. Reasoning-derived." }
+      - { model: claude-sonnet-5, rank: 8, score_hint: 7.8, rationale: "Included in a cross-lab pelican-SVG study with no significant judge-scored quality deficit vs. GPT-5.6/Gemini; solid default-execution-tier choice, cheaper than Opus/Fable, but not shown to lead on taste-heavy human-voted arenas." }
+      - { model: gemini-3.5-flash, rank: 19, score_hint: 5.8, rationale: "NOTABLE EXCLUSION (falsifies the prior promotion) — per Design Arena's own model index, SVG is 3.5-flash's OWN strongest relative category (~54.8% win rate), and it is reported with better color cohesion/hover-animation quality than 3.6-flash in direct comparison." }
+      - { model: gemini-3.6-flash, rank: 20, score_hint: 5.3, rationale: "NOTABLE EXCLUSION — currently the chain's leg-1. Multiple independent reviews explicitly flag SVG generation, layout, and spatial reasoning as a weakness of this model, and report it does not consistently outperform 3.5-flash on visual/design quality despite being newer — directly undercuts the 2026-07-27 'newer flash = better' promotion rationale." }
+      - { model: nano-banana-pro, rank: 28, score_hint: 1.5, rationale: "NOTABLE EXCLUSION — not applicable to this use case. A raster diffusion image model, not a code/vector SVG generator; cannot emit scalable SVG markup." }
+    chain_applied: ["claude/claude-fable-5", "ica/gemini-3.1-pro-preview[1m]", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"]
+    caveats:
+      - "COST/TASTE TRADE-OFF, explicit in chain_applied's ordering: frontier/taste-tier (claude-fable-5, then the Gemini Pro tier) is meant for FINAL/hero/taste-critical SVG assets (logos, illustrative diagrams, presentation graphics) where a human or downstream taste-sensitive consumer judges the output; the flash tier (3.5-flash, 3.6-flash) is meant for bulk/draft/programmatic SVG (icons, simple charts) where correctness and cost/latency dominate over aesthetic judgment. Do not route every SVG request through the frontier leg by default."
+      - "Design Arena is a crowdsourced, human-voted leaderboard with fast-moving snapshots (evidence spans Feb-Jul 2026; SVG-Arena #1 has changed hands from Gemini 3.1 Pro Preview to Claude Fable 5 within this window). Treat any single 'current #1' claim as a snapshot, not a stable fact."
+      - "The one controlled/automated-judge study found (pelicanmaxxing, cross-lab pelican-SVG comparison) shows NO significant frontier-vs-flash gap on a narrow subject — the taste gap shows up strongly in human-preference arenas but not in this LLM-judge methodology. The hypothesis is better supported for human-facing/aesthetic-judged SVG than for geometrically-scored/automated-eval SVG."
+      - "The prior chain's 2026-07-27 promotion of gemini-3.6-flash ahead of gemini-3.5-flash was justified on 'newer flash + ICA servability,' not on demonstrated SVG quality — evidence gathered here (independent reviews, Design Arena's own per-model category data) points the other way for this specific use case: 3.5-flash appears to be the stronger flash-tier SVG option currently. chain_applied above reorders 3.5-flash ahead of 3.6-flash accordingly."
+      - "No direct SVG-specific benchmark evidence was found for claude-opus-5 (too new to be indexed by the arenas checked) or for most mid/legacy tiers; their ranks rely on family/generation inference, not direct citations, and should be treated as lower-confidence than the top-3."
+
+  video-generation:
+    description: "Generating video clips, motion animation, or marketing-clip assets."
+    source_task_classes: [video_generation]
+    status: unmeasured
+
+  verdict:
+    description: "Issuing a final, high-stakes go/no-go, adjudication, or filing-readiness judgment over a body of evidence."
+    source_task_classes: [verdict]
+    status: unmeasured
+
+  council-review:
+    description: "Running a structured, multi-reviewer adversarial council pass (ARC) over an artifact and producing a scorecard."
+    source_task_classes: [council_review]
+    status: unmeasured
+
+  synthesis:
+    description: "Integrating multiple sources or parallel threads into one coherent, cross-cutting output."
+    source_task_classes: [synthesis]
+    status: unmeasured
+
+  schema-recovery:
+    description: "Reconstructing a structured schema/contract from partial, malformed, or undocumented data."
+    source_task_classes: [schema_recovery]
+    status: unmeasured
+
+  cross-wave-merge:
+    description: "Reconciling and merging outputs produced by parallel/independent execution waves into one consistent result."
+    source_task_classes: [cross_wave_merge]
+    status: unmeasured
+
+  planning:
+    description: "Architecture decisions, system/feature planning, and design-level reasoning ahead of implementation, including greenfield jumpstarts."
+    source_task_classes: []
+    status: unmeasured
+
+  debug-escalation:
+    description: "Deep, stuck-bug or novel-algorithm-design debugging escalated to a frontier-tier model when a standard-tier attempt stalls."
+    source_task_classes: []
+    status: unmeasured

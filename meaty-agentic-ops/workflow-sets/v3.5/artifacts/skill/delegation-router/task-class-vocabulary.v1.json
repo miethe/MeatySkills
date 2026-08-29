@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "taxonomy_id": "aos.routing.task_class",
+  "taxonomy_version": "1.0.0",
+  "identifier_format": "lower_snake_case",
+  "external_join_policy": "exact_canonical_only",
+  "unknown_policy": "no_empirical_adjustment",
+  "classes": [
+    {
+      "id": "exploration",
+      "status": "routable",
+      "legacy_aliases": []
+    },
+    {
+      "id": "documentation",
+      "status": "routable",
+      "legacy_aliases": ["doc-gen"]
+    },
+    {
+      "id": "mechanical",
+      "status": "routable",
+      "legacy_aliases": ["mechanical-tasks"]
+    },
+    {
+      "id": "second_opinion",
+      "status": "routable",
+      "legacy_aliases": ["second-opinion"]
+    },
+    {
+      "id": "implementation",
+      "status": "routable",
+      "legacy_aliases": []
+    },
+    {
+      "id": "web_research",
+      "status": "routable",
+      "legacy_aliases": ["web-research", "web-search"]
+    },
+    {
+      "id": "code_review",
+      "status": "routable",
+      "legacy_aliases": ["code-review", "ac-validation"]
+    },
+    {
+      "id": "image_generation",
+      "status": "routable",
+      "legacy_aliases": ["image-generation"]
+    },
+    {
+      "id": "svg_generation",
+      "status": "routable",
+      "legacy_aliases": ["svg-generation"]
+    },
+    {
+      "id": "video_generation",
+      "status": "routable",
+      "legacy_aliases": ["video-generation"]
+    },
+    {
+      "id": "orchestration",
+      "status": "must_stay_primary",
+      "legacy_aliases": []
+    },
+    {
+      "id": "mode_d",
+      "status": "must_stay_primary",
+      "legacy_aliases": ["mode-d"]
+    },
+    {
+      "id": "verdict",
+      "status": "must_stay_primary",
+      "legacy_aliases": []
+    },
+    {
+      "id": "council_review",
+      "status": "must_stay_primary",
+      "legacy_aliases": ["council-review"]
+    },
+    {
+      "id": "synthesis",
+      "status": "must_stay_primary",
+      "legacy_aliases": []
+    },
+    {
+      "id": "schema_recovery",
+      "status": "must_stay_primary",
+      "legacy_aliases": ["schema-recovery"]
+    },
+    {
+      "id": "cross_wave_merge",
+      "status": "must_stay_primary",
+      "legacy_aliases": ["cross-wave-merge"]
+    }
+  ],
+  "telemetry_only": [
+    "_unclassified"
+  ]
+}

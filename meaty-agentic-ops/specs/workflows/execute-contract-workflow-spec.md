@@ -270,6 +270,21 @@ Mirrors the `ReviewerVerdict` object from `execution-report.schema.json`:
 
 `execute-contract` returns a value conforming to `execution-report.schema.json`. The `report` array contains a single `WaveResult` with a single `PhaseResult` (the sprint phase). This matches the canonical schema so Opus post-processes it identically regardless of whether a plan ran via `execute-plan` or `execute-contract`.
 
+**`routing_log` — drain it after the run, on every outcome.** Every exit carries a `routing_log` array
+(`workflow-authoring-spec.md` §6.1) recording this run's fix-cycle provider routing: the Mode-D guard's
+override to claude, the `bob-delegate-executor` dispatch, and the measured fallback when Bob fails. The
+script cannot write it (constraint 1). `commands/dev/execute-contract.md` is hand-orchestrated and never
+invokes this workflow, so the two real callers own the hop — a direct invoker, and `auto-feature` when it
+nests this workflow (there, `commands/dev/autopilot.md` § "Handle the ExecutionReport" drains it):
+
+```bash
+node .claude/skills/delegation-router/log-cli.js --ingest <report.json> --task-id <node_or_contract_slug>
+skillmeat routing audit --unconfirmed
+```
+
+Skipping it discards the run's routing decisions and leaves the audit reporting *nothing*, which reads
+identically to *clean* (`node_01KZVV9R3EK13DJXS44VCQ8E9C`).
+
 **Status semantics**:
 
 | Status | When | Opus action |
