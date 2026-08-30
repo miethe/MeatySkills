@@ -37,6 +37,22 @@ python scripts/plan-status-report.py --all --include-pre-plan --include-meta --f
 
 **Summarize in conversation**: total counts by effective status (completed / in-progress / planned), count of inferred updates, mismatch count. Do not paste full report into context — point to the output file if saved.
 
+### Rich HTML report (`delivery-report` `program` route)
+
+The markdown/JSON output above is the canonical **aggregation** — the data source. When a
+**shareable, evidence-backed stakeholder report** is wanted (a program status snapshot where each
+open item carries a copyable agent handoff, not a raw table dump), hand that data to the
+`delivery-report` skill's `program` route rather than re-formatting the markdown by hand:
+
+```text
+Skill("delivery-report")   # route: program; subject = the program/epic slug
+```
+
+Division of labor: **plan-status aggregates** (what's in-flight, what's stale, effective statuses);
+**delivery-report renders** the point-in-time HTML program view from that aggregation. This is
+recommended / on-request, never automatic — for a quick "what's in progress" answer, the markdown
+summary above is enough. Route policy: `delivery-report/references/route-policy.md`.
+
 ### Report structure (Route 1 markdown)
 
 1. **Summary** — counts by `effective_status` (propagated, not raw).
