@@ -1152,19 +1152,22 @@ describe('I. DI-1 §1/§3/§4 — chain-join canonicalization (case-fold + dated
   });
 
   test('demoteChain: a canonicalizing keyFn matches a chain entry that is a per-provider model id, not an alias', () => {
-    // 'ica/claude-sonnet-4-6[1m]' is a real registry providers[*].model_id, NOT a `models` key —
-    // the default identity keyFn (old behavior) would never match a canonical-key Set against
-    // it; the injected keyFn must.
-    const chain = ['ica/claude-sonnet-4-6[1m]', 'claude/claude-haiku-4-5'];
+    // 'ica/gemma-4-26b-a4b-it' is a real registry providers[*].model_id, NOT a `models` key (that
+    // key is 'gemma-4-26b') — the default identity keyFn (old behavior) would never match a
+    // canonical-key Set against it; the injected keyFn must. Was
+    // 'ica/claude-sonnet-4-6[1m]' until the [1m] retirement removed every [1m]-suffixed provider
+    // row from the real registry; swapped 2026-08-27 (node_01M123CYDEN9JNYKEBNQ1W95EP) to a
+    // currently-real pair with the same model_id != models-key shape.
+    const chain = ['ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5'];
     const keyFn = (entry) => {
       const idx = entry.indexOf('/');
       if (idx <= 0) return entry;
       const res = canonEntry(entry.slice(0, idx), entry.slice(idx + 1), realRegistry);
       return res.ok ? res.key : entry;
     };
-    const out = demoteChain(chain, new Set(['ica/claude-sonnet-4-6']), keyFn);
-    assert.deepEqual(out.chain, ['claude/claude-haiku-4-5', 'ica/claude-sonnet-4-6[1m]']);
-    assert.deepEqual(out.displacements, [{ entry: 'ica/claude-sonnet-4-6[1m]', from: 0, to: 1 }]);
+    const out = demoteChain(chain, new Set(['ica/gemma-4-26b']), keyFn);
+    assert.deepEqual(out.chain, ['claude/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it']);
+    assert.deepEqual(out.displacements, [{ entry: 'ica/gemma-4-26b-a4b-it', from: 0, to: 1 }]);
   });
 
   test('demoteChain: omitting keyFn preserves the EXACT original identity behavior (backward compatible)', () => {

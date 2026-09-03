@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "taxonomy_id": "aos.routing.task_class",
-  "taxonomy_version": "1.0.0",
+  "taxonomy_version": "1.1.0",
   "identifier_format": "lower_snake_case",
   "external_join_policy": "exact_canonical_only",
   "unknown_policy": "no_empirical_adjustment",
@@ -55,6 +55,21 @@
       "id": "video_generation",
       "status": "routable",
       "legacy_aliases": ["video-generation"]
+    },
+    {
+      "id": "review",
+      "status": "routable",
+      "legacy_aliases": []
+    },
+    {
+      "id": "adjudication",
+      "status": "routable",
+      "legacy_aliases": []
+    },
+    {
+      "id": "critique",
+      "status": "routable",
+      "legacy_aliases": []
     },
     {
       "id": "orchestration",
