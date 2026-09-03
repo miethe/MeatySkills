@@ -352,6 +352,44 @@ recorded and are explicitly marked inert for consumers that receive the topology
 
 ---
 
+### Tool-less Sol lane + the Sol→Terra→Sol sandwich (2026-08-27)
+
+`gpt-5.6-sol` reasons genuinely on the ICA ccx lane ONLY when NO tool call is made:
+`reasoning_tokens=0` the instant one is, on BOTH `/v1/chat/completions` and `/v1/responses`
+(measured 2026-08-26/27, `node_01M0Z7JP9YT7W15X94Z843AM9Y`). Rather than leaving the whole
+`ica/gpt-5.6-sol` instance `enabled: false`, the row now carries `tool_mode: "none"` and the
+resolver machine-enforces it — this is capability data the router acts on, not a comment.
+
+- **`needs_tools` resolver input.** Default `true` (conservative — the OPPOSITE polarity from
+  `requires_write`, which defaults `false`): an undeclared caller might attempt a tool call, and a
+  restricted instance would silently forfeit reasoning rather than error, so the safe default is
+  exclusion. Pass `needs_tools: false` to reach a `tool_mode: "none"` instance. The gate is
+  per-INSTANCE, not per-provider — `codex/gpt-5.6-sol` (native codex CLI) is unaffected; only the
+  ICA row is restricted.
+- **Real enforcement, not description-only.** When the chosen instance is restricted, the
+  resolver embeds `--allowedTools ""` directly into `invocation_template` (mirroring how
+  `--sandbox` is embedded for codex, not left to `scope_flags` alone) — see the `disallowedTools`
+  vs `--allowedTools` distinction earlier in this file (§ "`disallowedTools` is the membership
+  test, not an enforcement mechanism").
+- **Three new routable task classes** — `review`, `adjudication`, `critique` — chain to
+  `ica/gpt-5.6-sol` alone (no fallback: no other tool-less-capable Sol lane exists yet). These are
+  deliberately NEW ids, **not** a repoint of the existing `must_stay_primary` `verdict` /
+  `council_review` / `synthesis` classes, which stay exactly as protected as before. A caller
+  reaching these classes must still pass `needs_tools: false` — declaring the class alone does not
+  imply it.
+- **`resolveSandwich(baseInput, legOverrides)`** — exported alongside `resolve()`. Composes three
+  independently-valid `RoutingRecord`s for a task needing BOTH Sol's reasoning and a tool-calling
+  step: `plan` (Sol, tool-less) → `execute` (`gpt-5.6-terra`, tools required) → `review` (Sol,
+  tool-less). Pure composition over `resolve()` — introduces no new task_class, touches no
+  `must_stay_primary` membership, and makes no invocation calls itself (resolver.js has no
+  `child_process`/`exec` by design; the caller dispatches all three legs).
+
+Registry provenance: `node_01M122PQQ86YWJWDA9GT83PBWQ`. ⚠️ Deploy (`scripts/sync-to-global.sh`)
+is deliberately withheld on this change — the live `~/.claude/config/model-registry.yaml` carries
+an untracked delta ahead of every tracked source (`node_01M0X28GWQYPZFGH8TQC9V9DAB`, HOLD).
+
+---
+
 ## Audit entry schema v2 (`.claude/logs/routing-decisions.jsonl`)
 
 Two entry kinds, joined on `task_id`. The log stays append-only: a realization never mutates the

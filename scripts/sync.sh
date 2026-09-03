@@ -2,30 +2,29 @@
 #
 # sync.sh — manage the origin (public) <-> ibm (private) fork mirror.
 #
-# Model (see CLAUDE.md "Mirror & sync model" for the full picture):
-#   main      -> origin (github.com/miethe/MeatySkills, PUBLIC)   = canonical source
-#   ibm-main  -> ibm    (github.ibm.com/boxboat-presales/...,     = the DEPLOYED branch
-#                         agent-artifacts)                           (also on origin, PUBLIC)
+# ⚠️ RETIRED 2026-09-03 — THE SPLIT MODEL THIS SCRIPT IMPLEMENTS IS ABANDONED.
 #
-#   Down  (personal -> IBM): FULL & routine   -> `to-ibm`      (rebase + force-push)
-#   Up    (IBM -> personal): SELECTIVE & manual -> `to-personal <commit>...` (cherry-pick)
+#   Nick's decision: `origin/main` is now the SINGLE canonical line. `ibm-main` and the
+#   `ibm` remote are deliberately FROZEN — left stale, not synced, not deleted. Anything
+#   IBM-specific goes to the private repo `ibm-agentic-tools` instead of a branch of this
+#   public one. See CLAUDE.md § "The split model is retired".
 #
-# ⚠️ THE INVARIANT THIS SCRIPT WAS WRITTEN AGAINST IS FALSE. Measured 2026-08-10:
-#   "ibm-main == origin/main + a small stack of IBM-private commits" does not hold.
-#   `git merge-base --is-ancestor origin/main origin/ibm-main` -> FALSE; the branches
-#   have diverged 59/4, which is 510 files and +155k lines, and `meaty-agentic-ops/`
-#   (the engine, router, executors, and the declared upstream for other repos'
-#   deployed workflow copies) exists ONLY on ibm-main. `cmd_status` reports the
-#   divergence honestly as of this commit — see the two headings it prints.
+#   `to-ibm` and `to-personal` therefore REFUSE. They are kept as refusals rather than
+#   deleted because `to-ibm` ends in a live `git push --force-with-lease ibm ibm-main:main`
+#   (it was line 158): a deleted script is a script someone restores from git history and
+#   runs, while a refusal states the decision at the moment of the attempt. `status` still
+#   works — it is read-only, and measuring the frozen divergence stays useful.
 #
-# ⚠️ `[ibm-only]` IS NOT A PRIVACY BOUNDARY. `ibm-main` is pushed to `origin` too, and
+# ⚠️ `[ibm-only]` WAS NEVER A PRIVACY BOUNDARY. `ibm-main` is pushed to `origin` too, and
 #   `origin` is PUBLIC: `skills/ica-delegate/SKILL.md` is served from
-#   github.com/miethe/MeatySkills?ref=ibm-main, and PR #12 was merged into that branch
-#   on the public remote. Treat the prefix as "belongs on the deploy branch", never as
-#   "cannot be read by the public" — and do not add a secret to an `[ibm-only]` commit
-#   expecting the branch to contain it. Tracked: node_01KZP5880QKRFEDKWDWNP07ZV5.
+#   github.com/miethe/MeatySkills?ref=ibm-main, and PR #12 was merged into that branch on
+#   the public remote. This stays true after the retirement — freezing the branch does not
+#   unpublish it. Never read the prefix as "cannot be read by the public".
 #
-# This file lives on ibm-main ONLY. Never cherry-pick it up to main/origin.
+# ⚠️ This file's own former claim — "lives on ibm-main ONLY, never cherry-pick it up to
+#   main" — was already FALSE before this retirement: 539def0 (PR #37) swept it onto
+#   `main`, where it has been ever since. The rule outlived nothing; it was simply not
+#   enforced by anything. Same for CLAUDE.md.
 
 set -euo pipefail
 
@@ -117,6 +116,12 @@ cmd_status() {
 # Down: bring everything from origin/main into ibm-main, keeping IBM-private
 # commits stacked on top, then publish to the IBM remote.
 cmd_to_ibm() {
+  die "RETIRED: the public/IBM split model was abandoned 2026-09-03. \`origin/main\` is the
+    single canonical line; \`ibm-main\` and the \`ibm\` remote are frozen on purpose, and
+    IBM-specific work belongs in the private \`ibm-agentic-tools\` repo. This verb used to
+    rebase ibm-main onto origin/main and FORCE-PUSH to ibm/main — doing that now would resurrect the retired
+    model. Read CLAUDE.md § 'The split model is retired' before overriding; if you
+    genuinely need it, run the git commands by hand and say why in the commit."
   require_clean_tree
   require_branch "$MAIN_BRANCH"
   require_branch "$IBM_BRANCH"
@@ -162,6 +167,12 @@ EOF
 # Up: selectively cherry-pick generic commit(s) from ibm-main onto main and
 # publish to the public origin. Never use this for [ibm-only] commits.
 cmd_to_personal() {
+  die "RETIRED: the public/IBM split model was abandoned 2026-09-03. \`origin/main\` is the
+    single canonical line; \`ibm-main\` and the \`ibm\` remote are frozen on purpose, and
+    IBM-specific work belongs in the private \`ibm-agentic-tools\` repo. This verb used to
+    cherry-pick commits from ibm-main onto main and push to origin — doing that now would resurrect the retired
+    model. Read CLAUDE.md § 'The split model is retired' before overriding; if you
+    genuinely need it, run the git commands by hand and say why in the commit."
   [ "$#" -ge 1 ] || die "usage: sync.sh to-personal <commit>... (e.g. a SHA from \`sync.sh status\`)"
   require_clean_tree
   require_branch "$MAIN_BRANCH"
@@ -193,28 +204,23 @@ cmd_to_personal() {
 
 usage() {
   cat <<EOF
-sync.sh — manage the origin (public) <-> ibm (private) mirror
+sync.sh — RETIRED. The origin(public) <-> ibm(private) split model was abandoned 2026-09-03.
 
 USAGE
-  scripts/sync.sh status                 Check the superset invariant, then list the
-                                         divergence split into [ibm-only] vs generic-stranded
-  scripts/sync.sh to-ibm                 Sync ALL of origin/main down into ibm-main
-                                         (rebase IBM-private commits on top + force-push)
-  scripts/sync.sh to-personal <commit>... Cherry-pick generic commit(s) up to main/origin
+  scripts/sync.sh status                 (still works, read-only) Measure the now-FROZEN
+                                         divergence between main and ibm-main
+  scripts/sync.sh to-ibm                 REFUSES — would force-push to the frozen ibm remote
+  scripts/sync.sh to-personal <commit>.. REFUSES — reconcile onto main directly instead
 
-FLOW
-  origin (PUBLIC)  = canonical source of truth   (branch: main)
-  ibm              = the branch deployed from     (branch: ibm-main)
+WHAT REPLACED IT
+  \`origin/main\` is the single canonical line. \`ibm-main\` and the \`ibm\` remote are
+  deliberately frozen — stale by decision, not by neglect. IBM-specific content goes to the
+  private \`ibm-agentic-tools\` repo, not to a branch of this public one.
 
-  Down  personal -> IBM : full & routine    (to-ibm)
-  Up    IBM -> personal : selective & manual (to-personal)
+  ⚠️ Freezing did NOT unpublish anything: \`ibm-main\` is on the PUBLIC origin and stays
+     readable. \`[ibm-only]\` never was a privacy boundary.
 
-  ⚠️ `ibm-main` is ALSO pushed to `origin`, which is PUBLIC — so `[ibm-only]` means
-     "belongs on the deploy branch", NOT "private". See the header comment.
-  ⚠️ The superset invariant is currently BROKEN; `status` says so explicitly rather
-     than printing the whole divergence as though it were all IBM-private.
-
-See CLAUDE.md for conventions ([ibm-only] commit prefix, conflict handling).
+See CLAUDE.md § "The split model is retired".
 EOF
 }
 
