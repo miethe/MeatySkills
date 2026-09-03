@@ -1,6 +1,6 @@
 ---
 name: debugging
-description: "Debug and remediate bugs with severity-gated workflows. Progressive disclosure from quick triage through comprehensive remediation planning. Integrates with planning skill for complex fixes and artifact-tracking for progress. Use when running /fix:debug or /fix:bugfix-commit commands."
+description: "Debug and remediate bugs with severity-gated workflows. Progressive disclosure from quick triage through comprehensive remediation planning. Integrates with planning skill for complex fixes and artifact-tracking for progress. Also provides a post-incident retrospective mode: classifies post-merge gaps against a failure taxonomy and emits a patch-plan addendum. Use when running /fix:debug or /fix:bugfix-commit commands. /fix:debug auto-invokes the retrospective workflow when the prompt contains: 'Codex had to patch', 'gaps after merge', 'we missed', or 'regression after phase'."
 ---
 
 # Debug Skill
@@ -14,13 +14,18 @@ Severity-gated debugging and remediation with token-efficient progressive disclo
 | Triage | Investigation only, no fix needed yet | [modes/triage.md](./modes/triage.md) |
 | Quick Fix | Simple/Moderate bugs (1-5 files, clear root cause) | [modes/quick-fix.md](./modes/quick-fix.md) |
 | Comprehensive | Complex/Critical bugs (cross-layer, architectural, unclear cause) | [modes/comprehensive-remediation.md](./modes/comprehensive-remediation.md) |
+| Post-Incident Retrospective | Post-merge gaps, regressions that shipped despite being in scope | [modes/post-incident-retrospective.md](./modes/post-incident-retrospective.md) |
 
 ## Mode Selection
 
 Assess severity first, then route:
 
 ```
-Bug reported
+Bug / incident reported
+  ├─ Prompt contains post-incident phrase? → Post-Incident Retrospective (auto via /fix:debug)
+  │     Trigger phrases (case-insensitive substring):
+  │       "codex had to patch" | "gaps after merge" | "we missed" | "regression after phase"
+  │
   ├─ --triage-only flag? → Triage mode (stop after assessment)
   ├─ --severity provided? → Use directly
   └─ No severity? → Run inline assessment (see references/severity-assessment.md)
