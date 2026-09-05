@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "d5c6455bbe8b43f41ed9d656967901afc08b3f3a5f73f0135205197db5db8aca",
+  "_yaml_sha256": "1216679012222579e5dadf9b3be5c39a838e2255954abe86fcbe06ccdc851f36",
   "version": 1,
   "updated": "2026-08-27",
   "routing_policy": {
