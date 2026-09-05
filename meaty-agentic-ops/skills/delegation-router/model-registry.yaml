@@ -29,6 +29,14 @@
 #   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
+# ICA ROUTING RESTATEMENT — 2026-08-28 (documentation-only; no chain/score change here):
+#   Prefer ccx / CCx1 (the one focus key for now) for generally eligible ICA work. CCx1 is approximately 2,000 credits/week
+#   (~$1,000/week in API credits) plus the independent free-model list above; the old beta keys
+#   (CC1-CC8, BB1) are retained for that fully-free unlimited list, not as the general-routing
+#   default. `5x` is renamed `1x` as of this date wherever that earlier subscription-key label
+#   appears; this tracked registry has no `subscription-5x` row to rename. See MODEL-ROUTING.md
+#   Updated 2026-08-28 for the economic order and §1.4 for eligibility.
+#
 # ICA 1M-CONTEXT PREFERENCE — RETIRED 2026-08-26 (was: "always prefer `[1m]`")
 #   ⚠️ INVERTED, not softened. Measured 2026-08-26 across both gateways (beta + ccx)
 #   and all 11 keys: every `[1m]`/dated model id now 403s on EVERY transport,
@@ -560,6 +568,10 @@ models:
   gpt-5.6-terra:
     family: openai
     class: codex
+    # ROUTING NOTE (2026-08-28, node_01M0B75BBDB158N1VBSKRV2ZJY, completed): Codex generates real
+    # images natively via its bundled imagegen skill (gpt-image-2), no flag needed — live-verified
+    # 2026-08-18. Route image-gen + SVG to Codex/gpt-5.6 ONLY (Gemini/Nano-Banana retired from both
+    # chains, MODEL-ROUTING.md). No schema field yet for this — comment-only until one is added.
     descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation]
