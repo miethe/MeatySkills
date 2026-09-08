@@ -35,8 +35,16 @@
 # Guard: master switch (case-insensitive: 1, true, yes)
 # ---------------------------------------------------------------------------
 _sync_enabled() {
-    local val="${INTENTTREE_SDLC_SYNC:-}"
-    case "${val,,}" in
+    # NOTE: `${val,,}` (bash 4+ lowercasing) is deliberately NOT used here — macOS ships
+    # /bin/bash 3.2 as the default `bash` on PATH, where `${val,,}` is a "bad substitution"
+    # runtime error. That error does not merely fail this function: it aborts the enclosing
+    # `if ! _sync_enabled; then exit 0; fi` statement entirely and execution falls through to
+    # the rest of the script — silently converting this guard into an always-on no-op on any
+    # box running the stock macOS bash, regardless of INTENTTREE_SDLC_SYNC. Measured
+    # 2026-09-05, node_01M1S5J1V57K0232H2FDSQ5T2F. `tr` is portable to bash 3.2+.
+    local val
+    val="$(printf '%s' "${INTENTTREE_SDLC_SYNC:-}" | tr '[:upper:]' '[:lower:]')"
+    case "$val" in
         1|true|yes) return 0 ;;
         *) return 1 ;;
     esac
