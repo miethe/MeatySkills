@@ -4,7 +4,8 @@ description: >-
   Per-model-family usage playbooks — how to get the best out of a model once it has already been
   chosen (by delegation-router's RoutingRecord, a plan/PRD explicit assignment, or a
   routing_policy chain). Covers exact invocation lane/model_id, effort and context guidance,
-  known gotchas, and anti-patterns for every routable model (Claude, GPT/Codex, Gemini, ICA
+  known gotchas, and anti-patterns for every routable model (Claude, GPT/Codex including native
+  image_gen.imagegen for raster assets, Gemini, ICA
   gateway lanes, free open models). Companion to delegation-router: that skill decides
   WHICH/WHERE; this skill says HOW. Use immediately after a model is named, before invoking it,
   when unsure of the exact model_id/effort/lane, or when hand-assigning a model in a plan and
@@ -53,13 +54,13 @@ progressive-disclosure design and burns context on families you aren't using thi
 | Model key(s) (registry `models:`) | Route file |
 |---|---|
 | `claude-opus-5`, `claude-fable-5`, `claude-sonnet-5`, `claude-sonnet-4-6`, `claude-sonnet-4-5`, `claude-haiku-4-5`, `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6` | [`routes/anthropic-claude.md`](routes/anthropic-claude.md) |
-| `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5-gus`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4`, `gpt-5.1`, `gpt-4o` | [`routes/openai-gpt.md`](routes/openai-gpt.md) |
+| `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-terra-dzus`, `gpt-5.6-luna`, `gpt-5.5-gus`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4`, `gpt-5.1`, `gpt-4o` — including image gen, mood boards, mock-up renders, raster illustrations, and PNG assets | [`routes/openai-gpt.md`](routes/openai-gpt.md) |
 | `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.1-pro-preview`, `gemini-3.1-pro-preview-ica`, `gemini-3.1-flash-lite` | [`routes/google-gemini.md`](routes/google-gemini.md) |
 | `gemma-4-26b`, `llama-4-maverick`, `granite-4-small`, `bob-local` | [`routes/open-models.md`](routes/open-models.md) |
 | any model where the chosen `provider` is `ica` (in addition to its family route above) | [`routes/ica-lanes.md`](routes/ica-lanes.md) |
 
 **Out of scope (no route file — consult `model-registry.yaml`'s `descriptor` directly):**
-`nano-banana-2`/`nano-banana-pro` (image gen, see `nano-banana`/`nano-banana-pro` skills),
+`nano-banana-2`/`nano-banana-pro` (Gemini fallback image gen, see `nano-banana`/`nano-banana-pro` skills),
 `sora-2` (video gen, see `sora` skill). Single-purpose generation models with no per-effort/lane
 nuance worth a route file — the registry carries no `playbook_ref` for either.
 

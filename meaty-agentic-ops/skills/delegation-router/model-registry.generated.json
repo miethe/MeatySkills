@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "1216679012222579e5dadf9b3be5c39a838e2255954abe86fcbe06ccdc851f36",
+  "_yaml_sha256": "8d9dd2bff675770a314dc5b2fcf499432683dba83d0f7371c4a159ca72784422",
   "version": 1,
   "updated": "2026-08-27",
   "routing_policy": {
@@ -59,6 +59,8 @@
     },
     "image_generation": {
       "chain": [
+        "codex/gpt-5.6-terra",
+        "ica/gpt-5.6-terra-dzus",
         "nano-banana/nano-banana-2",
         "nano-banana/nano-banana-pro"
       ],
@@ -1138,10 +1140,17 @@
         "code-review",
         "ac-validation",
         "debug-escalation",
-        "implementation"
+        "implementation",
+        "image-generation",
+        "raster-asset",
+        "mock-up-render",
+        "mood-board",
+        "png-asset"
       ],
       "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-terra",
-      "tools": [],
+      "tools": [
+        "imagegen"
+      ],
       "related_skills": [
         "codex"
       ],
@@ -1210,10 +1219,14 @@
         "code-review",
         "ac-validation",
         "implementation",
-        "second-opinion"
+        "second-opinion",
+        "image-generation",
+        "raster-asset"
       ],
       "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-5.6-terra-dzus",
-      "tools": [],
+      "tools": [
+        "imagegen"
+      ],
       "related_skills": [
         "codex"
       ],
@@ -1501,7 +1514,7 @@
     "nano-banana-2": {
       "family": "google",
       "class": "image",
-      "descriptor": "Nano Banana 2 (Gemini 3.1 Flash Image). Fast, cheap (~$0.067/1K). Default image generation — UI mockups, sprites, assets.",
+      "descriptor": "Nano Banana 2 (Gemini 3.1 Flash Image). Fast, cheap (~$0.067/1K). Gemini fallback for image generation — UI mockups, sprites, and assets after native Codex or an already-selected ICA GPT shim is unavailable.",
       "when_to_use": [
         "image-generation",
         "ui-mockup",
@@ -1530,7 +1543,7 @@
     "nano-banana-pro": {
       "family": "google",
       "class": "image",
-      "descriptor": "Nano Banana Pro (Gemini 3 Pro Image). Highest quality (~$0.134/1K). Final assets; 1K/2K/4K, image-to-image edits.",
+      "descriptor": "Nano Banana Pro (Gemini 3 Pro Image). Gemini fallback for high-quality final assets, 1K/2K/4K, and image-to-image edits when native Codex and an already-selected ICA GPT shim are unavailable.",
       "when_to_use": [
         "image-generation",
         "final-asset",

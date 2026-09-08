@@ -194,9 +194,13 @@ use_cases:
     status: unmeasured
 
   image-generation:
-    description: "Generating or editing raster images — UI mockups, sprites, draft assets, and final high-quality visuals."
+    description: "Generating or editing raster images, mood boards, mock-up renders, illustrations, PNG assets, sprites, and final high-quality visuals."
     source_task_classes: [image_generation]
     status: unmeasured
+    chain_applied: ["codex/gpt-5.6-terra", "ica/gpt-5.6-terra-dzus", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"]
+    chain_recommendation: "Use Codex native image_gen.imagegen first; use the ICA GPT shim only when already on ICA; retain Gemini/Nano Banana as fallback."
+    caveats:
+      - "This routing order is a capability/invocation decision verified from the installed Codex imagegen skill, not a comparative quality ranking; no benchmark score is implied."
 
   svg-generation:
     description: "Generating vector graphics/SVG and lightweight animations."

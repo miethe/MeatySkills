@@ -3,6 +3,18 @@
 Loaded only when the routed model is a GPT-family member. Source: `model-registry.yaml`
 `models:` block (gpt-5.6 line verified against codex-cli v0.144.0-alpha.4).
 
+## Image generation / raster assets
+
+- **When to pick:** image gen, mood boards, mock-up renders, raster images, illustrations, and
+  PNG assets. This is the first route for the `image_generation` task class.
+- **Invocation:** use Codex's native built-in `image_gen.imagegen` tool (the installed `imagegen`
+  skill's preferred invocation), not a guessed `codex exec` flag. It generates and edits raster
+  images without an API key. When the work is already on ICA, use
+  `ica/gpt-5.6-terra-dzus` through `~/ica-codex.sh`; otherwise do not move work to ICA just for
+  this. Gemini/Nano Banana is the fallback chain after both Codex paths.
+- **Anti-pattern:** do not treat Gemini image generation as the default lane, and do not use this
+  raster rule to select an SVG/vector/code-native implementation.
+
 ## gpt-5.6-sol
 
 - **When to pick:** FRONTIER SOTA — hardest reasoning / deep problem analysis, the escalation
@@ -32,7 +44,7 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 ## gpt-5.6-terra
 
 - **When to pick:** DEFAULT codex workhorse — agentic coding, code-review, ac-validation,
-  debug-escalation, implementation. This is the `codex/*` entry in the `code_review` routing
+  debug-escalation, implementation, and primary raster image generation. This is the `codex/*` entry in the `code_review` routing
   chain. Grounded 2026-07-28, conf 0.6: ranked **#1** for `second_opinion` — best balance of
   capability (AA Index 46-55) and genuine cross-family diversity: the current `second_opinion`
   chain has **zero** GPT-line legs despite `web_research` and `svg_generation` both being 100%
@@ -63,7 +75,7 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 
 - **When to pick:** the **free-to-us agentic Codex lane** on gpt-5.6-terra — identical model, $0 to
   the metered budget (ICA shared pool). Prefer for cost-sensitive agentic coding, code-review,
-  ac-validation, implementation, second-opinion when Codex is the executor. Escalate to metered
+  ac-validation, implementation, second-opinion, and raster image generation only when already on ICA. Escalate to metered
   `codex/gpt-5.6-terra` or `-sol` if the effort caveat or shim reliability bites.
 - **Invocation lane:** `ica/gpt-5.6-terra-dzus`. The delegation-router emits
   `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus "…"`; the wrapper auto-starts a local

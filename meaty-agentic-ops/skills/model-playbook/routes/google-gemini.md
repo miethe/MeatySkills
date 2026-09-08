@@ -83,15 +83,16 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 ## Native vs ICA — the split that matters
 
 - **Native gemini-cli:** Google Search grounding (Gemini 3+ only), 1M context without a suffix,
-  Nano Banana image-gen, SVG/multimodal input. Reach for this **only** when you need a capability
-  the ICA proxy lacks.
+  and SVG/multimodal input. For raster image gen, mood boards, mock-up renders, illustrations, or
+  PNG assets, use Codex native `image_gen.imagegen` first; Gemini/Nano Banana is fallback only.
 - **ICA gateway:** cheaper-feeling (shared pool) but **not** grounded and **not** free
   (`allowance: shared_token_pool`). ⚠️ **Superseded 2026-08-26:** the old "needs `[1m]` to unlock
   1M, plain caps at 200k" rule is inverted — `[1m]` 403s on every transport now, and the **bare**
   id carries native/large context for free (measured up to 950,002 prompt tokens on
   `gemini-3.7-flash`, ccx).
 - Prefer ICA-first for non-grounded cross-family second opinions; reach for native only to close
-  a grounding/image-gen/SVG capability gap.
+  a grounding/SVG/multimodal capability gap. Do not leave an ICA workflow solely to get Gemini
+  image generation: the `ica/gpt-5.6-terra-dzus` shim is the second image lane.
 - Auth: `GEMINI_API_KEY` (AI Studio, metered) in `~/.config/aos/secrets.env`;
   `~/.gemini/settings.json` `selectedType=gemini-api-key`. `IneligibleTierError` means the
   settings reverted to `oauth-personal` — fix the settings, don't re-OAuth.
@@ -99,6 +100,8 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 ## Do Not Say
 
 - Do not say Gemini on ICA gets Search grounding — it doesn't; grounding is native-key-only.
+- Do not say Gemini/Nano Banana is the primary image-generation lane. Codex native
+  `image_gen.imagegen` is first; the ICA GPT shim is second only when already on ICA.
 - ⚠️ **Do not say the plain (non-`[1m]`) ICA Gemini id caps at 200k — RETRACTED 2026-08-26.**
   Measured: bare `gemini-3.7-flash` accepted 950,002 prompt tokens on ccx. The bare id now carries
   native context; it is the `[1m]` id that is dead (403s on every transport).

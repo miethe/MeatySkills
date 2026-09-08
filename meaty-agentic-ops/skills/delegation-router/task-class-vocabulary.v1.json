@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "taxonomy_id": "aos.routing.task_class",
-  "taxonomy_version": "1.1.0",
+  "taxonomy_version": "1.2.0",
   "identifier_format": "lower_snake_case",
   "external_join_policy": "exact_canonical_only",
   "unknown_policy": "no_empirical_adjustment",
@@ -44,7 +44,7 @@
     {
       "id": "image_generation",
       "status": "routable",
-      "legacy_aliases": ["image-generation"]
+      "legacy_aliases": ["image-generation", "raster_asset", "raster-asset", "mock-up-render", "mood-board", "png-asset"]
     },
     {
       "id": "svg_generation",
