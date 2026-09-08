@@ -4,8 +4,10 @@ description: >-
   Route a (model, provider, effort, profile, task_class) tuple to an immutable RoutingRecord
   before any per-provider agentType is instantiated. Use when deciding WHERE to delegate
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
-  determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
-  platform skill executes it.
+  determinism, and MUST-stay-primary boundaries. For image gen, mood boards, mock-up renders,
+  raster images, illustrations, and PNG assets, it resolves native Codex first, the ICA GPT shim
+  only when already on ICA, and Gemini/Nano Banana as fallback. Emits a routing decision only;
+  the chosen platform skill executes it.
 version: "3.4"
 app_version: "2026-06-09"
 updated: 2026-08-11
@@ -27,6 +29,7 @@ rules, and MUST-stay invariants see `./SPEC.md`. For registry and bootstrap deta
 - Deciding where to run a delegated leg before instantiating a per-provider agentType.
 - A workflow stage needs a provider/model resolution honoring cost, capability, and determinism.
 - Building or auditing the provider for a task-class (exploration, mechanical, second-opinion, etc.).
+- Routing image gen, mood boards, mock-up renders, raster images, illustrations, or PNG assets.
 - Cost-shifting free-eligible work (Haiku-class / open models) to ICA free-tier.
 
 ## When NOT To Use
@@ -49,7 +52,7 @@ Repo-verified surfaces only:
 | Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
 | RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
-| Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.0.0) |
+| Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.2.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
 | write authority | Pass **`requires_write: true`** for any leg whose deliverable is a FILE. It excludes write-incapable agent types (`gemini-executor`) from candidates **and** the fallback chain. Default `false`. ⚠️ `task_class` cannot express this — `implementation`/`documentation`/`mechanical` are all routable, and three authoring legs once produced zero files for ~610k tokens because nothing declared it (SPEC §4c). It is **not** an offload ban: `ica-executor` is write-capable as of 2026-08-17 and still gets write legs. |
