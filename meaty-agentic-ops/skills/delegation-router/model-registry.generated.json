@@ -1,9 +1,27 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "d5c6455bbe8b43f41ed9d656967901afc08b3f3a5f73f0135205197db5db8aca",
+  "_yaml_sha256": "f78fdbc1df9207b2e44adde955d00cd9800f743ba115704ceecc83a469fa4c82",
   "version": 1,
-  "updated": "2026-08-27",
+  "updated": "2026-09-09",
+  "routing_attributes": {
+    "health": {
+      "statuses": [
+        "available",
+        "degraded",
+        "unavailable",
+        "unknown"
+      ],
+      "selection_rule": "Health is a hard gate before advisory scores: status=unavailable or quota_limit=0 requires enabled=false. Missing health is unknown, never evidence of availability."
+    },
+    "write_capability": {
+      "codex_sandbox": {
+        "read_class": "read_only",
+        "write_class": "workspace_write",
+        "write_contract": "A write artifact requires requires_write=true and an explicit write-class invocation; a read-class Codex leg cannot produce its own file artifact."
+      }
+    }
+  },
   "routing_policy": {
     "exploration": {
       "chain": [
@@ -66,7 +84,7 @@
     },
     "svg_generation": {
       "chain": [
-        "claude/claude-fable-5",
+        "claude/claude-fable-5-1",
         "ica/gemini-3.1-pro-preview",
         "gemini/gemini-3.5-flash",
         "gemini/gemini-3.6-flash"
@@ -94,6 +112,13 @@
     "critique": {
       "chain": [
         "ica/gpt-5.6-sol"
+      ],
+      "enabled": true
+    },
+    "advanced_sol": {
+      "chain": [
+        "codex/gpt-6-astra",
+        "claude/claude-fable-5-1"
       ],
       "enabled": true
     },
@@ -256,14 +281,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "claude-opus-4-7",
-          "cost_tier": "premium",
-          "allowance": "shared_token_pool",
-          "enabled": false,
-          "priority": 2
         }
       ]
     },
@@ -302,14 +319,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "claude-opus-4-6",
-          "cost_tier": "premium",
-          "allowance": "shared_token_pool",
-          "enabled": false,
-          "priority": 2
         }
       ]
     },
@@ -370,15 +379,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "claude-sonnet-5",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 3,
-          "cost_score": 8
         }
       ]
     },
@@ -429,14 +429,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "claude-sonnet-4-6",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 3
         }
       ]
     },
@@ -479,14 +471,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "claude-sonnet-4-5",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 2
         }
       ]
     },
@@ -537,10 +521,70 @@
         }
       ]
     },
+    "claude-fable-5-1": {
+      "family": "claude",
+      "class": "fable",
+      "descriptor": "Claude Fable 5.1 — the widely released Mythos-level frontier model for demanding reasoning and long-horizon agentic work. Anthropic recommends starting most work on Opus 5 and escalating when Opus at high effort falls short; this registry additionally permits explicit advanced_sol whole-node contracts and Nick's deliberately selected interactive register. Forced tool choice returns an error, and thinking blocks are prefix-bound/forward-only, so append history exactly rather than editing prior turns.",
+      "scores": {
+        "cost": 3,
+        "intelligence": 9,
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "when_to_use": [
+        "advanced-sol",
+        "long-horizon-autonomy",
+        "deep-reasoning",
+        "planning",
+        "architecture",
+        "interactive-principal-session"
+      ],
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "tool_choice": "auto_only",
+      "thinking_history": "prefix_bound_forward_only",
+      "related_skills": [],
+      "max_context": 1000000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 10,
+        "output_per_mtok_usd": 50,
+        "cache_read_per_mtok_usd": 0.25
+      },
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_effort": "high",
+      "sampling": "deterministic",
+      "status": "active",
+      "selection_posture": "explicit_or_advanced_sol_contract",
+      "providers": [
+        {
+          "provider": "claude",
+          "model_id": "claude-fable-5-1",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "health": {
+            "status": "available",
+            "checked_at": "2026-09-09",
+            "evidence": "Anthropic model overview: Active (latest)"
+          }
+        }
+      ]
+    },
     "claude-fable-5": {
       "family": "claude",
       "class": "fable",
-      "descriptor": "Claude Fable 5 (Mythos-class frontier, released 2026-06-09). SOTA agentic coding (SWE-bench Verified 95%, SWE-bench Pro 80%) and long-horizon reasoning; lead over Opus 4.8 grows with task length/complexity. $10/$50 per M = 2× Opus 4.8 — explicit opt-in only, never auto-routed. 1M context, 128K max output.",
+      "descriptor": "Claude Fable 5.0 (Mythos-class frontier, released 2026-06-09). Superseded by claude-fable-5-1 but retained as explicitly selectable compatibility inventory; never auto-routed.",
       "scores": {
         "cost": 1,
         "intelligence": 10,
@@ -559,6 +603,7 @@
         "planning"
       ],
       "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-fable-5",
+      "superseded_by": "claude-fable-5-1",
       "tools": [
         "agent_tool",
         "task_tool",
@@ -864,14 +909,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "gemini-3.1-pro-preview",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 2
         }
       ]
     },
@@ -911,8 +948,14 @@
           "model_id": "gemini-3.6-flash",
           "cost_tier": "standard",
           "allowance": "billed",
-          "enabled": true,
-          "priority": 1
+          "enabled": false,
+          "priority": 1,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-09-09",
+            "quota_limit": 0,
+            "evidence": "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune"
+          }
         },
         {
           "provider": "ica",
@@ -926,15 +969,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "gemini-3.6-flash",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 3,
-          "cost_score": 8
         }
       ]
     },
@@ -974,8 +1008,14 @@
           "model_id": "gemini-3.5-flash",
           "cost_tier": "standard",
           "allowance": "billed",
-          "enabled": true,
-          "priority": 1
+          "enabled": false,
+          "priority": 1,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-09-09",
+            "quota_limit": 0,
+            "evidence": "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune"
+          }
         },
         {
           "provider": "ica",
@@ -989,15 +1029,6 @@
             "one_million_context"
           ],
           "max_context": 1000000
-        },
-        {
-          "provider": "ica",
-          "model_id": "gemini-3.5-flash",
-          "cost_tier": "standard",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 3,
-          "cost_score": 8
         }
       ]
     },
@@ -1035,8 +1066,14 @@
           "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "billed",
-          "enabled": true,
-          "priority": 1
+          "enabled": false,
+          "priority": 1,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-09-09",
+            "quota_limit": 0,
+            "evidence": "native lane returned hard 429 with limit:0 in the SOTA retune"
+          }
         }
       ]
     },
@@ -1070,8 +1107,75 @@
           "model_id": "gemini-3.1-flash-lite",
           "cost_tier": "free",
           "allowance": "billed",
+          "enabled": false,
+          "priority": 1,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-09-09",
+            "quota_limit": 0,
+            "evidence": "same native AI Studio account-level limit:0 lane"
+          }
+        }
+      ]
+    },
+    "gpt-6-astra": {
+      "family": "openai",
+      "class": "codex",
+      "descriptor": "OpenAI GPT-6 Astra via the personal Codex account. Frontier escalation only, or selected up front by an explicit itt advanced_sol whole-node execution contract; never the default build/review lane. Default effort is medium. High is permitted only when explicitly requested; none is unsupported.",
+      "scores": {
+        "cost": 2,
+        "intelligence": 10,
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "when_to_use": [
+        "advanced-sol",
+        "frontier-escalation",
+        "long-horizon-judgment",
+        "doctrine-review",
+        "adversarial-review",
+        "many-constraint-design",
+        "terminal-automation"
+      ],
+      "tools": [
+        "imagegen"
+      ],
+      "related_skills": [
+        "codex"
+      ],
+      "max_context": 1050000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 10,
+        "output_per_mtok_usd": 50
+      },
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_effort": "medium",
+      "high_effort_requires": "explicit_request",
+      "sampling": "deterministic",
+      "status": "active",
+      "selection_posture": "escalation_or_explicit_itt_advanced_sol_contract",
+      "providers": [
+        {
+          "provider": "codex",
+          "model_id": "gpt-6-astra",
+          "cost_tier": "premium",
+          "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "account_relationship": "personal",
+          "health": {
+            "status": "available",
+            "checked_at": "2026-09-09",
+            "evidence": "Codex CLI 0.153.0+ official availability; local 0.153.4 measured"
+          },
+          "write_capability": "codex_sandbox"
         }
       ]
     },
@@ -1107,7 +1211,8 @@
           "cost_tier": "premium",
           "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "write_capability": "codex_sandbox"
         },
         {
           "provider": "ica",
@@ -1155,7 +1260,8 @@
           "cost_tier": "premium",
           "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "write_capability": "codex_sandbox"
         }
       ]
     },
@@ -1191,7 +1297,8 @@
           "cost_tier": "standard",
           "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "write_capability": "codex_sandbox"
         }
       ]
     },
@@ -1299,7 +1406,8 @@
           "cost_tier": "premium",
           "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "write_capability": "codex_sandbox"
         }
       ]
     },
@@ -1334,7 +1442,8 @@
           "cost_tier": "premium",
           "allowance": "billed",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "write_capability": "codex_sandbox"
         }
       ]
     },

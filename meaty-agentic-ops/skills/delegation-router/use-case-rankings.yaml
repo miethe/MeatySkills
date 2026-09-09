@@ -41,7 +41,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-08-09   # agentic-coding grounded by execution pilot (n=3, conf 0.5) — the first entry here grounded by RUNNING the work rather than by a web-evidence sweep, so provenance.rf_run_id is deliberately null. Chain unchanged. Prior 2026-07-28: second-opinion + svg-generation re-ranked from rf web-evidence pilots (conf 0.6).
+updated: 2026-09-09   # Registry posture sync: Fable 5.1 replaces 5.0 in the live SVG chain, advanced-sol is an explicit unmeasured contract class, and collapsed ICA ids use their surviving bare-id rows. Prior evidence/ranks remain attached to the exact models measured.
 
 composition_rule:
   form: "effective_rank(model, use_case) = blend(base_scorecard, grounded_rank, confidence, freshness_decay)"
@@ -94,7 +94,7 @@ use_cases:
       - { model: llama-4-maverick, rank: 20, score_hint: 2.5, rationale: "NOTABLE EXCLUSION — cross-family (Meta) but AA Intelligence Index only 14, the lowest measured here; LMArena history is contested (Meta's non-public 'experimental chat' variant vs ~32nd-place public weights). Adds noise more than adversarial signal; drop despite being the current chain's only non-Google/non-Claude leg." }
       - { model: gemini-3.5-flash, rank: 15, score_hint: 4.2, rationale: "NOTABLE EXCLUSION — redundant with gemini-3.6-flash (same family, older, already the demoted fallback in the current chain note); low marginal diversity or capability value." }
       - { model: granite-4-small, rank: 19, score_hint: 3,   rationale: "NOTABLE EXCLUSION — no task-relevant public benchmark evidence surfaced this pass; would add genuine 4th-family diversity but capability for adversarial-critique work is unproven, not confidently ranked." }
-    chain_applied: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash[1m]", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"]
+    chain_applied: ["codex/gpt-5.6-terra", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"]
     caveats:
       - "gpt-5.6-sol is ESCALATION-ONLY, not a default round-robin leg — invoke on a terra-tier disagreement or after ~2 flagged misses at terra tier, per org escalation doctrine; it is deliberately absent from chain_applied above."
       - "llama-4-maverick and gemini-3.5-flash were DROPPED from the prior chain — Maverick for weak + trust-compromised benchmark standing, 3.5-flash for redundancy with 3.6-flash already present in this and every other Gemini-saturated chain."
@@ -227,8 +227,9 @@ use_cases:
       - { model: gemini-3.6-flash, rank: 20, score_hint: 5.3, rationale: "NOTABLE EXCLUSION — currently the chain's leg-1. Multiple independent reviews explicitly flag SVG generation, layout, and spatial reasoning as a weakness of this model, and report it does not consistently outperform 3.5-flash on visual/design quality despite being newer — directly undercuts the 2026-07-27 'newer flash = better' promotion rationale." }
       - { model: gemini-3.7-flash, rank: 18, score_hint: 5.8, rationale: "MEASURED 2026-08-26 (n=3 execution pilot on the ICA ccx gateway, node_01M0Z7K4QJXD2EWK0BPKD98QVG — a different method than this ranking's rf web-evidence sweep, see caveat below). Given the same 3 SVG prompts (line-chart icon, 3-box arrow diagram, gear icon) on the same transport as gemini-3.6-flash: both models produced valid, well-formed, on-brief SVG once given a large enough max_tokens budget, but 3.7-flash needed markedly fewer output tokens to complete (e.g. the gear icon: 3.6-flash needed a 10,000-token budget and still wrapped its output in a stray ```xml fence despite an explicit 'no markdown fences' instruction; 3.7-flash completed cleanly in 4,471 tokens with no fence). Ranked above 3.6-flash on measured token-efficiency and instruction-adherence; this pilot found no evidence either way on the deeper visual-taste weakness the sweep-derived evidence below flags for 3.6-flash, so do not read this rank as refuting that concern for the family generally." }
       - { model: nano-banana-pro, rank: 28, score_hint: 1.5, rationale: "NOTABLE EXCLUSION — not applicable to this use case. A raster diffusion image model, not a code/vector SVG generator; cannot emit scalable SVG markup." }
-    chain_applied: ["claude/claude-fable-5", "ica/gemini-3.1-pro-preview[1m]", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"]
+    chain_applied: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"]
     caveats:
+      - "The 2026-09-09 chain replacement to claude-fable-5-1 is a roster/policy update, not a transfer of Fable 5.0's measured rank. Fable 5.1 Taste/Speed remain explicitly UNMEASURED until M4; the ranking row above continues to name the exact 5.0 model its evidence measured."
       - "COST/TASTE TRADE-OFF, explicit in chain_applied's ordering: frontier/taste-tier (claude-fable-5, then the Gemini Pro tier) is meant for FINAL/hero/taste-critical SVG assets (logos, illustrative diagrams, presentation graphics) where a human or downstream taste-sensitive consumer judges the output; the flash tier (3.5-flash, 3.6-flash) is meant for bulk/draft/programmatic SVG (icons, simple charts) where correctness and cost/latency dominate over aesthetic judgment. Do not route every SVG request through the frontier leg by default."
       - "Design Arena is a crowdsourced, human-voted leaderboard with fast-moving snapshots (evidence spans Feb-Jul 2026; SVG-Arena #1 has changed hands from Gemini 3.1 Pro Preview to Claude Fable 5 within this window). Treat any single 'current #1' claim as a snapshot, not a stable fact."
       - "The one controlled/automated-judge study found (pelicanmaxxing, cross-lab pelican-SVG comparison) shows NO significant frontier-vs-flash gap on a narrow subject — the taste gap shows up strongly in human-preference arenas but not in this LLM-judge methodology. The hypothesis is better supported for human-facing/aesthetic-judged SVG than for geometrically-scored/automated-eval SVG."
@@ -269,6 +270,11 @@ use_cases:
   planning:
     description: "Architecture decisions, system/feature planning, and design-level reasoning ahead of implementation, including greenfield jumpstarts."
     source_task_classes: []
+    status: unmeasured
+
+  advanced-sol:
+    description: "Planned-from-the-start whole-node frontier execution where an itt contract explicitly selects Astra or Fable 5.1 up front; never a default implementation/review class."
+    source_task_classes: [advanced_sol]
     status: unmeasured
 
   debug-escalation:
