@@ -6,9 +6,9 @@ description: >-
   (claude primary, ICA free-tier, Bob, Gemini, or Codex) based on cost, capability,
   determinism, and MUST-stay-primary boundaries. Emits a routing decision only; the chosen
   platform skill executes it.
-version: "3.4"
+version: "3.5"
 app_version: "2026-06-09"
-updated: 2026-08-11
+updated: 2026-09-09
 scope: repo
 spec: ./SPEC.md
 ---
@@ -53,6 +53,8 @@ Repo-verified surfaces only:
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
 | write authority | Pass **`requires_write: true`** for any leg whose deliverable is a FILE. It excludes write-incapable agent types (`gemini-executor`) from candidates **and** the fallback chain. Default `false`. ⚠️ `task_class` cannot express this — `implementation`/`documentation`/`mechanical` are all routable, and three authoring legs once produced zero files for ~610k tokens because nothing declared it (SPEC §4c). It is **not** an offload ban: `ica-executor` is write-capable as of 2026-08-17 and still gets write legs. |
+| registry health | Provider-row `health` is a hard gate before advisory scores. A measured `status: unavailable` or `quota_limit: 0` row must also be `enabled: false`; the builder rejects an enabled contradiction. Missing health is unknown, never proof that a high Speed score is usable. |
+| Codex write class | Codex provider rows carry `write_capability: codex_sandbox`: read-class is `read_only`; file artifacts require the explicit write class (`requires_write: true` plus a write-capable invocation). This is registry metadata; the 14-field RoutingRecord remains unchanged. |
 | Audit CLI | `skillmeat routing audit [--task-type <class>] [--violations] [--unconfirmed] [--model-substitutions]` |
 
 ## Routing Posture
@@ -63,6 +65,7 @@ Repo-verified surfaces only:
 4. **Determinism filter** — when `resume_active=true` on a structural stage, exclude nondeterministic providers.
 5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout. ⚠️ **Availability failures only. A permission denial is NOT one** — a classifier/hook/user refusal of the shelled invocation is a decision about whether this content may take this path, not a fact about the path, so the executor returns `{status: 'blocked', reason: 'permission_denied', fallback_applied: false}` with evidence and stops. It never re-attempts the same content on another lane (next entry, in-process, or reworded), and never probes to isolate the block. Rerouting after a denial belongs to the orchestrator. Closed trigger list + provenance: SPEC §5a.
 6. **Flat legs only** — the router governs FLAT legs; nesting is **never routed cross-provider**. An offloaded executor (`ica-executor` / `codex-executor` / `gemini-executor` / `bob-delegate-executor`) MUST NOT spawn nested children via the `Agent` tool — a nested spawn from an offloaded leg escapes the `RoutingRecord` audit log. Nesting is claude-primary-only. See provider-routing-spec §5 (MUST-stay #7) and `.claude/specs/subagent-nesting-spec.md` § "Claude-Primary-Only Nesting".
+7. **Advanced-Sol is explicit** — `advanced_sol` is a planned-from-the-start whole-node execution-contract class whose chain is Astra → Fable 5.1. It is never inferred from `implementation`/`code_review` and never becomes their default. Astra otherwise remains escalation-only or directly named by an itt execution contract; its default effort is `medium`, and `high` requires an explicit request.
 
 ## External Feedback Join
 

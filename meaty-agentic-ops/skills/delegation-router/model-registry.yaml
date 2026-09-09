@@ -79,9 +79,20 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-08-27   # Sol tool-less unblock (node_01M122PQQ86YWJWDA9GT83PBWQ, citing node_01M0Z7JP9YT7W15X94Z843AM9Y). ENABLED ica/gpt-5.6-sol with a new `tool_mode: "none"` field — the mutual-exclusivity finding is now machine-enforced (resolver.js TOOL_RESTRICTED gate) instead of leaving the whole instance disabled. Added THREE NEW routable task classes (review, adjudication, critique) chained to it — deliberately new ids, NOT a repoint of the existing must_stay_primary verdict/council_review/synthesis classes; see resolver.js and SPEC.md § "Tool-less Sol lane". Also added a resolveSandwich() helper (Sol plan tool-less -> Terra execute with tools -> Sol review tool-less) for tasks needing both. ⚠️ Deploy deliberately WITHHELD — the live ~/.claude/config/model-registry.yaml carries an untracked 142-line-ahead delta (node_01M0X28GWQYPZFGH8TQC9V9DAB, HOLD); this source-repo change is not yet synced. Prior 2026-08-26   # RECONCILE against the live registry (~/.claude/config/model-registry.yaml, node_01M0Z8DK6YR41BXEQ122ZE5943) — this file had been deliberately left behind it since 2026-08-26's ICA lane sweep because deploying it as-is would have restored the dead ICA Opus rows (see 583ffc9, which fixed every OTHER doc in this skill but explicitly skipped this file). Audited diff, not a copy: (a) all four `ica/claude-opus-*` provider rows set `enabled: false` — see the header's "ICA OPUS — RETRACTED" note; (b) every live `[1m]` provider `model_id` (Sonnet, Sonnet 4.6, Sonnet 4.5, Gemini 3.1-pro/3.6/3.5) stripped to its bare id, and the `second_opinion`/`web_research`/`implementation`/`svg_generation` routing_policy chains updated to match — see the header's "ICA 1M-CONTEXT PREFERENCE — RETIRED" note; (c) added an ICA ccx row for gpt-5.6-sol, `enabled: false`, carrying `capability_gap` (tools + reasoning are mutually exclusive on both transports there — a 200 status is not evidence it reasons); (d) gpt-5.6-luna-dzus provider row promoted to `cost_tier: free, allowance: unlimited` — it joined the ICA free tier (now five models, not four); (e) four models added `status: scaffolded, enabled: false` per the "ADDING A NEW MODEL" convention — gemini-3.7-flash (promotion candidate over gemini-3.6-flash on web_research/second_opinion/svg_generation pending a head-to-head, node_01M0Z7K4QJXD2EWK0BPKD98QVG), gpt-5.4-gus (servable again on ccx, retires 2026-08-31 regardless), meta-llama/llama-3-3-70b-instruct, mistral-medium-2505. NOT ported: the live registry's newer `provider_lanes:` schema block and per-row `lane:` fields — that is a structural addition, not a correctness fix, and is out of scope for this reconcile; a future edit may port it deliberately. Prior 2026-07-31   # ICA now serves claude-opus-5 — VERIFIED end-to-end (gateway /models list + cache-busted /chat/completions probe + Claude Code executor path via ica-claude.sh). ENABLED ica/claude-opus-5[1m] (priority 2, cost_score 8) → the ICA spine-offload lane is now claude-opus-5[1m]; claude-opus-4-8[1m] demoted to the spine-offload FALLBACK (still enabled). Verified capabilities on the ICA lane: [1m]=1,000,000 ctx vs plain id=200,000 (the [1m] invariant holds for Opus 5 too); maxOutputTokens reported 64,000 on ICA (vs 128K first-party — ICA-side cap, plan long outputs accordingly); tool_use OK on both Claude Code and raw /v1/messages; adaptive thinking via output_config.effort OK (thinking blocks + thinking_tokens); legacy thinking.type:enabled ALSO OK (diverges from sonnet-5, where the legacy form 400s); output_config.format (structured JSON schema) HONORED — Opus 5 does NOT have Sonnet 5's structured-output gap, so no tool-call workaround needed. ⚠️ The [1m] suffix is a Claude-Code CLIENT-SIDE hint, not a gateway model id: raw /v1/messages + /chat/completions MUST use the plain "claude-opus-5" (passing "claude-opus-5[1m]" returns 403 team_model_access_denied). Prior 2026-07-28   # Grounded use-case-rankings layer added (co-located use-case-rankings.yaml, rf-provenanced, human-gated); second_opinion + svg_generation chains re-ranked from the pilot evidence (supersedes the 2026-07-27 by-analogy gemini-3.6 promotions on those two chains — note the cost-posture change on second_opinion: leg-1 now metered codex/gpt-5.6-terra); per-model playbook_ref pointers added -> model-playbook skill. Prior 2026-07-27   # Dual-key ICA gateway probe (probe-ica-models.sh, CC + CODEX keys). ADDED gemini-3.6-flash (ICA servability verified via ica-claude.sh) — ENABLED + PROMOTED to leg-1 in web_research / second_opinion / svg_generation chains (3.5-flash demoted to fallback). ADDED claude-sonnet-4-5 (ICA-only fallback lane, verified, not in any auto chain — prefer sonnet-5/4-6 first). gpt-5.6-{terra,luna}-dzus RE-CONFIRMED not dispatchable (/responses Azure api-version 400 both keys; luna's only working path = CODEX key + raw /chat/completions no-effort, unreachable by wired executors) → left documented in the native codex blocks, NO ICA provider rows carried (matches the 2026-07-20 revert). claude-opus-5[1m] RE-PROBED still absent from the gateway → stays disabled; ICA spine-offload remains claude-opus-4-8[1m]. Prior 2026-07-24   # Opus 5 (claude-opus-5) lands as the new SPINE / MUST-stay tier (orchestration + mode_d chains repointed claude-opus-4-8 -> claude-opus-5). Opus 4.8 demoted to legacy (Anthropic moved it to the legacy model list, same $5/$25) but kept selectable + as the ICA claude-opus-4-8[1m] spine-offload fallback (Opus 5 ICA availability unconfirmed -> claude-opus-5[1m] scaffolded/disabled pending a gateway probe). Sonnet 5 stays the default implementation workhorse; added token_economy_note (new tokenizer ~30% more tokens vs 4.6 -> prefer 4.6[1m]/Haiku for bounded/mechanical high-volume fan-out on metered/ICA lanes). Codex gpt-5.6 line (sol/terra/luna) unchanged/current. Prior 2026-07-21   # ICA GPT retest: NEW gpt-5.5-gus works with tools+reasoning on RAW transports (chat/completions, /responses w/ effort-scaling, /messages) on both keys — but 400s via Claude Code (CC's output_config rejected by Azure) → added status:scaffolded/enabled:false pending an output_config-strip path. gpt-5.4-gus + gpt-5.1-chat-gus REGRESSED (not servable on any key/endpoint) → status:degraded/enabled:false. gpt-5.6-*-dzus retest: terra-dzus dead on all routes; luna-dzus works ONLY via CODEX key + /chat/completions + tool + NO reasoning_effort (the strip-reasoning-control-param hypothesis CONFIRMED, narrow path; /responses still api-version-gated). One unifying finding: the ICA Azure-backed GPT deployments reject the client's reasoning-control param (reasoning_effort on chat, output_config on /messages) — strip it and the working models complete (effort defaults server-side). Prior 2026-07-20   # ICA Sonnet 5 reasoning REVALIDATED WORKING via Claude Code (supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end; legacy thinking.type:enabled now 400s. Reasoning-dependent offload to ica/claude-sonnet-5[1m] is now allowed; only gap = output_config.format (structured JSON) dropped by the gateway → use a tool-call. Gemini 3.5-flash/3.1-pro usable via ICA (/v1/messages + /chat/completions + CC [1m]); reasoning not surfaced as thinking blocks, grounding native-key-only. ALSO REVERTED the earlier same-day gpt-5.6-*-dzus ICA additions: those ICA gateway ids are listed on the gateway but NOT reliably servable (load-balanced onto a misconfigured deployment → 'LLM Provider NOT provided'; ~/ica-claude.sh masked it via Opus fallback). code_review restored to codex/gpt-5.6-terra first. Parked design + retry trigger: docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md. Prior (2026-07-09): Codex gpt-5.6 line added; code_review chain → codex/gpt-5.6-terra; gpt-5.5/-pro demoted. Effort ladder Light|Medium|High|Extra High(=low|medium|high|xhigh) + Ultra(=ultra, Sol/Terra only). ICA Sonnet 5 reasoning caveat. Prior (2026-07-08): ICA serves Sonnet 5 (claude-sonnet-5[1m]=1M) + [1m] preference extends to Gemini.
+updated: 2026-09-09   # SOTA M1 registry retune: Fable 5.1/Astra, advanced_sol, hard health/write gates, Gemini quota gating, and duplicate-identity validation. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Additive registry metadata. The v3 RoutingRecord shape is unchanged.
+routing_attributes:
+  health:
+    statuses: [available, degraded, unavailable, unknown]
+    selection_rule: "Health is a hard gate before advisory scores: status=unavailable or quota_limit=0 requires enabled=false. Missing health is unknown, never evidence of availability."
+  write_capability:
+    codex_sandbox:
+      read_class: read_only
+      write_class: workspace_write
+      write_contract: "A write artifact requires requires_write=true and an explicit write-class invocation; a read-class Codex leg cannot produce its own file artifact."
+
 # Task-class → ordered preference chain. The chain IS the priority / free-first
 # mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
 # start at a free ICA instance; orchestration / mode_d pin to primary Claude.
@@ -98,7 +109,7 @@ routing_policy:
   code_review:      { chain: ["codex/gpt-5.6-terra", "claude/claude-sonnet-5"], enabled: true }   # codex workhorse = gpt-5.6-terra (successor to gpt-5.5); escalate to gpt-5.6-sol (frontier SOTA) on two failures per the two-failure rule. (An ICA gpt-5.6-terra-dzus lane was attempted 2026-07-20 but reverted — model not reliably servable on the gateway; see ica-codex-responses-shim-v1.md.)
   image_generation: { chain: ["nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
-  svg_generation:   { chain: ["claude/claude-fable-5", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
+  svg_generation:   { chain: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
   video_generation: { chain: ["sora/sora-2"], enabled: true }
   # Added 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ, citing node_01M0Z7JP9YT7W15X94Z843AM9Y).
   # gpt-5.6-sol reasons genuinely on the ICA ccx lane ONLY when NO tool declarations are present
@@ -111,6 +122,9 @@ routing_policy:
   review:           { chain: ["ica/gpt-5.6-sol"], enabled: true }
   adjudication:     { chain: ["ica/gpt-5.6-sol"], enabled: true }
   critique:         { chain: ["ica/gpt-5.6-sol"], enabled: true }
+  # Contract-only whole-node class. Never inferred from another task class and never a default
+  # build/review lane. The itt execution contract chooses Astra or Fable 5.1 up front.
+  advanced_sol:     { chain: ["codex/gpt-6-astra", "claude/claude-fable-5-1"], enabled: true }
   orchestration:    { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
   mode_d:           { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
 
@@ -176,7 +190,6 @@ models:
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
       - { provider: ica, model_id: "claude-opus-4-7", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "claude-opus-4-7",     cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2 }  # disabled 2026-08-26 — no ICA Opus lane, see header
 
   claude-opus-4-6:
     family: claude
@@ -193,7 +206,6 @@ models:
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
       - { provider: ica, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "claude-opus-4-6",     cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2 }  # disabled 2026-08-26 — no ICA Opus lane, see header
 
   claude-sonnet-5:
     family: claude
@@ -215,7 +227,6 @@ models:
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback. Verified 2026-07-08: [1m]=1M, plain=200k via modelUsage.
       # ✅ reasoning WORKS on this ICA lane via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent legs OK here. Only gap: output_config.format (structured JSON) dropped by the gateway — use a tool-call.
       - { provider: ica,    model_id: "claude-sonnet-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica,    model_id: "claude-sonnet-5",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   claude-sonnet-4-6:
     family: claude
@@ -233,7 +244,6 @@ models:
       - { provider: claude, model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: billed,            enabled: true, priority: 1, cost_score: 5 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is demoted fallback.
       - { provider: ica,    model_id: "claude-sonnet-4-6",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica,    model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3 }
 
   claude-sonnet-4-5:
     family: claude
@@ -258,7 +268,6 @@ models:
     providers:
       # ICA-only lane (no subscription entry — sonnet-5 is the subscription default). 1m preferred over plain 200k.
       - { provider: ica, model_id: "claude-sonnet-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "claude-sonnet-4-5",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2 }
 
   claude-haiku-4-5:
     family: claude
@@ -306,13 +315,41 @@ models:
   #   routine implementation (Sonnet/Opus already strong) · high-volume mechanical work
   #   (→ Haiku/ICA, free) · latency-sensitive interactive loops · tight iterate-many-times
   #   loops · anything you run dozens of times where 2× compounds.
+  claude-fable-5-1:
+    family: claude
+    class: fable
+    descriptor: "Claude Fable 5.1 — the widely released Mythos-level frontier model for demanding reasoning and long-horizon agentic work. Anthropic recommends starting most work on Opus 5 and escalating when Opus at high effort falls short; this registry additionally permits explicit advanced_sol whole-node contracts and Nick's deliberately selected interactive register. Forced tool choice returns an error, and thinking blocks are prefix-bound/forward-only, so append history exactly rather than editing prior turns."
+    scores: { cost: 3, intelligence: 9, taste: UNMEASURED, speed: UNMEASURED }   # Taste/Speed are placeholders, explicitly unrankable until M4 measures them.
+    when_to_use: [advanced-sol, long-horizon-autonomy, deep-reasoning, planning, architecture, interactive-principal-session]
+    tools: [agent_tool, task_tool, one_million_context]
+    tool_choice: auto_only
+    thinking_history: prefix_bound_forward_only
+    related_skills: []
+    max_context: 1000000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 10, output_per_mtok_usd: 50, cache_read_per_mtok_usd: 0.25 }
+    reasoning_efforts: [low, medium, high, xhigh, max]
+    default_effort: high
+    sampling: deterministic
+    status: active
+    selection_posture: explicit_or_advanced_sol_contract
+    providers:
+      - provider: claude
+        model_id: "claude-fable-5-1"
+        cost_tier: premium
+        allowance: billed
+        enabled: true
+        priority: 1
+        health: { status: available, checked_at: 2026-09-09, evidence: "Anthropic model overview: Active (latest)" }
+
   claude-fable-5:
     family: claude
     class: fable
-    descriptor: "Claude Fable 5 (Mythos-class frontier, released 2026-06-09). SOTA agentic coding (SWE-bench Verified 95%, SWE-bench Pro 80%) and long-horizon reasoning; lead over Opus 4.8 grows with task length/complexity. $10/$50 per M = 2× Opus 4.8 — explicit opt-in only, never auto-routed. 1M context, 128K max output."
+    descriptor: "Claude Fable 5.0 (Mythos-class frontier, released 2026-06-09). Superseded by claude-fable-5-1 but retained as explicitly selectable compatibility inventory; never auto-routed."
     scores: { cost: 1, intelligence: 10, taste: 9, speed: 4 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [orchestration, architecture, novel-algorithm-design, greenfield-jumpstart, long-horizon-autonomy, debug-escalation, high-stakes-verdict, deep-reasoning, planning]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-fable-5
+    superseded_by: claude-fable-5-1
     tools: [agent_tool, task_tool, one_million_context]   # frontier for agent delegation / orchestration / long-horizon work — declares the same orchestration tool-classes as the Opus tiers (was missing agent_tool/task_tool, corrected 2026-07-27)
     related_skills: []
     max_context: 1000000
@@ -447,7 +484,6 @@ models:
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback.
       - { provider: ica, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "gemini-3.1-pro-preview",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2 }
 
   # ── Google (native gemini-cli, AI Studio GEMINI_API_KEY — metered; free Code Assist OAuth tier sunset 2026-07) ──
 
@@ -464,10 +500,9 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }   # native gemini-cli: 1M without a suffix, Search-grounded
+      - { provider: gemini, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
       - { provider: ica, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "gemini-3.6-flash",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   gemini-3.5-flash:
     family: google
@@ -482,10 +517,9 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }   # native gemini-cli: 1M without a suffix, Search-grounded
+      - { provider: gemini, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
       - { provider: ica, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
-      - { provider: ica, model_id: "gemini-3.5-flash",     cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 3, cost_score: 8 }
 
   gemini-3.1-pro-preview:
     family: google
@@ -500,7 +534,7 @@ models:
     sampling: stochastic
     status: preview
     providers:
-      - { provider: gemini, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+      - { provider: gemini, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native lane returned hard 429 with limit:0 in the SOTA retune" } }
 
   gemini-3.1-flash-lite:
     family: google
@@ -515,7 +549,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.1-flash-lite", cost_tier: free, allowance: billed, enabled: true, priority: 1 }
+      - { provider: gemini, model_id: "gemini-3.1-flash-lite", cost_tier: free, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "same native AI Studio account-level limit:0 lane" } }
 
   # ── Codex (OpenAI gpt-5.6 line via codex CLI, sandbox-gated) ────────────────
   # Verified codex-cli v0.144.0-alpha.4 (2026-07-09): three-model gpt-5.6 line —
@@ -527,6 +561,34 @@ models:
   #   `none`/`minimal` remain below Light for pure-mechanical work. The 400 API-enum
   #   error message understates the set (omits `ultra`) — `ultra` verified accepted on
   #   sol & terra 2026-07-09. gpt-5.5/-pro are SUPERSEDED (kept for compatibility).
+
+  gpt-6-astra:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-6 Astra via the personal Codex account. Frontier escalation only, or selected up front by an explicit itt advanced_sol whole-node execution contract; never the default build/review lane. Default effort is medium. High is permitted only when explicitly requested; none is unsupported."
+    scores: { cost: 2, intelligence: 10, taste: UNMEASURED, speed: UNMEASURED }   # Taste/Speed are placeholders, explicitly unrankable until M4 measures them.
+    when_to_use: [advanced-sol, frontier-escalation, long-horizon-judgment, doctrine-review, adversarial-review, many-constraint-design, terminal-automation]
+    tools: [imagegen]
+    related_skills: [codex]
+    max_context: 1050000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 10, output_per_mtok_usd: 50 }
+    reasoning_efforts: [low, medium, high, xhigh, max]
+    default_effort: medium
+    high_effort_requires: explicit_request
+    sampling: deterministic
+    status: active
+    selection_posture: escalation_or_explicit_itt_advanced_sol_contract
+    providers:
+      - provider: codex
+        model_id: "gpt-6-astra"
+        cost_tier: premium
+        allowance: billed
+        enabled: true
+        priority: 1
+        account_relationship: personal
+        health: { status: available, checked_at: 2026-09-09, evidence: "Codex CLI 0.153.0+ official availability; local 0.153.4 measured" }
+        write_capability: codex_sandbox
 
   gpt-5.6-sol:
     family: openai
@@ -541,7 +603,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: codex, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
       # ICA ccx lane — measured 2026-08-26, re-probed 2026-08-27 (node_01M0Z7JP9YT7W15X94Z843AM9Y,
       # won't-wire-direct-tools decision recorded there). SERVABLE (all 3 CCx keys, bare id,
       # 600,007 prompt tokens) but tools and reasoning are mutually exclusive there on BOTH
@@ -583,7 +645,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: codex, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-luna:
     family: openai
@@ -598,7 +660,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+      - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-terra-dzus:
     family: openai
@@ -646,7 +708,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: codex, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.5-pro:
     family: openai
@@ -662,7 +724,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: codex, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   # ── ICA ccx-only, newly discovered 2026-08-26 — scaffolded per the header's ─────
   # "ADDING A NEW MODEL" convention: registered so agents know they exist, every

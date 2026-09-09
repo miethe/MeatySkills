@@ -3,6 +3,19 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-09-09 — Fable 5.1 / Astra registry posture and registry integrity gates
+
+- Added active `claude-fable-5-1` and `gpt-6-astra` rows with exact context/output/pricing and
+  effort metadata. Taste/Speed are literal `UNMEASURED` placeholders for both.
+- Added explicit-only `advanced_sol` (Astra → Fable 5.1). Astra otherwise remains escalation-only;
+  its default effort is medium and high requires an explicit request. Fable 5.0 remains selectable
+  but is superseded, and the SVG chain now points at 5.1.
+- Added hard health metadata: measured native Gemini `limit: 0` rows are unavailable and disabled.
+  Added `codex_sandbox` write capability: read-class is read-only; file output needs write-class.
+- Reconciled eight duplicate `(model, provider, model_id)` rows created when `[1m]` ids collapsed to
+  bare ids. The builder now rejects duplicate identities, enabled unavailable/limit:0 rows, and
+  Codex rows without a declared write-capability profile.
+
 ## 2026-08-27 — `needs_tools` + `resolveSandwich()`: unblock gpt-5.6-sol for tool-less reasoning
 
 `gpt-5.6-sol` reasons genuinely on the ICA ccx lane only when NO tool call is made
