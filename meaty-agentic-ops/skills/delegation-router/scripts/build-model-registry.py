@@ -55,6 +55,28 @@ def validate_registry(data: dict, source: str) -> list[str]:
         ((data.get("routing_attributes") or {}).get("write_capability") or {})
     )
 
+    for index, row in enumerate(data.get("ica_catalog") or []):
+        prefix = f"ica_catalog[{index}]"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} must be a mapping")
+            continue
+        if not row.get("model_id"):
+            errors.append(f"{prefix}.model_id is required")
+        if not isinstance(row.get("lanes"), list) or not row["lanes"] or any(lane not in {"ccx", "beta"} for lane in row["lanes"]):
+            errors.append(f"{prefix}.lanes must be a non-empty list of ccx/beta")
+        if row.get("economics") not in {"unlimited", "shared_token_pool", "unknown"}:
+            errors.append(f"{prefix}.economics must be unlimited, shared_token_pool, or unknown")
+        health = row.get("health")
+        if not isinstance(health, dict) or health.get("status") not in {"available", "degraded", "unavailable", "unknown"}:
+            errors.append(f"{prefix}.health.status is required and must be declared")
+
+    for task_class, policy in (data.get("routing_policy") or {}).items():
+        for chain_entry in (policy or {}).get("chain", []):
+            if str(chain_entry).startswith("external/"):
+                errors.append(
+                    f"routing_policy.{task_class} may not reference an external lane before its executor exists"
+                )
+
     for model_key, model in models.items():
         providers = (model or {}).get("providers") or []
         for index, instance in enumerate(providers):
@@ -98,6 +120,14 @@ def validate_registry(data: dict, source: str) -> list[str]:
                     f"models.{model_key}.providers[{index}].write_capability references "
                     f"unknown profile '{write_capability}'"
                 )
+
+            if provider == "external":
+                required = (data.get("routing_attributes", {}).get("lane_eligibility", {}).get("required", []))
+                eligibility = instance.get("eligibility")
+                if not isinstance(eligibility, dict) or any(field not in eligibility for field in required):
+                    errors.append(f"models.{model_key}.providers[{index}] external lane must declare all four eligibility attributes")
+                if instance.get("enabled") is not False or model.get("status") != "candidate":
+                    errors.append(f"models.{model_key}.providers[{index}] external lane must be status:candidate and enabled:false")
 
     return [f"{source}: {error}" for error in errors]
 

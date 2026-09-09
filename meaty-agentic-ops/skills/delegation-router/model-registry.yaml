@@ -92,6 +92,40 @@ routing_attributes:
       read_class: read_only
       write_class: workspace_write
       write_contract: "A write artifact requires requires_write=true and an explicit write-class invocation; a read-class Codex leg cannot produce its own file artifact."
+  lane_eligibility:
+    required: [compute_custody, retention, jurisdiction, account_relationship]
+    unknown_rule: "unknown fails closed for disclosure_absolute and authority_absolute; it never authorizes a protected chain."
+
+# Read-only catalog reconciliation, 2026-09-09 (R5).  These are concrete ICA
+# endpoint rows, not routing candidates: `enabled` remains on each provider
+# instance below.  `health.status: unavailable` records the Opus E002 tenancy
+# gap, never model absence.  `unknown` economics is deliberately not treated as
+# shared-pool or free.
+ica_catalog:
+  - { model_id: "BIAN-llama3.1-8b:260213_pad_free_assistant_only", lanes: [ccx, beta], economics: unknown, health: { status: unknown } }
+  - { model_id: "TMF-llama3.1-8b:251028_no_sys_prompt", lanes: [ccx, beta], economics: unknown, health: { status: unknown } }
+  - { model_id: "claude-opus-4-6", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-4-8", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-sonnet-4-5", lanes: [beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "claude-sonnet-4-6", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "claude-haiku-4-5", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
+  - { model_id: "gemini-3.1-pro-preview", lanes: [beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "gemini-3.5-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "gemini-3.6-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "gemini-3.7-flash", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
+  - { model_id: "gemma-4-26b-a4b-it", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
+  - { model_id: "gpt-4o", lanes: [beta], economics: shared_token_pool, health: { status: unknown } }
+  - { model_id: "gpt-5.1", lanes: [ccx], economics: unknown, health: { status: unknown } }
+  - { model_id: "gpt-5.4", lanes: [ccx], economics: unknown, health: { status: unknown } }
+  - { model_id: "gpt-5.6-luna", lanes: [ccx], economics: unknown, health: { status: unknown } }
+  - { model_id: "gpt-5.6-sol", lanes: [ccx], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "gpt-5.6-terra", lanes: [ccx], economics: unknown, health: { status: unknown } }
+  - { model_id: "ibm/granite-4-h-small", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
+  - { model_id: "meta-llama/llama-3-3-70b-instruct", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
+  - { model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
+  - { model_id: "mistral-medium-2505", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
 
 # Task-class → ordered preference chain. The chain IS the priority / free-first
 # mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
@@ -793,6 +827,47 @@ models:
     status: scaffolded
     providers:
       - { provider: ica, model_id: "mistral-medium-2505", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+
+  # ── External-lane scaffolds — no executor, no routing chain (M5b owns executor) ──
+  deepseek-v4-flash:
+    family: deepseek
+    class: external
+    descriptor: "Direct DeepSeek candidate. Public-only fan-out is possible only after M5b supplies an executor and a concrete eligibility decision."
+    status: candidate
+    providers:
+      - { provider: external, model_id: "deepseek-v4-flash", endpoint: "https://api.deepseek.com/anthropic", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+
+  qwen3-flash:
+    family: qwen
+    class: external
+    descriptor: "Alibaba Model Studio candidate; endpoint-specific compatibility and retention remain unverified."
+    status: candidate
+    providers:
+      - { provider: external, model_id: "qwen3-flash", endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+
+  kimi-k2:
+    family: kimi
+    class: external
+    descriptor: "Moonshot direct-lane candidate; public fan-out only after executor and lane approval."
+    status: candidate
+    providers:
+      - { provider: external, model_id: "kimi-k2", endpoint: "https://api.moonshot.cn/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+
+  glm:
+    family: glm
+    class: external
+    descriptor: "Z.AI direct endpoint candidate; no declared executor or protected-work eligibility."
+    status: candidate
+    providers:
+      - { provider: external, model_id: "glm", endpoint: "https://open.bigmodel.cn/api/paas/v4", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
+
+  grok:
+    family: xai
+    class: external
+    descriptor: "xAI Grok candidate for an out-of-family judge only after a concrete executor and endpoint declaration."
+    status: candidate
+    providers:
+      - { provider: external, model_id: "grok", endpoint: "https://api.x.ai/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
 
   # ── Bob (local, zero-cost, stateless) ───────────────────────────────────────
 
