@@ -14,7 +14,7 @@
   "taxonomy": {
     "taxonomy_id": "aos.routing.task_class",
     "taxonomy_version": "1.2.0",
-    "taxonomy_digest": "sha256:04d1487d4a75747d7c774dfaca0d76fdf255dd0f2e9b1ce1d2542aed70c437d3"
+    "taxonomy_digest": "sha256:94213d92a6e0ea7494030ad096699e0ce12f316cfcc48197cabd7741fe2db018"
   },
   "accepted_producers": {
     "ccdash": {
