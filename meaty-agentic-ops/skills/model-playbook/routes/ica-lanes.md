@@ -4,39 +4,54 @@ Loaded whenever the chosen provider is `ica`, **in addition to** the model's fam
 This file covers lane mechanics shared across every model routed through the gateway — not a
 model family itself. Source: `model-registry.yaml` header invariants + `ica-delegate` SKILL.md.
 
-## The `[1m]` suffix is RETIRED — use bare ids (superseded 2026-08-26)
+## `[1m]` is a Claude-Code-layer convention, not a gateway model id (corrected 2026-09-10)
 
-⚠️ **This section previously instructed "always use the `[1m]` id." That instruction is now
-DEAD and inverted.** Measured 2026-08-26 across both ICA gateways (beta and ccx) and all 11 keys:
-every `[1m]`-suffixed and dated id now returns **403 on every transport, including the Claude
-Code client path** — the "works on the CC client, 403 on raw transports" split documented below
-no longer holds; there is no longer a transport on which `[1m]` succeeds.
+⚠️ **The 2026-08-26 finding below ("every `[1m]` id 403s on every transport, including the Claude
+Code client path; bare ids carry native context") is RETRACTED for the Claude Code path.** It was
+measured with a raw-HTTP-only instrument (`ica-key verify`, direct `/v1/messages`/
+`/chat/completions` calls) and wrongly generalized to the Claude Code client, which was never
+re-probed on that date. See the anti-pattern note below.
 
-**Bare ids now carry each model's native context, at no cost.** Measured via
-`usage.prompt_tokens`: bare `claude-sonnet-5` accepted **600,007** tokens on the beta gateway and
-**950,007** on ccx; `gemini-3.7-flash` accepted 950,002. Bare `claude-haiku-4-5` accepted 190,008
-and rejected 250,000 — that is Haiku's own real 200k model limit, not a gateway cap. **So the
-standing "bare/plain ICA ids cap at 200k, always prefer `[1m]`" rule is dead on both lanes; drop
-the suffix entirely and cost nothing.**
+**Measured rule (Nick, 2026-09-10, via `~/ica-claude.sh --output-format json` on ccx):**
 
-Full receipts: `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` F1/F2 and
-`agentic_meta_dev/docs/agentic-operator/ICA-CCX-LANE-MATRIX.md`.
+- On the **Claude Code invocation path** — `~/ica-claude.sh`, an `ica-settings*.json`-driven
+  session, `leg`, or any launch script that shells out to the Claude Code binary — the `[1m]`
+  suffix (e.g. `claude-sonnet-5[1m]`, `claude-opus-5[1m]`) gets the model's full 1M-token context
+  window; the **bare** id on that same path gets only **200k**. Measured: `claude-sonnet-5[1m]` →
+  `contextWindow: 1000000`; bare `claude-sonnet-5` → `200000`; identical split for
+  `claude-opus-5[1m]` vs bare `claude-opus-5`. A 1.1MB piped file: bare → `"Prompt is too long"`,
+  `[1m]` → answers.
+- On a **raw-HTTP call to the gateway** (curl `/v1/messages`, `/chat/completions`, `ica-key
+  verify`) — the `[1m]` suffix 403s `team_model_access_denied`, because Claude Code strips the
+  suffix client-side and substitutes the model's 1M-context beta header before the request ever
+  reaches the gateway; a raw caller instead sends the literal `[1m]`-suffixed string, which is not
+  in the gateway's model catalog. That 403 is a fact about the raw-HTTP transport, not about the
+  Claude Code lane — it does not mean `[1m]` is dead everywhere.
 
-The historical mechanics below (why `[1m]` was ever a client-side hint, the prefix/quoting
-gotchas) are kept for archaeology only — **do not follow them**; they describe a lane that no
-longer exists.
+**Rule:** use `[1m]` for every Claude-Code-layer caller (`ica-claude.sh`, `ica-settings*.json`,
+`leg`, launch scripts). Use bare ids ONLY for apps/adapters that call the gateway over HTTP
+directly. Receipts: ibm-agentic-tools branch `lane-hardening/ica-envelope-0910` commit `cd40713`
+(`.leg/ica-1m-measure/SUMMARY.md`), agentic_meta_dev branch `lane-hardening/ica-envelope-0910`
+commit `4246d894`.
+
+⚠️ **Anti-pattern — "the instrument decides the layer" (2026-09-10):** a claim about one layer
+(Claude Code client vs. raw-HTTP gateway) made using the other layer's instrument is a
+mismeasurement, not a finding. This exact error recurred on 2026-08-07, 2026-08-26, 2026-08-31,
+and 2026-09-10 — each time a raw-HTTP or CLI-only probe's result was generalized to "every
+transport" without re-testing the Claude Code client path specifically. Always name which
+transport/layer a probe used before generalizing its result to another layer.
 
 <details>
-<summary>Historical — `[1m]` mechanics while the suffix was live (superseded, do not follow)</summary>
+<summary>Historical — `[1m]` mechanics while first documented as a client-side-only hint (superseded 2026-08-26, itself now partially retracted — see above)</summary>
 
-- `[1m]` was a Claude Code CLIENT-SIDE hint, not a real gateway model id. Raw transports
-  (`/v1/messages`, `/chat/completions`) required the **plain** id; sending a `[1m]` id there
-  returned 403 `team_model_access_denied`.
+- `[1m]` was described as a Claude Code CLIENT-SIDE hint, not a real gateway model id. Raw
+  transports (`/v1/messages`, `/chat/completions`) require the **plain** id; sending a `[1m]` id
+  there returns 403 `team_model_access_denied`. This half of the claim still holds.
 - Bare `sonnet-5[1m]` (missing the `claude-` prefix) 401'd.
-- `[1m]` is a zsh glob bracket and had to be quoted: `--model 'claude-sonnet-5[1m]'`.
-
-None of this matters now — every `[1m]` id 403s everywhere, so there is no id form to get right
-except the bare one.
+- `[1m]` is a zsh glob bracket and must be quoted: `--model 'claude-sonnet-5[1m]'`.
+- The 2026-08-26 entry then claimed this whole mechanism was retired and every `[1m]` id 403s
+  everywhere including Claude Code — that generalization is what the 2026-09-10 correction above
+  retracts.
 
 </details>
 
@@ -60,6 +75,13 @@ claude-opus-5` first. See `routes/anthropic-claude.md` for the primary-subscript
 which this does not change.
 
 Full receipts: `agentic_meta_dev/docs/audits/ica-lane-findings-2026-08-26.md` F1.
+
+⚠️ **(Opus-lane availability re-measured 2026-09-10:** `claude-opus-5[1m]` answers on the Claude
+Code lane (`~/ica-claude.sh`, ccx), per the `[1m]`-as-Claude-Code-layer-convention correction
+above. That measurement was scoped to the `[1m]`/context-window question only and does not
+re-probe or overturn this section's tenancy-wide-403 finding for raw-HTTP/`ica-key verify` calls
+— re-probe explicitly before treating ICA Opus as restored for spine-offload routing. See
+agentic_meta_dev MODEL-ROUTING for the current row.)
 
 ## Free-5 vs shared_token_pool — the only genuinely free lane
 
@@ -142,9 +164,11 @@ and the model completes with server-default effort.
 `output_config.format` (schema-constrained JSON) is silently **dropped** by the ICA gateway on
 the Claude Sonnet 5 lane — `effort` passes through, `format` does not — so you get prose, not
 schema JSON. This was previously reported as **lane-specific, not gateway-wide** (`format` honored
-on `claude-opus-5[1m]`, probed 2026-07-31) — ⚠️ that comparison lane no longer exists (there is no
-ICA Opus lane and no `[1m]` id at all, see above), so it cannot be re-checked or relied on. On any
-lane where you haven't confirmed `format` passes through, use a forced **tool-call** for structured
+on `claude-opus-5[1m]`, probed 2026-07-31) — ⚠️ that comparison cannot currently be re-checked: the
+`[1m]` id itself is valid again on the Claude Code lane (see the correction above), but this
+section's ICA-Opus-tenancy-wide-403 finding is unchanged and unre-probed for raw transports, so
+whether `claude-opus-5[1m]` still honors `format` on ICA is unverified either way. On any lane
+where you haven't confirmed `format` passes through, use a forced **tool-call** for structured
 output instead.
 
 ## Do Not Say
@@ -154,12 +178,18 @@ output instead.
 - Do not say fallback models make probing safe — they hide failures; disable `--fallback-model`
   for any validation run.
 - Do not read a 403 `team_model_access_denied`/`Model not available - E002` as generically "no
-  access" without checking WHICH condition produced it (superseded 2026-08-26): the `[1m]`-suffix
-  cause is retired — every `[1m]` id now 403s on every transport, so the suffix is no longer a
-  useful discriminator by itself. What still distinguishes a real gap is the **model family**: a
-  bare `claude-opus-*` id 403s tenancy-wide (Opus entitlement revoked — see above); a bare
-  `claude-sonnet-5` or bare Gemini/GPT id should succeed. A 403 on a non-Opus bare id is a genuine
-  new finding, not suffix confusion.
+  access" without checking WHICH condition produced it AND which transport produced it (corrected
+  2026-09-10): a `[1m]`-suffixed id 403ing on a **raw-HTTP** call (curl, `ica-key verify`) is
+  expected — that transport never gets the Claude-Code-side suffix substitution, see the
+  correction above — and is not evidence that `[1m]` is broken on the Claude Code lane. What still
+  distinguishes a real gap is the **model family** on a matched transport: a bare `claude-opus-*`
+  id 403ing tenancy-wide (Opus entitlement revoked — see above) on the *same* transport as a
+  working bare `claude-sonnet-5` call is a genuine new finding; a `[1m]` id 403ing on raw-HTTP
+  while the same id succeeds via Claude Code is not.
+- Do not say "`[1m]` is retired" or "bare ids carry native 1M context on the Claude Code lane"
+  without naming which transport was tested — the 2026-08-26 version of that claim was measured
+  with a raw-HTTP-only instrument and did not hold for the Claude Code client path (retracted
+  2026-09-10, see above).
 
 **Full transport mechanics:** flags, key rotation, exhaustion handling, `--bare` context
 injection — `~/.claude/skills/ica-delegate/SKILL.md`.
