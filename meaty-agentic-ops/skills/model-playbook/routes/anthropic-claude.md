@@ -3,8 +3,13 @@
 Loaded only when the routed model is a Claude family member. Source: `model-registry.yaml`
 `models:` block (fields verified against the registry, updated 2026-07-31 — ICA Opus 5 lane
 verified live on that date). ⚠️ **Superseded 2026-08-26: the ICA Opus 5 lane verified live on
-2026-07-31 has since been revoked tenancy-wide, and `[1m]` ids are separately retired — see the
-per-model sections below.**
+2026-07-31 has since been revoked tenancy-wide (raw-HTTP transports; unre-probed on the Claude
+Code lane) — see the per-model sections below.** ⚠️ **Correction 2026-09-10: the 2026-08-26 claim
+that `[1m]` ids are "separately retired" does NOT hold for the Claude Code invocation path —
+`[1m]` (e.g. `claude-sonnet-5[1m]`, `claude-opus-5[1m]`) gets 1M context there; only bare ids on
+that path get 200k. `[1m]` still 403s on raw-HTTP calls to the gateway — that is a
+transport-specific fact, not a universal retirement. See `routes/ica-lanes.md` for the full
+correction and the "instrument decides the layer" anti-pattern note.**
 
 ## claude-opus-5
 
@@ -12,33 +17,41 @@ per-model sections below.**
   synthesis, architecture, mode-d, schema-recovery, cross-wave merge, deep-reasoning,
   novel-algorithm-design. Current flagship as of 2026-07-24, supersedes claude-opus-4-8.
 - **Invocation lane:** `claude/claude-opus-5` (primary, billed, $5/$25 per M). ⚠️ **ICA offload
-  RETRACTED 2026-08-26 — there is no ICA Opus lane.** `claude-opus-5` (with or without the
-  now-also-dead `[1m]` suffix) 403s on all 11 ICA keys, both gateways — a tenancy-wide entitlement
-  revocation (`claude-sonnet-5` returns 200 on those same keys). The paragraph below describes the
-  2026-07-31 verification that this supersedes; it is kept for history, not as current guidance.
-  MUST-stay-primary classes (`orchestration`, `mode_d`) route to `claude/claude-opus-5` regardless
-  — that was never contingent on ICA availability.
+  RETRACTED 2026-08-26 (raw-HTTP transports) — no confirmed ICA Opus lane for routing purposes.**
+  `claude-opus-5` (bare) 403s on all 11 ICA keys, both gateways, on raw-HTTP transports — a
+  tenancy-wide entitlement revocation (`claude-sonnet-5` returns 200 on those same keys). ⚠️
+  **2026-09-10: `claude-opus-5[1m]` answers on the Claude Code lane** (`~/ica-claude.sh`, ccx) per
+  the `[1m]`-is-a-Claude-Code-layer-convention correction (`routes/ica-lanes.md`) — that
+  measurement was scoped to the context-window question only and does not by itself re-establish
+  ICA Opus as a routable spine-offload lane; re-probe the 2026-08-26 tenancy finding on the
+  Claude Code path specifically before changing routing. MUST-stay-primary classes
+  (`orchestration`, `mode_d`) route to `claude/claude-opus-5` regardless — that was never
+  contingent on ICA availability.
 
   <details>
-  <summary>Historical (superseded 2026-08-26) — the 2026-07-31 "ICA spine-offload lane" verification</summary>
+  <summary>Historical (superseded 2026-08-26, `[1m]`-retirement claim partially retracted 2026-09-10) — the 2026-07-31 "ICA spine-offload lane" verification</summary>
 
   `ica/claude-opus-5[1m]` was **enabled** (priority 2) and was **the** ICA spine-offload lane —
   verified servable 2026-07-31 (raw `/chat/completions` + the `~/ica-claude.sh` Claude Code
   executor path, both with a unique nonce). `allowance: shared_token_pool` — token-limited,
-  **NOT free**. 1M context on the `[1m]` id (plain `claude-opus-5` caps at 200k), but
-  `maxOutputTokens` was **64000** on the ICA lane vs the 128K first-party ceiling. `ica/claude-opus-4-8[1m]`
-  was the offload *fallback*. None of this is reachable any more.
+  **NOT free**. 1M context on the `[1m]` id (plain `claude-opus-5` caps at 200k on that path), but
+  `maxOutputTokens` was **64000** on the ICA lane vs the 128K first-party ceiling.
+  `ica/claude-opus-4-8[1m]` was the offload *fallback*. The 2026-08-26 entry marked this whole
+  section unreachable; 2026-09-10 measurement shows the `[1m]`/context-window half of it still
+  holds on the Claude Code path — the open question is Opus tenancy access, not the suffix.
   </details>
 - **Effort/context:** 1M context, 128K max output, adaptive thinking; effort defaults to `high`
   on the Claude API/Claude Code — set explicitly to change. New tokenizer (~30% more tokens than
   Opus 4.8/Sonnet 4.6 for the same text — same family as Sonnet 5+).
 - **Gotchas:** knowledge cutoff May 2026; trails Fable 5 on taste/quality but surpasses Opus 4.8
   (>2x Opus 4.8's agentic performance at the same price point per Anthropic).
-- **ICA lane capabilities** — ⚠️ **UNVERIFIABLE as of 2026-08-26; the lane is gone.** The
+- **ICA lane capabilities** — ⚠️ **Unverified as of 2026-09-10; do not assume restored.** The
   2026-07-31 probe (adaptive thinking via `output_config.effort` working, legacy
   `thinking.type: "enabled"` also working — a divergence from Sonnet 5, where the legacy form
   400s; tool use working both via Claude Code and raw `/v1/messages`; `output_config.format`
-  honored) cannot be re-checked or relied on now that `claude-opus-5` 403s tenancy-wide on ICA.
+  honored) was marked unreachable 2026-08-26 when `claude-opus-5` 403'd tenancy-wide on raw-HTTP
+  ICA transports. `claude-opus-5[1m]` answering on the Claude Code lane 2026-09-10 (see above) does
+  not by itself confirm these capabilities still hold — re-probe before relying on any of them.
 - **Anti-patterns:** don't use for mechanical/bulk fan-out — route that to Haiku or a free ICA
   lane instead. Don't route MUST-stay classes (`orchestration`, `mode_d`) to the ICA lane just
   because it exists.
@@ -66,9 +79,14 @@ per-model sections below.**
 - **When to pick:** the DEFAULT subscription implementation/workhorse tier — agentic coding,
   code review, multi-file refactoring, planning, exploration, extended-thinking/deep-reasoning.
 - **Invocation lanes:** `claude/claude-sonnet-5` (primary, billed, $3/$15 per M, intro $2/$10
-  through 2026-08-31). ICA offload: `ica/claude-sonnet-5` — ⚠️ **id form superseded 2026-08-26: use
-  the bare id**, `[1m]` 403s on every transport now (bare id carries native context — measured up
-  to 950,007 prompt tokens on ccx / 600,007 on beta). Still the current-gen free-offload lane since
+  through 2026-08-31). ICA offload: `ica/claude-sonnet-5` — ⚠️ **id form corrected 2026-09-10: use
+  `claude-sonnet-5[1m]` on the Claude Code invocation path** (`~/ica-claude.sh`,
+  `ica-settings*.json`, `leg`) to get the full 1M context; the bare id on that same path caps at
+  200k. Measured: `claude-sonnet-5[1m]` → `contextWindow: 1000000` on ccx; bare → `200000`. Use the
+  **bare** id only for a raw-HTTP caller hitting the gateway directly (`/v1/messages`,
+  `/chat/completions`) — `[1m]` 403s there because the gateway never sees the suffix from that
+  path (Claude Code strips it and substitutes a beta header before sending). See
+  `routes/ica-lanes.md` for the full correction. Still the current-gen free-offload lane since
   2026-07-08, superseding sonnet-4-6.
 - **Effort/context:** 1M context, 128K output, adaptive thinking on by default; first Sonnet with
   `xhigh` effort.
@@ -91,8 +109,10 @@ per-model sections below.**
   high-volume fan-out on metered/ICA lanes).
 - **Invocation lanes:** `claude/claude-sonnet-4-6` (billed, standard), `ica/claude-sonnet-4-6`
   (older token-efficient offload, shared_token_pool — the demoted-but-still-useful ICA lane).
-  ⚠️ Superseded 2026-08-26: the old "`[1m]` = full context, plain avoid — caps at 200k" split is
-  dead — `[1m]` 403s everywhere now, and the bare id above carries native context.
+  ⚠️ Corrected 2026-09-10: the "`[1m]` = full context, plain caps at 200k" split is back in force
+  on the **Claude Code invocation path** (the 2026-08-26 "dead everywhere" claim was measured on
+  raw-HTTP transports only and did not hold for Claude Code) — use `[1m]` there for 1M context;
+  bare only for a raw-HTTP caller.
 - **Gotchas:** superseded as the default ICA offload by `sonnet-5` (bare) since 2026-07-08; keep
   only as the older/cheaper-token fallback lane, not the default.
 - **Anti-patterns:** don't use as the default subscription workhorse — `sonnet-5` is now default.
@@ -116,30 +136,34 @@ per-model sections below.**
 ## claude-opus-4-8
 
 LEGACY as of 2026-07-24 (superseded by opus-5 as spine), same $5/$25 per M pricing. ⚠️ **Its ICA
-lane is RETRACTED 2026-08-26** — `claude-opus-4-8` (plain or `[1m]`) 403s tenancy-wide on all 11
-ICA keys, both gateways, alongside every other ICA Opus id. Was previously `enabled` as the
-spine-offload fallback behind `ica/claude-opus-5[1m]`; neither exists any more. Still genuinely
+lane is RETRACTED 2026-08-26 on raw-HTTP transports** — `claude-opus-4-8` (plain or `[1m]`) 403s
+tenancy-wide on all 11 ICA keys, both gateways, alongside every other ICA Opus id, when called
+directly against the gateway. Was previously `enabled` as the spine-offload fallback behind
+`ica/claude-opus-5[1m]`; not re-probed on the Claude Code lane after the 2026-09-10 `[1m]`
+correction (`routes/ica-lanes.md`) — do not assume restored without re-testing. Still genuinely
 useful on the **primary subscription**: 4.8 has the older/lighter tokenizer, which can win for
 bounded high-volume fan-out — that has nothing to do with ICA.
 
 ## claude-opus-4-7
 
-⚠️ **ICA lane RETRACTED 2026-08-26** — same tenancy-wide Opus revocation as `claude-opus-4-8`
-above (not individually re-probed, but there is no reason to expect it survived when 4-6/4-8/5 all
-403). Deep-reasoning/architecture/planning fallback tier below opus-4-8 on the **primary
-subscription** only.
+⚠️ **ICA lane RETRACTED 2026-08-26 on raw-HTTP transports** — same tenancy-wide Opus revocation as
+`claude-opus-4-8` above (not individually re-probed on the Claude Code lane either). Deep-reasoning/
+architecture/planning fallback tier below opus-4-8 on the **primary subscription** only.
 
 ## claude-opus-4-6
 
-⚠️ **ICA lane RETRACTED 2026-08-26** — `claude-opus-4-6` 403s tenancy-wide on ICA, confirmed
-directly (one of the three Opus ids measured). Deep-reasoning/architecture fallback tier below
-opus-4-7 on the **primary subscription** only.
+⚠️ **ICA lane RETRACTED 2026-08-26 on raw-HTTP transports** — `claude-opus-4-6` 403s tenancy-wide
+on ICA via raw-HTTP, confirmed directly (one of the three Opus ids measured); not re-probed on the
+Claude Code lane. Deep-reasoning/architecture fallback tier below opus-4-7 on the **primary
+subscription** only.
 
 ## claude-sonnet-4-5
 
-Oldest ICA-only Sonnet fallback: `ica/claude-sonnet-4-5`. ⚠️ Superseded 2026-08-26: use the bare
-id — `[1m]` 403s everywhere now. Explicit-selectable only, not in any auto chain — prefer
-`sonnet-5` or `sonnet-4-6` first; reach for this only when both are unavailable.
+Oldest ICA-only Sonnet fallback: `ica/claude-sonnet-4-5`. ⚠️ Corrected 2026-09-10: use
+`claude-sonnet-4-5[1m]` on the Claude Code invocation path for 1M context (bare caps at 200k
+there); bare only for a raw-HTTP caller — see `routes/ica-lanes.md`. Explicit-selectable only, not
+in any auto chain — prefer `sonnet-5` or `sonnet-4-6` first; reach for this only when both are
+unavailable.
 
 ## Do Not Say
 
@@ -150,13 +174,20 @@ id — `[1m]` 403s everywhere now. Explicit-selectable only, not in any auto cha
   entitlement revocation now 403s it on all 11 keys, both gateways. Current truth: no ICA Opus
   lane exists.
 - Do not say the ICA gateway drops `output_config.format` universally — that gap is observed on
-  the Claude Sonnet 5 lane. ⚠️ The prior comparison ("honored on `claude-opus-5[1m]`") is
-  unverifiable now — that lane is gone.
+  the Claude Sonnet 5 lane. ⚠️ The prior comparison ("honored on `claude-opus-5[1m]`") remains
+  unverified — Opus tenancy on ICA is still an open question (see above), independent of the
+  `[1m]` correction.
 - Do not say ICA Opus availability permits routing MUST-stay-primary classes
-  (`orchestration`, `mode_d`) off `claude/claude-opus-5` — moot as of 2026-08-26 (no ICA Opus lane
-  to route to), but was never permitted regardless.
-- ⚠️ Do not say a `[1m]`-suffixed id reaches ICA on any transport — superseded 2026-08-26. Every
-  `[1m]` id 403s everywhere now; use bare ids.
+  (`orchestration`, `mode_d`) off `claude/claude-opus-5` — moot regardless of ICA Opus tenancy
+  status; was never permitted.
+- ⚠️ Do not say "a `[1m]`-suffixed id never reaches ICA" without naming the transport (corrected
+  2026-09-10): `[1m]` ids work on the Claude Code invocation path (`~/ica-claude.sh`,
+  `ica-settings*.json`, `leg`) and give 1M context there; they 403 only on raw-HTTP calls to the
+  gateway. Conflating the two transports is the "instrument decides the layer" anti-pattern — see
+  `routes/ica-lanes.md`.
+- Do not say "bare ids carry native 1M context on the Claude Code lane" — that was the retracted
+  half of the 2026-08-26 finding; on Claude Code, bare ids cap at 200k and `[1m]` is required for
+  1M.
 
 **Full transport mechanics:** for Claude API params/pricing/tool-use detail see the `claude-api`
 skill; for ICA transport flags see `routes/ica-lanes.md` + `~/.claude/skills/ica-delegate/SKILL.md`.

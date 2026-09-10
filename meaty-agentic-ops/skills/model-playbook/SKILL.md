@@ -11,9 +11,9 @@ description: >-
   when unsure of the exact model_id/effort/lane, or when hand-assigning a model in a plan and
   needing its usage mechanics. One route file per model family, loaded progressively — an
   executor loads ONLY the route file for the model it was actually routed to.
-version: "1.0"
-app_version: "2026-07-28"
-updated: 2026-07-28
+version: "1.1"
+app_version: "2026-09-10"
+updated: 2026-09-10
 scope: repo
 ---
 

@@ -11,9 +11,13 @@ Loaded only when the routed model is a Gemini family member. Source: `model-regi
   3.5-flash, not by evidence — see gotchas).
 - **Invocation lanes:** `gemini/gemini-3.6-flash` (native gemini-cli, 1M without a suffix,
   Google-Search **GROUNDED** — Gemini 3+ only). `ica/gemini-3.6-flash` (ICA gateway,
-  `shared_token_pool`, NOT free; ⚠️ **superseded 2026-08-26: use the bare id** — `[1m]` 403s on
-  every transport now, and the bare id carries native/1M-scale context for free, measured up to
-  950,002 prompt tokens on `gemini-3.7-flash`, ccx. Not grounded on the ICA path either way).
+  `shared_token_pool`, NOT free; ⚠️ **the 2026-08-26 "`[1m]` 403s on every transport, bare id
+  carries native/1M-scale context" finding was measured on raw-HTTP transports only (see the
+  `[1m]`-is-a-Claude-Code-layer-convention correction in `routes/ica-lanes.md`, confirmed
+  2026-09-10 for Claude models) and has NOT been re-probed for Gemini on the Claude Code
+  invocation path specifically. Treat the bare-id-caps-at-200k-on-Claude-Code / `[1m]`-gets-1M
+  split as the working assumption for this id too until re-measured; the bare-id-950,002-tokens
+  result below stands for the raw-HTTP transport. Not grounded on the ICA path either way).
 - **Effort/context:** 1M context (native, no suffix needed). Auth: AI Studio `GEMINI_API_KEY` at
   `~/.config/aos/secrets.env`.
 - **Gotchas — GROUNDED 2026-07-28, conf 0.6, cuts against the current chain promotion:**
@@ -38,8 +42,11 @@ Loaded only when the routed model is a Gemini family member. Source: `model-regi
   evidence against the "promote to newest flash" rationale. Consider it the stronger flash-tier
   SVG choice pending a formal re-validation.
 - **Invocation lanes:** `gemini/gemini-3.5-flash` (native, grounded, 1M without a suffix),
-  `ica/gemini-3.5-flash` (ICA, ungrounded). ⚠️ Superseded 2026-08-26: use the **bare** id on ICA —
-  `[1m]` 403s on every transport now; the bare id carries native context for free.
+  `ica/gemini-3.5-flash` (ICA, ungrounded). ⚠️ Corrected 2026-09-10 (by analogy to the Claude
+  finding in `routes/ica-lanes.md`, not independently re-measured for Gemini): the 2026-08-26
+  "`[1m]` 403s everywhere, bare carries native context" claim was raw-HTTP-only. On the Claude
+  Code invocation path, expect `[1m]` to get 1M context and bare to cap at 200k, same as Claude;
+  on a raw-HTTP caller, use the bare id.
 - **Gotchas:** the free "Gemini Code Assist for individuals" OAuth tier was sunset — on
   `IneligibleTierError`, fix `GEMINI_API_KEY`/`selectedType` in `~/.gemini/settings.json`;
   **do not** re-OAuth, that tier is permanently gone.
@@ -67,9 +74,10 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 - **When to pick:** same as `gemini-3.1-pro-preview` (web-research, large-context, exploration) —
   reach for this lane specifically when the caller is already on the ICA profile and doesn't need
   Search grounding.
-- **Invocation lane:** `ica/gemini-3.1-pro-preview` — ⚠️ **superseded 2026-08-26: use the bare
-  id.** The old "`[1m]` always, plain is a demoted fallback" rule is inverted now: `[1m]` 403s on
-  every transport, and the bare id carries native context for free.
+- **Invocation lane:** `ica/gemini-3.1-pro-preview` — ⚠️ **corrected 2026-09-10 (by analogy, not
+  independently re-measured for Gemini — see `routes/ica-lanes.md`).** The 2026-08-26 "`[1m]`
+  403s on every transport" claim was raw-HTTP-only; on the Claude Code invocation path `[1m]`
+  should get 1M context and bare should cap at 200k. Use the bare id for a raw-HTTP caller.
 - **Gotchas:** `shared_token_pool`, not free. Not Search-grounded — the ICA proxy cannot ground;
   use the native lane above if grounding is required.
 
@@ -86,10 +94,13 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
   and SVG/multimodal input. For raster image gen, mood boards, mock-up renders, illustrations, or
   PNG assets, use Codex native `image_gen.imagegen` first; Gemini/Nano Banana is fallback only.
 - **ICA gateway:** cheaper-feeling (shared pool) but **not** grounded and **not** free
-  (`allowance: shared_token_pool`). ⚠️ **Superseded 2026-08-26:** the old "needs `[1m]` to unlock
-  1M, plain caps at 200k" rule is inverted — `[1m]` 403s on every transport now, and the **bare**
-  id carries native/large context for free (measured up to 950,002 prompt tokens on
-  `gemini-3.7-flash`, ccx).
+  (`allowance: shared_token_pool`). ⚠️ **Corrected 2026-09-10 (by analogy to the Claude finding,
+  not independently re-measured for Gemini — `routes/ica-lanes.md`):** the 2026-08-26 "`[1m]`
+  403s everywhere, bare carries native context" claim was measured on raw-HTTP transports only.
+  On a raw-HTTP caller, the bare id still carries large context for free (measured up to 950,002
+  prompt tokens on `gemini-3.7-flash`, ccx) and `[1m]` still 403s. On the **Claude Code invocation
+  path**, expect the original "`[1m]` needed for 1M, bare caps at 200k" split to hold instead —
+  re-probe before relying on this for Gemini specifically.
 - Prefer ICA-first for non-grounded cross-family second opinions; reach for native only to close
   a grounding/SVG/multimodal capability gap. Do not leave an ICA workflow solely to get Gemini
   image generation: the `ica/gpt-5.6-terra-dzus` shim is the second image lane.
@@ -102,11 +113,15 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 - Do not say Gemini on ICA gets Search grounding — it doesn't; grounding is native-key-only.
 - Do not say Gemini/Nano Banana is the primary image-generation lane. Codex native
   `image_gen.imagegen` is first; the ICA GPT shim is second only when already on ICA.
-- ⚠️ **Do not say the plain (non-`[1m]`) ICA Gemini id caps at 200k — RETRACTED 2026-08-26.**
-  Measured: bare `gemini-3.7-flash` accepted 950,002 prompt tokens on ccx. The bare id now carries
-  native context; it is the `[1m]` id that is dead (403s on every transport).
-- Do not say a `[1m]`-suffixed Gemini id reaches ICA on any transport — superseded 2026-08-26,
-  every `[1m]` id 403s now.
+- ⚠️ **Do not say the plain (non-`[1m]`) ICA Gemini id caps at 200k on a raw-HTTP transport —
+  RETRACTED 2026-08-26 for that transport.** Measured: bare `gemini-3.7-flash` accepted 950,002
+  prompt tokens on ccx via raw-HTTP. That finding does not extend to the Claude Code invocation
+  path without its own re-measurement — see the correction above.
+- Do not say a `[1m]`-suffixed Gemini id never reaches ICA without naming the transport (corrected
+  2026-09-10, by analogy to the Claude finding in `routes/ica-lanes.md`): `[1m]` ids 403 on
+  raw-HTTP calls to the gateway, but the equivalent Claude finding shows `[1m]` works and gets 1M
+  context on the Claude Code invocation path — Gemini has not been independently re-probed on
+  that path yet, so don't assert either direction as confirmed for Gemini specifically.
 - Do not say `gemini-3.7-flash` is unavailable — it is servable on ccx (950,002 prompt tokens
   measured, tool use and structured output both confirmed) and outranks the model currently
   leading three routing chains, but is not yet promoted pending a head-to-head vs `gemini-3.6-flash`.
