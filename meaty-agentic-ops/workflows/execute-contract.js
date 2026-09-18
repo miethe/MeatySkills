@@ -1871,12 +1871,12 @@ async function runCouncil(parsed, sprintResult) {
  * non-council path that want the codex offload keep dispatching it themselves before falling
  * back to this funnel — see the flag-off `else` branch at the initial review site.
  */
-async function dispatchReview(parsed, reviewerType, sprintResult, measurement, label) {
+async function dispatchReview(parsed, reviewerType, sprintResult, measurement, label, prompt = reviewPrompt(parsed, sprintResult, measurement)) {
   if (reviewerType === 'council-review') {
     return assessCouncilVerdict(await runCouncil(parsed, sprintResult), 'sprint')
   }
   assertKnownAgentType(reviewerType, 'dispatchReview')
-  const verdict = await agent(reviewPrompt(parsed, sprintResult, measurement), {
+  const verdict = await agent(prompt, {
     label: label || 'review',
     phase: 'Review',
     agentType: reviewerType,
@@ -2729,13 +2729,26 @@ while (verdict && !verdict.approved && !integrityFailure && cycles < 2 && budget
   // dispatchReview() — never a bare agent({agentType: reviewerType}) — so a council-tier
   // re-review cannot hit the same 'council-review' agentType defect the initial review was
   // fixed for (node_01M00NVT1S5WGY8T6W71TB676D). dispatchReview() applies enforceEvidenceRules
-  // itself for the non-council path and assessCouncilVerdict's own integrity checks for the
-  // council path — no separate enforceEvidenceRules call needed here.
+  // itself for the non-council path; retain the explicit post-dispatch pass here as the fix
+  // loop's measured boundary. It is idempotent after a downgrade and makes the re-review's
+  // evidence enforcement local to the post-fix measurement rather than an incidental property
+  // of the dispatch helper. Council verdicts retain assessCouncilVerdict's distinct semantics.
   phase('Review')
-  const cycleReview = await dispatchReview(parsed, reviewerType, reviewResult, measurement, `review-cycle-${cycleNumber}`)
+  const cycleReview = await dispatchReview(
+    parsed,
+    reviewerType,
+    reviewResult,
+    measurement,
+    `review-cycle-${cycleNumber}`,
+    reviewPrompt(parsed, reviewResult, measurement),
+  )
   verdict = cycleReview.verdict
-  if (cycleReview.integrity_failure) {
-    integrityFailure = cycleReview.integrity_failure
+  const enforcedCycle = reviewerType === 'council-review'
+    ? cycleReview
+    : enforceEvidenceRules(verdict, 'sprint', reviewerType, measurement)
+  verdict = enforcedCycle.verdict
+  if (enforcedCycle.integrity_failure) {
+    integrityFailure = enforcedCycle.integrity_failure
     log(`GATE INTEGRITY FAILURE on re-review (fix cycle ${cycleNumber}): ${integrityFailure}. Halting the fix loop — the fix so far is unreviewed, not rejected.`)
   }
 
