@@ -695,7 +695,7 @@ function applyIncoherenceRule(verdict) {
  * conditions must hold — a non-executing lens's bare say-so is not enough on its own; the gate
  * still needs a real path from SOMEWHERE, just not necessarily from this lens.
  */
-function applyEvidenceRules(verdict, gateContext = {}) {
+function applyEvidenceRules(verdict, gateContext = null) {
   if (verdict.verdict_source !== 'reviewer' || !verdict.approved) return verdict
 
   const claims = asList(verdict.self_reported_claims)
@@ -721,15 +721,25 @@ function applyEvidenceRules(verdict, gateContext = {}) {
     const vp = verdict.verification_path
     const honestlyUnestablished = Boolean(vp) && vp.established === false
     const declaredUnverifiable = asList(verdict.unverifiable).length > 0
+    // The first pass below intentionally has no gate-wide context yet: that context is
+    // derived from every raw lens verdict. Keep this limited case pending rather than
+    // prematurely converting an honest non-executing lens into an integrity failure;
+    // the immediately following contextual pass resolves it before any consumer reads
+    // the approval tally.
+    if (honestlyUnestablished && declaredUnverifiable && !gateContext) {
+      return { ...verdict, verification_path_pending: true }
+    }
     if (honestlyUnestablished && declaredUnverifiable && gateContext.anyExecutingLensEstablishedPath) {
       log(`Gate DELEGATION on the ${verdict.lens} lens: no execution capability, honestly declared verification_path.established:false, and named ${asList(verdict.unverifiable).length} unverifiable criterion(a) — the ${gateContext.establishingLens} lens already established a real verification path in this gate round. NOT a gate-integrity failure.`)
-      return { ...verdict, verification_path_delegated: gateContext.establishingLens }
+      const { verification_path_pending, ...delegated } = verdict
+      return { ...delegated, verification_path_delegated: gateContext.establishingLens }
     }
   }
 
   log(`GATE INTEGRITY FAILURE on the ${verdict.lens} lens (${verdict.reviewer_type}): ${gap}. Recording as a gate-integrity failure, NOT as an approval and NOT as a rejection. The caller must NOT run a fix cycle.`)
+  const { verification_path_pending, ...failedVerdict } = verdict
   return {
-    ...verdict,
+    ...failedVerdict,
     approved: false,
     verdict_source: 'gate_integrity_failure',
     integrity_reason: gap,
@@ -1175,12 +1185,11 @@ const gateContext = {
   establishingLens: establishingLens ? establishingLens.lens : null,
 }
 
-// D4 → R3/D3 → AC-3/D2 → D5, in that order, on the RAW lens verdict, so no downstream consumer
-// ever sees an un-adjusted verdict. applyIncoherenceRule runs first because it is a shape check
-// on what the lens itself emitted, independent of (and prior to) any enforcement rewrite;
-// applyNonLocalFixRule runs last because it operates on whatever required_fixes survive every
-// upstream pass, including fixes those passes themselves added.
-const verdicts = rawVerdicts
+// R3/D3 begins on each RAW verdict. The first pass applies the local evidence rule before any
+// approval consumer can observe a lens. Honest non-executing lenses need the gate-wide fact,
+// which can only be derived after all raw verdicts exist, so the contextual second pass resolves
+// their narrowly-marked pending state before D4/AC-3/D2/D5 and before the approval tally.
+const verdicts = rawVerdicts.map(applyEvidenceRules)
   .map(applyIncoherenceRule)
   .map(v => applyEvidenceRules(v, gateContext))
   .map(v => applyTestStatusRules(v, measurement))
