@@ -1,0 +1,123 @@
+{
+  "snapshot_id": "cgh-capabilities-2026-09-17",
+  "verified_on": "2026-09-17",
+  "review_after_days": 14,
+  "surface": "chatgpt-chat",
+  "account_default": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_defaults": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "documented_platform_ceiling": null,
+    "basis": "operator request for ten; four is an authored conservative batch"
+  },
+  "routes": {
+    "pro-decision": {
+      "preferred_model": "GPT-6 Pro",
+      "thinking": "Pro selection; no separate effort asserted",
+      "tool_requirement": "task-dependent; verify in Chat",
+      "fallback_policy": "ask_before_downgrade",
+      "source_ids": [
+        "OAI-01"
+      ],
+      "rationale": "Authored recommendation for expensive judgment and synthesis."
+    },
+    "reasoned-standard": {
+      "preferred_model": "GPT-5.6 Sol",
+      "thinking": "High; Extra High for a harder bounded review when available",
+      "tool_requirement": "verify requested tools",
+      "fallback_policy": "report_and_use_available_reasoning_only_if_authorized",
+      "source_ids": [
+        "OAI-01"
+      ],
+      "rationale": "Authored default for routine structured reasoning."
+    },
+    "image-execution": {
+      "preferred_model": "ChatGPT Images",
+      "thinking": "Images with thinking when exposed and useful",
+      "tool_requirement": "image generation/editing",
+      "fallback_policy": "block_without_image_capability",
+      "source_ids": [
+        "OAI-04"
+      ],
+      "rationale": "Use actual image capability, not a guessed text-model combination."
+    },
+    "deep-research-execution": {
+      "preferred_model": "Deep Research service selection",
+      "thinking": "service-managed; operator reviews plan",
+      "tool_requirement": "Deep Research in Chat",
+      "fallback_policy": "no_silent_search_substitution",
+      "source_ids": [
+        "OAI-02"
+      ],
+      "rationale": "Depth/source-policy workflow, separate from Pro reasoning."
+    },
+    "search-execution": {
+      "preferred_model": "available Chat model with search",
+      "thinking": "Medium or High where available",
+      "tool_requirement": "web search",
+      "fallback_policy": "mark_current_facts_unverified_without_search",
+      "source_ids": [
+        "OAI-08"
+      ],
+      "rationale": "Bounded current factual lookup."
+    },
+    "tool-analysis": {
+      "preferred_model": "available reasoning model with required tools",
+      "thinking": "High or Extra High where available",
+      "tool_requirement": "file/vision/Python or artifact tools as requested",
+      "fallback_policy": "report_missing_tool_no_fake_artifacts",
+      "source_ids": [
+        "OAI-06"
+      ],
+      "rationale": "Tool compatibility is checked before premium-model preference."
+    }
+  },
+  "capability_routes": {
+    "image_generation": "image-execution",
+    "deep_research": "deep-research-execution",
+    "web_search": "search-execution",
+    "pro_reasoning": "pro-decision",
+    "code_review": "reasoned-standard",
+    "data_analysis": "tool-analysis",
+    "visual_review": "tool-analysis",
+    "artifact_creation": "tool-analysis"
+  },
+  "known_facts": [
+    {
+      "id": "F01",
+      "fact": "GPT-6 Pro is documented for Pro $100 and Pro $200; exact account tier and remaining allowance are unknown here.",
+      "source": "OAI-01"
+    },
+    {
+      "id": "F02",
+      "fact": "Sol uses Instant, Medium, High and Extra High labels; model/thinking must be selected in the UI, not assumed from a request to think harder.",
+      "source": "OAI-01"
+    },
+    {
+      "id": "F03",
+      "fact": "Chat Deep Research has a separate task allowance; it can use permitted web/files and supported read-only app sources.",
+      "source": "OAI-02"
+    },
+    {
+      "id": "F04",
+      "fact": "Images can be created or edited with text, requested aspect ratios and transparent backgrounds; exact results still need QA.",
+      "source": "OAI-04"
+    },
+    {
+      "id": "F05",
+      "fact": "The upload FAQ lists 40 files per Pro Project and 20 MB per image; other limits and account state also apply.",
+      "source": "OAI-05"
+    }
+  ],
+  "unknowns": [
+    "exact Pro tier",
+    "remaining model/research/image allowance",
+    "universal image-generation batch ceiling",
+    "per-model tool compatibility in the user's session",
+    "actual uploaded corporate template contents"
+  ]
+}

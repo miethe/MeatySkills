@@ -1,0 +1,60 @@
+{
+  "id": "CGH-REFERENCE",
+  "version": "1.0.0",
+  "snapshot": "cgh-reference-v1.0.0",
+  "files": [
+    {
+      "path": "SPEC.md",
+      "sha256": "69912ecef3eb29be7fb50bdb43e0e8c059ab93fc19189e87f04f4fa43a95dae7"
+    },
+    {
+      "path": "docs/analysis-artifacts.md",
+      "sha256": "c9b6978f57a72b4231cec13fa12a63ab3c24bbb68cc8ef8bbd0d5e133e331a3d"
+    },
+    {
+      "path": "docs/bootstrap.md",
+      "sha256": "db0e4728d0bb164771f044f61969a9fea1d594c372c471ab183cb8af38a9df31"
+    },
+    {
+      "path": "docs/design-profiles.md",
+      "sha256": "83170db749a0c866163a319de08455f2f5fae95a4a7f1b62264a1fd77005bb8f"
+    },
+    {
+      "path": "docs/extensibility.md",
+      "sha256": "404335cb44504667fa52eae1cb1b59a803c4930d14209db74ce5be176a78f96a"
+    },
+    {
+      "path": "docs/handback.md",
+      "sha256": "acb0174b540637c59de031795ba3e0dc6cb034199a60ed1cfc0dd8bdcbe1c19f"
+    },
+    {
+      "path": "docs/images.md",
+      "sha256": "ac94d6f94ef9e75e04b92a5ac3b553f86103f63372e90bed0601069b30de3c87"
+    },
+    {
+      "path": "docs/payload-fields.md",
+      "sha256": "7d89423b274ff47f7871594dc8905f21c0871ba2d4c47bfe4d9bd950354618c4"
+    },
+    {
+      "path": "docs/protocol.md",
+      "sha256": "2449eb2559fee70685e95004b3c04b52193e88af0580155dc9294936dbab1414"
+    },
+    {
+      "path": "docs/research.md",
+      "sha256": "8a1dcb1e2ce9dacd18fd8a3956dcecb30f0ab94dd0db0fd7b97dbaa351c61a1d"
+    },
+    {
+      "path": "registry/design-profiles.json",
+      "sha256": "06cdf9ff910205ae0332317289107413af10bd134c191e0478188e8f9980b827"
+    },
+    {
+      "path": "schemas/handback.schema.json",
+      "sha256": "370452d1f0a569798e28c871f234bd9901280c34c6de9335c4a7096893cc08f2"
+    },
+    {
+      "path": "schemas/handoff.schema.json",
+      "sha256": "106ca16541317e27ea4ebca149901a6c62e8d97800600ffa3a1dc04eb0ffb5d0"
+    }
+  ],
+  "content_sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+}

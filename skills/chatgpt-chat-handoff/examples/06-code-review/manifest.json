@@ -1,0 +1,114 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-review-an-empty-input-edge-case",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Review an empty-input edge case",
+  "objective": "Review the mean function contract and propose a minimal tested correction without applying it.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Sanitized demonstration fixture. No actual client data, production repository or account state is represented.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [
+    {
+      "id": "I01",
+      "kind": "file",
+      "path": "inputs/mean.py",
+      "sha256": "dd614311a13cc6bd1db137ff338730187de6ebc3662833d5e629f92ba070820c",
+      "media_type": "text/x-python",
+      "role": "evidence",
+      "required": true,
+      "note": "Synthetic fixture; not production evidence."
+    }
+  ],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "code_review",
+      "route": "reasoned-standard",
+      "depends_on": [],
+      "input_ids": [
+        "I01"
+      ],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "O01"
+      ],
+      "payload": {
+        "task": "Review empty-input behavior and define an explicit contract. Supply a review with a minimal proposed patch and tests.",
+        "base_revision": "synthetic-fixture-v1; not a repository commit",
+        "environment": {
+          "python": "3.10+",
+          "dependencies": "standard library only"
+        },
+        "test_evidence": [
+          {
+            "command": "python3 -m unittest",
+            "status": "not_run",
+            "result": "No test suite is supplied; propose tests and label execution status."
+          }
+        ],
+        "mutation_boundary": "proposed_patch",
+        "review_focus": [
+          "Empty list behavior",
+          "Whether non-finite values belong in scope",
+          "Clear exception contract",
+          "Minimal tests"
+        ],
+        "output_structure": [
+          "Findings with severity and concrete tests",
+          "Not-run checks"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O01",
+      "path": "outputs/result.md",
+      "media_type": "text/markdown",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Address every requested question.",
+        "Label gaps, assumptions and tests not run."
+      ]
+    }
+  ],
+  "extensions": {}
+}

@@ -1,0 +1,96 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-bounded-handoff-architecture-decision",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Bounded handoff architecture decision",
+  "objective": "Choose between one large consultation and staged research/review turns for a difficult architecture decision.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Sanitized demonstration fixture. No actual client data, production repository or account state is represented.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "pro_reasoning",
+      "route": "pro-decision",
+      "depends_on": [],
+      "input_ids": [],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "O01"
+      ],
+      "payload": {
+        "decision": "How should a human-relayed Chat consultation be split to preserve evidence and minimize rework?",
+        "alternatives": [
+          "One combined request",
+          "Research first, decision second",
+          "Several independent research runs, then synthesis"
+        ],
+        "evidence_policy": "Use the supplied scenario as assumptions, not empirical performance evidence.",
+        "adversarial_questions": [
+          "Where would splitting lose context?",
+          "Which decisions could be made locally?",
+          "What makes a separate Pro review worth its allowance?"
+        ],
+        "output_structure": [
+          "Recommendation and conditions",
+          "Compact trade-off table",
+          "Failure modes",
+          "Concrete next-step contract"
+        ],
+        "reasoning_request": "concise_rationale_and_checks"
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O01",
+      "path": "outputs/result.md",
+      "media_type": "text/markdown",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Address every requested question.",
+        "Label gaps, assumptions and tests not run."
+      ]
+    }
+  ],
+  "extensions": {}
+}
