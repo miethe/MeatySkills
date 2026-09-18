@@ -1,0 +1,21 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-twelve-slide-governed-workflow-illustration-s",
+  "manifest_sha256": "57a1316331471c6956c1a35c704104cef4b21111d30adc0bb9498085f590d711",
+  "status": "partial",
+  "completed_turn_ids": [],
+  "files": [],
+  "findings": [],
+  "deviations": [],
+  "gaps": [
+    "Populate only actually delivered files and completed turns; no output is assumed."
+  ],
+  "observed_execution": {
+    "model_label": null,
+    "thinking_label": null,
+    "basis": "unknown",
+    "tools_used": []
+  },
+  "extensions": {}
+}

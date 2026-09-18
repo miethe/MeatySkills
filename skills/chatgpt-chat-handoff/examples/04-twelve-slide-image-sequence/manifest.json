@@ -1,0 +1,937 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-twelve-slide-governed-workflow-illustration-s",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Twelve-slide governed workflow illustration set",
+  "objective": "Create twelve separate 16:9 slide images, review them, then build a clearly labeled image-only deck and asset map.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Public-safe conceptual workflow. The IBM-light preset is an authored preference, not a supplied corporate template or compliance claim.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "image_generation",
+      "route": "image-execution",
+      "depends_on": [],
+      "input_ids": [],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "payload": {
+        "return_mode": "images_only",
+        "images": [
+          {
+            "output_id": "S01",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "From request to bounded work",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "A repeatable human-relayed workflow",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "01",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S02",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Capture the actual intent",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Outcome, audience, constraints",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "02",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S03",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Declare the operating boundary",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Allowed inputs and actions",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "03",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S04",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Separate judgment from permission",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "A proposal is not authorization",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "04",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "T02",
+      "capability": "image_generation",
+      "route": "image-execution",
+      "depends_on": [
+        "T01"
+      ],
+      "input_ids": [],
+      "upstream_output_ids": [
+        "S01"
+      ],
+      "output_ids": [
+        "S05",
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "payload": {
+        "return_mode": "images_only",
+        "images": [
+          {
+            "output_id": "S05",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Plan dependencies explicitly",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Inputs and prerequisites stay visible",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "05",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S06",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Select the smallest useful capability",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Research, reasoning, images or analysis",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "06",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S07",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Carry the actual evidence",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Names and links are not file contents",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "07",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S08",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Validate before the action",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Check the contract at the boundary",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "08",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "T03",
+      "capability": "image_generation",
+      "route": "image-execution",
+      "depends_on": [
+        "T02"
+      ],
+      "input_ids": [],
+      "upstream_output_ids": [
+        "S01"
+      ],
+      "output_ids": [
+        "S09",
+        "S10",
+        "S11",
+        "S12"
+      ],
+      "payload": {
+        "return_mode": "images_only",
+        "images": [
+          {
+            "output_id": "S09",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Recover without losing decisions",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Resume only missing or failed work",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "09",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S10",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Preserve approved artifacts",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Keep stable IDs and selected variants",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "10",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S11",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Return a verifiable handback",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Files, gaps and checks—not just advice",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "11",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "S12",
+            "kind": "slide",
+            "operation": "generate",
+            "brief": "Light editorial technical slide with a large left-aligned title, one central process illustration and a concise subtitle. Each slide has one dominant idea. Do not add logos.",
+            "text_mode": "exact",
+            "exact_text": [
+              {
+                "id": "title",
+                "region": "upper left",
+                "text": "Promote only after local review",
+                "emphasis": "large bold heading"
+              },
+              {
+                "id": "subtitle",
+                "region": "lower left",
+                "text": "Evidence supports acceptance",
+                "emphasis": "smaller supporting line"
+              },
+              {
+                "id": "page",
+                "region": "bottom right",
+                "text": "12",
+                "emphasis": "small page number"
+              }
+            ],
+            "aspect_ratio": "16:9",
+            "target_pixels": [
+              1920,
+              1080
+            ],
+            "background": {
+              "mode": "solid",
+              "color": "#FFFFFF"
+            },
+            "profile_id": "work.ibm-consulting-light.v1",
+            "overrides": {},
+            "negative_constraints": [
+              "No logos",
+              "No additional labels or decorative text",
+              "No tiny body copy"
+            ],
+            "consistency": "Use the resolved common grid and palette. In later batches, use the actual attached S01 output as style anchor.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "T04",
+      "capability": "visual_review",
+      "route": "tool-analysis",
+      "depends_on": [
+        "T03"
+      ],
+      "input_ids": [],
+      "upstream_output_ids": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12"
+      ],
+      "output_ids": [
+        "QA"
+      ],
+      "payload": {
+        "review_target": "All twelve actual generated slide images, ordered S01 through S12.",
+        "criteria": [
+          "Verify every exact text block against the original three generation prompts.",
+          "Check crop, legibility, margins, consistency and order.",
+          "Do not approve unseen files or turn the contact sheet into the deliverable."
+        ],
+        "severity_scheme": "critical / major / minor",
+        "allowed_changes": "Review only. Propose targeted repairs; preserve originals and approved copy.",
+        "output_structure": [
+          "QA report keyed by slide ID",
+          "Repairs and acceptance checks",
+          "Missing-file list"
+        ]
+      }
+    },
+    {
+      "id": "T05",
+      "capability": "artifact_creation",
+      "route": "tool-analysis",
+      "depends_on": [
+        "T04"
+      ],
+      "input_ids": [],
+      "upstream_output_ids": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "QA"
+      ],
+      "output_ids": [
+        "DECK",
+        "MAP"
+      ],
+      "payload": {
+        "build_brief": "Assemble approved actual images into a twelve-slide image-only PPTX and create an output-ID asset map. Do not claim native editability.",
+        "structure": [
+          "One image per slide in S01-S12 order",
+          "Preserve original image files as separate deliverables",
+          "Map each image to actual saved filename, measured dimensions and hash when measured"
+        ],
+        "native_requirements": "PPTX container only; content is explicitly raster/image-only.",
+        "raster_allowed": "All slide content is raster by design.",
+        "validation": [
+          "Open/render the deck and verify twelve slides and order.",
+          "Preserve original aspect ratio without unintended crop.",
+          "List every unmeasured hash or unresolved QA defect rather than inventing evidence."
+        ],
+        "output_structure": [
+          "Actual image-only PPTX",
+          "asset-map.json",
+          "Final handback.json and unresolved gaps"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "S01",
+      "path": "outputs/slide-01.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S02",
+      "path": "outputs/slide-02.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S03",
+      "path": "outputs/slide-03.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S04",
+      "path": "outputs/slide-04.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S05",
+      "path": "outputs/slide-05.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S06",
+      "path": "outputs/slide-06.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S07",
+      "path": "outputs/slide-07.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S08",
+      "path": "outputs/slide-08.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S09",
+      "path": "outputs/slide-09.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S10",
+      "path": "outputs/slide-10.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S11",
+      "path": "outputs/slide-11.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "S12",
+      "path": "outputs/slide-12.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "One separate 16:9 slide image.",
+        "All three exact text blocks appear once with correct spelling.",
+        "No invented logos; preserve light layout and margins."
+      ]
+    },
+    {
+      "id": "QA",
+      "path": "outputs/qa-report.md",
+      "media_type": "text/markdown",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Produce actual requested content; list unresolved gaps."
+      ]
+    },
+    {
+      "id": "DECK",
+      "path": "outputs/slides-image-only.pptx",
+      "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "editability": "raster",
+      "acceptance": [
+        "Twelve image-only slides in exact S01-S12 order.",
+        "No claim of native content editability."
+      ]
+    },
+    {
+      "id": "MAP",
+      "path": "outputs/asset-map.json",
+      "media_type": "application/json",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Produce actual requested content; list unresolved gaps."
+      ]
+    }
+  ],
+  "extensions": {
+    "aos.parent_packet": {
+      "status": "unbound_demo",
+      "note": "Bind the actual installed parent packet contract at adoption."
+    }
+  }
+}

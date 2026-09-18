@@ -1,0 +1,21 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-bounded-handoff-architecture-decision",
+  "manifest_sha256": "aa4f805cf866ce38aaa4dd9c38322c2addf9274bc436ff223dc7da90d1b0b1ae",
+  "status": "partial",
+  "completed_turn_ids": [],
+  "files": [],
+  "findings": [],
+  "deviations": [],
+  "gaps": [
+    "Populate only actually delivered files and completed turns; no output is assumed."
+  ],
+  "observed_execution": {
+    "model_label": null,
+    "thinking_label": null,
+    "basis": "unknown",
+    "tools_used": []
+  },
+  "extensions": {}
+}

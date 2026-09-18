@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "profiles": {
+    "work.ibm-consulting-light.v1": {
+      "name": "IBM Consulting light — preference preset",
+      "version": "1.0.0",
+      "basis": "user preference; authored seed, not an official brand specification",
+      "applies_to": [
+        "slide",
+        "diagram",
+        "infographic",
+        "web_graphic"
+      ],
+      "tokens": {
+        "background": "#FFFFFF",
+        "foreground": "#161616",
+        "muted": "#525252",
+        "accent": "#0F62FE",
+        "rule": "#DDE1E6",
+        "font_preference": "IBM Plex Sans when installed; otherwise disclose substitution",
+        "layout": "16:9 for slides; generous margins; clear grid; strong left alignment; restrained blue accents",
+        "graphics": "clean technical linework; authentic supplied logos only; avoid decorative clutter",
+        "text": "short hierarchical blocks; exact requested strings; ample line spacing"
+      },
+      "guardrails": [
+        "No claim of official brand compliance without actual template",
+        "Do not package font files",
+        "Do not invent logos",
+        "Preserve approved narrative and slide order"
+      ]
+    },
+    "work.ibm-template-exact.v1": {
+      "name": "Bound IBM template",
+      "version": "1.0.0",
+      "basis": "actual task attachment is required",
+      "applies_to": [
+        "slide",
+        "diagram",
+        "infographic"
+      ],
+      "tokens": {
+        "layout": "Use bound template geometry, typography, backgrounds and actual reference renders",
+        "text": "Preserve exact copy and specified object positions",
+        "graphics": "Use supplied authentic assets; mark unresolved assets"
+      },
+      "requires_template": true,
+      "guardrails": [
+        "Do not claim pixel-perfect matching from a template name alone",
+        "Attach reference slide PNGs for visual guidance",
+        "Do not substitute another campaign version silently"
+      ]
+    },
+    "personal.fiber-glass.v1": {
+      "name": "Fiber & Glass",
+      "version": "1.0.0",
+      "basis": "prior project preference; opt-in, not universal personal default",
+      "applies_to": [
+        "ui_mockup",
+        "web_graphic",
+        "icon",
+        "illustration"
+      ],
+      "tokens": {
+        "background": "warm linen",
+        "palette": [
+          "sage",
+          "terracotta",
+          "mineral blue"
+        ],
+        "surfaces": "tactile fabric-like grounding; opaque readable content; restrained translucent glass accents",
+        "layout": "progressive disclosure; calm hierarchy; rounded tactile components",
+        "graphics": "warm material depth, not glossy science-fiction chrome",
+        "accessibility": "readable contrast and clear non-color state indicators"
+      },
+      "guardrails": [
+        "Avoid transparency behind dense text",
+        "Do not apply this profile to unrelated personal projects without selection"
+      ]
+    },
+    "personal.editorial-neutral.v1": {
+      "name": "Personal editorial neutral",
+      "version": "1.0.0",
+      "basis": "new conservative fallback proposal",
+      "applies_to": [
+        "slide",
+        "infographic",
+        "illustration",
+        "web_graphic"
+      ],
+      "tokens": {
+        "background": "off-white",
+        "foreground": "near-black",
+        "accent": "one muted accent chosen explicitly",
+        "layout": "spacious editorial hierarchy with legible headings",
+        "graphics": "purposeful illustrations and minimal ornament"
+      },
+      "guardrails": [
+        "Override explicitly for book, app or themed project styles"
+      ]
+    },
+    "technical.diagram-clean.v1": {
+      "name": "Clean technical diagram",
+      "version": "1.0.0",
+      "basis": "new task-neutral preset",
+      "applies_to": [
+        "diagram",
+        "icon",
+        "infographic",
+        "slide"
+      ],
+      "tokens": {
+        "background": "white unless transparent explicitly requested",
+        "foreground": "charcoal",
+        "accent": "one restrained blue accent",
+        "layout": "orthogonal connectors; consistent node geometry; visible arrowheads; avoid crossing lines",
+        "graphics": "flat or subtle depth; uniform line weight",
+        "text": "short exact node labels; relationships from supplied topology"
+      },
+      "guardrails": [
+        "Never invent edges or quantities for aesthetics",
+        "Icons default to no text; transparency must be actual alpha"
+      ]
+    },
+    "custom.inline.v1": {
+      "name": "Inline custom design",
+      "version": "1.0.0",
+      "basis": "explicit per-task overrides",
+      "applies_to": [
+        "slide",
+        "diagram",
+        "icon",
+        "web_graphic",
+        "infographic",
+        "illustration",
+        "ui_mockup",
+        "other"
+      ],
+      "tokens": {},
+      "guardrails": [
+        "Provide concrete palette, composition and typography/linework instructions in overrides"
+      ]
+    }
+  }
+}

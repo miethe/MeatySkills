@@ -1,0 +1,132 @@
+{
+  "verified_on": "2026-09-17",
+  "sources": [
+    {
+      "id": "OAI-01",
+      "title": "GPT-5.6 and GPT-6 Pro in ChatGPT",
+      "url": "https://help.openai.com/en/articles/20001354-gpt-5-6",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "21 hours ago",
+      "retrieved_on": "2026-09-17",
+      "supports": "Chat model labels, thinking options and plan-specific allowances."
+    },
+    {
+      "id": "OAI-02",
+      "title": "Deep research in ChatGPT",
+      "url": "https://help.openai.com/en/articles/10500283-deep-research-in-chatgpt",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "6 days ago",
+      "retrieved_on": "2026-09-17",
+      "supports": "Chat entry point, source restrictions, plan flow and separate Chat task allowance."
+    },
+    {
+      "id": "OAI-03",
+      "title": "Projects in ChatGPT",
+      "url": "https://help.openai.com/en/articles/10169521-projects-in-chatgpt",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "last month",
+      "retrieved_on": "2026-09-17",
+      "supports": "Project files and project instructions; project scope and customization precedence."
+    },
+    {
+      "id": "OAI-04",
+      "title": "Images in ChatGPT",
+      "url": "https://help.openai.com/en/articles/11084440-chatgpt-images-faq",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "7 days ago",
+      "retrieved_on": "2026-09-17",
+      "supports": "Image creation/editing, thinking availability, text/transparency and image retrieval."
+    },
+    {
+      "id": "OAI-05",
+      "title": "File Uploads FAQ",
+      "url": "https://help.openai.com/en/articles/8555545-file-uploads-faq",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "6 days ago",
+      "retrieved_on": "2026-09-17",
+      "supports": "File limits; Pro project file count; document visual-retrieval caveats."
+    },
+    {
+      "id": "OAI-06",
+      "title": "Data analysis with ChatGPT",
+      "url": "https://help.openai.com/en/articles/8437071-data-analysis-with-chatgpt",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "2 months ago",
+      "retrieved_on": "2026-09-17",
+      "supports": "Structured uploads, Python-backed analysis and no external network calls from that Python environment."
+    },
+    {
+      "id": "OAI-07",
+      "title": "ChatGPT Custom Instructions",
+      "url": "https://help.openai.com/en/articles/8096356-chatgpt-custom-instructions",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": "last month",
+      "retrieved_on": "2026-09-17",
+      "supports": "Global customization and plan-dependent instruction length."
+    },
+    {
+      "id": "OAI-08",
+      "title": "Searching the web with ChatGPT",
+      "url": "https://help.openai.com/en/articles/9237897-chatgpt-search",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": null,
+      "retrieved_on": "2026-09-17",
+      "supports": "Current web answers and source links; availability remains session-dependent."
+    },
+    {
+      "id": "OAI-09",
+      "title": "Apps in ChatGPT",
+      "url": "https://help.openai.com/en/articles/11487775-connectors-in-chatgpt",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": null,
+      "retrieved_on": "2026-09-17",
+      "supports": "Connected source and action availability varies by app and account."
+    },
+    {
+      "id": "OAI-10",
+      "title": "Data Controls FAQ",
+      "url": "https://help.openai.com/en/articles/7730893-data-controls-faq",
+      "publisher": "OpenAI",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": null,
+      "retrieved_on": "2026-09-17",
+      "supports": "Operator-controlled data settings; not enterprise upload authorization."
+    },
+    {
+      "id": "DEP-01",
+      "title": "jsonschema validation documentation",
+      "url": "https://python-jsonschema.readthedocs.io/en/stable/validate/",
+      "publisher": "python-jsonschema project",
+      "published_at": null,
+      "updated_at": null,
+      "updated_label_observed": null,
+      "retrieved_on": "2026-09-17",
+      "supports": "Draft 2020-12 schema validation and explicit format checking."
+    }
+  ],
+  "notes": [
+    "Relative update labels are preserved, not converted into invented exact dates.",
+    "Public docs were checked; the operator's UI, tier and remaining allowances were not inspected.",
+    "A historical image-help URL returned 404; the current Images article is used instead.",
+    "No universal ten-generated-images-per-turn limit was established by the official documentation reviewed."
+  ]
+}

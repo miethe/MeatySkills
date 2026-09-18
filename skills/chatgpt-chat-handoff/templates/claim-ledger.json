@@ -1,0 +1,13 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "REPLACE_ME",
+      "source_ids": [],
+      "evidence_locators": [],
+      "status": "unknown",
+      "limitations": [],
+      "proposed_revision": null
+    }
+  ]
+}

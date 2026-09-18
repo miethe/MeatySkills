@@ -1,0 +1,102 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-inspect-a-synthetic-workflow-diagram",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Inspect a synthetic workflow diagram",
+  "objective": "Find differences between the actual attached diagram and the expected labels Request → Approval → Action.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Sanitized demonstration fixture. No actual client data, production repository or account state is represented.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [
+    {
+      "id": "I01",
+      "kind": "file",
+      "path": "inputs/qa-fixture.png",
+      "sha256": "3983d9ddbc8a7cd1af5992b079ae79ab2cd2983fdf520a537bd56f902e355c49",
+      "media_type": "image/png",
+      "role": "evidence",
+      "required": true,
+      "note": "Synthetic fixture; not production evidence."
+    }
+  ],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "visual_review",
+      "route": "tool-analysis",
+      "depends_on": [],
+      "input_ids": [
+        "I01"
+      ],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "O01"
+      ],
+      "payload": {
+        "review_target": "Actual attached synthetic QA fixture; not a screenshot of a real application.",
+        "criteria": [
+          "Expected labels are Request, Approval, Action.",
+          "Three nodes connected left to right with arrowheads.",
+          "Report exact region and severity for any spelling defect."
+        ],
+        "severity_scheme": "critical / major / minor",
+        "allowed_changes": "Review only; no edits",
+        "output_structure": [
+          "Issues by view and region",
+          "Repairs and acceptance checks"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O01",
+      "path": "outputs/result.md",
+      "media_type": "text/markdown",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Address every requested question.",
+        "Label gaps, assumptions and tests not run."
+      ]
+    }
+  ],
+  "extensions": {}
+}

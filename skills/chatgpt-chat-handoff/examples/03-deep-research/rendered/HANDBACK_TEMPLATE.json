@@ -1,0 +1,21 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-prior-art-for-deterministic-controls-around-p",
+  "manifest_sha256": "243693e686b631e31c8709fc5f0c076b08d7a46d63cd021d2799e95dcabab840",
+  "status": "partial",
+  "completed_turn_ids": [],
+  "files": [],
+  "findings": [],
+  "deviations": [],
+  "gaps": [
+    "Populate only actually delivered files and completed turns; no output is assumed."
+  ],
+  "observed_execution": {
+    "model_label": null,
+    "thinking_label": null,
+    "basis": "unknown",
+    "tools_used": []
+  },
+  "extensions": {}
+}

@@ -1,0 +1,21 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-analyze-synthetic-service-requests",
+  "manifest_sha256": "0c5b0be71cf71ed69295dbd63ad4a7912a3e1cb9f566af74511a11b7a76b0126",
+  "status": "partial",
+  "completed_turn_ids": [],
+  "files": [],
+  "findings": [],
+  "deviations": [],
+  "gaps": [
+    "Populate only actually delivered files and completed turns; no output is assumed."
+  ],
+  "observed_execution": {
+    "model_label": null,
+    "thinking_label": null,
+    "basis": "unknown",
+    "tools_used": []
+  },
+  "extensions": {}
+}

@@ -1,0 +1,110 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-analyze-synthetic-service-requests",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Analyze synthetic service requests",
+  "objective": "Calculate request-weighted latency and failure rate from the synthetic daily aggregates; return a reproducible analysis.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Sanitized demonstration fixture. No actual client data, production repository or account state is represented.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [
+    {
+      "id": "I01",
+      "kind": "file",
+      "path": "inputs/service.csv",
+      "sha256": "83aca060e6c581fc2617fe923cfbaedba5dd34e52ba6a05c0ccfceeedd331822",
+      "media_type": "text/csv",
+      "role": "evidence",
+      "required": true,
+      "note": "Synthetic fixture; not production evidence."
+    }
+  ],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "data_analysis",
+      "route": "tool-analysis",
+      "depends_on": [],
+      "input_ids": [
+        "I01"
+      ],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "O01"
+      ],
+      "payload": {
+        "questions": [
+          "What is the total failure rate?",
+          "What is request-weighted mean latency?",
+          "Which day has the highest failure rate?"
+        ],
+        "data_dictionary": {
+          "date": "UTC calendar day",
+          "requests": "count",
+          "failures": "count included within requests",
+          "mean_latency_ms": "daily mean in milliseconds, weighted by requests"
+        },
+        "coverage": "Six complete synthetic days, 2026-08-01 through 2026-08-06. No production representativeness is claimed.",
+        "missing_values": "No nulls expected; fail validation if any occur.",
+        "method": "Weighted means and exact ratio of sums. Do not average daily failure percentages unweighted.",
+        "reconciliation": "Requests must sum to 700; failures must sum to 17. Check independently.",
+        "output_structure": [
+          "Results table with denominators",
+          "Reproducible Python code",
+          "Validation and limitations"
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O01",
+      "path": "outputs/result.md",
+      "media_type": "text/markdown",
+      "editability": "not_applicable",
+      "acceptance": [
+        "Address every requested question.",
+        "Label gaps, assumptions and tests not run."
+      ]
+    }
+  ],
+  "extensions": {}
+}

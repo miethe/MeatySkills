@@ -1,0 +1,21 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-verify-current-chat-image-and-research-entry-",
+  "manifest_sha256": "3842f287ae4d5eff080c53286fcb53835d20605b57ea30685ee90a1a74afa41a",
+  "status": "partial",
+  "completed_turn_ids": [],
+  "files": [],
+  "findings": [],
+  "deviations": [],
+  "gaps": [
+    "Populate only actually delivered files and completed turns; no output is assumed."
+  ],
+  "observed_execution": {
+    "model_label": null,
+    "thinking_label": null,
+    "basis": "unknown",
+    "tools_used": []
+  },
+  "extensions": {}
+}

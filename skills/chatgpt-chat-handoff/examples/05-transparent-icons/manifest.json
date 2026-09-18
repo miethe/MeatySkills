@@ -1,0 +1,233 @@
+{
+  "protocol": "CGH/1",
+  "protocol_version": "1.0.0",
+  "pack_id": "cgh-20260917-four-transparent-workflow-icons",
+  "revision": 1,
+  "created_at": "2026-09-17T16:00:00-04:00",
+  "surface": "chatgpt-chat",
+  "title": "Four transparent workflow icons",
+  "objective": "Generate four coherent standalone icons with true transparent backgrounds.",
+  "audience": "Technical operator and local implementation agents",
+  "context": "Sanitized demonstration fixture. No actual client data, production repository or account state is represented.",
+  "constraints": {
+    "frozen": [
+      "Preserve the stated scope and output IDs.",
+      "Clearly distinguish performed work from suggested steps."
+    ],
+    "exclusions": [
+      "Do not use Work or Codex"
+    ],
+    "implementation_freedom": [
+      "Choose concise explanatory wording unless exact text is supplied."
+    ]
+  },
+  "authorization": {
+    "classification": "public",
+    "approved_for_chat": true,
+    "approval_basis": "Synthetic/public example content authored for this release; approval applies only to these fixture bytes.",
+    "connector_writes": false
+  },
+  "reference": {
+    "id": "CGH-REFERENCE",
+    "version": "1.0.0",
+    "snapshot": "cgh-reference-v1.0.0",
+    "sha256": "3fcbfbf718d11201cdedbd5ab31ccc61528afc6ba09604180a8b69676ef25b8b"
+  },
+  "capability_snapshot": "cgh-capabilities-2026-09-17",
+  "capability_sha256": "c00d474e55d95a78b8463622646aeb72f9acc8a1187311c49fd59f4b5afbaad7",
+  "account": {
+    "plan": "Pro",
+    "tier": "unknown",
+    "ui_verified_at": null
+  },
+  "batch_policy": {
+    "working_images": 4,
+    "operator_ceiling": 10,
+    "observed_platform_ceiling": null
+  },
+  "inputs": [],
+  "turns": [
+    {
+      "id": "T01",
+      "capability": "image_generation",
+      "route": "image-execution",
+      "depends_on": [],
+      "input_ids": [],
+      "upstream_output_ids": [],
+      "output_ids": [
+        "ICON01",
+        "ICON02",
+        "ICON03",
+        "ICON04"
+      ],
+      "payload": {
+        "return_mode": "images_only",
+        "images": [
+          {
+            "output_id": "ICON01",
+            "kind": "icon",
+            "operation": "generate",
+            "brief": "Simple line icon representing Intent capture; communicate through shape, not words.",
+            "text_mode": "none",
+            "exact_text": [],
+            "aspect_ratio": "1:1",
+            "target_pixels": [
+              1024,
+              1024
+            ],
+            "background": {
+              "mode": "transparent",
+              "color": null
+            },
+            "profile_id": "technical.diagram-clean.v1",
+            "overrides": {
+              "linework": "uniform rounded strokes with generous optical padding"
+            },
+            "negative_constraints": [
+              "No text",
+              "No painted checkerboard",
+              "No bounding box"
+            ],
+            "consistency": "Same stroke weight, angle, optical size and palette across all four icons.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "ICON02",
+            "kind": "icon",
+            "operation": "generate",
+            "brief": "Simple line icon representing Policy gate; communicate through shape, not words.",
+            "text_mode": "none",
+            "exact_text": [],
+            "aspect_ratio": "1:1",
+            "target_pixels": [
+              1024,
+              1024
+            ],
+            "background": {
+              "mode": "transparent",
+              "color": null
+            },
+            "profile_id": "technical.diagram-clean.v1",
+            "overrides": {
+              "linework": "uniform rounded strokes with generous optical padding"
+            },
+            "negative_constraints": [
+              "No text",
+              "No painted checkerboard",
+              "No bounding box"
+            ],
+            "consistency": "Same stroke weight, angle, optical size and palette across all four icons.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "ICON03",
+            "kind": "icon",
+            "operation": "generate",
+            "brief": "Simple line icon representing Evidence receipt; communicate through shape, not words.",
+            "text_mode": "none",
+            "exact_text": [],
+            "aspect_ratio": "1:1",
+            "target_pixels": [
+              1024,
+              1024
+            ],
+            "background": {
+              "mode": "transparent",
+              "color": null
+            },
+            "profile_id": "technical.diagram-clean.v1",
+            "overrides": {
+              "linework": "uniform rounded strokes with generous optical padding"
+            },
+            "negative_constraints": [
+              "No text",
+              "No painted checkerboard",
+              "No bounding box"
+            ],
+            "consistency": "Same stroke weight, angle, optical size and palette across all four icons.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          },
+          {
+            "output_id": "ICON04",
+            "kind": "icon",
+            "operation": "generate",
+            "brief": "Simple line icon representing Recovery checkpoint; communicate through shape, not words.",
+            "text_mode": "none",
+            "exact_text": [],
+            "aspect_ratio": "1:1",
+            "target_pixels": [
+              1024,
+              1024
+            ],
+            "background": {
+              "mode": "transparent",
+              "color": null
+            },
+            "profile_id": "technical.diagram-clean.v1",
+            "overrides": {
+              "linework": "uniform rounded strokes with generous optical padding"
+            },
+            "negative_constraints": [
+              "No text",
+              "No painted checkerboard",
+              "No bounding box"
+            ],
+            "consistency": "Same stroke weight, angle, optical size and palette across all four icons.",
+            "brand_mode": "profile",
+            "source_input_id": null,
+            "template_input_id": null
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "ICON01",
+      "path": "outputs/icon-01.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "Separate PNG with actual transparent pixels.",
+        "No text; coherent line weight and optical padding."
+      ]
+    },
+    {
+      "id": "ICON02",
+      "path": "outputs/icon-02.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "Separate PNG with actual transparent pixels.",
+        "No text; coherent line weight and optical padding."
+      ]
+    },
+    {
+      "id": "ICON03",
+      "path": "outputs/icon-03.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "Separate PNG with actual transparent pixels.",
+        "No text; coherent line weight and optical padding."
+      ]
+    },
+    {
+      "id": "ICON04",
+      "path": "outputs/icon-04.png",
+      "media_type": "image/png",
+      "editability": "raster",
+      "acceptance": [
+        "Separate PNG with actual transparent pixels.",
+        "No text; coherent line weight and optical padding."
+      ]
+    }
+  ],
+  "extensions": {}
+}

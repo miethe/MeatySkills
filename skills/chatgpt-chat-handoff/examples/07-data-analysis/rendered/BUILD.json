@@ -1,0 +1,10 @@
+{
+  "manifest_sha256": "0c5b0be71cf71ed69295dbd63ad4a7912a3e1cb9f566af74511a11b7a76b0126",
+  "generated_files": {
+    "turns/T01.md": "ea2507e5c92e169862f3baf007b9a5b3e76642136ce10c94e54a390835fab87d",
+    "HANDOFF.md": "ea2507e5c92e169862f3baf007b9a5b3e76642136ce10c94e54a390835fab87d",
+    "INPUTS.md": "884a2fd9a50936d60d3d0cadadeec3e1f0af529f6f3c9eacf76066a2c3d2a516",
+    "OPERATOR.md": "665036f5f1cbbd467220a6918fd600cf9c7cddaa842a9b7bc954abcfddf5841a",
+    "HANDBACK_TEMPLATE.json": "683685e178228dcf9ce1c16f36efadcc82b18e51f00c9b3bb1ec9fd8deaff136"
+  }
+}

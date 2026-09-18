@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cgh:handback:1.0.0",
+  "title": "CGH/1 handback",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "const": "CGH/1"
+    },
+    "protocol_version": {
+      "const": "1.0.0"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "partial",
+        "blocked"
+      ]
+    },
+    "completed_turn_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+      },
+      "uniqueItems": true
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "check": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "not_run"
+                  ]
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "check",
+                "status",
+                "note"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "sha256",
+          "validation"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "deviations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "observed_execution": {
+      "type": "object",
+      "properties": {
+        "model_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "thinking_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "basis": {
+          "enum": [
+            "operator_observed",
+            "session_exposed",
+            "unknown"
+          ]
+        },
+        "tools_used": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "model_label",
+        "thinking_label",
+        "basis",
+        "tools_used"
+      ],
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9_-]*\\.[A-Za-z0-9_.-]+$": {}
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocol",
+    "protocol_version",
+    "pack_id",
+    "manifest_sha256",
+    "status",
+    "completed_turn_ids",
+    "files",
+    "findings",
+    "deviations",
+    "gaps",
+    "observed_execution",
+    "extensions"
+  ],
+  "additionalProperties": false
+}

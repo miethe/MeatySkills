@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "id": "S01",
+      "title": "REPLACE_ME",
+      "organization": "REPLACE_ME",
+      "url": null,
+      "input_id": null,
+      "published_at": null,
+      "updated_at": null,
+      "event_date": null,
+      "retrieved_on": null,
+      "source_type": "primary",
+      "access_status": "not_checked",
+      "locator": "REPLACE_ME"
+    }
+  ]
+}
