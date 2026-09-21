@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IntentTree — Spacing, Radius, Shadow, Motion</title>
+<link rel="stylesheet" href="_preview.css" />
+<style>
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+  /* Spacing */
+  .space-row { display: grid; grid-template-columns: 80px 80px 1fr; gap: 16px; align-items: center; padding: 8px 0; }
+  .space-bar { height: 16px; background: var(--it-blue-300); border-radius: 4px; }
+  .space-name { font-family: var(--it-font-mono); font-size: 11.5px; color: var(--it-text-secondary); }
+  .space-px { font-family: var(--it-font-mono); font-size: 11.5px; color: var(--it-text-tertiary); }
+
+  /* Radius */
+  .radius-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .radius-tile {
+    height: 96px;
+    background: var(--it-blue-50);
+    border: 1px solid var(--it-blue-200);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--it-blue-700);
+    font-size: var(--it-text-sm);
+  }
+  .radius-tile span { font-family: var(--it-font-mono); font-size: 11px; opacity: 0.7; margin-top: 4px; }
+
+  /* Shadow */
+  .shadow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .shadow-tile {
+    background: var(--it-surface-base);
+    border-radius: var(--it-radius-lg);
+    height: 110px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: var(--it-text-sm);
+    color: var(--it-text-secondary);
+  }
+  .shadow-tile span { font-family: var(--it-font-mono); font-size: 11px; color: var(--it-text-tertiary); margin-top: 4px; }
+  .sh-xs { box-shadow: var(--it-shadow-xs); }
+  .sh-sm { box-shadow: var(--it-shadow-sm); }
+  .sh-md { box-shadow: var(--it-shadow-md); }
+  .sh-lg { box-shadow: var(--it-shadow-lg); }
+  .sh-xl { box-shadow: var(--it-shadow-xl); }
+  .sh-glow-blue   { box-shadow: var(--it-shadow-glow-blue);   border: 1px solid var(--it-blue-200); }
+  .sh-glow-green  { box-shadow: var(--it-shadow-glow-green);  border: 1px solid var(--it-green-200); }
+  .sh-glow-purple { box-shadow: var(--it-shadow-glow-purple); border: 1px solid var(--it-purple-200); }
+
+  /* Motion */
+  .motion-card {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    padding: 18px;
+  }
+  .motion-card h3 {
+    margin: 0 0 4px;
+    font-size: var(--it-text-md);
+    font-weight: 600;
+  }
+  .motion-card p { margin: 0; font-size: var(--it-text-sm); color: var(--it-text-secondary); }
+  .motion-bar {
+    height: 8px;
+    background: var(--it-neutral-100);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 14px;
+    position: relative;
+  }
+  .motion-fill {
+    position: absolute; inset: 0;
+    width: 0;
+    background: var(--it-blue-400);
+    border-radius: 999px;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+  }
+  .m-fast    .motion-fill { animation: grow 1.6s var(--it-ease-out)    infinite alternate; }
+  .m-base    .motion-fill { animation: grow 2.4s var(--it-ease-out)    infinite alternate; }
+  .m-slow    .motion-fill { animation: grow 3.6s var(--it-ease-inout)  infinite alternate; }
+  .m-spring  .motion-fill { animation: grow 2.4s var(--it-ease-spring) infinite alternate; }
+  @keyframes grow { from { width: 0; } to { width: 100%; } }
+  .motion-meta { display: flex; gap: 14px; font-family: var(--it-font-mono); font-size: 11px; color: var(--it-text-tertiary); margin-top: 8px; }
+
+  /* Blur */
+  .blur-row {
+    background:
+      radial-gradient(circle at 20% 30%, var(--it-blue-200) 0%, transparent 40%),
+      radial-gradient(circle at 70% 80%, var(--it-purple-200) 0%, transparent 45%),
+      radial-gradient(circle at 90% 20%, var(--it-orange-200) 0%, transparent 35%),
+      var(--it-bg-canvas);
+    padding: 28px;
+    border-radius: var(--it-radius-xl);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .blur-tile {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: var(--it-radius-lg);
+    height: 120px;
+    padding: 14px 16px;
+    color: var(--it-text-primary);
+    font-size: var(--it-text-sm);
+  }
+  .blur-tile h4 { margin: 0 0 4px; font-size: var(--it-text-md); font-weight: 600; }
+  .blur-tile.sm { backdrop-filter: var(--it-blur-sm); -webkit-backdrop-filter: var(--it-blur-sm); }
+  .blur-tile.md { backdrop-filter: var(--it-blur-md); -webkit-backdrop-filter: var(--it-blur-md); }
+  .blur-tile.lg { backdrop-filter: var(--it-blur-lg); -webkit-backdrop-filter: var(--it-blur-lg); }
+</style>
+</head>
+<body>
+<div class="dsc-doc">
+
+  <header class="dsc-header">
+    <div>
+      <div class="dsc-eyebrow">Design System · Spacing & atmosphere</div>
+      <h1>Spacing, radius, shadow, motion</h1>
+    </div>
+    <div class="dsc-mono">4pt grid · soft elevation · calm motion</div>
+  </header>
+  <p class="dsc-lede">Layout sits on a 4pt grid. Radii are soft and consistent — the whole product
+    has rounded corners, never sharp. Elevation is layered with low-opacity shadow plus subtle
+    blur, never a hard drop shadow. Motion orients the user — every transition has a spatial
+    purpose, never decoration.</p>
+
+  <!-- SPACING -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Spacing scale</h2>
+      <span class="dsc-section-note">12 steps. 4pt baseline; 1 = 4px.</span>
+    </div>
+    <div class="dsc-card">
+      <div class="space-row"><span class="space-name">--it-space-1</span>  <span class="space-px">4px</span>  <div class="space-bar" style="width:4px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-2</span>  <span class="space-px">8px</span>  <div class="space-bar" style="width:8px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-3</span>  <span class="space-px">12px</span> <div class="space-bar" style="width:12px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-4</span>  <span class="space-px">16px</span> <div class="space-bar" style="width:16px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-5</span>  <span class="space-px">20px</span> <div class="space-bar" style="width:20px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-6</span>  <span class="space-px">24px</span> <div class="space-bar" style="width:24px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-8</span>  <span class="space-px">32px</span> <div class="space-bar" style="width:32px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-10</span> <span class="space-px">40px</span> <div class="space-bar" style="width:40px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-12</span> <span class="space-px">48px</span> <div class="space-bar" style="width:48px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-16</span> <span class="space-px">64px</span> <div class="space-bar" style="width:64px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-20</span> <span class="space-px">80px</span> <div class="space-bar" style="width:80px"></div></div>
+      <div class="space-row"><span class="space-name">--it-space-24</span> <span class="space-px">96px</span> <div class="space-bar" style="width:96px"></div></div>
+    </div>
+  </section>
+
+  <!-- RADIUS -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Radius</h2>
+      <span class="dsc-section-note">Soft, iPadOS-native curves. We never use sharp 0px corners.</span>
+    </div>
+    <div class="radius-grid">
+      <div class="radius-tile" style="border-radius:var(--it-radius-xs)">xs<span>4px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-sm)">sm<span>6px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-md)">md<span>10px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-lg)">lg<span>14px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-xl)">xl<span>18px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-2xl)">2xl<span>24px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-3xl)">3xl<span>32px</span></div>
+      <div class="radius-tile" style="border-radius:var(--it-radius-pill)">pill<span>999px</span></div>
+    </div>
+  </section>
+
+  <!-- SHADOW -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Elevation · shadow</h2>
+      <span class="dsc-section-note">Layered, low-opacity. Glow variants for selected & active states.</span>
+    </div>
+    <div class="shadow-grid">
+      <div class="shadow-tile sh-xs">xs<span>--shadow-xs</span></div>
+      <div class="shadow-tile sh-sm">sm<span>--shadow-sm</span></div>
+      <div class="shadow-tile sh-md">md<span>--shadow-md</span></div>
+      <div class="shadow-tile sh-lg">lg<span>--shadow-lg</span></div>
+      <div class="shadow-tile sh-xl">xl<span>--shadow-xl</span></div>
+      <div class="shadow-tile sh-glow-blue"   style="color:var(--it-blue-700)">glow · blue<span>selected</span></div>
+      <div class="shadow-tile sh-glow-green"  style="color:var(--it-green-700)">glow · green<span>complete</span></div>
+      <div class="shadow-tile sh-glow-purple" style="color:var(--it-purple-700)">glow · purple<span>agent</span></div>
+    </div>
+  </section>
+
+  <!-- BLUR -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Glass · backdrop blur</h2>
+      <span class="dsc-section-note">Used only for cards, panels, sidebars. Dense data sits on solid surfaces.</span>
+    </div>
+    <div class="blur-row">
+      <div class="blur-tile sm"><h4>blur · sm</h4>8px / saturate 140%<br/>floating chips</div>
+      <div class="blur-tile md"><h4>blur · md</h4>18px / saturate 160%<br/>cards & panels</div>
+      <div class="blur-tile lg"><h4>blur · lg</h4>28px / saturate 180%<br/>frosted sheets, sidebar</div>
+    </div>
+  </section>
+
+  <!-- MOTION -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Motion</h2>
+      <span class="dsc-section-note">Calm, oriented to spatial context. Honors prefers-reduced-motion.</span>
+    </div>
+    <div class="grid-2">
+      <div class="motion-card m-fast">
+        <h3>Fast · 160ms</h3>
+        <p>Hover, focus rings, small toggles.</p>
+        <div class="motion-bar"><div class="motion-fill"></div></div>
+        <div class="motion-meta"><span>--dur-fast</span><span>--ease-out</span></div>
+      </div>
+      <div class="motion-card m-base">
+        <h3>Base · 240ms</h3>
+        <p>Card lift, panel slide, status change.</p>
+        <div class="motion-bar"><div class="motion-fill"></div></div>
+        <div class="motion-meta"><span>--dur-base</span><span>--ease-out</span></div>
+      </div>
+      <div class="motion-card m-slow">
+        <h3>Slow · 420ms</h3>
+        <p>Drawer open, breadcrumb morph.</p>
+        <div class="motion-bar"><div class="motion-fill"></div></div>
+        <div class="motion-meta"><span>--dur-slow</span><span>--ease-inout</span></div>
+      </div>
+      <div class="motion-card m-spring">
+        <h3>Zoom · 560ms</h3>
+        <p>Tree drill-in: card expands into the new canvas.</p>
+        <div class="motion-bar"><div class="motion-fill"></div></div>
+        <div class="motion-meta"><span>--dur-zoom</span><span>--ease-spring</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

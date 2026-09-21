@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IntentTree — Design System</title>
+<link rel="stylesheet" href="_preview.css" />
+<link rel="stylesheet" href="../tokens/components.css" />
+<style>
+  body { padding: 64px 56px; }
+  .hero {
+    background: linear-gradient(180deg, #ffffff 0%, var(--it-blue-50) 100%);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-2xl);
+    padding: 48px 52px;
+    box-shadow: var(--it-shadow-md);
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 28px;
+    align-items: center;
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: var(--it-text-3xl);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .hero p {
+    margin: 0;
+    font-size: var(--it-text-md);
+    color: var(--it-text-secondary);
+    max-width: 56ch;
+    line-height: 1.5;
+  }
+  .hero .mark {
+    width: 96px; height: 96px; border-radius: 22px;
+    background: linear-gradient(180deg, var(--it-green-50), var(--it-green-100));
+    border: 1px solid rgba(47,143,74,0.22);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--it-shadow-sm);
+  }
+  .hero .mark svg { width: 56px; height: 56px; color: var(--it-green-600); }
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .nav-card {
+    display: block;
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    padding: 22px 22px 20px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--it-shadow-sm);
+    transition: transform var(--it-dur-fast) var(--it-ease-out), box-shadow var(--it-dur-fast) var(--it-ease-out);
+  }
+  .nav-card:hover { transform: translateY(-2px); box-shadow: var(--it-shadow-md); }
+  .nav-card .eyebrow {
+    font-size: var(--it-text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--it-tracking-eyebrow);
+    color: var(--it-text-tertiary);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .nav-card h3 {
+    margin: 0 0 6px;
+    font-size: var(--it-text-lg);
+    font-weight: 600;
+    color: var(--it-text-primary);
+    letter-spacing: -0.01em;
+  }
+  .nav-card p {
+    margin: 0;
+    font-size: var(--it-text-sm);
+    color: var(--it-text-secondary);
+    line-height: 1.5;
+  }
+  .nav-card.large {
+    grid-column: span 3;
+    background: linear-gradient(180deg, #fff 0%, var(--it-green-50) 100%);
+    border-color: rgba(47,143,74,0.22);
+  }
+  .nav-card.large h3 { color: var(--it-green-700); }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div>
+      <div class="dsc-eyebrow" style="margin-bottom:8px;">Design System · v0.1</div>
+      <h1>IntentTree</h1>
+      <p>Plan deeply. Zoom in. Execute precisely. The visual language for an
+        iPad-first execution operating system that turns intent into a living, zoomable tree of work.</p>
+    </div>
+    <div class="mark">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="16" cy="6" r="2.5"/><circle cx="6" cy="20" r="2.5"/>
+        <circle cx="16" cy="20" r="2.5"/><circle cx="26" cy="20" r="2.5"/>
+        <circle cx="11" cy="28" r="1.5"/><circle cx="21" cy="28" r="1.5"/>
+        <path d="M16 8.5 L16 17.5"/><path d="M16 8.5 L6 17.5"/><path d="M16 8.5 L26 17.5"/>
+        <path d="M11 26.5 L11 22.5"/><path d="M21 26.5 L21 22.5"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="nav-grid">
+    <a class="nav-card large" href="../ui_kits/app/index.html">
+      <span class="eyebrow">UI Kit · Live preview</span>
+      <h3>The full IntentTree app →</h3>
+      <p>A multi-screen walk-through: Project Map, Major Goal, Atomic Task, and Daily Train —
+        light and dark themes, all composed from the tokens and components below.</p>
+    </a>
+    <a class="nav-card" href="colors.html">
+      <span class="eyebrow">Foundations</span>
+      <h3>Colors</h3>
+      <p>9-step semantic scales, status pills, surface stack, dark theme.</p>
+    </a>
+    <a class="nav-card" href="typography.html">
+      <span class="eyebrow">Foundations</span>
+      <h3>Typography</h3>
+      <p>SF Pro / Inter ramp, eight steps, tabular numerics, voice samples.</p>
+    </a>
+    <a class="nav-card" href="spacing.html">
+      <span class="eyebrow">Foundations</span>
+      <h3>Spacing &amp; atmosphere</h3>
+      <p>4pt grid, radius, layered shadow, blur, calm motion tokens.</p>
+    </a>
+    <a class="nav-card" href="components.html">
+      <span class="eyebrow">Components</span>
+      <h3>Component library</h3>
+      <p>Buttons, chips, pills, tiles, rings, breadcrumb, execution-mode, atomic-task card.</p>
+    </a>
+    <a class="nav-card" href="brand.html">
+      <span class="eyebrow">Brand</span>
+      <h3>Brand &amp; voice</h3>
+      <p>Logo lockup, signature phrases, mascot direction, voice rules.</p>
+    </a>
+  </div>
+
+</body>
+</html>

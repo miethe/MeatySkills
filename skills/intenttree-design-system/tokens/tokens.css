@@ -1,0 +1,345 @@
+/* =========================================================================
+   IntentTree — Design Tokens
+   Single source of truth for color, type, spacing, radius, shadow, motion.
+   Light theme is default. Dark theme overrides under [data-theme="dark"].
+   ========================================================================= */
+
+:root {
+  /* -------------------------------------------------------------------------
+     COLOR — Brand & Semantic
+     The palette is muted, premium, calm. Greens carry "execute / on track",
+     blues carry "primary / structure", purples carry "agent / intelligence".
+     Avoid pure saturated hues; everything sits in a slightly desaturated,
+     iPad-native register.
+     ------------------------------------------------------------------------- */
+
+  /* Brand greens — primary execution CTA */
+  --it-green-50:  #ecf6ee;
+  --it-green-100: #d4ebd9;
+  --it-green-200: #aad8b3;
+  --it-green-300: #7cc189;
+  --it-green-400: #4fa863;
+  --it-green-500: #2f8f4a;   /* primary green — used for "Execute Next" */
+  --it-green-600: #237a3c;
+  --it-green-700: #1a6131;
+  --it-green-800: #144a26;
+
+  /* Blues — primary structure, selected state, plan paths */
+  --it-blue-50:   #eef3fb;
+  --it-blue-100:  #dbe7f7;
+  --it-blue-200:  #b7cdee;
+  --it-blue-300:  #8aaee2;
+  --it-blue-400:  #5b8dd2;
+  --it-blue-500:  #3b6fbd;   /* primary blue */
+  --it-blue-600:  #2c5aa0;
+  --it-blue-700:  #234781;
+  --it-blue-800:  #1a3661;
+
+  /* Purples — agents, intelligence, side quests */
+  --it-purple-50:  #f1eefb;
+  --it-purple-100: #e3dbf7;
+  --it-purple-200: #c8bbef;
+  --it-purple-300: #a896e2;
+  --it-purple-400: #8a73d4;
+  --it-purple-500: #6f56c2;   /* primary purple */
+  --it-purple-600: #5a44a4;
+  --it-purple-700: #463486;
+
+  /* Teals — knowledge, memory, wiki, context */
+  --it-teal-50:   #e8f4f5;
+  --it-teal-100:  #cfe7eb;
+  --it-teal-200:  #a3d2da;
+  --it-teal-300:  #71b9c5;
+  --it-teal-400:  #4ba0ae;
+  --it-teal-500:  #2f8693;   /* primary teal */
+  --it-teal-600:  #226c78;
+
+  /* Oranges — quick wins, priority, attention */
+  --it-orange-50:  #fdf1e6;
+  --it-orange-100: #fbe1c8;
+  --it-orange-200: #f5c08b;
+  --it-orange-300: #ee9d52;
+  --it-orange-400: #df7d2a;
+  --it-orange-500: #c2641a;   /* primary orange */
+  --it-orange-600: #9a4f15;
+
+  /* Reds — blockers, risk, failure */
+  --it-red-50:    #fbecec;
+  --it-red-100:   #f7d2d2;
+  --it-red-200:   #ee9f9f;
+  --it-red-300:   #df6f6f;
+  --it-red-400:   #cc4949;
+  --it-red-500:   #b03434;
+  --it-red-600:   #8d2828;
+
+  /* Gold — milestones, unlocks, achievements */
+  --it-gold-50:   #fbf2dc;
+  --it-gold-100:  #f4e1ad;
+  --it-gold-200:  #e9c97a;
+  --it-gold-300:  #d6ab48;
+  --it-gold-400:  #b88a2b;
+  --it-gold-500:  #93701f;
+
+  /* Neutrals — slightly cool gray with a hint of slate */
+  --it-neutral-0:    #ffffff;
+  --it-neutral-25:   #fafbfc;
+  --it-neutral-50:   #f4f5f8;
+  --it-neutral-100:  #ebedf2;
+  --it-neutral-150:  #dfe2ea;
+  --it-neutral-200:  #cdd2dd;
+  --it-neutral-300:  #b1b8c7;
+  --it-neutral-400:  #8a92a4;
+  --it-neutral-500:  #6b7385;
+  --it-neutral-600:  #4f5667;
+  --it-neutral-700:  #383e4d;
+  --it-neutral-800:  #242938;
+  --it-neutral-900:  #161a26;
+  --it-neutral-950:  #0c0f17;
+
+  /* -------------------------------------------------------------------------
+     COLOR — Light Surfaces
+     The canvas is a faint lavender-tinted off-white (matches reference).
+     Glass surfaces use translucent white over the tint with subtle blur.
+     ------------------------------------------------------------------------- */
+  --it-bg-app:        #eef0f6;   /* outer app frame */
+  --it-bg-canvas:     #f1f2f7;   /* tree workspace */
+  --it-bg-canvas-2:   #e8eaf2;   /* secondary canvas wash */
+  --it-surface-base:  #ffffff;   /* solid panel */
+  --it-surface-glass: rgba(255, 255, 255, 0.72);
+  --it-surface-frosted: rgba(255, 255, 255, 0.58);
+  --it-surface-elevated: #ffffff;
+  --it-surface-toast:  rgba(255, 255, 255, 0.92);
+  --it-sidebar-bg:    rgba(255, 255, 255, 0.78);
+
+  --it-border-subtle: rgba(20, 26, 44, 0.06);
+  --it-border-soft:   rgba(20, 26, 44, 0.10);
+  --it-border-strong: rgba(20, 26, 44, 0.16);
+  --it-border-focus:  var(--it-blue-400);
+
+  --it-text-primary:   #181d2a;
+  --it-text-secondary: #4f5667;
+  --it-text-tertiary:  #8a92a4;
+  --it-text-muted:     #aab0bf;
+  --it-text-inverse:   #ffffff;
+  --it-text-link:      var(--it-blue-600);
+
+  /* Semantic — light */
+  --it-status-ready-bg:    var(--it-green-50);
+  --it-status-ready-fg:    var(--it-green-700);
+  --it-status-progress-bg: var(--it-blue-50);
+  --it-status-progress-fg: var(--it-blue-700);
+  --it-status-blocked-bg:  var(--it-red-50);
+  --it-status-blocked-fg:  var(--it-red-600);
+  --it-status-warn-bg:     var(--it-orange-50);
+  --it-status-warn-fg:     var(--it-orange-600);
+  --it-status-done-bg:     var(--it-green-100);
+  --it-status-done-fg:     var(--it-green-700);
+  --it-status-idle-bg:     var(--it-neutral-100);
+  --it-status-idle-fg:     var(--it-neutral-600);
+
+  /* -------------------------------------------------------------------------
+     TYPOGRAPHY
+     Apple-native hierarchy. SF Pro on Apple, Inter as cross-platform fallback,
+     system stack as last resort. Tabular figures for metrics.
+     ------------------------------------------------------------------------- */
+  --it-font-sans: "SF Pro Display", "SF Pro Text", "Inter", -apple-system,
+                  BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --it-font-text: "SF Pro Text", "Inter", -apple-system, BlinkMacSystemFont,
+                  "Segoe UI", Helvetica, Arial, sans-serif;
+  --it-font-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Monaco,
+                  Consolas, monospace;
+
+  /* Type scale — based on 4pt grid, line-heights tuned for reading */
+  --it-text-xs:    11px;   /* meta, eyebrow */
+  --it-text-sm:    13px;   /* secondary copy */
+  --it-text-base:  15px;   /* body */
+  --it-text-md:    17px;   /* card title, list row */
+  --it-text-lg:    20px;   /* sub-section title */
+  --it-text-xl:    24px;   /* section title */
+  --it-text-2xl:   30px;   /* page title */
+  --it-text-3xl:   38px;   /* hero title */
+  --it-text-4xl:   48px;   /* north-star */
+
+  --it-leading-tight:  1.18;
+  --it-leading-snug:   1.30;
+  --it-leading-normal: 1.45;
+  --it-leading-loose:  1.60;
+
+  --it-tracking-tight:  -0.02em;
+  --it-tracking-normal: 0;
+  --it-tracking-wide:   0.04em;
+  --it-tracking-eyebrow:0.10em;   /* uppercase eyebrow labels */
+
+  --it-weight-regular:  400;
+  --it-weight-medium:   500;
+  --it-weight-semibold: 600;
+  --it-weight-bold:     700;
+
+  /* -------------------------------------------------------------------------
+     SPACING — 4pt grid
+     ------------------------------------------------------------------------- */
+  --it-space-0:   0px;
+  --it-space-px:  1px;
+  --it-space-0_5: 2px;
+  --it-space-1:   4px;
+  --it-space-1_5: 6px;
+  --it-space-2:   8px;
+  --it-space-2_5: 10px;
+  --it-space-3:   12px;
+  --it-space-4:   16px;
+  --it-space-5:   20px;
+  --it-space-6:   24px;
+  --it-space-7:   28px;
+  --it-space-8:   32px;
+  --it-space-10:  40px;
+  --it-space-12:  48px;
+  --it-space-16:  64px;
+  --it-space-20:  80px;
+  --it-space-24:  96px;
+
+  /* -------------------------------------------------------------------------
+     RADIUS — soft, iPadOS-native curves
+     ------------------------------------------------------------------------- */
+  --it-radius-xs:  4px;
+  --it-radius-sm:  6px;
+  --it-radius-md:  10px;
+  --it-radius-lg:  14px;
+  --it-radius-xl:  18px;
+  --it-radius-2xl: 24px;
+  --it-radius-3xl: 32px;
+  --it-radius-pill: 999px;
+
+  /* -------------------------------------------------------------------------
+     SHADOW — layered, low-opacity. Glass surfaces use blur + soft elevation.
+     ------------------------------------------------------------------------- */
+  --it-shadow-xs: 0 1px 2px rgba(20, 26, 44, 0.04);
+  --it-shadow-sm: 0 1px 2px rgba(20, 26, 44, 0.04),
+                  0 2px 6px rgba(20, 26, 44, 0.04);
+  --it-shadow-md: 0 2px 4px rgba(20, 26, 44, 0.04),
+                  0 6px 16px rgba(20, 26, 44, 0.06);
+  --it-shadow-lg: 0 4px 8px rgba(20, 26, 44, 0.05),
+                  0 14px 36px rgba(20, 26, 44, 0.08);
+  --it-shadow-xl: 0 12px 32px rgba(20, 26, 44, 0.10),
+                  0 24px 56px rgba(20, 26, 44, 0.10);
+  --it-shadow-glow-blue:   0 0 0 1px rgba(59, 111, 189, 0.18),
+                           0 8px 24px rgba(59, 111, 189, 0.18);
+  --it-shadow-glow-green:  0 0 0 1px rgba(47, 143, 74, 0.18),
+                           0 8px 24px rgba(47, 143, 74, 0.20);
+  --it-shadow-glow-purple: 0 0 0 1px rgba(111, 86, 194, 0.18),
+                           0 8px 24px rgba(111, 86, 194, 0.20);
+
+  /* Glass blur — used with backdrop-filter */
+  --it-blur-sm:  blur(8px) saturate(140%);
+  --it-blur-md:  blur(18px) saturate(160%);
+  --it-blur-lg:  blur(28px) saturate(180%);
+
+  /* -------------------------------------------------------------------------
+     MOTION — calm, oriented to spatial context
+     ------------------------------------------------------------------------- */
+  --it-ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --it-ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+  --it-ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  --it-dur-instant: 80ms;
+  --it-dur-fast:    160ms;
+  --it-dur-base:    240ms;
+  --it-dur-slow:    420ms;
+  --it-dur-zoom:    560ms;
+
+  /* -------------------------------------------------------------------------
+     Z-INDEX
+     ------------------------------------------------------------------------- */
+  --it-z-base:    0;
+  --it-z-raised:  10;
+  --it-z-sticky:  100;
+  --it-z-overlay: 500;
+  --it-z-modal:   1000;
+  --it-z-toast:   2000;
+  --it-z-popover: 3000;
+}
+
+/* ===========================================================================
+   DARK THEME — deep navy, matches reference vertical-tree / mid-task images.
+   =========================================================================== */
+[data-theme="dark"] {
+  --it-bg-app:        #0c0f17;
+  --it-bg-canvas:     #0f1320;
+  --it-bg-canvas-2:   #141a2c;
+  --it-surface-base:  #18203a;
+  --it-surface-glass: rgba(28, 36, 60, 0.62);
+  --it-surface-frosted: rgba(20, 26, 44, 0.72);
+  --it-surface-elevated: #1c2440;
+  --it-surface-toast:  rgba(20, 26, 44, 0.92);
+  --it-sidebar-bg:    rgba(14, 18, 30, 0.78);
+
+  --it-border-subtle: rgba(255, 255, 255, 0.06);
+  --it-border-soft:   rgba(255, 255, 255, 0.10);
+  --it-border-strong: rgba(255, 255, 255, 0.18);
+
+  --it-text-primary:   #f4f6fb;
+  --it-text-secondary: #b8c0d2;
+  --it-text-tertiary:  #8089a1;
+  --it-text-muted:     #5b6378;
+  --it-text-link:      var(--it-blue-300);
+
+  --it-status-ready-bg:    rgba(47, 143, 74, 0.16);
+  --it-status-ready-fg:    var(--it-green-300);
+  --it-status-progress-bg: rgba(59, 111, 189, 0.18);
+  --it-status-progress-fg: var(--it-blue-300);
+  --it-status-blocked-bg:  rgba(176, 52, 52, 0.18);
+  --it-status-blocked-fg:  var(--it-red-300);
+  --it-status-warn-bg:     rgba(194, 100, 26, 0.18);
+  --it-status-warn-fg:     var(--it-orange-300);
+  --it-status-done-bg:     rgba(47, 143, 74, 0.22);
+  --it-status-done-fg:     var(--it-green-300);
+  --it-status-idle-bg:     rgba(255, 255, 255, 0.06);
+  --it-status-idle-fg:     var(--it-neutral-300);
+
+  --it-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40),
+                  0 2px 6px rgba(0, 0, 0, 0.30);
+  --it-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45),
+                  0 6px 16px rgba(0, 0, 0, 0.40);
+  --it-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.45),
+                  0 14px 36px rgba(0, 0, 0, 0.55);
+  --it-shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.55),
+                  0 24px 56px rgba(0, 0, 0, 0.65);
+}
+
+/* ===========================================================================
+   RESET — minimal, design-system-focused
+   =========================================================================== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--it-font-sans);
+  font-size: var(--it-text-base);
+  line-height: var(--it-leading-normal);
+  color: var(--it-text-primary);
+  background: var(--it-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: var(--it-text-link); text-decoration: none; }
+img, svg { display: block; max-width: 100%; }
+
+::selection { background: var(--it-blue-200); color: var(--it-blue-800); }
+[data-theme="dark"] ::selection { background: rgba(138, 174, 226, 0.35); color: #fff; }
+
+/* ===========================================================================
+   UTILITY — type ramp helpers (optional)
+   =========================================================================== */
+.it-eyebrow {
+  font-size: var(--it-text-xs);
+  font-weight: var(--it-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--it-tracking-eyebrow);
+  color: var(--it-text-tertiary);
+}
+.it-numeric { font-variant-numeric: tabular-nums; }

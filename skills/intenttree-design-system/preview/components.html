@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IntentTree — Components</title>
+<link rel="stylesheet" href="_preview.css" />
+<link rel="stylesheet" href="../tokens/components.css" />
+<style>
+  .stack { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .stack.tight { gap: 8px; }
+  .stack-v { display: flex; flex-direction: column; gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .label-sm { font-size: var(--it-text-xs); text-transform: uppercase; letter-spacing: var(--it-tracking-eyebrow); color: var(--it-text-tertiary); font-weight: 600; margin-bottom: 8px; }
+
+  /* Sample composite cards */
+  .goal-card {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    box-shadow: var(--it-shadow-sm);
+  }
+  .goal-title { font-size: var(--it-text-md); font-weight: 600; color: var(--it-text-primary); margin: 0 0 2px; }
+  .goal-desc  { font-size: var(--it-text-sm); color: var(--it-text-secondary); margin: 0; }
+
+  .row-card {
+    display: grid;
+    grid-template-columns: 36px 1fr 140px 110px 130px 18px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--it-border-subtle);
+  }
+  .row-card:last-child { border-bottom: 0; }
+  .row-card .t { font-size: var(--it-text-md); font-weight: 500; }
+  .row-card .d { font-size: var(--it-text-sm); color: var(--it-text-secondary); margin-top: 1px; }
+  .row-card .chev { color: var(--it-text-muted); }
+
+  .atomic-card {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-xl);
+    box-shadow: var(--it-shadow-md);
+    padding: 22px;
+  }
+</style>
+</head>
+<body>
+<div class="dsc-doc">
+  <header class="dsc-header">
+    <div>
+      <div class="dsc-eyebrow">Design System · Components</div>
+      <h1>Components</h1>
+    </div>
+    <div class="dsc-mono">tokens/components.css</div>
+  </header>
+  <p class="dsc-lede">The vocabulary of building blocks IntentTree composes from. Buttons, chips,
+    pills, cards, navigation, progress, execution-mode controls, and node-specific elements
+    (shared work, quick wins, side quests).</p>
+
+  <!-- BUTTONS -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Buttons</h2><span class="dsc-section-note">primary green = "execute". Use sparingly.</span></div>
+    <div class="dsc-card">
+      <div class="label-sm">Variants · md</div>
+      <div class="stack" style="margin-bottom:18px;">
+        <button class="it-btn primary">Execute Next →</button>
+        <button class="it-btn secondary">Open</button>
+        <button class="it-btn">Edit</button>
+        <button class="it-btn ghost">Cancel</button>
+        <button class="it-btn agent">Run Agent</button>
+        <button class="it-btn danger">Archive</button>
+      </div>
+      <div class="label-sm">Sizes</div>
+      <div class="stack">
+        <button class="it-btn primary lg">Execute Next →</button>
+        <button class="it-btn primary">Execute Next</button>
+        <button class="it-btn primary sm">Execute</button>
+        <button class="it-btn icon-only" aria-label="More">⋯</button>
+        <button class="it-btn sm icon-only" aria-label="More">⋯</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHIPS & PILLS -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Chips, status pills, shared work, quick wins</h2></div>
+    <div class="dsc-card">
+      <div class="label-sm">Categorical chips</div>
+      <div class="stack tight" style="margin-bottom:16px;">
+        <span class="it-chip green">Data Model</span>
+        <span class="it-chip blue">P1</span>
+        <span class="it-chip purple">Agent</span>
+        <span class="it-chip teal">Knowledge</span>
+        <span class="it-chip orange">Quick Win</span>
+        <span class="it-chip red">Risk</span>
+        <span class="it-chip gold">Milestone</span>
+        <span class="it-chip">AT-1.2.1</span>
+      </div>
+      <div class="label-sm">Status pills</div>
+      <div class="stack tight" style="margin-bottom:16px;">
+        <span class="it-pill ready">Ready to execute</span>
+        <span class="it-pill progress">In Progress · 62%</span>
+        <span class="it-pill done">Completed</span>
+        <span class="it-pill warn">Waiting Review</span>
+        <span class="it-pill blocked">Blocked</span>
+        <span class="it-pill idle">Not Started</span>
+      </div>
+      <div class="label-sm">Shared work · Quick wins · Side quests</div>
+      <div class="stack tight">
+        <span class="it-shared">⚭ Shared · 4 branches</span>
+        <span class="it-qw">⚡ Ship CLI MVP · 30m</span>
+        <span class="it-sq">✦ Side quest: Voice interface experiment</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TILES + RINGS + PROGRESS -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Tiles · rings · progress</h2></div>
+    <div class="grid-2">
+      <div class="dsc-card">
+        <div class="label-sm">Node tiles (44px) — color = category</div>
+        <div class="stack">
+          <div class="it-tile blue"   title="Plan">◎</div>
+          <div class="it-tile green"  title="Execute">✓</div>
+          <div class="it-tile purple" title="Agent">⚛</div>
+          <div class="it-tile teal"   title="Knowledge">📖</div>
+          <div class="it-tile orange" title="Quick Win">⚡</div>
+          <div class="it-tile red"    title="Risk">⚠</div>
+          <div class="it-tile gold"   title="Milestone">★</div>
+        </div>
+      </div>
+      <div class="dsc-card">
+        <div class="label-sm">Progress rings · bars</div>
+        <div class="stack" style="margin-bottom:16px;">
+          <div class="it-ring">
+            <svg viewBox="0 0 44 44">
+              <circle class="track" cx="22" cy="22" r="18"/>
+              <circle class="value" cx="22" cy="22" r="18" stroke-dasharray="79.2 113.1"/>
+            </svg>
+            <span class="label">62%</span>
+          </div>
+          <div class="it-ring blue">
+            <svg viewBox="0 0 44 44">
+              <circle class="track" cx="22" cy="22" r="18"/>
+              <circle class="value" cx="22" cy="22" r="18" stroke-dasharray="96.7 113.1"/>
+            </svg>
+            <span class="label">75%</span>
+          </div>
+          <div class="it-ring purple">
+            <svg viewBox="0 0 44 44">
+              <circle class="track" cx="22" cy="22" r="18"/>
+              <circle class="value" cx="22" cy="22" r="18" stroke-dasharray="50.9 113.1"/>
+            </svg>
+            <span class="label">40%</span>
+          </div>
+        </div>
+        <div class="stack-v">
+          <div class="it-progress" style="width:100%;"><div class="fill" style="width:62%"></div></div>
+          <div class="it-progress blue" style="width:100%;"><div class="fill" style="width:38%"></div></div>
+          <div class="it-progress purple" style="width:100%;"><div class="fill" style="width:78%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AVATAR + BREADCRUMB + SEARCH -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Avatars, breadcrumb, search, segmented control</h2></div>
+    <div class="dsc-card">
+      <div class="label-sm">Avatars</div>
+      <div class="stack" style="margin-bottom:16px;">
+        <div class="it-avatar sm" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+        <div class="it-avatar"    style="background:var(--it-green-200); color:var(--it-green-700)">AC</div>
+        <div class="it-avatar lg" style="background:var(--it-purple-200); color:var(--it-purple-700)">JT</div>
+        <div class="it-avatar-stack">
+          <div class="it-avatar" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+          <div class="it-avatar" style="background:var(--it-green-200); color:var(--it-green-700)">AC</div>
+          <div class="it-avatar" style="background:var(--it-orange-200); color:var(--it-orange-700)">JT</div>
+          <div class="it-avatar" style="background:var(--it-neutral-200); color:var(--it-neutral-700)">+3</div>
+        </div>
+      </div>
+      <div class="label-sm">Breadcrumb</div>
+      <div class="it-breadcrumb" style="margin-bottom:16px;">
+        <span>Execution</span><span class="sep">›</span>
+        <span>Phase 1: Foundation</span><span class="sep">›</span>
+        <span>Data Model</span><span class="sep">›</span>
+        <span class="current">Define Node Schema</span>
+      </div>
+      <div class="label-sm">Search · segmented</div>
+      <div class="stack">
+        <div class="it-search" style="width:280px;">
+          <span class="icon">🔍</span>
+          <input placeholder="Search the tree…"/>
+          <span class="kbd">⌘K</span>
+        </div>
+        <div class="it-seg">
+          <button class="active"><span class="icon">⊞</span>Tree</button>
+          <button><span class="icon">▦</span>Board</button>
+          <button><span class="icon">⌚</span>Timeline</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXECUTION MODE -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Execution mode</h2><span class="dsc-section-note">Human · Agent · Hybrid · Autonomous. Always recommend; allow override.</span></div>
+    <div class="dsc-card">
+      <div class="stack-v" style="gap:12px;">
+        <div class="it-exec">
+          <button class="active human">👤 Human</button>
+          <button>🤖 Agent</button>
+          <button>✦ Hybrid</button>
+          <button>↻ Autonomous</button>
+        </div>
+        <div class="it-exec">
+          <button>👤 Human</button>
+          <button class="active agent">🤖 Agent</button>
+          <button>✦ Hybrid</button>
+          <button>↻ Autonomous</button>
+        </div>
+        <div class="it-exec">
+          <button>👤 Human</button>
+          <button>🤖 Agent</button>
+          <button class="active hybrid">✦ Hybrid</button>
+          <button>↻ Autonomous</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPOSITE — node cards -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Composite · node cards</h2><span class="dsc-section-note">The way these primitives compose into real product surfaces.</span></div>
+
+    <div class="stack-v" style="gap:14px;">
+
+      <!-- Major goal card -->
+      <div class="goal-card">
+        <div class="it-tile lg blue">◎</div>
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h3 class="goal-title">Execution Core</h3>
+            <span class="it-chip blue">Core Pillar</span>
+          </div>
+          <p class="goal-desc">The central runtime and orchestration layer that turns intent into action.</p>
+          <div class="it-progress blue" style="margin-top:10px; max-width:340px;"><div class="fill" style="width:68%"></div></div>
+        </div>
+        <div class="stack tight">
+          <span class="it-pill progress">68% · On Track</span>
+          <button class="it-btn ghost icon-only">›</button>
+        </div>
+      </div>
+
+      <!-- Work-area row list -->
+      <div class="dsc-card" style="padding:0;">
+        <div class="row-card">
+          <div class="it-tile sm blue">📅</div>
+          <div><div class="t">Planning Engine</div><div class="d">Breaks intent into plans, steps, and dependencies.</div></div>
+          <div class="it-progress blue"><div class="fill" style="width:72%"></div></div>
+          <span class="it-pill progress">In Progress</span>
+          <div class="stack tight"><span class="it-qw">⚡ Plan Templates</span></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="row-card">
+          <div class="it-tile sm green">⊟</div>
+          <div><div class="t">Task &amp; State Model</div><div class="d">Defines task schema, state transitions, and persistence.</div></div>
+          <div class="it-progress"><div class="fill" style="width:65%"></div></div>
+          <span class="it-pill progress">In Progress</span>
+          <div class="stack tight"><span class="it-qw">⚡ State Visualizer</span></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="row-card">
+          <div class="it-tile sm purple">▷</div>
+          <div><div class="t">Execution Engine</div><div class="d">Runs tasks, manages state, handles retries.</div></div>
+          <div class="it-progress purple"><div class="fill" style="width:70%"></div></div>
+          <span class="it-pill progress">In Progress</span>
+          <div class="stack tight"><span class="it-qw">⚡ Dry Run Mode</span></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="row-card">
+          <div class="it-tile sm teal">📖</div>
+          <div><div class="t">Context &amp; Memory</div><div class="d">Manages context windows, memory, and retrieval.</div></div>
+          <div class="it-progress" style="--it-green-500: var(--it-teal-500)"><div class="fill" style="width:60%; background:var(--it-teal-500)"></div></div>
+          <span class="it-pill warn">Waiting Review</span>
+          <div class="stack tight"><span class="it-qw">⚡ Memory Inspector</span></div>
+          <span class="chev">›</span>
+        </div>
+      </div>
+
+      <!-- Atomic task card -->
+      <div class="atomic-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:14px;">
+          <div>
+            <div class="it-eyebrow" style="color:var(--it-green-600); margin-bottom:6px;">Atomic Task</div>
+            <h3 style="margin:0; font-size: var(--it-text-2xl); font-weight:600; letter-spacing:-0.02em;">Define Node Schema</h3>
+            <p style="margin:6px 0 0; font-size:var(--it-text-sm); color: var(--it-text-secondary); max-width:54ch;">Define the core Node schema with required fields and types in the data model layer.</p>
+            <div class="stack tight" style="margin-top:10px;">
+              <span class="it-chip green">Data Model</span>
+              <span class="it-chip blue">P1</span>
+              <span class="it-chip">AT-1.2.1</span>
+            </div>
+          </div>
+          <div style="text-align:center; min-width:120px;">
+            <div class="it-eyebrow" style="margin-bottom:4px;">Estimated Effort</div>
+            <div style="font-size:var(--it-text-2xl); font-weight:600; font-variant-numeric:tabular-nums;">45m</div>
+            <div style="font-size:var(--it-text-sm); color:var(--it-text-tertiary);">± 10m</div>
+            <span class="it-chip green" style="margin-top:6px;"><span class="dot"></span>Small</span>
+          </div>
+        </div>
+        <hr class="it-divider"/>
+        <div class="it-eyebrow" style="margin-bottom:8px;">Subtasks · 0 / 6</div>
+        <div class="stack-v" style="gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--it-neutral-50); border-radius:8px;">
+            <div class="it-check"></div>
+            <div style="flex:1; font-size:var(--it-text-base);">1. Create <code style="font-family:var(--it-font-mono); font-size:13px;">Node</code> interface/type</div>
+            <div style="font-size:var(--it-text-sm); color:var(--it-text-tertiary); font-variant-numeric:tabular-nums;">⏱ 5m</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--it-neutral-50); border-radius:8px;">
+            <div class="it-check"></div>
+            <div style="flex:1; font-size:var(--it-text-base);">2. Add <code style="font-family:var(--it-font-mono); font-size:13px;">id: UUID</code> field</div>
+            <div style="font-size:var(--it-text-sm); color:var(--it-text-tertiary); font-variant-numeric:tabular-nums;">⏱ 3m</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--it-neutral-50); border-radius:8px;">
+            <div class="it-check"></div>
+            <div style="flex:1; font-size:var(--it-text-base);">3. Add <code style="font-family:var(--it-font-mono); font-size:13px;">title: string</code> field</div>
+            <div style="font-size:var(--it-text-sm); color:var(--it-text-tertiary); font-variant-numeric:tabular-nums;">⏱ 5m</div>
+          </div>
+        </div>
+        <hr class="it-divider"/>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="it-pill ready">Ready to execute</span>
+          <button class="it-btn primary lg">Execute Next →</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IntentTree — Brand</title>
+<link rel="stylesheet" href="_preview.css" />
+<link rel="stylesheet" href="../tokens/components.css" />
+<style>
+  .logo-lockup { display: flex; align-items: center; gap: 14px; }
+  .logo-mark {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: linear-gradient(180deg, var(--it-green-50), var(--it-green-100));
+    border: 1px solid rgba(47,143,74,0.22);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--it-shadow-sm);
+  }
+  .logo-mark svg { width: 32px; height: 32px; color: var(--it-green-600); }
+  .wordmark { display: flex; flex-direction: column; }
+  .wordmark .name { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--it-text-primary); line-height: 1; }
+  .wordmark .tagline { font-size: 13px; color: var(--it-blue-600); font-weight: 500; margin-top: 4px; }
+
+  .brand-quote {
+    font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+    color: var(--it-text-primary);
+    line-height: 1.2;
+    text-wrap: pretty;
+    max-width: 30ch;
+    margin: 0;
+  }
+  .brand-quote em { font-style: normal; color: var(--it-green-600); }
+
+  .mascot {
+    width: 88px; height: 88px;
+    background: linear-gradient(180deg, #d4ebd9, #aad8b3);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    image-rendering: pixelated;
+    border: 1px solid rgba(47,143,74,0.30);
+  }
+  .mascot svg { width: 56px; height: 56px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+</style>
+</head>
+<body>
+<div class="dsc-doc">
+  <header class="dsc-header">
+    <div>
+      <div class="dsc-eyebrow">Design System · Brand</div>
+      <h1>Brand &amp; voice</h1>
+    </div>
+    <div class="dsc-mono">v0.1 · 2026-05-02</div>
+  </header>
+  <p class="dsc-lede">A calm, premium command center. Soft greens for execution, deep blues for
+    structure, restrained gold for moments of accomplishment. The product never shouts; it
+    orients.</p>
+
+  <!-- LOGO -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Logo lockup</h2><span class="dsc-section-note">Mark = a stylized intent tree. Wordmark in semibold, "Execution OS" descriptor in blue.</span></div>
+    <div class="dsc-card">
+      <div class="logo-lockup" style="margin-bottom:24px;">
+        <div class="logo-mark">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="6" r="2.5"/>
+            <circle cx="6" cy="20" r="2.5"/>
+            <circle cx="16" cy="20" r="2.5"/>
+            <circle cx="26" cy="20" r="2.5"/>
+            <circle cx="11" cy="28" r="1.5"/>
+            <circle cx="21" cy="28" r="1.5"/>
+            <path d="M16 8.5 L16 17.5"/>
+            <path d="M16 8.5 L6 17.5"/>
+            <path d="M16 8.5 L26 17.5"/>
+            <path d="M11 26.5 L11 22.5"/>
+            <path d="M21 26.5 L21 22.5"/>
+          </svg>
+        </div>
+        <div class="wordmark">
+          <span class="name">IntentTree</span>
+          <span class="tagline">Execution OS</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div style="background:var(--it-neutral-950); border-radius:14px; padding:24px;">
+          <div class="logo-lockup">
+            <div class="logo-mark" style="background:rgba(47,143,74,0.16); border-color:rgba(47,143,74,0.30);">
+              <svg viewBox="0 0 32 32" fill="none" stroke="#7cc189" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="16" cy="6" r="2.5"/><circle cx="6" cy="20" r="2.5"/><circle cx="16" cy="20" r="2.5"/><circle cx="26" cy="20" r="2.5"/>
+                <circle cx="11" cy="28" r="1.5"/><circle cx="21" cy="28" r="1.5"/>
+                <path d="M16 8.5 L16 17.5"/><path d="M16 8.5 L6 17.5"/><path d="M16 8.5 L26 17.5"/>
+                <path d="M11 26.5 L11 22.5"/><path d="M21 26.5 L21 22.5"/>
+              </svg>
+            </div>
+            <div class="wordmark">
+              <span class="name" style="color:#fff">IntentTree</span>
+              <span class="tagline" style="color:#8aaee2">Execution OS</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--it-bg-canvas); border-radius:14px; padding:24px; border:1px solid var(--it-border-subtle);">
+          <div class="logo-lockup">
+            <div class="logo-mark">
+              <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="16" cy="6" r="2.5"/><circle cx="6" cy="20" r="2.5"/><circle cx="16" cy="20" r="2.5"/><circle cx="26" cy="20" r="2.5"/>
+                <circle cx="11" cy="28" r="1.5"/><circle cx="21" cy="28" r="1.5"/>
+                <path d="M16 8.5 L16 17.5"/><path d="M16 8.5 L6 17.5"/><path d="M16 8.5 L26 17.5"/>
+                <path d="M11 26.5 L11 22.5"/><path d="M21 26.5 L21 22.5"/>
+              </svg>
+            </div>
+            <div class="wordmark">
+              <span class="name">IntentTree</span>
+              <span class="tagline">Execution OS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAGLINES -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Signature phrases</h2><span class="dsc-section-note">Used sparingly — never as wallpaper.</span></div>
+    <div class="grid-2">
+      <div class="dsc-card">
+        <p class="brand-quote">Plan deeply.<br/>Zoom in.<br/><em>Execute precisely.</em></p>
+        <div class="dsc-mono" style="margin-top:14px;">Product tagline · marketing &amp; splash</div>
+      </div>
+      <div class="dsc-card">
+        <p class="brand-quote">Solve once,<br/><em>advance many.</em></p>
+        <div class="dsc-mono" style="margin-top:14px;">Shared-work microcopy · in-product hint</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MASCOT -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Mascot &amp; delight</h2><span class="dsc-section-note">A small pixel tree. Surfaces in the sidebar after meaningful completions. Never in tables, dashboards, or dense data.</span></div>
+    <div class="dsc-card" style="display:flex; gap:24px; align-items:center;">
+      <div class="mascot">
+        <!-- pixel tree -->
+        <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+          <rect x="6" y="13" width="4" height="2" fill="#705518"/>
+          <rect x="5" y="11" width="6" height="2" fill="#1a6131"/>
+          <rect x="4" y="8"  width="8" height="3" fill="#237a3c"/>
+          <rect x="5" y="5"  width="6" height="3" fill="#2f8f4a"/>
+          <rect x="6" y="3"  width="4" height="2" fill="#4fa863"/>
+          <rect x="7" y="2"  width="2" height="1" fill="#7cc189"/>
+        </svg>
+      </div>
+      <div>
+        <h3 style="margin:0 0 6px; font-size:var(--it-text-md); font-weight:600;">"You found me. Keep building."</h3>
+        <p style="margin:0; font-size:var(--it-text-sm); color:var(--it-text-secondary); max-width:48ch;">
+          The tree grows leaves after meaningful completions — never on routine task ticks. A single tooltip on long-term return; no XP bars, no levels, no popups.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section class="dsc-section">
+    <div class="dsc-section-head"><h2>Voice rules</h2></div>
+    <div class="dsc-card">
+      <ul style="margin:0; padding-left:20px; line-height:1.7; color:var(--it-text-secondary); font-size:var(--it-text-base);">
+        <li><strong style="color:var(--it-text-primary)">Verbs first</strong> on actionable surfaces. "Execute Next", "Group these tasks?", "Resolve to continue".</li>
+        <li><strong style="color:var(--it-text-primary)">Concise &amp; operational.</strong> Status before sentiment. "Two tasks blocked" beats "Yikes — we have a problem!"</li>
+        <li><strong style="color:var(--it-text-primary)">Recommend, don't decree.</strong> "Recommended: Hybrid. AI scaffolds, you refine."</li>
+        <li><strong style="color:var(--it-text-primary)">No XP. No streaks. No emoji confetti.</strong> Delight is restrained: a small sparkle on completion, a leaf growing on the mascot.</li>
+        <li><strong style="color:var(--it-text-primary)">Shepherd is grounded.</strong> The assistant clarifies, never performs. No exclamation points.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

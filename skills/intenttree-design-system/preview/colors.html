@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IntentTree — Colors</title>
+<link rel="stylesheet" href="_preview.css" />
+<style>
+  /* ---- Color preview specifics ---- */
+  .scale {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 0;
+    border-top: 1px solid var(--it-border-subtle);
+  }
+  .scale:first-of-type { border-top: 0; }
+  .scale-name { font-size: var(--it-text-md); font-weight: var(--it-weight-semibold); }
+  .scale-name small {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--it-text-xs);
+    font-weight: var(--it-weight-regular);
+    color: var(--it-text-tertiary);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 8px;
+  }
+  .swatch {
+    aspect-ratio: 1.05;
+    border-radius: var(--it-radius-md);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--it-shadow-xs);
+    font-size: 10.5px;
+    font-family: var(--it-font-mono);
+  }
+  .swatch .step { font-weight: 600; opacity: 0.85; }
+  .swatch .hex  { opacity: 0.7; letter-spacing: -0.01em; }
+  .light-text { color: rgba(255,255,255,0.92); }
+  .dark-text  { color: rgba(20,26,44,0.78); }
+
+  /* Semantic mapping panel */
+  .sem-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .sem-card {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--it-shadow-sm);
+  }
+  .sem-dot {
+    width: 36px; height: 36px;
+    border-radius: var(--it-radius-md);
+    flex-shrink: 0;
+  }
+  .sem-info h3 {
+    margin: 0 0 2px;
+    font-size: var(--it-text-md);
+    font-weight: var(--it-weight-semibold);
+  }
+  .sem-info p {
+    margin: 0;
+    font-size: var(--it-text-sm);
+    color: var(--it-text-secondary);
+  }
+
+  /* Status pill samples */
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px 5px 9px;
+    border-radius: var(--it-radius-pill);
+    font-size: var(--it-text-sm);
+    font-weight: var(--it-weight-medium);
+  }
+  .pill::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.85;
+  }
+  .pill.ready    { background: var(--it-status-ready-bg);    color: var(--it-status-ready-fg); }
+  .pill.progress { background: var(--it-status-progress-bg); color: var(--it-status-progress-fg); }
+  .pill.blocked  { background: var(--it-status-blocked-bg);  color: var(--it-status-blocked-fg); }
+  .pill.warn     { background: var(--it-status-warn-bg);     color: var(--it-status-warn-fg); }
+  .pill.done     { background: var(--it-status-done-bg);     color: var(--it-status-done-fg); }
+  .pill.idle     { background: var(--it-status-idle-bg);     color: var(--it-status-idle-fg); }
+
+  /* Surface stack demo */
+  .surface-stack {
+    background: var(--it-bg-canvas);
+    border-radius: var(--it-radius-xl);
+    padding: 28px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    border: 1px solid var(--it-border-subtle);
+  }
+  .surf-tile {
+    border-radius: var(--it-radius-lg);
+    padding: 16px;
+    min-height: 88px;
+    font-size: var(--it-text-sm);
+    color: var(--it-text-secondary);
+    border: 1px solid var(--it-border-subtle);
+  }
+  .surf-tile h4 {
+    margin: 0 0 4px;
+    font-size: var(--it-text-sm);
+    font-weight: var(--it-weight-semibold);
+    color: var(--it-text-primary);
+  }
+  .surf-tile.canvas   { background: var(--it-bg-canvas); }
+  .surf-tile.glass    { background: var(--it-surface-glass);   backdrop-filter: var(--it-blur-md); }
+  .surf-tile.frosted  { background: var(--it-surface-frosted); backdrop-filter: var(--it-blur-md); }
+  .surf-tile.elevated { background: var(--it-surface-elevated); box-shadow: var(--it-shadow-lg); }
+
+  /* Dark theme inline preview block */
+  .theme-dark-block {
+    background: var(--it-neutral-950);
+    color: var(--it-text-inverse);
+    border-radius: var(--it-radius-xl);
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .theme-dark-block .surf-tile {
+    border-color: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.78);
+  }
+  .theme-dark-block .surf-tile h4 { color: #f4f6fb; }
+  .theme-dark-block .surf-tile.canvas   { background: #0f1320; }
+  .theme-dark-block .surf-tile.glass    { background: rgba(28,36,60,0.62); }
+  .theme-dark-block .surf-tile.frosted  { background: rgba(20,26,44,0.72); }
+  .theme-dark-block .surf-tile.elevated { background: #1c2440; box-shadow: 0 12px 32px rgba(0,0,0,0.55); }
+</style>
+</head>
+<body>
+<div class="dsc-doc">
+
+  <header class="dsc-header">
+    <div>
+      <div class="dsc-eyebrow">Design System · Colors</div>
+      <h1>Color</h1>
+    </div>
+    <div class="dsc-mono">tokens/tokens.css · v0.1</div>
+  </header>
+  <p class="dsc-lede">A muted, semantic palette. Every hue is slightly desaturated so nothing
+    pops harder than it needs to. Color carries meaning — execute, blocked, agent, knowledge —
+    never decoration. Status is always paired with an icon and label so the system stays
+    accessible at high contrast and for color-blind users.</p>
+
+  <!-- ============= SCALES ============= -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Brand & semantic scales</h2>
+      <span class="dsc-section-note">9-step scales. The 500 step is canonical for each hue.</span>
+    </div>
+
+    <div class="dsc-card">
+      <!-- Green — execute -->
+      <div class="scale">
+        <div class="scale-name">Green<small>execute · ready · on track</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#ecf6ee"><span class="step">50</span><span class="hex">#ECF6EE</span></div>
+          <div class="swatch dark-text"  style="background:#d4ebd9"><span class="step">100</span><span class="hex">#D4EBD9</span></div>
+          <div class="swatch dark-text"  style="background:#aad8b3"><span class="step">200</span><span class="hex">#AAD8B3</span></div>
+          <div class="swatch dark-text"  style="background:#7cc189"><span class="step">300</span><span class="hex">#7CC189</span></div>
+          <div class="swatch light-text" style="background:#4fa863"><span class="step">400</span><span class="hex">#4FA863</span></div>
+          <div class="swatch light-text" style="background:#2f8f4a"><span class="step">500</span><span class="hex">#2F8F4A</span></div>
+          <div class="swatch light-text" style="background:#237a3c"><span class="step">600</span><span class="hex">#237A3C</span></div>
+          <div class="swatch light-text" style="background:#1a6131"><span class="step">700</span><span class="hex">#1A6131</span></div>
+          <div class="swatch light-text" style="background:#144a26"><span class="step">800</span><span class="hex">#144A26</span></div>
+        </div>
+      </div>
+      <!-- Blue — primary structure -->
+      <div class="scale">
+        <div class="scale-name">Blue<small>primary · selected · core paths</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#eef3fb"><span class="step">50</span><span class="hex">#EEF3FB</span></div>
+          <div class="swatch dark-text"  style="background:#dbe7f7"><span class="step">100</span><span class="hex">#DBE7F7</span></div>
+          <div class="swatch dark-text"  style="background:#b7cdee"><span class="step">200</span><span class="hex">#B7CDEE</span></div>
+          <div class="swatch dark-text"  style="background:#8aaee2"><span class="step">300</span><span class="hex">#8AAEE2</span></div>
+          <div class="swatch light-text" style="background:#5b8dd2"><span class="step">400</span><span class="hex">#5B8DD2</span></div>
+          <div class="swatch light-text" style="background:#3b6fbd"><span class="step">500</span><span class="hex">#3B6FBD</span></div>
+          <div class="swatch light-text" style="background:#2c5aa0"><span class="step">600</span><span class="hex">#2C5AA0</span></div>
+          <div class="swatch light-text" style="background:#234781"><span class="step">700</span><span class="hex">#234781</span></div>
+          <div class="swatch light-text" style="background:#1a3661"><span class="step">800</span><span class="hex">#1A3661</span></div>
+        </div>
+      </div>
+      <!-- Purple — agents -->
+      <div class="scale">
+        <div class="scale-name">Purple<small>agents · intelligence · side quests</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#f1eefb"><span class="step">50</span><span class="hex">#F1EEFB</span></div>
+          <div class="swatch dark-text"  style="background:#e3dbf7"><span class="step">100</span><span class="hex">#E3DBF7</span></div>
+          <div class="swatch dark-text"  style="background:#c8bbef"><span class="step">200</span><span class="hex">#C8BBEF</span></div>
+          <div class="swatch dark-text"  style="background:#a896e2"><span class="step">300</span><span class="hex">#A896E2</span></div>
+          <div class="swatch light-text" style="background:#8a73d4"><span class="step">400</span><span class="hex">#8A73D4</span></div>
+          <div class="swatch light-text" style="background:#6f56c2"><span class="step">500</span><span class="hex">#6F56C2</span></div>
+          <div class="swatch light-text" style="background:#5a44a4"><span class="step">600</span><span class="hex">#5A44A4</span></div>
+          <div class="swatch light-text" style="background:#463486"><span class="step">700</span><span class="hex">#463486</span></div>
+          <div class="swatch light-text" style="background:#322360"><span class="step">800</span><span class="hex">#322360</span></div>
+        </div>
+      </div>
+      <!-- Teal — knowledge -->
+      <div class="scale">
+        <div class="scale-name">Teal<small>knowledge · memory · context</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#e8f4f5"><span class="step">50</span><span class="hex">#E8F4F5</span></div>
+          <div class="swatch dark-text"  style="background:#cfe7eb"><span class="step">100</span><span class="hex">#CFE7EB</span></div>
+          <div class="swatch dark-text"  style="background:#a3d2da"><span class="step">200</span><span class="hex">#A3D2DA</span></div>
+          <div class="swatch dark-text"  style="background:#71b9c5"><span class="step">300</span><span class="hex">#71B9C5</span></div>
+          <div class="swatch light-text" style="background:#4ba0ae"><span class="step">400</span><span class="hex">#4BA0AE</span></div>
+          <div class="swatch light-text" style="background:#2f8693"><span class="step">500</span><span class="hex">#2F8693</span></div>
+          <div class="swatch light-text" style="background:#226c78"><span class="step">600</span><span class="hex">#226C78</span></div>
+          <div class="swatch light-text" style="background:#185361"><span class="step">700</span><span class="hex">#185361</span></div>
+          <div class="swatch light-text" style="background:#103e49"><span class="step">800</span><span class="hex">#103E49</span></div>
+        </div>
+      </div>
+      <!-- Orange — quick wins -->
+      <div class="scale">
+        <div class="scale-name">Orange<small>quick wins · priority · attention</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#fdf1e6"><span class="step">50</span><span class="hex">#FDF1E6</span></div>
+          <div class="swatch dark-text"  style="background:#fbe1c8"><span class="step">100</span><span class="hex">#FBE1C8</span></div>
+          <div class="swatch dark-text"  style="background:#f5c08b"><span class="step">200</span><span class="hex">#F5C08B</span></div>
+          <div class="swatch dark-text"  style="background:#ee9d52"><span class="step">300</span><span class="hex">#EE9D52</span></div>
+          <div class="swatch light-text" style="background:#df7d2a"><span class="step">400</span><span class="hex">#DF7D2A</span></div>
+          <div class="swatch light-text" style="background:#c2641a"><span class="step">500</span><span class="hex">#C2641A</span></div>
+          <div class="swatch light-text" style="background:#9a4f15"><span class="step">600</span><span class="hex">#9A4F15</span></div>
+          <div class="swatch light-text" style="background:#763c10"><span class="step">700</span><span class="hex">#763C10</span></div>
+          <div class="swatch light-text" style="background:#552b0b"><span class="step">800</span><span class="hex">#552B0B</span></div>
+        </div>
+      </div>
+      <!-- Red — blockers -->
+      <div class="scale">
+        <div class="scale-name">Red<small>blockers · risk · failure</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#fbecec"><span class="step">50</span><span class="hex">#FBECEC</span></div>
+          <div class="swatch dark-text"  style="background:#f7d2d2"><span class="step">100</span><span class="hex">#F7D2D2</span></div>
+          <div class="swatch dark-text"  style="background:#ee9f9f"><span class="step">200</span><span class="hex">#EE9F9F</span></div>
+          <div class="swatch dark-text"  style="background:#df6f6f"><span class="step">300</span><span class="hex">#DF6F6F</span></div>
+          <div class="swatch light-text" style="background:#cc4949"><span class="step">400</span><span class="hex">#CC4949</span></div>
+          <div class="swatch light-text" style="background:#b03434"><span class="step">500</span><span class="hex">#B03434</span></div>
+          <div class="swatch light-text" style="background:#8d2828"><span class="step">600</span><span class="hex">#8D2828</span></div>
+          <div class="swatch light-text" style="background:#6b1f1f"><span class="step">700</span><span class="hex">#6B1F1F</span></div>
+          <div class="swatch light-text" style="background:#4d1616"><span class="step">800</span><span class="hex">#4D1616</span></div>
+        </div>
+      </div>
+      <!-- Gold — milestones -->
+      <div class="scale">
+        <div class="scale-name">Gold<small>milestones · unlocks · achievements</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#fbf2dc"><span class="step">50</span><span class="hex">#FBF2DC</span></div>
+          <div class="swatch dark-text"  style="background:#f4e1ad"><span class="step">100</span><span class="hex">#F4E1AD</span></div>
+          <div class="swatch dark-text"  style="background:#e9c97a"><span class="step">200</span><span class="hex">#E9C97A</span></div>
+          <div class="swatch dark-text"  style="background:#d6ab48"><span class="step">300</span><span class="hex">#D6AB48</span></div>
+          <div class="swatch light-text" style="background:#b88a2b"><span class="step">400</span><span class="hex">#B88A2B</span></div>
+          <div class="swatch light-text" style="background:#93701f"><span class="step">500</span><span class="hex">#93701F</span></div>
+          <div class="swatch light-text" style="background:#705518"><span class="step">600</span><span class="hex">#705518</span></div>
+          <div class="swatch light-text" style="background:#523e11"><span class="step">700</span><span class="hex">#523E11</span></div>
+          <div class="swatch light-text" style="background:#37290b"><span class="step">800</span><span class="hex">#37290B</span></div>
+        </div>
+      </div>
+      <!-- Neutral — slate -->
+      <div class="scale">
+        <div class="scale-name">Neutral<small>text · borders · surfaces</small></div>
+        <div class="swatches">
+          <div class="swatch dark-text"  style="background:#fafbfc;border-color:#ebedf2"><span class="step">25</span><span class="hex">#FAFBFC</span></div>
+          <div class="swatch dark-text"  style="background:#f4f5f8"><span class="step">50</span><span class="hex">#F4F5F8</span></div>
+          <div class="swatch dark-text"  style="background:#ebedf2"><span class="step">100</span><span class="hex">#EBEDF2</span></div>
+          <div class="swatch dark-text"  style="background:#cdd2dd"><span class="step">200</span><span class="hex">#CDD2DD</span></div>
+          <div class="swatch dark-text"  style="background:#b1b8c7"><span class="step">300</span><span class="hex">#B1B8C7</span></div>
+          <div class="swatch light-text" style="background:#6b7385"><span class="step">500</span><span class="hex">#6B7385</span></div>
+          <div class="swatch light-text" style="background:#4f5667"><span class="step">600</span><span class="hex">#4F5667</span></div>
+          <div class="swatch light-text" style="background:#383e4d"><span class="step">700</span><span class="hex">#383E4D</span></div>
+          <div class="swatch light-text" style="background:#161a26"><span class="step">900</span><span class="hex">#161A26</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= SEMANTIC ROLES ============= -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Semantic mapping</h2>
+      <span class="dsc-section-note">Hue → meaning. Always paired with icon + label.</span>
+    </div>
+    <div class="sem-grid">
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-green-500)"></div>
+        <div class="sem-info"><h3>Execute · Complete · On track</h3>
+          <p>Primary CTA, completed nodes, on-track health, ready-to-execute state.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-blue-500)"></div>
+        <div class="sem-info"><h3>Primary · Selected · Core paths</h3>
+          <p>Selected sidebar item, plan paths, focus rings, primary structural lines.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-purple-500)"></div>
+        <div class="sem-info"><h3>Agents · Intelligence · Side quests</h3>
+          <p>Agent badges, side-quest dotted outlines, Shepherd assistant moments.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-teal-500)"></div>
+        <div class="sem-info"><h3>Knowledge · Memory · Context</h3>
+          <p>Knowledge Brain branch, context packets, wiki tiles.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-orange-500)"></div>
+        <div class="sem-info"><h3>Quick wins · Priority · Attention</h3>
+          <p>Lightning-bolt quick-win chips, priority flags, time-sensitive callouts.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-red-500)"></div>
+        <div class="sem-info"><h3>Blockers · Risk · Failure</h3>
+          <p>Blocker warnings, failed agent runs, destructive confirmations.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-gold-300)"></div>
+        <div class="sem-info"><h3>Milestones · Unlocks</h3>
+          <p>Milestone badges, restraint glow on unlock, achievement markers.</p></div></div>
+      <div class="sem-card"><div class="sem-dot" style="background:var(--it-neutral-400)"></div>
+        <div class="sem-info"><h3>Inactive · Parked · Speculative</h3>
+          <p>Dashed connectors, archived state, weak/speculative links.</p></div></div>
+    </div>
+  </section>
+
+  <!-- ============= STATUS PILLS ============= -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Status pills</h2>
+      <span class="dsc-section-note">The one canonical pattern for showing node state.</span>
+    </div>
+    <div class="dsc-card">
+      <div class="pill-row">
+        <span class="pill ready">Ready</span>
+        <span class="pill progress">In Progress</span>
+        <span class="pill done">Completed</span>
+        <span class="pill warn">Waiting Review</span>
+        <span class="pill blocked">Blocked</span>
+        <span class="pill idle">Not Started</span>
+        <span class="pill idle" style="background:var(--it-neutral-100); color:var(--it-neutral-500)">Deferred</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= SURFACES ============= -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Surfaces — light theme</h2>
+      <span class="dsc-section-note">Four-tier elevation, soft blur over hard shadow.</span>
+    </div>
+    <div class="surface-stack">
+      <div class="surf-tile canvas">  <h4>Canvas</h4>App / workspace background.</div>
+      <div class="surf-tile glass">   <h4>Glass</h4>Translucent panel — cards, inspectors.</div>
+      <div class="surf-tile frosted"> <h4>Frosted</h4>Sidebar, sheets, floating controls.</div>
+      <div class="surf-tile elevated"><h4>Elevated</h4>Selected card, modal foreground.</div>
+    </div>
+  </section>
+
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Surfaces — dark theme</h2>
+      <span class="dsc-section-note">Same hierarchy in deep navy. Used on dense map and tree views.</span>
+    </div>
+    <div class="theme-dark-block">
+      <div class="surface-stack" style="background:#0f1320; border:0;">
+        <div class="surf-tile canvas">  <h4>Canvas</h4>App / workspace background.</div>
+        <div class="surf-tile glass">   <h4>Glass</h4>Translucent panel — cards, inspectors.</div>
+        <div class="surf-tile frosted"> <h4>Frosted</h4>Sidebar, sheets, floating controls.</div>
+        <div class="surf-tile elevated"><h4>Elevated</h4>Selected card, modal foreground.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

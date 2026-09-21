@@ -1,0 +1,104 @@
+/* Preview-card shared layout — frame for design-review cards.
+   Each preview HTML file pairs this with tokens.css. */
+
+@import url("../tokens/tokens.css");
+
+html, body {
+  background: var(--it-bg-app);
+  color: var(--it-text-primary);
+}
+
+body {
+  padding: 48px 56px;
+  min-height: 100vh;
+}
+
+.dsc-doc {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.dsc-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--it-border-subtle);
+}
+
+.dsc-header h1 {
+  margin: 0;
+  font-size: var(--it-text-2xl);
+  font-weight: var(--it-weight-semibold);
+  letter-spacing: var(--it-tracking-tight);
+  color: var(--it-text-primary);
+}
+
+.dsc-header .dsc-eyebrow {
+  font-size: var(--it-text-xs);
+  font-weight: var(--it-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--it-tracking-eyebrow);
+  color: var(--it-text-tertiary);
+  margin-bottom: 6px;
+}
+
+.dsc-lede {
+  font-size: var(--it-text-md);
+  color: var(--it-text-secondary);
+  max-width: 70ch;
+  line-height: var(--it-leading-normal);
+}
+
+.dsc-section {
+  margin-top: 56px;
+}
+
+.dsc-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dsc-section h2 {
+  margin: 0;
+  font-size: var(--it-text-lg);
+  font-weight: var(--it-weight-semibold);
+  letter-spacing: var(--it-tracking-tight);
+  color: var(--it-text-primary);
+}
+
+.dsc-section-note {
+  font-size: var(--it-text-sm);
+  color: var(--it-text-tertiary);
+}
+
+.dsc-section-intro {
+  font-size: var(--it-text-base);
+  color: var(--it-text-secondary);
+  margin: 0 0 24px;
+  max-width: 72ch;
+}
+
+.dsc-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.dsc-card {
+  background: var(--it-surface-base);
+  border: 1px solid var(--it-border-subtle);
+  border-radius: var(--it-radius-lg);
+  padding: 20px;
+  box-shadow: var(--it-shadow-sm);
+}
+
+.dsc-mono {
+  font-family: var(--it-font-mono);
+  font-size: 11.5px;
+  color: var(--it-text-tertiary);
+  letter-spacing: 0;
+}

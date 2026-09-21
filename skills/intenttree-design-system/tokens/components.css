@@ -1,0 +1,453 @@
+/* IntentTree component library — used by both preview/components.html and ui_kits/app/index.html.
+   Imports tokens; provides the canonical CSS classes for buttons, chips, cards, nav, etc. */
+
+@import url("../tokens/tokens.css");
+
+/* =========================================================================
+   BUTTONS
+   - .it-btn is the base. Modifiers: .primary .secondary .ghost .danger .agent
+   - Sizes: .sm .md (default) .lg
+   ========================================================================= */
+.it-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  height: 38px;
+  border-radius: var(--it-radius-md);
+  border: 1px solid transparent;
+  font-family: var(--it-font-sans);
+  font-size: var(--it-text-base);
+  font-weight: var(--it-weight-medium);
+  letter-spacing: -0.005em;
+  color: var(--it-text-primary);
+  background: var(--it-surface-base);
+  border-color: var(--it-border-soft);
+  cursor: pointer;
+  transition: transform var(--it-dur-fast) var(--it-ease-out),
+              box-shadow var(--it-dur-fast) var(--it-ease-out),
+              background var(--it-dur-fast) var(--it-ease-out);
+  white-space: nowrap;
+}
+.it-btn:hover    { box-shadow: var(--it-shadow-sm); transform: translateY(-0.5px); }
+.it-btn:active   { transform: translateY(0); }
+.it-btn:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(59,111,189,0.30);
+  border-color: var(--it-blue-400);
+}
+.it-btn .icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+.it-btn.primary {
+  background: var(--it-green-500);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset, 0 1px 2px rgba(20,26,44,0.10);
+}
+.it-btn.primary:hover { background: var(--it-green-600); box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset, var(--it-shadow-glow-green); }
+
+.it-btn.secondary {
+  background: var(--it-blue-500);
+  color: #fff;
+  border-color: transparent;
+}
+.it-btn.secondary:hover { background: var(--it-blue-600); }
+
+.it-btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--it-text-secondary);
+}
+.it-btn.ghost:hover { background: rgba(20,26,44,0.04); color: var(--it-text-primary); }
+
+.it-btn.danger {
+  background: var(--it-red-500); color: #fff; border-color: transparent;
+}
+.it-btn.danger:hover { background: var(--it-red-600); }
+
+.it-btn.agent {
+  background: var(--it-purple-500); color: #fff; border-color: transparent;
+}
+.it-btn.agent:hover { background: var(--it-purple-600); }
+
+.it-btn.sm  { height: 30px; padding: 5px 12px; font-size: var(--it-text-sm); border-radius: 8px; }
+.it-btn.lg  { height: 46px; padding: 12px 22px; font-size: var(--it-text-md); border-radius: var(--it-radius-lg); }
+
+.it-btn.icon-only { width: 38px; padding: 0; }
+.it-btn.sm.icon-only { width: 30px; }
+
+/* =========================================================================
+   CHIPS — small categorical / metadata indicators
+   ========================================================================= */
+.it-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  height: 26px;
+  border-radius: var(--it-radius-pill);
+  font-size: var(--it-text-sm);
+  font-weight: var(--it-weight-medium);
+  background: var(--it-neutral-100);
+  color: var(--it-text-secondary);
+  border: 1px solid var(--it-border-subtle);
+  white-space: nowrap;
+}
+.it-chip.green   { background: var(--it-green-50);  color: var(--it-green-700);  border-color: rgba(47,143,74,0.18); }
+.it-chip.blue    { background: var(--it-blue-50);   color: var(--it-blue-700);   border-color: rgba(59,111,189,0.20); }
+.it-chip.purple  { background: var(--it-purple-50); color: var(--it-purple-700); border-color: rgba(111,86,194,0.22); }
+.it-chip.teal    { background: var(--it-teal-50);   color: var(--it-teal-600);   border-color: rgba(47,134,147,0.20); }
+.it-chip.orange  { background: var(--it-orange-50); color: var(--it-orange-600); border-color: rgba(194,100,26,0.22); }
+.it-chip.red     { background: var(--it-red-50);    color: var(--it-red-600);    border-color: rgba(176,52,52,0.20); }
+.it-chip.gold    { background: var(--it-gold-50);   color: var(--it-gold-500);   border-color: rgba(184,138,43,0.25); }
+
+/* Chip icon — small filled tile to its left */
+.it-chip .dot {
+  width: 7px; height: 7px; border-radius: 999px; background: currentColor; opacity: 0.85;
+}
+.it-chip .icon { width: 14px; height: 14px; }
+
+/* =========================================================================
+   STATUS PILL — canonical node-state indicator
+   ========================================================================= */
+.it-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 9px;
+  border-radius: var(--it-radius-pill);
+  font-size: var(--it-text-sm);
+  font-weight: var(--it-weight-medium);
+}
+.it-pill::before {
+  content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; opacity: 0.85;
+}
+.it-pill.ready    { background: var(--it-status-ready-bg);    color: var(--it-status-ready-fg); }
+.it-pill.progress { background: var(--it-status-progress-bg); color: var(--it-status-progress-fg); }
+.it-pill.blocked  { background: var(--it-status-blocked-bg);  color: var(--it-status-blocked-fg); }
+.it-pill.warn     { background: var(--it-status-warn-bg);     color: var(--it-status-warn-fg); }
+.it-pill.done     { background: var(--it-status-done-bg);     color: var(--it-status-done-fg); }
+.it-pill.idle     { background: var(--it-status-idle-bg);     color: var(--it-status-idle-fg); }
+
+/* =========================================================================
+   NODE TILE — the icon-on-tinted-square used to label a node category
+   ========================================================================= */
+.it-tile {
+  width: 44px; height: 44px;
+  border-radius: var(--it-radius-md);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: var(--it-blue-50);
+  color: var(--it-blue-600);
+  border: 1px solid rgba(59,111,189,0.18);
+}
+.it-tile .icon { width: 22px; height: 22px; stroke-width: 1.6; }
+.it-tile.sm { width: 32px; height: 32px; border-radius: 8px; }
+.it-tile.sm .icon { width: 16px; height: 16px; }
+.it-tile.lg { width: 56px; height: 56px; border-radius: var(--it-radius-lg); }
+.it-tile.lg .icon { width: 28px; height: 28px; }
+
+.it-tile.green   { background: var(--it-green-50);  color: var(--it-green-600);  border-color: rgba(47,143,74,0.20); }
+.it-tile.blue    { background: var(--it-blue-50);   color: var(--it-blue-600);   border-color: rgba(59,111,189,0.20); }
+.it-tile.purple  { background: var(--it-purple-50); color: var(--it-purple-600); border-color: rgba(111,86,194,0.22); }
+.it-tile.teal    { background: var(--it-teal-50);   color: var(--it-teal-600);   border-color: rgba(47,134,147,0.22); }
+.it-tile.orange  { background: var(--it-orange-50); color: var(--it-orange-600); border-color: rgba(194,100,26,0.22); }
+.it-tile.red     { background: var(--it-red-50);    color: var(--it-red-600);    border-color: rgba(176,52,52,0.22); }
+.it-tile.gold    { background: var(--it-gold-50);   color: var(--it-gold-500);   border-color: rgba(184,138,43,0.30); }
+.it-tile.neutral { background: var(--it-neutral-100); color: var(--it-neutral-600); }
+
+/* =========================================================================
+   CARD — base glass surface
+   ========================================================================= */
+.it-card {
+  background: var(--it-surface-base);
+  border: 1px solid var(--it-border-subtle);
+  border-radius: var(--it-radius-lg);
+  box-shadow: var(--it-shadow-sm);
+}
+.it-card.glass {
+  background: var(--it-surface-glass);
+  backdrop-filter: var(--it-blur-md);
+  -webkit-backdrop-filter: var(--it-blur-md);
+  border-color: rgba(255,255,255,0.6);
+}
+.it-card.elevated { box-shadow: var(--it-shadow-md); }
+.it-card.selected {
+  border-color: var(--it-blue-300);
+  box-shadow: var(--it-shadow-glow-blue);
+}
+
+/* =========================================================================
+   PROGRESS BAR
+   ========================================================================= */
+.it-progress {
+  height: 6px;
+  background: var(--it-neutral-100);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.it-progress > .fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--it-green-500);
+  transition: width var(--it-dur-base) var(--it-ease-out);
+}
+.it-progress.blue   > .fill { background: var(--it-blue-500); }
+.it-progress.purple > .fill { background: var(--it-purple-500); }
+.it-progress.gold   > .fill { background: var(--it-gold-300); }
+
+/* =========================================================================
+   RING — circular progress (used on goal cards)
+   ========================================================================= */
+.it-ring {
+  display: inline-block;
+  position: relative;
+  width: 44px; height: 44px;
+}
+.it-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.it-ring .track  { stroke: var(--it-neutral-150); stroke-width: 4; fill: none; }
+.it-ring .value  { stroke: var(--it-green-500);   stroke-width: 4; fill: none; stroke-linecap: round; transition: stroke-dasharray var(--it-dur-base) var(--it-ease-out); }
+.it-ring .label  {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--it-text-xs);
+  font-weight: var(--it-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--it-text-primary);
+}
+.it-ring.blue   .value { stroke: var(--it-blue-500); }
+.it-ring.purple .value { stroke: var(--it-purple-500); }
+.it-ring.gold   .value { stroke: var(--it-gold-300); }
+
+/* =========================================================================
+   AVATAR
+   ========================================================================= */
+.it-avatar {
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  background: var(--it-neutral-200);
+  color: var(--it-neutral-700);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  border: 2px solid var(--it-surface-base);
+  flex-shrink: 0;
+}
+.it-avatar.sm  { width: 22px; height: 22px; font-size: 10px; }
+.it-avatar.lg  { width: 36px; height: 36px; font-size: 13px; }
+.it-avatar.xl  { width: 44px; height: 44px; font-size: 14px; }
+.it-avatar-stack { display: inline-flex; }
+.it-avatar-stack > .it-avatar + .it-avatar { margin-left: -8px; }
+
+/* =========================================================================
+   BREADCRUMB
+   ========================================================================= */
+.it-breadcrumb {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--it-text-sm);
+  color: var(--it-text-secondary);
+}
+.it-breadcrumb a, .it-breadcrumb span {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--it-neutral-100);
+  color: var(--it-text-secondary);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.it-breadcrumb .sep {
+  background: transparent;
+  padding: 0;
+  color: var(--it-text-muted);
+}
+.it-breadcrumb .current {
+  background: var(--it-blue-50);
+  color: var(--it-blue-700);
+  font-weight: 500;
+}
+
+/* =========================================================================
+   SIDEBAR ITEM
+   ========================================================================= */
+.it-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px;
+  border-radius: var(--it-radius-md);
+  color: var(--it-text-secondary);
+  font-size: var(--it-text-base);
+  font-weight: var(--it-weight-medium);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--it-dur-fast) var(--it-ease-out);
+}
+.it-nav-item:hover  { background: rgba(20,26,44,0.04); color: var(--it-text-primary); }
+.it-nav-item.active { background: var(--it-green-50); color: var(--it-green-700); }
+.it-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 8px; bottom: 8px;
+  width: 3px;
+  background: var(--it-green-500);
+  border-radius: 999px;
+}
+.it-nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; }
+.it-nav-item .badge {
+  margin-left: auto;
+  font-size: 11px; font-weight: 600;
+  background: var(--it-neutral-200); color: var(--it-text-secondary);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* =========================================================================
+   FORM — search field, text input
+   ========================================================================= */
+.it-search {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--it-radius-md);
+  background: var(--it-surface-base);
+  border: 1px solid var(--it-border-soft);
+  color: var(--it-text-secondary);
+  font-size: var(--it-text-sm);
+}
+.it-search .icon { width: 14px; height: 14px; color: var(--it-text-tertiary); }
+.it-search input {
+  border: 0; outline: 0; background: transparent;
+  flex: 1;
+  font-size: var(--it-text-sm);
+  color: var(--it-text-primary);
+  font-family: inherit;
+}
+.it-search input::placeholder { color: var(--it-text-tertiary); }
+.it-search .kbd {
+  font-family: var(--it-font-mono);
+  font-size: 10.5px;
+  background: var(--it-neutral-100);
+  border: 1px solid var(--it-border-subtle);
+  color: var(--it-text-tertiary);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* =========================================================================
+   SEGMENTED CONTROL — used for view switcher (Tree / Board / Timeline)
+   ========================================================================= */
+.it-seg {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 3px;
+  background: var(--it-neutral-100);
+  border-radius: var(--it-radius-md);
+  border: 1px solid var(--it-border-subtle);
+}
+.it-seg button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; height: 28px;
+  border-radius: 7px;
+  font-size: var(--it-text-sm); font-weight: 500;
+  color: var(--it-text-secondary);
+  background: transparent; border: 0;
+  cursor: pointer;
+  transition: background var(--it-dur-fast) var(--it-ease-out);
+}
+.it-seg button.active {
+  background: var(--it-surface-base);
+  color: var(--it-text-primary);
+  box-shadow: var(--it-shadow-xs);
+}
+.it-seg button .icon { width: 14px; height: 14px; }
+
+/* =========================================================================
+   EXECUTION-MODE TOGGLE — Human / Agent / Hybrid / Autonomous
+   ========================================================================= */
+.it-exec {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 0;
+  background: var(--it-neutral-100);
+  border: 1px solid var(--it-border-subtle);
+  border-radius: var(--it-radius-md);
+  padding: 3px;
+}
+.it-exec button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; height: 30px;
+  border-radius: 7px;
+  font-size: var(--it-text-sm); font-weight: 500;
+  color: var(--it-text-secondary);
+  background: transparent; border: 0;
+  cursor: pointer;
+  transition: background var(--it-dur-fast) var(--it-ease-out), color var(--it-dur-fast) var(--it-ease-out);
+}
+.it-exec button .icon { width: 14px; height: 14px; }
+.it-exec button.active.human  { background: var(--it-surface-base); color: var(--it-text-primary); box-shadow: var(--it-shadow-xs); }
+.it-exec button.active.agent  { background: var(--it-purple-50); color: var(--it-purple-700); box-shadow: 0 0 0 1px rgba(111,86,194,0.20); }
+.it-exec button.active.hybrid { background: var(--it-green-50);  color: var(--it-green-700);  box-shadow: 0 0 0 1px rgba(47,143,74,0.22); }
+.it-exec button.active.auto   { background: var(--it-blue-50);   color: var(--it-blue-700);   box-shadow: 0 0 0 1px rgba(59,111,189,0.20); }
+
+/* =========================================================================
+   CHECKBOX
+   ========================================================================= */
+.it-check {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--it-neutral-300);
+  background: var(--it-surface-base);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--it-dur-fast) var(--it-ease-out);
+}
+.it-check.checked {
+  background: var(--it-green-500);
+  border-color: var(--it-green-500);
+  color: #fff;
+}
+.it-check svg { width: 12px; height: 12px; opacity: 0; transition: opacity var(--it-dur-fast); }
+.it-check.checked svg { opacity: 1; }
+
+/* =========================================================================
+   DIVIDER
+   ========================================================================= */
+.it-divider { height: 1px; background: var(--it-border-subtle); border: 0; margin: 12px 0; }
+
+/* =========================================================================
+   SHARED-WORK BADGE — chain link with branch count
+   ========================================================================= */
+.it-shared {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--it-radius-pill);
+  background: var(--it-blue-50);
+  color: var(--it-blue-700);
+  border: 1px dashed var(--it-blue-300);
+  font-size: var(--it-text-sm);
+  font-weight: 500;
+}
+.it-shared .icon { width: 13px; height: 13px; }
+
+/* =========================================================================
+   QUICK-WIN CHIP — lightning bolt with title
+   ========================================================================= */
+.it-qw {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: var(--it-radius-pill);
+  background: var(--it-orange-50);
+  color: var(--it-orange-600);
+  border: 1px solid rgba(194,100,26,0.20);
+  font-size: var(--it-text-sm);
+  font-weight: 500;
+}
+.it-qw .icon { width: 13px; height: 13px; }
+
+/* =========================================================================
+   SIDE-QUEST CARD — purple, dotted outline
+   ========================================================================= */
+.it-sq {
+  background: var(--it-purple-50);
+  border: 1.5px dashed var(--it-purple-300);
+  border-radius: var(--it-radius-md);
+  padding: 10px 12px;
+  font-size: var(--it-text-sm);
+  color: var(--it-purple-700);
+  display: flex; align-items: center; gap: 8px;
+}
+.it-sq .icon { width: 14px; height: 14px; }
