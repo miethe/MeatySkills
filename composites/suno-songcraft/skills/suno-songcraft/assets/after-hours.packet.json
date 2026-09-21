@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0",
+  "title": "After Hours Circuit",
+  "mode": "instrumental",
+  "platform": {
+    "name": "suno",
+    "model": "v6",
+    "verified_on": "2026-09-14",
+    "style_limit": 1000,
+    "limit_basis": "user_constraint",
+    "lyrics_limit": null
+  },
+  "brief": {
+    "premise": "A focused late-night instrumental that feels warm rather than sleepy.",
+    "language": "Instrumental",
+    "lyric_edit_level": "rewrite",
+    "source_audio_available": false,
+    "genres": [
+      {
+        "name": "Minimal house",
+        "role": "foundation",
+        "contribution": "Steady restrained dance pulse."
+      },
+      {
+        "name": "Neo-soul",
+        "role": "support",
+        "contribution": "Electric-piano voicings and syncopation."
+      },
+      {
+        "name": "Ambient",
+        "role": "accent",
+        "contribution": "Low-density spatial tail textures."
+      }
+    ],
+    "groove": {
+      "bpm": 104,
+      "meter": "4/4",
+      "beat_unit": "quarter-note",
+      "feel": "Steady restrained pulse with syncopated keys"
+    },
+    "vocals": [],
+    "instruments": [
+      {
+        "name": "electric piano",
+        "role": "Short syncopated anchor motif",
+        "priority": "anchor"
+      },
+      {
+        "name": "synth bass",
+        "role": "Round low foundation",
+        "priority": "support"
+      },
+      {
+        "name": "drum machine",
+        "role": "Dry four-on-the-floor pulse",
+        "priority": "support"
+      },
+      {
+        "name": "synth pad",
+        "role": "Quiet spatial tail",
+        "priority": "accent"
+      }
+    ],
+    "must_keep": [
+      "Instrumental only",
+      "104 BPM target",
+      "Electric-piano motif remains foreground"
+    ],
+    "must_avoid": [
+      "Country or bluegrass defaults",
+      "Lead vocals",
+      "Large drops"
+    ],
+    "assumptions": [
+      "The key and melody will be established during composition; they were not supplied."
+    ]
+  },
+  "artist_references": [],
+  "lyrics": {
+    "original": null,
+    "tagged": "[Intro]\n[Electric piano motif and soft pulse]\n\n[Main Groove]\n[Instrumental]\n\n[Breakdown]\n[Drums recede; retain the motif]\n\n[Outro]\n[Instrumental fade]",
+    "locked_lines": [],
+    "revision_notes": []
+  },
+  "variants": [
+    {
+      "id": "A",
+      "label": "Warm instrumental baseline",
+      "kind": "baseline",
+      "changed_axis": "none",
+      "hypothesis": "Keep the motif clear and the groove stable while evaluating texture.",
+      "held_constant": [
+        "104 BPM",
+        "Instrumental",
+        "Motif, instrumentation and form"
+      ],
+      "artist_mode": "descriptive",
+      "style": "Instrumental minimal house with neo-soul electric piano and restrained ambient space. 104 BPM, 4/4, steady quarter-note pulse. Short syncopated electric-piano motif stays foreground over round synth bass, dry drum-machine kick and light hats. Sparse sustained pad tails fill gaps, not the melody. Intimate opening, gradual groove entry, subtractive breakdown, warm return, clean fading outro. Clear low end and close dry keys; no big drop.",
+      "style_counts": {
+        "codepoints": 439,
+        "utf16": 439
+      },
+      "lyrics_override": null,
+      "exclude": "lead vocals, backing vocals, choir, big EDM drops, bluegrass",
+      "edit_brief": "",
+      "warnings": []
+    },
+    {
+      "id": "B",
+      "label": "Light tape-grain texture",
+      "kind": "sonic",
+      "changed_axis": "tape texture",
+      "hypothesis": "Keep the motif clear and the groove stable while evaluating texture.",
+      "held_constant": [
+        "104 BPM",
+        "Instrumental",
+        "Motif, instrumentation and form"
+      ],
+      "artist_mode": "descriptive",
+      "style": "Instrumental minimal house with neo-soul electric piano and restrained ambient space. 104 BPM, 4/4, steady quarter-note pulse. Short syncopated electric-piano motif stays foreground over round synth bass, dry drum-machine kick and light hats. Sparse sustained pad tails fill gaps, not the melody. Intimate opening, gradual groove entry, subtractive breakdown, warm return, clean fading outro. Clear low end; add gentle tape grain to close dry keys and drums without changing the notes or groove. No big drop.",
+      "style_counts": {
+        "codepoints": 508,
+        "utf16": 508
+      },
+      "lyrics_override": null,
+      "exclude": "lead vocals, backing vocals, choir, big EDM drops, bluegrass",
+      "edit_brief": "",
+      "warnings": []
+    }
+  ],
+  "evaluation": {
+    "status": "not_audio_tested",
+    "notes": [
+      "Check motif clarity, groove, and the absence of vocals.",
+      "This is a second text example, not an audio benchmark."
+    ]
+  }
+}

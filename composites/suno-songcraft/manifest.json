@@ -1,0 +1,177 @@
+{
+  "name": "suno-songcraft-codex",
+  "version": "1.0.0",
+  "created_on": "2026-09-14",
+  "platform_snapshot": "2026-09-14",
+  "runtime": "Python 3.10+; standard library only",
+  "audio_tested": false,
+  "automated_tests_passed": 69,
+  "behavioral_cases_not_executed": 28,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 1893,
+      "sha256": "8ceee7e90723008e1c405128fc7e3a0c9d39fa11bfa22b72e387415c57bf3c04"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8672,
+      "sha256": "41eb814dbf9a91a15bfb066d2ed59d53e853e76e392346b32d917d1bbb5c2b93"
+    },
+    {
+      "path": "VALIDATION.md",
+      "bytes": 3114,
+      "sha256": "2f36872d6384ed1194fea3d08115b527cb358bd9ae8a35aa661c36a9cb8b5081"
+    },
+    {
+      "path": "install.py",
+      "bytes": 4204,
+      "sha256": "6d6bd9acac59a3f7a88e1a0cee816e7ece9bbf806c421c257ad24d19ef6f9698"
+    },
+    {
+      "path": "skills/genre-lyricist/SKILL.md",
+      "bytes": 6203,
+      "sha256": "62d22d7cd4afff295e77987a6d9e20345735c4694a25fce795d362afb88d0ad2"
+    },
+    {
+      "path": "skills/genre-lyricist/agents/openai.yaml",
+      "bytes": 297,
+      "sha256": "3fa01b4f4b446ddc3c3fbdfc1b0fc9beef624325b526ee5ad3f0d921323ce2cb"
+    },
+    {
+      "path": "skills/genre-lyricist/assets/lyric-brief-template.md",
+      "bytes": 636,
+      "sha256": "5c8e75920809476c116732cd2bb4bcf274b668bf2a09ce1e86ae5f72633addf2"
+    },
+    {
+      "path": "skills/genre-lyricist/assets/lyric-review-template.md",
+      "bytes": 942,
+      "sha256": "02fc5c472568b8c48a9e04a0676b4357e9f0279e231ea3369a47939ded7974a7"
+    },
+    {
+      "path": "skills/genre-lyricist/evals/acceptance-cases.json",
+      "bytes": 5315,
+      "sha256": "4282ab29eba0113fabb7e051900efec5e2feb6356c90557e62d99639d5a10f54"
+    },
+    {
+      "path": "skills/genre-lyricist/references/craft-and-prosody.md",
+      "bytes": 5947,
+      "sha256": "f4b5cb7c40a9f2df2b189ec5babc146e3dec529c19a0cc646af27567cb8e8d68"
+    },
+    {
+      "path": "skills/genre-lyricist/references/genre-lenses.md",
+      "bytes": 9369,
+      "sha256": "cfa546618d070b430820c0724b98f460383ded821ff47ef05022acba5e1dc81f"
+    },
+    {
+      "path": "skills/genre-lyricist/references/revision-and-duets.md",
+      "bytes": 4016,
+      "sha256": "dea8809f7da332e8fb0f24bf2a3e3fab49e06da63d13e6f10c40576e394d8391"
+    },
+    {
+      "path": "skills/genre-lyricist/references/sources.md",
+      "bytes": 1273,
+      "sha256": "3d5878c368fe18b6c6ad6b8dd5eea82d9d8b600420d263f00b0589f4f9724cf7"
+    },
+    {
+      "path": "skills/suno-songcraft/SKILL.md",
+      "bytes": 7826,
+      "sha256": "cb37c4cdef8a0fe2a4dbedec502d63c31011786430351b6459e4b1ff4861e0e5"
+    },
+    {
+      "path": "skills/suno-songcraft/agents/openai.yaml",
+      "bytes": 283,
+      "sha256": "db9fa98bd86b04996ef8e365c06d02b197361c9b66be3d57a8531c331b48b361"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/after-hours.copy.md",
+      "bytes": 1979,
+      "sha256": "72932380d473ec43d9df2b0edcb7e84eea7a970cee9fe273f04dd215666f3a20"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/after-hours.packet.json",
+      "bytes": 4690,
+      "sha256": "9d32682a09397a5cf108e53eea65b0ffb0e0708ae8087d207a6467484f9be95d"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/brief-template.md",
+      "bytes": 1332,
+      "sha256": "d13b1ce8e3b765b99a1d2042701baf168bce86c40efc8d0d41c72709fdd7d3b1"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/carolina-rain.copy.md",
+      "bytes": 9110,
+      "sha256": "4e6404fe72b8636d079644f9599f5f244e83cda0070cbee511d6847f4ab08f6b"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/carolina-rain.packet.json",
+      "bytes": 17211,
+      "sha256": "6d142d1dbf612f8106dfcfd981d2786869e55d605ce2dfeffb378334a19b29cf"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/listening-log.csv",
+      "bytes": 243,
+      "sha256": "b6d58e5803047add33f93a97d9f5f18b03a22cbf42220de3d32fa27d7baa47ce"
+    },
+    {
+      "path": "skills/suno-songcraft/assets/song.packet.schema.json",
+      "bytes": 10498,
+      "sha256": "19559e589e86a3c73f8e4303fc4247c80f9e1b6b9b0f1c28d42b59fe9d2f0475"
+    },
+    {
+      "path": "skills/suno-songcraft/evals/acceptance-cases.json",
+      "bytes": 8435,
+      "sha256": "30b8ea993f27bccd42f61f0c2de4b4637bc3570e9e73b2bdaafb6e590e62b970"
+    },
+    {
+      "path": "skills/suno-songcraft/references/arrangement-and-prompting.md",
+      "bytes": 6027,
+      "sha256": "b81f4d2a9b47e972831927b56883a18afc74548eb2ee43fe8ecd77d26989117d"
+    },
+    {
+      "path": "skills/suno-songcraft/references/artist-references.md",
+      "bytes": 3692,
+      "sha256": "96894033fd33fa87e7f68ba5e611bc42a9872d5a29eceb4bacd582c9117d35d7"
+    },
+    {
+      "path": "skills/suno-songcraft/references/carolina-profile.md",
+      "bytes": 2611,
+      "sha256": "1af07ae86918a2bbaf0327bc01f7d771723c810ff6e79fa9ce9c18df09b9128c"
+    },
+    {
+      "path": "skills/suno-songcraft/references/iteration-and-qc.md",
+      "bytes": 5007,
+      "sha256": "ad7856ea03eac988ec91174c8b41aed80a634b8a263586e2b845edc880f4586c"
+    },
+    {
+      "path": "skills/suno-songcraft/references/packet-contract.md",
+      "bytes": 4206,
+      "sha256": "2b5b85924f933cad3a7170b0225cbb6c7573563a123eb046f1a9da9d50c4e14e"
+    },
+    {
+      "path": "skills/suno-songcraft/references/platform-v6.md",
+      "bytes": 5081,
+      "sha256": "2e383b5c2d41ef41eb21b845cc4ad5b27e700f93dbf8f18f0bf79d349755abfe"
+    },
+    {
+      "path": "skills/suno-songcraft/references/sources.md",
+      "bytes": 2955,
+      "sha256": "19beea966805994b9d7cacf2ad7016cfbcfafb41d74ec19a5c9cf9187a853cf8"
+    },
+    {
+      "path": "skills/suno-songcraft/scripts/songcheck.py",
+      "bytes": 16238,
+      "sha256": "e471ad700401cdac536f0537921a49af5c707346c51c31041a708ae7315d8a86"
+    },
+    {
+      "path": "skills/suno-songcraft/scripts/test_songcheck.py",
+      "bytes": 10919,
+      "sha256": "4dcb7659f6bde573496256b3d65ee77162b8e9a0c17811f31e81432605d0e577"
+    },
+    {
+      "path": "tests/test_install.py",
+      "bytes": 2680,
+      "sha256": "f3d7153979115649b6b349b3778110c8b606d6c46a5454e43606ad0f1f1983be"
+    }
+  ]
+}

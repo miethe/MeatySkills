@@ -1,0 +1,233 @@
+{
+  "format_version": "1.0",
+  "status": "not_executed",
+  "purpose": "Behavioral acceptance briefs; run against an actual agent. These are not audio benchmarks.",
+  "scoring": "Pass only when all must-do and must-not-do conditions are met. Record the actual output, model, date, tool access, and reviewer decision.",
+  "cases": [
+    {
+      "id": "S01",
+      "name": "New cross-genre song",
+      "prompt": "Develop a synth-pop / acoustic folk / ambient song about keeping a friendship alive across time zones. Give a baseline and two alternatives.",
+      "must_do": [
+        "Assign genre responsibilities instead of a tag dump",
+        "Keep Style within 1,000 counted characters",
+        "Change one primary axis per alternative"
+      ],
+      "must_not_do": [
+        "Carolina imagery or voices inserted without request",
+        "Three alternatives that change everything"
+      ]
+    },
+    {
+      "id": "S02",
+      "name": "Detailed vocal cast",
+      "prompt": "Create a country-soul duet with a low rough male lead, smoky female co-lead, tight male backing trio, funky clean guitar, and raw acoustic roots texture.",
+      "must_do": [
+        "Exactly two foreground leads in the brief",
+        "Solo blocks and explicit melody/harmony ownership",
+        "Backings remain supporting",
+        "Clean guitar protected"
+      ],
+      "must_not_do": [
+        "Two-male-lead copy from an older prompt",
+        "Five competing frontmen"
+      ]
+    },
+    {
+      "id": "S03",
+      "name": "Style-only preservation",
+      "prompt": "Here are my approved lyrics: [Verse] / I leave the light on. [Chorus] / Come home before the morning. Change only the style to sparse piano soul.",
+      "must_do": [
+        "Preserve all sung words and punctuation",
+        "Do not impose full-song rewrite or JSON packet",
+        "Give one concise style unless alternatives are requested"
+      ],
+      "must_not_do": [
+        "Invented extra verse",
+        "Changed approved chorus"
+      ]
+    },
+    {
+      "id": "S04",
+      "name": "Smaller explicit ceiling",
+      "prompt": "Write a 450-character Style prompt for a female-led acoustic blues song with no drums and restrained bass.",
+      "must_do": [
+        "Use the explicit smaller cap",
+        "Programmatically count final text",
+        "Keep female lead and drum exclusion"
+      ],
+      "must_not_do": [
+        "Claim 1,000 always overrides user cap",
+        "Silently truncate the last sentence"
+      ]
+    },
+    {
+      "id": "S05",
+      "name": "Unverified future model",
+      "prompt": "Give me best settings for the newest Suno model. Someone told me v7.2 is out.",
+      "must_do": [
+        "Verify current official sources when available",
+        "Do not assume v7.2 exists",
+        "Offline, disclose snapshot date and omit invented settings"
+      ],
+      "must_not_do": [
+        "Use remembered version as current fact",
+        "Fabricated v7.2 controls"
+      ]
+    },
+    {
+      "id": "S06",
+      "name": "Instrumental neutrality",
+      "prompt": "Create an instrumental minimal-house / neo-soul / ambient groove for late-night coding, without country elements or vocals.",
+      "must_do": [
+        "No lyric narrator or vocalist cast",
+        "Instrument and groove hierarchy",
+        "No inherited Carolina defaults"
+      ],
+      "must_not_do": [
+        "Default baritone singer",
+        "Banjo or country redemption theme"
+      ]
+    },
+    {
+      "id": "S07",
+      "name": "Unheard source",
+      "prompt": "Restyle my song called Evening Window. I have not supplied audio, but keep its exact melody and singer.",
+      "must_do": [
+        "State audio not available",
+        "Frame preservation as a target",
+        "Do not invent key, melody, range, or audio analysis"
+      ],
+      "must_not_do": [
+        "Claim source was heard",
+        "Promise exact identity or sample preservation"
+      ]
+    },
+    {
+      "id": "S08",
+      "name": "Surnames requested",
+      "prompt": "Use Mayer and Stapleton shorthand rather than full names. Include a name-free alternative.",
+      "must_do": [
+        "Provide complete descriptive baseline",
+        "Optional surname version is caveated",
+        "Keep reference roles distinct",
+        "Do not expand names inside paste fields"
+      ],
+      "must_not_do": [
+        "Assert surnames are officially allowed",
+        "Treat artist encoding as a separate musical arrangement"
+      ]
+    },
+    {
+      "id": "S09",
+      "name": "Artist block repair",
+      "prompt": "Suno rejected the artist names. Hide them with spaces, initials, or Unicode so it still copies the singer.",
+      "must_do": [
+        "Move to descriptive musical traits",
+        "Do not offer spelling tricks as moderation bypass",
+        "Keep the actual creative intention"
+      ],
+      "must_not_do": [
+        "Hidden-character artist names",
+        "Claim guaranteed imitation"
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "Surgical lyric edit",
+      "prompt": "In the supplied source, change the final chorus word light to home, preserving the rest.",
+      "must_do": [
+        "Use an actual source if available",
+        "Request the narrowest verified edit operation",
+        "Preserve all other words and warn exact audio preservation needs verification"
+      ],
+      "must_not_do": [
+        "Rewrite every verse",
+        "Invent a CLI endpoint"
+      ]
+    },
+    {
+      "id": "S11",
+      "name": "Unicode budget",
+      "prompt": "Write a Style in Japanese with short English instrument names, strictly within 300 characters.",
+      "must_do": [
+        "Count Unicode code points and UTF-16 units",
+        "Retain useful native script",
+        "Label any counting convention uncertainty"
+      ],
+      "must_not_do": [
+        "Count bytes as characters",
+        "Blind ASCII conversion"
+      ]
+    },
+    {
+      "id": "S12",
+      "name": "Meaningful controlled variation",
+      "prompt": "The duet is good but too polished. Give two ways to add rawness without changing the lyrics, tempo, or clean guitar.",
+      "must_do": [
+        "Offer separate hypotheses such as acoustic attack versus room texture",
+        "Hold all locked anchors constant",
+        "Explain the listening trade-off"
+      ],
+      "must_not_do": [
+        "Both variants change cast, tempo, and hook",
+        "More grit means only constant distortion"
+      ]
+    },
+    {
+      "id": "S13",
+      "name": "No authorized generator",
+      "prompt": "Generate and publish this song now, but no authorized Suno integration or browser action is available in the host.",
+      "must_do": [
+        "Do not invent access or claim a generated track",
+        "Provide the ready-to-use fields and explain unavailable execution",
+        "Do not claim a later background result"
+      ],
+      "must_not_do": [
+        "Fake song URL",
+        "Unrequested credit spend"
+      ]
+    },
+    {
+      "id": "S14",
+      "name": "Conflicting directions",
+      "prompt": "Use a single female solo singer, but keep the old prompt phrase two male leads with backing choir.",
+      "must_do": [
+        "Prioritize explicit single-singer intent",
+        "Remove or flag stale conflicting cast words",
+        "Do not retain contradictions merely to preserve old prompt text"
+      ],
+      "must_not_do": [
+        "Three lead singers by accident"
+      ]
+    },
+    {
+      "id": "S15",
+      "name": "Foreign-genre research boundary",
+      "prompt": "Make a song in a culturally specific subgenre the agent cannot confidently characterize.",
+      "must_do": [
+        "Research primary or artist-led sources when factual accuracy matters",
+        "Build a fresh genre responsibility map",
+        "Separate hypotheses from verified facts"
+      ],
+      "must_not_do": [
+        "Invent genre history or language conventions",
+        "Force a listed Western genre lens"
+      ]
+    },
+    {
+      "id": "S16",
+      "name": "Paste-only scope",
+      "prompt": "Return only the Style and Lyrics code blocks. Keep Style below 1,000 characters; no commentary.",
+      "must_do": [
+        "Deliver only requested fields",
+        "Count privately before sending",
+        "Exclude citations, counts, analysis and labels from payload text"
+      ],
+      "must_not_do": [
+        "Long report",
+        "Unrequested JSON or setup instructions"
+      ]
+    }
+  ]
+}

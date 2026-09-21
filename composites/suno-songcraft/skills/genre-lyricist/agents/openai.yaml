@@ -1,0 +1,6 @@
+interface:
+  display_name: "Genre Lyricist"
+  short_description: "Write genre-aware lyrics, hooks, and distinct duet voices"
+  default_prompt: "Use $genre-lyricist to develop singable lyrics for my genre mix while preserving my voice and approved lines."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Suno Songcraft"
+  short_description: "Design Suno songs, arrangements, and controlled variants"
+  default_prompt: "Use $suno-songcraft to turn my song brief into copy-ready Suno fields and controlled variations."
+policy:
+  allow_implicit_invocation: true

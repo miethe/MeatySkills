@@ -1,0 +1,165 @@
+{
+  "format_version": "1.0",
+  "status": "not_executed",
+  "purpose": "Behavioral acceptance briefs; run against an actual agent. These are not audio benchmarks.",
+  "scoring": "Pass only when all must-do and must-not-do conditions are met. Record the actual output, model, date, tool access, and reviewer decision.",
+  "cases": [
+    {
+      "id": "L01",
+      "name": "Country detail without props",
+      "prompt": "Write a country verse about returning to a partner after always leaving during arguments, without trucks or alcohol.",
+      "must_do": [
+        "Consequential action and credible speaker",
+        "No prohibited props",
+        "Distinct movement toward staying"
+      ],
+      "must_not_do": [
+        "Generic rural checklist"
+      ]
+    },
+    {
+      "id": "L02",
+      "name": "Grungegrass lens",
+      "prompt": "Write a grungegrass chorus about admitting fear, not a song about drinking or roads.",
+      "must_do": [
+        "Raw emotion with intelligible imagery",
+        "Singable refrain",
+        "No imported Carolina hook"
+      ],
+      "must_not_do": [
+        "Random darkness vocabulary"
+      ]
+    },
+    {
+      "id": "L03",
+      "name": "Distinct duet agency",
+      "prompt": "Write a duet where both people contributed to a falling-out and neither is merely the comforting partner.",
+      "must_do": [
+        "Independent knowledge and wants",
+        "Reciprocal action or admissions",
+        "Clear ownership and converging shared lines"
+      ],
+      "must_not_do": [
+        "Gender-based personality assignment",
+        "Female co-lead only echoes male lead"
+      ]
+    },
+    {
+      "id": "L04",
+      "name": "Melody unavailable",
+      "prompt": "Polish this long verse while keeping its existing melody. No audio or notation has been provided.",
+      "must_do": [
+        "Preserve meaning and constraints",
+        "State melody fit is provisional",
+        "Flag precise stress/breath questions"
+      ],
+      "must_not_do": [
+        "Guarantee drop-in fit from syllable count"
+      ]
+    },
+    {
+      "id": "L05",
+      "name": "Locked chorus",
+      "prompt": "Keep my approved chorus exactly; revise only verse two and show a short change log.",
+      "must_do": [
+        "Chorus unchanged",
+        "Only authorized section edited",
+        "Substantive concise diff"
+      ],
+      "must_not_do": [
+        "Improved chorus without permission"
+      ]
+    },
+    {
+      "id": "L06",
+      "name": "Rap prosody",
+      "prompt": "Create a 16-bar rap verse with internal rhyme and clear breath groups, without imitating a named rapper.",
+      "must_do": [
+        "Meaning-led internal rhyme",
+        "Cadence and breath plan",
+        "No stolen or invented autobiographical credentials"
+      ],
+      "must_not_do": [
+        "Only end rhymes",
+        "Dense syntax with no performance room"
+      ]
+    },
+    {
+      "id": "L07",
+      "name": "Dance minimalism",
+      "prompt": "Write a minimal vocal hook for an instrumental-led house track; no full narrative verses.",
+      "must_do": [
+        "Short loopable phrase",
+        "Purposeful repetition",
+        "No unnecessary bridge"
+      ],
+      "must_not_do": [
+        "Full country/pop song template"
+      ]
+    },
+    {
+      "id": "L08",
+      "name": "Multilingual lyric",
+      "prompt": "Write a Japanese/English refrain. Preserve native script and put pronunciation help separately.",
+      "must_do": [
+        "Natural language appropriate to competence",
+        "Separate pronunciation notes",
+        "No English-only scansion claims"
+      ],
+      "must_not_do": [
+        "Strip Japanese script",
+        "Mix analysis into sung text"
+      ]
+    },
+    {
+      "id": "L09",
+      "name": "Lullaby dynamics",
+      "prompt": "Write a reassuring bedtime song for a young child with no big final chorus or frightening imagery.",
+      "must_do": [
+        "Low-stimulation artistic arc",
+        "Simple meaningful repetition",
+        "No clinical sleep guarantees"
+      ],
+      "must_not_do": [
+        "Default explosive ending",
+        "Invented child biography"
+      ]
+    },
+    {
+      "id": "L10",
+      "name": "Biographical humility",
+      "prompt": "Use a cassette-player image for a fictional 1990s narrator, but do not claim this happened to me.",
+      "must_do": [
+        "Label invented scene as fictional when explaining",
+        "Use era detail with narrative function"
+      ],
+      "must_not_do": [
+        "Describe imagined event as user history"
+      ]
+    },
+    {
+      "id": "L11",
+      "name": "Metaphor audit",
+      "prompt": "Critique a rain-and-drought reconciliation lyric; improve only accidental confusion, not the central metaphor.",
+      "must_do": [
+        "Identify actual logical tension",
+        "Preserve intentional image system",
+        "No broad rewrite for its own sake"
+      ],
+      "must_not_do": [
+        "Treat every unconventional metaphor as an error"
+      ]
+    },
+    {
+      "id": "L12",
+      "name": "Trigger boundary",
+      "prompt": "Explain how to configure a guitar compressor; I am not writing lyrics.",
+      "must_do": [
+        "Do not activate lyric workflow as the main task"
+      ],
+      "must_not_do": [
+        "Forced hook or lyric generation"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,294 @@
+{
+  "schema_version": "1.0",
+  "title": "Carolina Rain",
+  "mode": "restyle",
+  "platform": {
+    "name": "suno",
+    "model": "v6",
+    "verified_on": "2026-09-14",
+    "style_limit": 1000,
+    "limit_basis": "user_constraint",
+    "lyrics_limit": null
+  },
+  "brief": {
+    "premise": "Returning home becomes a choice to stay, admit fault, and accept reconciliation.",
+    "language": "English",
+    "lyric_edit_level": "light",
+    "source_audio_available": false,
+    "genres": [
+      {
+        "name": "Carolina country-soul",
+        "role": "foundation",
+        "contribution": "Narrative duet, harmonic warmth, restrained groove."
+      },
+      {
+        "name": "Bluegrass and folk roots",
+        "role": "support",
+        "contribution": "Acoustic techniques and sparse roots responses."
+      },
+      {
+        "name": "Grunge and 1990s unplugged rock",
+        "role": "accent",
+        "contribution": "Attack, rough peaks, and quiet-to-loud contrast."
+      }
+    ],
+    "groove": {
+      "bpm": 78,
+      "meter": "12/8",
+      "beat_unit": "dotted-quarter (provisional counted-pulse assumption)",
+      "feel": "Slow rolling triplet feel; retain the source pulse when available."
+    },
+    "vocals": [
+      {
+        "id": "M1",
+        "role": "lead",
+        "description": "Deep, raspy male frontman; solo verse one."
+      },
+      {
+        "id": "F1",
+        "role": "co-lead",
+        "description": "Rich smoky female co-lead; solo verse two."
+      },
+      {
+        "id": "BGV",
+        "role": "backing-ensemble",
+        "description": "Three male harmony parts; support both leads."
+      }
+    ],
+    "instruments": [
+      {
+        "name": "clean single-coil guitar",
+        "role": "Finger-funk anchor between vocal phrases",
+        "priority": "anchor"
+      },
+      {
+        "name": "acoustic guitar",
+        "role": "Flatpicking and attack",
+        "priority": "support"
+      },
+      {
+        "name": "banjo",
+        "role": "Sparse rolling subdivision",
+        "priority": "accent"
+      },
+      {
+        "name": "mandolin",
+        "role": "Dry rhythmic chops",
+        "priority": "accent"
+      },
+      {
+        "name": "fiddle",
+        "role": "Phrase responses and pre-chorus lift",
+        "priority": "accent"
+      },
+      {
+        "name": "dobro",
+        "role": "Roots sustain and outro",
+        "priority": "accent"
+      },
+      {
+        "name": "bass",
+        "role": "Woody foundation",
+        "priority": "support"
+      },
+      {
+        "name": "B3",
+        "role": "Subtle swells",
+        "priority": "accent"
+      },
+      {
+        "name": "drums",
+        "role": "Brushes to heavy backbeat",
+        "priority": "support"
+      }
+    ],
+    "must_keep": [
+      "Chorus hook",
+      "Soulful clean guitar identity",
+      "Male/female co-lead hierarchy",
+      "Rural Carolina character"
+    ],
+    "must_avoid": [
+      "Unrequested third lead",
+      "Fast hoedown treatment",
+      "Continuous distortion hiding clean guitar"
+    ],
+    "assumptions": [
+      "Source recording was not available or auditioned.",
+      "Artist traits translate the user brief; they are not factual voice-identification claims."
+    ]
+  },
+  "artist_references": [
+    {
+      "label": "Mayer",
+      "aliases": [
+        "Mayer",
+        "John Mayer"
+      ],
+      "traits": "Clean finger-funk, blues bends, double-stops.",
+      "role": "guitar"
+    },
+    {
+      "label": "Stapleton",
+      "aliases": [
+        "Stapleton",
+        "Chris Stapleton"
+      ],
+      "traits": "Deep chesty grain and ragged soulful peaks.",
+      "role": "M1"
+    },
+    {
+      "label": "Evans",
+      "aliases": [
+        "Evans",
+        "Sara Evans"
+      ],
+      "traits": "Rich smoky country co-lead with ringing highs.",
+      "role": "F1"
+    },
+    {
+      "label": "LeVox",
+      "aliases": [
+        "LeVox",
+        "Gary LeVox"
+      ],
+      "traits": "Bright high country backing harmony.",
+      "role": "BGV"
+    },
+    {
+      "label": "DeMarcus",
+      "aliases": [
+        "DeMarcus",
+        "Jay DeMarcus"
+      ],
+      "traits": "Warm middle backing blend.",
+      "role": "BGV"
+    },
+    {
+      "label": "Rooney",
+      "aliases": [
+        "Rooney",
+        "Joe Don Rooney"
+      ],
+      "traits": "Resonant supporting country blend.",
+      "role": "BGV"
+    },
+    {
+      "label": "Cornell",
+      "aliases": [
+        "Cornell",
+        "Chris Cornell"
+      ],
+      "traits": "Rough high-harmony peaks.",
+      "role": "BGV"
+    },
+    {
+      "label": "Weiland",
+      "aliases": [
+        "Weiland",
+        "Scott Weiland"
+      ],
+      "traits": "Dark rock grain at selected peaks.",
+      "role": "BGV"
+    }
+  ],
+  "lyrics": {
+    "original": "[Intro]\nThunder on the county line, comin' low and slow...\n\n[Verse 1]\nI ran the interstate till the tank ran dry,\nChasing somethin' better under somebody's sky.\nBut every mile I burned just circled back to you,\nAnd the map inside my chest only pointed one way through.\n\n[Pre-Chorus]\nSo if the sky wants to open, let it open wide,\nI ain't runnin' from the weather no more, no more tonight—\n\n[Chorus]\nWash me in the Carolina rain,\nEvery crooked road, every mile of blame.\nI'll stand here soakin', I'll say your name—\nCome on and wash me in the Carolina rain.\n\n[Verse 2]\nI've got a temper like a match in a dry July,\nWords I can't take back and a stubborn, foolish pride.\nBut I'd trade every hard thing I ever said,\nFor your hand on my shoulder and your rain on my head.\n\n[Pre-Chorus]\nSo if the storm's gonna find me, let it find me here,\nI'm done outrunnin' every cloud I ever feared—\n\n[Chorus]\nWash me in the Carolina rain,\nEvery crooked road, every mile of blame.\nI'll stand here soakin', I'll say your name—\nCome on and wash me in the Carolina rain.\n\n[Bridge]\nWhen the levee breaks—\nLet it break.\nWhen my hands are shakin'—\nHold the ache.\nThere ain't no drought that love can't drown,\nSo let it come down, let it come down.\n\n[Final Chorus]\nWash me in the Carolina rain,\nEvery crooked road, every mile of blame.\nI'll stand here soakin', I'll say your name—\nCome on and wash me... in the Carolina rain.\n\n[Outro]\nLet it come down, oh...\nWash me in the Carolina rain.",
+    "tagged": "[Intro]\n[Fingerpicked acoustic, dobro, clean electric swells]\n[Female lead: low, smoky, close]\nThunder on the county line, comin' low and slow...\n\n[Verse 1]\n[Male lead: deep, gravelly baritone; intimate solo]\nI ran the interstate till the tank ran dry,\nChasin' somethin' better under somebody's sky.\nBut every mile I burned just circled back to you,\nAnd the map inside my chest knew what the blacktop never knew.\n\n[Pre-Chorus]\n[Male lead; mandolin and brushes enter]\nSo if the sky wants to open, let it open wide,\n[Female joins in close upper harmony]\nI ain't runnin' from the weather no more, no more tonight—\n\n[Chorus]\n[Male melody; female close harmony; full-band lift]\nWash me in the Carolina rain,\nEvery crooked road, every mile of blame.\n[Male backing trio enters behind both leads]\nI'll stand here soakin', I'll say your name—\nCome on and wash me in the Carolina rain.\n\n[Verse 2]\n[Sparse acoustic, muted clean guitar, bass and brushes]\n[Female lead: rich, smoky country soul; solo]\nI've got a temper like a match in a dry July,\nWords I can't take back and a stubborn, foolish pride.\nBut I'd trade every hard thing I ever said,\n[Male adds soft low harmony beneath female melody]\nFor your hand on my shoulder and the rain on my head.\n\n[Pre-Chorus]\n[Female lead; fiddle answers between phrases]\nSo if the storm's gonna find me, let it find me here,\n[Male joins in close lower harmony]\nI'm done outrunnin' every cloud I ever feared—\n\n[Chorus]\n[Female melody; male lower harmony; stronger backbeat]\nWash me in the Carolina rain,\nEvery crooked road, every mile of blame.\n[Male backing trio swells behind both leads]\nI'll stand here soakin', I'll say your name—\nCome on and wash me in the Carolina rain.\n\n[Instrumental Break]\n[Clean blues-funk guitar answered by fiddle and dobro]\n[Sparse banjo and mandolin; keep the same slow pulse]\n\n[Bridge]\n[Acoustic, dobro, quiet foot-stomp; exposed voices]\n[Male lead: low, rough, vulnerable]\nWhen the levee breaks—\n[Female lead: tender answer]\nLet it break.\n[Female lead: intimate solo]\nWhen my hands are shakin'—\n[Male lead: reassuring answer]\nHold the ache.\n[Both leads in close harmony; backing trio enters softly]\nThere ain't no drought that love can't drown,\n[All voices build; ragged edges, controlled power]\nSo let it come down, let it come down.\n\n[Final Chorus]\n[Full band; dirty accents beneath audible clean guitar]\n[Male melody; female upper harmony; male backing trio]\nWash me in the Carolina rain,\n[Female melody; male lower harmony; backing trio sustains]\nEvery crooked road, every mile of blame.\n[Both leads harmonize; backing trio swells behind them]\nI'll stand here soakin', I'll say your name—\nCome on and wash me... in the Carolina rain.\n\n[Outro]\n[Acoustic guitar and dobro only]\n[Male lead: low, raspy, unforced]\nLet it come down, oh...\n[Both leads: soft close harmony; backing trio fades]\nWash me in the Carolina rain.\n[Let the last dobro note ring]",
+    "locked_lines": [
+      "Wash me in the Carolina rain,",
+      "Every crooked road, every mile of blame.",
+      "I'll stand here soakin', I'll say your name—",
+      "Come on and wash me in the Carolina rain."
+    ],
+    "revision_notes": [
+      "Chasing becomes Chasin' for consistency with the supplied diction.",
+      "Verse one ending tightened; melody fit remains untested.",
+      "Your rain becomes the rain.",
+      "Bridge lead roles changed to reciprocal male/female responses.",
+      "Final chorus retains the separately supplied ellipsis variation."
+    ]
+  },
+  "variants": [
+    {
+      "id": "A",
+      "label": "Balanced Carolina soul",
+      "kind": "baseline",
+      "changed_axis": "none",
+      "hypothesis": "Establish clean-guitar identity, distinct co-leads, and restrained roots grit.",
+      "held_constant": [
+        "Hook and sung text",
+        "78 BPM slow 12/8 target",
+        "Two co-leads and supporting male trio",
+        "Audible clean guitar anchor"
+      ],
+      "artist_mode": "descriptive",
+      "style": "Soulful Carolina country duet with grungegrass grit and 1990s unplugged-rock tension. 78 BPM, slow 12/8, deep pocket. Two leads: deep, chesty male baritone with sandpaper rasp, tender lows and ragged soulful belts; rich, smoky female country lead with clear, ringing highs. Alternate solo verse blocks; share choruses in close harmony. Male backing trio: bright high tenor, smoky middle, resonant low harmony; tight country thirds, rough rock edge at peaks, always behind both leads. Prominent clean single-coil guitar: fingerstyle funk, muted ghost notes, blues bends, double-stops. Acoustic flatpicking, sparse banjo rolls, mandolin chops, crying fiddle and dobro, woody bass, subtle B3. Brushed drums build to heavy backbeat; dirty guitar swells lift choruses without masking clean guitar. Earthy Carolina drawl, porch intimacy, pick attack, warm live-room sound. Aching to redemptive; exposed call-response bridge, huge final harmonies, bare acoustic outro.",
+      "style_counts": {
+        "codepoints": 961,
+        "utf16": 961
+      },
+      "lyrics_override": null,
+      "exclude": "hard-tuned robotic vocals, metal screaming, EDM drops, trap drums, breakneck bluegrass, novelty hoedown",
+      "edit_brief": "Use the selected source track. Preserve its hook melody, chord movement, slow 12/8 groove and clean blues-funk guitar. Use one deep raspy male lead, one rich smoky female co-lead, and a male backing trio behind them. Follow the supplied lyric cues for verse ownership and the bridge exchange. Add sparse roots instrumentation and grungegrass attack without speeding up or masking the clean guitar. Keep other elements as close as the workflow permits. Compare the result against the original; exact preservation is not assumed.",
+      "warnings": []
+    },
+    {
+      "id": "B",
+      "label": "Rougher acoustic attack",
+      "kind": "sonic",
+      "changed_axis": "texture and attack",
+      "hypothesis": "Test more grit without raising tempo or masking the clean guitar.",
+      "held_constant": [
+        "Hook and sung text",
+        "78 BPM slow 12/8 target",
+        "Two co-leads and supporting male trio",
+        "Audible clean guitar anchor"
+      ],
+      "artist_mode": "descriptive",
+      "style": "Carolina country-soul duet with heavier grungegrass bite and 1990s unplugged tension. 78 BPM, slow 12/8, deep pocket. Deep chesty male baritone: sandpaper rasp, tender lows, ragged belts. Rich smoky female country co-lead: clear ringing highs. Alternate solo verses; close chorus harmonies. Male backing trio: bright high tenor, smoky middle, resonant low support; rougher rock grain at peaks, always behind both leads. Keep clean single-coil finger-funk, muted ghost notes, blues bends and double-stops prominent. Acoustic flatpicking, sparse banjo rolls, mandolin chops, fiddle and dobro, woody bass, subtle B3. Increase percussive acoustic attack, pick scrape and short dirty-electric accents; do not add tempo or continuous fuzz. Brushes build to heavy backbeat. Quiet verses, ragged chorus lift, exposed call-response bridge, huge final harmonies, bare acoustic outro. Earthy Carolina drawl, live-room warmth, bruised pride turning to redemption.",
+      "style_counts": {
+        "codepoints": 951,
+        "utf16": 951
+      },
+      "lyrics_override": null,
+      "exclude": "hard-tuned robotic vocals, metal screaming, EDM drops, trap drums, breakneck bluegrass, novelty hoedown",
+      "edit_brief": "Use the selected source track. Preserve its hook melody, chord movement, slow 12/8 groove and clean blues-funk guitar. Use one deep raspy male lead, one rich smoky female co-lead, and a male backing trio behind them. Follow the supplied lyric cues for verse ownership and the bridge exchange. Add sparse roots instrumentation and grungegrass attack without speeding up or masking the clean guitar. Keep other elements as close as the workflow permits. Compare the result against the original; exact preservation is not assumed.",
+      "warnings": []
+    },
+    {
+      "id": "C",
+      "label": "Optional surname shorthand",
+      "kind": "reference-encoding",
+      "changed_axis": "artist-reference encoding",
+      "hypothesis": "Test an alternate reference encoding, not a new arrangement.",
+      "held_constant": [
+        "Hook and sung text",
+        "78 BPM slow 12/8 target",
+        "Two co-leads and supporting male trio",
+        "Audible clean guitar anchor"
+      ],
+      "artist_mode": "surname-shorthand",
+      "style": "Soulful Carolina country duet with grungegrass grit and 1990s unplugged-rock tension. 78 BPM, slow 12/8, laid-back pocket. Two leads: Stapleton-like deep, chesty, gravelly male baritone, tender growl to ragged soulful belt; Evans-like rich, smoky female country lead with clear, strong highs. Trade verse blocks; share choruses in close harmony. LeVox/DeMarcus/Rooney-like male backing trio, with restrained Cornell/Weiland grit at peaks; support, never replace the leads. Prominent Mayer-like clean Strat finger-funk, muted ghost notes, blues bends and double-stops. Acoustic flatpicking, sparse banjo rolls, mandolin chops, crying fiddle and dobro, woody bass, subtle B3. Brushed drums grow into a heavy backbeat. Spacious verses; dirty guitar swells and percussive acoustic strums lift choruses. Earthy Carolina drawl, porch intimacy, audible pick attack, warm live-room sound. Aching to redemptive; exposed call-response bridge, huge final harmonies, bare acoustic outro.",
+      "style_counts": {
+        "codepoints": 975,
+        "utf16": 975
+      },
+      "lyrics_override": null,
+      "exclude": "hard-tuned robotic vocals, metal screaming, EDM drops, trap drums, breakneck bluegrass, novelty hoedown",
+      "edit_brief": "Use the selected source track. Preserve its hook melody, chord movement, slow 12/8 groove and clean blues-funk guitar. Use one deep raspy male lead, one rich smoky female co-lead, and a male backing trio behind them. Follow the supplied lyric cues for verse ownership and the bridge exchange. Add sparse roots instrumentation and grungegrass attack without speeding up or masking the clean guitar. Keep other elements as close as the workflow permits. Compare the result against the original; exact preservation is not assumed.",
+      "warnings": [
+        "Artist-name acceptance is unverified. No documented surname exception; use A if rejected."
+      ]
+    }
+  ],
+  "evaluation": {
+    "status": "not_audio_tested",
+    "notes": [
+      "Confirm the clean guitar remains audible under roots and dirty accents.",
+      "Check that the co-leads are distinguishable and backups stay behind them.",
+      "Check actual tempo feel, lyric delivery, and bridge handoffs against the source.",
+      "Style counts and packet structure were checked; no Suno generation or audio listening was performed."
+    ]
+  }
+}

@@ -1,0 +1,471 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nick-miethe:suno-song-packet:1.0",
+  "title": "Local Suno song-development packet",
+  "description": "A local planning and validation format, not a Suno API request.",
+  "x-pack-note": "Style cap and artist-reference rules are explicit project constraints.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "enum": [
+        "new",
+        "restyle",
+        "revise",
+        "lyric-only",
+        "instrumental"
+      ]
+    },
+    "platform": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "suno"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verified_on": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "style_limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit_basis": {
+          "enum": [
+            "user_constraint",
+            "confirmed_ui",
+            "project_default"
+          ]
+        },
+        "lyrics_limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      },
+      "required": [
+        "name",
+        "model",
+        "verified_on",
+        "style_limit",
+        "limit_basis",
+        "lyrics_limit"
+      ],
+      "additionalProperties": false
+    },
+    "brief": {
+      "type": "object",
+      "properties": {
+        "premise": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lyric_edit_level": {
+          "enum": [
+            "none",
+            "light",
+            "rewrite"
+          ]
+        },
+        "source_audio_available": {
+          "type": "boolean"
+        },
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "enum": [
+                  "foundation",
+                  "support",
+                  "accent"
+                ]
+              },
+              "contribution": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "name",
+              "role",
+              "contribution"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "groove": {
+          "type": "object",
+          "properties": {
+            "bpm": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 1
+            },
+            "meter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "beat_unit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "feel": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "bpm",
+            "meter",
+            "beat_unit",
+            "feel"
+          ],
+          "additionalProperties": false
+        },
+        "vocals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "enum": [
+                  "lead",
+                  "co-lead",
+                  "backing-ensemble",
+                  "backing"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "role",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "instruments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "priority": {
+                "enum": [
+                  "anchor",
+                  "support",
+                  "accent"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "role",
+              "priority"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "must_keep": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "must_avoid": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "premise",
+        "language",
+        "lyric_edit_level",
+        "source_audio_available",
+        "genres",
+        "groove",
+        "vocals",
+        "instruments",
+        "must_keep",
+        "must_avoid",
+        "assumptions"
+      ],
+      "additionalProperties": false
+    },
+    "artist_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "traits": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "label",
+          "aliases",
+          "traits",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "lyrics": {
+      "type": "object",
+      "properties": {
+        "original": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tagged": {
+          "type": "string"
+        },
+        "locked_lines": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "revision_notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "original",
+        "tagged",
+        "locked_lines",
+        "revision_notes"
+      ],
+      "additionalProperties": false
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "baseline",
+              "sonic",
+              "structural",
+              "lyric",
+              "reference-encoding"
+            ]
+          },
+          "changed_axis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hypothesis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "held_constant": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "artist_mode": {
+            "enum": [
+              "descriptive",
+              "surname-shorthand"
+            ]
+          },
+          "style": {
+            "type": "string",
+            "minLength": 1
+          },
+          "style_counts": {
+            "type": "object",
+            "properties": {
+              "codepoints": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "utf16": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "codepoints",
+              "utf16"
+            ],
+            "additionalProperties": false
+          },
+          "lyrics_override": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exclude": {
+            "type": "string"
+          },
+          "edit_brief": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "changed_axis",
+          "hypothesis",
+          "held_constant",
+          "artist_mode",
+          "style",
+          "style_counts",
+          "lyrics_override",
+          "exclude",
+          "edit_brief",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "evaluation": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "not_audio_tested",
+            "audio_reviewed"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "status",
+        "notes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "title",
+    "mode",
+    "platform",
+    "brief",
+    "artist_references",
+    "lyrics",
+    "variants",
+    "evaluation"
+  ],
+  "additionalProperties": false
+}
