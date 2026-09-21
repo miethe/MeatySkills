@@ -8,3 +8,4 @@ skills/YT/scrape_watch_later.json
 # 8 older .pyc files under skills/ — those predate this rule and are left alone.
 __pycache__/
 *.pyc
+*.DS_Store
