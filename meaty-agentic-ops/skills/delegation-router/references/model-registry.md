@@ -49,6 +49,11 @@ routing_policy:        # task-class → ordered preference chain (the chain IS p
 
 must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 
+routing_attributes:    # additive lane metadata; does not add RoutingRecord fields
+  health: {...}        # unavailable / limit:0 is a hard gate before advisory scores
+  write_capability:
+    codex_sandbox: {...}
+
 models:                # model-keyed descriptors, each with provider sub-instances
   <model-key>:
     family: ...
@@ -99,6 +104,9 @@ it is a MAJOR change to the skill contract (SPEC §3 invariant 1).
 | `allowance` | `unlimited` \| `shared_token_pool` \| `billed` — see below. |
 | `enabled` | Per-instance on/off (a provider-level master toggle may also apply). |
 | `priority` | Lower = tried first when the `routing_policy` chain doesn't already pin order. |
+| `health` | Optional measured lane health. `status: unavailable` or `quota_limit: 0` requires `enabled: false`; the builder rejects a contradictory enabled row. Missing means unknown, not healthy. |
+| `write_capability` | Named profile from `routing_attributes.write_capability`. Codex uses `codex_sandbox`: read-class is read-only; a file artifact requires an explicit write-class contract. |
+| `account_relationship` | Lane holder (`personal` / `employer` / `broker`) when the row must carry an explicit eligibility fact. Astra's Codex row is `personal`; it is never the ICA gateway. |
 
 ### `cost_tier` vs `allowance` — the load-bearing distinction
 
@@ -146,6 +154,10 @@ claude-sonnet-4-6:
 | `taste` | Prose quality, instruction-following, formatting adherence (higher = better). |
 | `speed` | Tokens-per-second / latency (higher = faster). |
 
+`taste` and `speed` may be the literal string `UNMEASURED` for a new model. That value is an
+explicit unrankable placeholder, never zero and never a numeric estimate. Health is evaluated
+before this advisory scorecard: a `limit: 0` lane has no effective Speed rank.
+
 `cost_score` on a provider instance overrides the model-level `cost` value for that lane only
 (e.g. the ICA path of a subscription model that is cheaper on the ICA pool).
 
@@ -159,14 +171,14 @@ the task's `intelligence`/`taste` bar.
 
 ### Resolver caveat — v3 does not read `scores:` yet
 
-The **v3 resolver does NOT read `scores:`**. Chain order, `priority`, availability, and
+The **v3 resolver does NOT read `scores:`**. Chain order, `priority`, `enabled` health gating, and
 capability-match (`when_to_use`) drive v3 resolution; `scores:` is advisory metadata for agents
 making their own delegation decisions and a reserved input for a future resolver upgrade. Do not
 rely on `scores:` influencing routing outcomes until a CHANGELOG entry confirms the upgrade.
 
 ## Adding a new model on release
 
-Worked example: **Claude Fable 5** ships. Register it before routing real work to it.
+Worked example: **a new frontier model** ships. Register it before routing real work to it.
 
 Edit the **tracked source** `meaty-agentic-ops/skills/delegation-router/model-registry.yaml` (in
 MeatySkills), commit it, then deploy:
@@ -180,16 +192,16 @@ which copies the YAML to `~/.claude/config/` and regenerates `model-registry.gen
 1. **Add the model entry** under `models:`, keyed by the model class name:
 
    ```yaml
-   claude-fable-5:
+   claude-frontier-next:
      family: claude
      class: fable
-     descriptor: "Claude Fable 5 (newly released). Capabilities TBD — confirm before routing real work."
+     descriptor: "New frontier model. Capabilities TBD — confirm before routing real work."
      when_to_use: []          # fill in after confirming capabilities
      tools: []
      related_skills: []
      status: scaffolded       # known-to-exist, NOT yet auto-routed
      providers:
-       - { provider: claude, model_id: "claude-fable-5", cost_tier: premium, allowance: billed, enabled: false, priority: 1 }
+       - { provider: claude, model_id: "claude-frontier-next", cost_tier: premium, allowance: billed, enabled: false, priority: 1 }
    ```
 
 2. **Land it as `status: scaffolded`, `enabled: false`.** This registers existence so agents know
@@ -206,6 +218,7 @@ which copies the YAML to `~/.claude/config/` and regenerates `model-registry.gen
 
 5. **Bump `version` / `updated`** at the top of the registry, run
    `python3 ~/.claude/skills/delegation-router/scripts/build-model-registry.py` to regenerate
-   the JSON, then verify the resolver unit tests stay green.
+   the JSON, then verify the resolver unit tests stay green. The builder also rejects duplicate
+   `(model key, provider, model_id)` rows and enabled `unavailable` / `quota_limit: 0` rows.
 
 > New models always land scaffolded + disabled first (design §8). Registering ≠ routing.

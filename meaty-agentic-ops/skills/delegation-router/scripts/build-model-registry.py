@@ -46,6 +46,92 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
+def validate_registry(data: dict, source: str) -> list[str]:
+    """Return deterministic, human-readable registry integrity errors."""
+    errors: list[str] = []
+    models = data.get("models") or {}
+    seen_instances: dict[tuple[str, str, str], int] = {}
+    write_profiles = (
+        ((data.get("routing_attributes") or {}).get("write_capability") or {})
+    )
+
+    for index, row in enumerate(data.get("ica_catalog") or []):
+        prefix = f"ica_catalog[{index}]"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} must be a mapping")
+            continue
+        if not row.get("model_id"):
+            errors.append(f"{prefix}.model_id is required")
+        if not isinstance(row.get("lanes"), list) or not row["lanes"] or any(lane not in {"ccx", "beta"} for lane in row["lanes"]):
+            errors.append(f"{prefix}.lanes must be a non-empty list of ccx/beta")
+        if row.get("economics") not in {"unlimited", "shared_token_pool", "unknown"}:
+            errors.append(f"{prefix}.economics must be unlimited, shared_token_pool, or unknown")
+        health = row.get("health")
+        if not isinstance(health, dict) or health.get("status") not in {"available", "degraded", "unavailable", "unknown"}:
+            errors.append(f"{prefix}.health.status is required and must be declared")
+
+    for task_class, policy in (data.get("routing_policy") or {}).items():
+        for chain_entry in (policy or {}).get("chain", []):
+            if str(chain_entry).startswith("external/"):
+                errors.append(
+                    f"routing_policy.{task_class} may not reference an external lane before its executor exists"
+                )
+
+    for model_key, model in models.items():
+        providers = (model or {}).get("providers") or []
+        for index, instance in enumerate(providers):
+            if not isinstance(instance, dict):
+                errors.append(f"models.{model_key}.providers[{index}] must be a mapping")
+                continue
+
+            provider = instance.get("provider")
+            model_id = instance.get("model_id")
+            identity = (str(model_key), str(provider), str(model_id))
+            if identity in seen_instances:
+                first = seen_instances[identity]
+                errors.append(
+                    "duplicate provider/model_id within model entry: "
+                    f"models.{model_key}.providers[{first}] and [{index}] both declare "
+                    f"{provider}/{model_id}"
+                )
+            else:
+                seen_instances[identity] = index
+
+            health = instance.get("health") or {}
+            if health and not isinstance(health, dict):
+                errors.append(f"models.{model_key}.providers[{index}].health must be a mapping")
+            elif health:
+                unavailable = health.get("status") == "unavailable"
+                zero_limit = health.get("quota_limit") == 0
+                if (unavailable or zero_limit) and instance.get("enabled") is not False:
+                    errors.append(
+                        f"models.{model_key}.providers[{index}] is unavailable/limit:0 "
+                        "and must set enabled: false before it can be built"
+                    )
+
+            write_capability = instance.get("write_capability")
+            if provider == "codex" and not write_capability:
+                errors.append(
+                    f"models.{model_key}.providers[{index}] is a Codex lane and must declare "
+                    "write_capability (read-class is read-only)"
+                )
+            elif write_capability and write_capability not in write_profiles:
+                errors.append(
+                    f"models.{model_key}.providers[{index}].write_capability references "
+                    f"unknown profile '{write_capability}'"
+                )
+
+            if provider == "external":
+                required = (data.get("routing_attributes", {}).get("lane_eligibility", {}).get("required", []))
+                eligibility = instance.get("eligibility")
+                if not isinstance(eligibility, dict) or any(field not in eligibility for field in required):
+                    errors.append(f"models.{model_key}.providers[{index}] external lane must declare all four eligibility attributes")
+                if instance.get("enabled") is not False or model.get("status") != "candidate":
+                    errors.append(f"models.{model_key}.providers[{index}] external lane must be status:candidate and enabled:false")
+
+    return [f"{source}: {error}" for error in errors]
+
+
 def main() -> int:
     # Default: global canonical location at ~/.claude/config/.
     global_config_dir = os.path.join(os.path.expanduser("~"), ".claude", "config")
@@ -72,6 +158,13 @@ def main() -> int:
 
     if not isinstance(data, dict):
         sys.stderr.write(f"ERROR: {args.src} did not parse to a mapping.\n")
+        return 1
+
+    validation_errors = validate_registry(data, args.src)
+    if validation_errors:
+        sys.stderr.write("ERROR: model registry validation failed:\n")
+        for error in validation_errors:
+            sys.stderr.write(f"  - {error}\n")
         return 1
 
     # SHA256 of the raw YAML bytes. resolver.js recomputes this over the live YAML

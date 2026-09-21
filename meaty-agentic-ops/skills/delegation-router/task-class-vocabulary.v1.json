@@ -72,6 +72,11 @@
       "legacy_aliases": []
     },
     {
+      "id": "advanced_sol",
+      "status": "routable",
+      "legacy_aliases": ["advanced-sol"]
+    },
+    {
       "id": "orchestration",
       "status": "must_stay_primary",
       "legacy_aliases": []

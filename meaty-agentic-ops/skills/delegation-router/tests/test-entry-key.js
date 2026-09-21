@@ -78,10 +78,10 @@ function findRow(pred) {
 describe('AC1 — canonicalization resolves via alias / model_id / observed_ids', () => {
 // ===========================================================================
 
-  test('provider vocabulary is the exact registry union (bob, claude, codex, gemini, ica, nano-banana, sora)', () => {
+  test('provider vocabulary is the exact registry union, including disabled external candidates', () => {
     assert.deepEqual(
       [...providerVocabulary(registry)].sort(),
-      ['bob', 'claude', 'codex', 'gemini', 'ica', 'nano-banana', 'sora']
+      ['bob', 'claude', 'codex', 'external', 'gemini', 'ica', 'nano-banana', 'sora']
     );
   });
 
