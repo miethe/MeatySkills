@@ -1,0 +1,63 @@
+id: '03'
+name: Quiet Kyoto Playbook
+asset: assets/quiet_kyoto_family_learning_board.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Learning becomes ritual. Meaning emerges through restraint, seasonality, and
+  gentle repetition.
+role: 'The mindful learning style: Japanese language, quiet study, seasonality, and
+  deliberate noticing.'
+best_for:
+- Japanese learning materials
+- vocabulary cards
+- quiet educational apps
+- culture-rich stories
+- mindful routines
+core_metaphors:
+- paper
+- seasons
+- paths
+- torii and temple silhouettes
+- tea-like calm
+- small steps
+materials:
+- soft ink lines
+- washy watercolor
+- paper grain
+- subtle collage
+- minimal diagram notes
+palette:
+- blush pink
+- ink navy
+- rice paper cream
+- spring leaf
+- mist grey
+- warm wood
+composition_rules:
+- respect negative space
+- limit visual noise
+- use asymmetry thoughtfully
+- anchor each spread with one focal teaching moment
+- gentle margins and whitespace
+influences:
+- Japanese picture-book restraint
+- ukiyo-e color sensibility (without imitation)
+- washi paper aesthetics
+- Montessori calm learning design
+- the family's Japanese learning goals
+prompt_focus: Emphasize quiet wonder, study as affection, and visual serenity.
+anti_patterns:
+- anime exaggeration
+- busy collage overload
+- neon saturation
+- gag humor that breaks calm
+blend_with:
+- 05 Montessori Meadow Cut-Paper
+- 08 Piano Rain Geometry
+- 01 Constitution base

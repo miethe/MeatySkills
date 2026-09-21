@@ -1,0 +1,62 @@
+id: '10'
+name: Hearthlight Future Garden
+asset: assets/hearthlight_future_garden_styleboard.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: The future is cultivated. Technology, home, family, and ecology are one living
+  system.
+role: 'The world-building style: hopeful futures, biophilic technology, and the civilization
+  we want to grow.'
+best_for:
+- future-of-home stories
+- optimistic technology visuals
+- sustainability education
+- AI-with-heart concepts
+- vision pieces
+core_metaphors:
+- gardens
+- terrariums
+- sunrise
+- clean water
+- helpful AI companions
+- living infrastructure
+materials:
+- lush biophilic rendering
+- soft futuristic glow
+- glass, wood, and foliage harmony
+- gentle holographic accents
+palette:
+- hearth glow
+- leaf green
+- sunrise gold
+- water blue
+- soft white
+- flower blush
+composition_rules:
+- family stays central, tech stays servant
+- use abundance and light
+- tie interiors to landscapes/cities
+- make the future feel reachable and humane
+influences:
+- solarpunk
+- biophilic architecture
+- storybook futurism
+- family-centered sustainability graphics
+- the user's future-building worldview
+prompt_focus: Show a better future being actively nurtured by real people in loving
+  relationship.
+anti_patterns:
+- dystopia
+- sterile chrome futurism
+- dehumanized tech worship
+- grim cyberpunk
+blend_with:
+- 04 Maker Constellation
+- 06 Mosaic Story Atlas
+- 09 Wonder Workshop Toymaker

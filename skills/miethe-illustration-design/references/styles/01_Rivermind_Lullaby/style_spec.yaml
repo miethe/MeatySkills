@@ -1,0 +1,64 @@
+id: '01'
+name: Rivermind Lullaby
+asset: assets/rivermind_lullaby_storybook_style_board.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Thoughts become landscape. Feelings are rivers, moonlight, lanterns, and quiet
+  water.
+role: 'The emotional hearth: bedtime calm, reassurance, tenderness, and the river-of-thought
+  metaphor.'
+best_for:
+- bedtime stories
+- sleep and calm content
+- emotional literacy
+- family rituals
+- gentle audio/visual experiences
+core_metaphors:
+- rivers
+- moon
+- lanterns
+- pine forests
+- quiet cabins
+- starlit guidance
+materials:
+- watercolor washes
+- soft gouache texture
+- quilt and knit patterning
+- glowing light blooms
+palette:
+- midnight blue
+- lake silver
+- lantern gold
+- pajama lilac
+- soft cream
+- pine green
+composition_rules:
+- close family grouping
+- soft curved lines
+- foreground comfort objects
+- wide calm negative space in sky/water
+- light source as emotional anchor
+influences:
+- lyrical bedtime picture books
+- Scandinavian hygge illustration
+- Appalachian lakeside atmosphere
+- quiet cinematic night scenes
+- the user's bedtime river metaphor
+prompt_focus: Emphasize safety, closeness, slowing down, and a gentle transition from
+  wakefulness into peace.
+anti_patterns:
+- chaotic composition
+- loud saturation
+- hyperactive poses
+- ironic tone
+- hard sci-fi aesthetics
+blend_with:
+- 08 Piano Rain Geometry
+- 02 Blue Ridge Campfire Quilt
+- 01 Constitution base

@@ -1,0 +1,60 @@
+id: 08
+name: Piano Rain Geometry
+asset: assets/piano_rain_geometry_style_board.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Emotion becomes rhythm and geometry. Sound is rendered as motion, rain, keys,
+  waves, and pattern.
+role: 'The music-and-pattern style: emotion translated into rhythm, line, and gentle
+  abstraction.'
+best_for:
+- music learning visuals
+- poetic interludes
+- motion-rich graphics
+- emotion mapping
+- meditative scenes
+core_metaphors:
+- piano keys
+- raindrops
+- waveforms
+- notation
+- echo lines
+- harmonic arcs
+materials:
+- translucent overlays
+- musical linework
+- soft rain texture
+- glowing note motifs
+palette:
+- rain blue
+- midnight indigo
+- silver
+- pearl cream
+- lavender mist
+- warm glow
+composition_rules:
+- use repetition and interval
+- allow abstraction to coexist with tenderness
+- let rhythm guide eye movement
+- maintain calm despite dynamism
+influences:
+- music notation
+- synesthetic visual art
+- editorial abstraction
+- lyrical children's illustration
+- the user's self-taught piano interest
+prompt_focus: Translate feeling into pattern without losing warmth or readability.
+anti_patterns:
+- random abstract chaos
+- club/nightlife energy
+- harsh contrast
+blend_with:
+- 01 Rivermind Lullaby
+- 03 Quiet Kyoto Playbook
+- 04 Maker Constellation

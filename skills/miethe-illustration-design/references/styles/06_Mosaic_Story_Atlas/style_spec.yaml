@@ -1,0 +1,61 @@
+id: '06'
+name: Mosaic Story Atlas
+asset: assets/mosaic_story_atlas_moodboard.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Experience becomes permanent artifact. Small pieces join into a durable family
+  story.
+role: 'The travel-and-memory style: places, culture, and lasting shared narrative.'
+best_for:
+- travel journals
+- place-based storybooks
+- family memory maps
+- culture-rich graphics
+- keepsakes
+core_metaphors:
+- mosaic tesserae
+- maps
+- coastal towns
+- compass roses
+- journals
+- collected moments
+materials:
+- mosaic texture
+- sunlit painted stone
+- map linework
+- Mediterranean palette harmonies
+palette:
+- sea blue
+- terracotta
+- sun cream
+- olive green
+- coral pink
+- tile teal
+composition_rules:
+- build scenes from many small shape relationships
+- embrace pattern and place identity
+- keep the whole image cohesive despite many parts
+- use decorative borders or map elements sparingly
+influences:
+- Mediterranean mosaics
+- travel posters
+- family atlas imagery
+- storybook cartography
+- memory-keeping design
+prompt_focus: Capture place, belonging, and the beauty of many moments becoming one
+  story.
+anti_patterns:
+- "generic tourism clich\xE9s"
+- overly photoreal realism
+- monochrome flatness
+- crowded unreadable tiling
+blend_with:
+- 07 Lenslight Field Journal
+- 02 Blue Ridge Campfire Quilt
+- 10 Hearthlight Future Garden

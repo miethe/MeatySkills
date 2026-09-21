@@ -1,0 +1,119 @@
+{
+  "pack_name": "miethe-illustration-design (SkillMeat skill)",
+  "version": "1.0.0",
+  "root_files": [
+    "SKILL.md",
+    "CHANGELOG.md"
+  ],
+  "constitution": {
+    "guide": "references/constitution/MIETHE_ILLUSTRATION_CONSTITUTION.md",
+    "spec": "references/constitution/constitution_spec.yaml",
+    "assets": [
+      "assets/constitution/the_illustration_constitution_a_brighter_tomorrow.png",
+      "assets/constitution/the_dialect_atlas_ten_styles_one_family.png",
+      "assets/constitution/application_blueprint_a_kinder_tomorrow.png",
+      "assets/constitution/the_three_signature_paths_infographic.png"
+    ]
+  },
+  "styles": [
+    {
+      "id": "01",
+      "name": "Rivermind Lullaby",
+      "folder": "02_STYLES/01_Rivermind_Lullaby",
+      "guide": "references/styles/01_Rivermind_Lullaby/STYLE_GUIDE.md",
+      "spec": "references/styles/01_Rivermind_Lullaby/style_spec.yaml",
+      "asset": "assets/styles/01_Rivermind_Lullaby/rivermind_lullaby_storybook_style_board.png"
+    },
+    {
+      "id": "02",
+      "name": "Blue Ridge Campfire Quilt",
+      "folder": "02_STYLES/02_Blue_Ridge_Campfire_Quilt",
+      "guide": "references/styles/02_Blue_Ridge_Campfire_Quilt/STYLE_GUIDE.md",
+      "spec": "references/styles/02_Blue_Ridge_Campfire_Quilt/style_spec.yaml",
+      "asset": "assets/styles/02_Blue_Ridge_Campfire_Quilt/blue_ridge_campfire_quilt_style_guide.png"
+    },
+    {
+      "id": "03",
+      "name": "Quiet Kyoto Playbook",
+      "folder": "02_STYLES/03_Quiet_Kyoto_Playbook",
+      "guide": "references/styles/03_Quiet_Kyoto_Playbook/STYLE_GUIDE.md",
+      "spec": "references/styles/03_Quiet_Kyoto_Playbook/style_spec.yaml",
+      "asset": "assets/styles/03_Quiet_Kyoto_Playbook/quiet_kyoto_family_learning_board.png"
+    },
+    {
+      "id": "04",
+      "name": "Maker Constellation",
+      "folder": "02_STYLES/04_Maker_Constellation",
+      "guide": "references/styles/04_Maker_Constellation/STYLE_GUIDE.md",
+      "spec": "references/styles/04_Maker_Constellation/style_spec.yaml",
+      "asset": "assets/styles/04_Maker_Constellation/maker_constellation_a_family_of_curious_makers.png"
+    },
+    {
+      "id": "05",
+      "name": "Montessori Meadow Cut-Paper",
+      "folder": "02_STYLES/05_Montessori_Meadow_Cut_Paper",
+      "guide": "references/styles/05_Montessori_Meadow_Cut_Paper/STYLE_GUIDE.md",
+      "spec": "references/styles/05_Montessori_Meadow_Cut_Paper/style_spec.yaml",
+      "asset": "assets/styles/05_Montessori_Meadow_Cut_Paper/montessori_meadow_cut_paper_style_guide.png"
+    },
+    {
+      "id": "06",
+      "name": "Mosaic Story Atlas",
+      "folder": "02_STYLES/06_Mosaic_Story_Atlas",
+      "guide": "references/styles/06_Mosaic_Story_Atlas/STYLE_GUIDE.md",
+      "spec": "references/styles/06_Mosaic_Story_Atlas/style_spec.yaml",
+      "asset": "assets/styles/06_Mosaic_Story_Atlas/mosaic_story_atlas_moodboard.png"
+    },
+    {
+      "id": "07",
+      "name": "Lenslight Field Journal",
+      "folder": "02_STYLES/07_Lenslight_Field_Journal",
+      "guide": "references/styles/07_Lenslight_Field_Journal/STYLE_GUIDE.md",
+      "spec": "references/styles/07_Lenslight_Field_Journal/style_spec.yaml",
+      "asset": "assets/styles/07_Lenslight_Field_Journal/lenslight_field_journal_style_guide.png"
+    },
+    {
+      "id": "08",
+      "name": "Piano Rain Geometry",
+      "folder": "02_STYLES/08_Piano_Rain_Geometry",
+      "guide": "references/styles/08_Piano_Rain_Geometry/STYLE_GUIDE.md",
+      "spec": "references/styles/08_Piano_Rain_Geometry/style_spec.yaml",
+      "asset": "assets/styles/08_Piano_Rain_Geometry/piano_rain_geometry_style_board.png"
+    },
+    {
+      "id": "09",
+      "name": "Wonder Workshop Toymaker",
+      "folder": "02_STYLES/09_Wonder_Workshop_Toymaker",
+      "guide": "references/styles/09_Wonder_Workshop_Toymaker/STYLE_GUIDE.md",
+      "spec": "references/styles/09_Wonder_Workshop_Toymaker/style_spec.yaml",
+      "asset": "assets/styles/09_Wonder_Workshop_Toymaker/wonder_workshop_family_maker_moodboard.png"
+    },
+    {
+      "id": "10",
+      "name": "Hearthlight Future Garden",
+      "folder": "02_STYLES/10_Hearthlight_Future_Garden",
+      "guide": "references/styles/10_Hearthlight_Future_Garden/STYLE_GUIDE.md",
+      "spec": "references/styles/10_Hearthlight_Future_Garden/style_spec.yaml",
+      "asset": "assets/styles/10_Hearthlight_Future_Garden/hearthlight_future_garden_styleboard.png"
+    }
+  ],
+  "visual_story_assets": [
+    "assets/visual-stories/a_brighter_tomorrow_together.png",
+    "assets/visual-stories/when_the_river_grows_quiet.png",
+    "assets/visual-stories/blue_ridge_family_field_journal.png",
+    "assets/visual-stories/build_wonder_together.png",
+    "assets/visual-stories/storyworld_adventures_in_your_pocket.png",
+    "assets/visual-stories/the_future_we_grow.png"
+  ],
+  "context_files": [
+    "references/canon/CHARACTER_BIBLE.md",
+    "references/canon/DEVELOPMENT_CONTEXT.md",
+    "references/canon/INFLUENCES_AND_DERIVATIONS.md",
+    "references/canon/CANON_NOTES.md"
+  ],
+  "template_files": [
+    "references/templates/PROMPT_PATTERNS.md",
+    "references/templates/ARTIFACT_RECIPES.md"
+  ],
+  "asset_count": 51
+}

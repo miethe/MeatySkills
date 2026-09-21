@@ -1,0 +1,62 @@
+id: '05'
+name: Montessori Meadow Cut-Paper
+asset: assets/montessori_meadow_cut_paper_style_guide.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: The world becomes touchable pieces. Shapes, layers, and tactile objects invite
+  understanding.
+role: 'The early-childhood tactile style: hands-on discovery, simple forms, and nature-first
+  play.'
+best_for:
+- toddler materials
+- early learning books
+- shape and nature concepts
+- simple activity cards
+- gentle app mini-games
+core_metaphors:
+- paper petals
+- leaves
+- stones
+- simple creatures
+- movable parts
+- sorting and arranging
+materials:
+- cut paper collage
+- felt/craft paper edges
+- flat shape language
+- soft shadows
+palette:
+- meadow green
+- flower pink
+- sun cream
+- sky blue
+- warm coral
+- soft lavender
+composition_rules:
+- big readable shapes
+- clear silhouette hierarchy
+- low cognitive load
+- generous spacing
+- everything looks touchable
+influences:
+- Montessori materials
+- Eric Carle-like collage logic (without imitation)
+- paper craft design
+- nature tables
+- preschool visual pedagogy
+prompt_focus: Keep it calm, tactile, inviting, and age-appropriate.
+anti_patterns:
+- fussy detail overload
+- dark moody drama
+- sharp harsh gradients
+- tiny unreadable objects
+blend_with:
+- 03 Quiet Kyoto Playbook
+- 07 Lenslight Field Journal
+- 01 Constitution base

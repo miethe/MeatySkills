@@ -1,0 +1,59 @@
+id: 09
+name: Wonder Workshop Toymaker
+asset: assets/wonder_workshop_family_maker_moodboard.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Ideas become things. Play and invention share one tabletop.
+role: 'The playful construction style: building, tinkering, and imaginative objects
+  with heart.'
+best_for:
+- DIY projects
+- kids maker kits
+- craft apps
+- toy-rich storytelling
+- playful product concepts
+core_metaphors:
+- wooden robots
+- blocks
+- gears
+- planes
+- workbenches
+- prototype sketches
+materials:
+- warm workshop wood
+- toy-like form language
+- friendly robotics
+- paper plans and parts
+palette:
+- workshop tan
+- robot blue
+- tool red
+- honey amber
+- sage
+- blueprint cream
+composition_rules:
+- busy but legible tabletop scenes
+- friendly modular forms
+- objects feel buildable
+- play is structured by curiosity and kindness
+influences:
+- Waldorf/Montessori making culture
+- wooden toy design
+- maker spaces
+- friendly robotics
+- the user's 3D printing/woodworking/building interests
+prompt_focus: Convey agency, play, making, and invention as family culture.
+anti_patterns:
+- militarized robots
+- cold industrial fabrication
+- mess without purpose
+blend_with:
+- 04 Maker Constellation
+- 05 Montessori Meadow Cut-Paper
+- 10 Hearthlight Future Garden

@@ -1,0 +1,63 @@
+id: '02'
+name: Blue Ridge Campfire Quilt
+asset: assets/blue_ridge_campfire_quilt_style_guide.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Family memory becomes textile folklore. Life is stitched from adventures,
+  seasons, and keepsakes.
+role: 'The regional memory style: home, mountain belonging, camping, and generational
+  warmth.'
+best_for:
+- family adventure stories
+- travel keepsakes
+- regional prints
+- outdoor learning
+- seasonal wall art
+core_metaphors:
+- quilts
+- campfires
+- mountain ridges
+- stitched seams
+- trail signs
+- heirloom objects
+materials:
+- quilt texture
+- folk-art simplification
+- woodgrain accents
+- cozy painterly firelight
+palette:
+- indigo
+- campfire amber
+- mountain blue
+- moss green
+- cream
+- berry rose
+composition_rules:
+- patchwork framing devices
+- warm central glow
+- landscape depth
+- layered memorabilia
+- objects used as memory anchors
+influences:
+- Appalachian craft traditions
+- American folk quilts
+- family camping imagery
+- Blue Ridge landscape painting
+- cozy outdoor editorial illustration
+prompt_focus: Emphasize North Carolina mountain identity, family togetherness, and
+  memory-making through outdoors experiences.
+anti_patterns:
+- sterile modern minimalism
+- urban sleekness
+- grim wilderness realism
+- lonely compositions
+blend_with:
+- 07 Lenslight Field Journal
+- 01 Rivermind Lullaby
+- 06 Mosaic Story Atlas

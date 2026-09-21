@@ -1,0 +1,252 @@
+[
+  {
+    "path": "SKILL.md",
+    "type": "document",
+    "bytes": null
+  },
+  {
+    "path": "CHANGELOG.md",
+    "type": "document",
+    "bytes": null
+  },
+  {
+    "path": "references/constitution/MIETHE_ILLUSTRATION_CONSTITUTION.md",
+    "type": "document",
+    "bytes": 3990
+  },
+  {
+    "path": "assets/constitution/application_blueprint_a_kinder_tomorrow.png",
+    "type": "image",
+    "bytes": 2823392
+  },
+  {
+    "path": "assets/constitution/the_dialect_atlas_ten_styles_one_family.png",
+    "type": "image",
+    "bytes": 2801526
+  },
+  {
+    "path": "assets/constitution/the_illustration_constitution_a_brighter_tomorrow.png",
+    "type": "image",
+    "bytes": 2970953
+  },
+  {
+    "path": "assets/constitution/the_three_signature_paths_infographic.png",
+    "type": "image",
+    "bytes": 2918583
+  },
+  {
+    "path": "references/constitution/constitution_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1021
+  },
+  {
+    "path": "references/styles/01_Rivermind_Lullaby/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2844
+  },
+  {
+    "path": "assets/styles/01_Rivermind_Lullaby/rivermind_lullaby_storybook_style_board.png",
+    "type": "image",
+    "bytes": 3058656
+  },
+  {
+    "path": "references/styles/01_Rivermind_Lullaby/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1493
+  },
+  {
+    "path": "references/styles/02_Blue_Ridge_Campfire_Quilt/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2817
+  },
+  {
+    "path": "assets/styles/02_Blue_Ridge_Campfire_Quilt/blue_ridge_campfire_quilt_style_guide.png",
+    "type": "image",
+    "bytes": 3144548
+  },
+  {
+    "path": "references/styles/02_Blue_Ridge_Campfire_Quilt/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1452
+  },
+  {
+    "path": "references/styles/03_Quiet_Kyoto_Playbook/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2849
+  },
+  {
+    "path": "assets/styles/03_Quiet_Kyoto_Playbook/quiet_kyoto_family_learning_board.png",
+    "type": "image",
+    "bytes": 2854011
+  },
+  {
+    "path": "references/styles/03_Quiet_Kyoto_Playbook/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1492
+  },
+  {
+    "path": "references/styles/04_Maker_Constellation/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2914
+  },
+  {
+    "path": "assets/styles/04_Maker_Constellation/maker_constellation_a_family_of_curious_makers.png",
+    "type": "image",
+    "bytes": 2759514
+  },
+  {
+    "path": "references/styles/04_Maker_Constellation/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1534
+  },
+  {
+    "path": "references/styles/05_Montessori_Meadow_Cut_Paper/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2774
+  },
+  {
+    "path": "assets/styles/05_Montessori_Meadow_Cut_Paper/montessori_meadow_cut_paper_style_guide.png",
+    "type": "image",
+    "bytes": 2630126
+  },
+  {
+    "path": "references/styles/05_Montessori_Meadow_Cut_Paper/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1404
+  },
+  {
+    "path": "references/styles/06_Mosaic_Story_Atlas/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2787
+  },
+  {
+    "path": "assets/styles/06_Mosaic_Story_Atlas/mosaic_story_atlas_moodboard.png",
+    "type": "image",
+    "bytes": 3400397
+  },
+  {
+    "path": "references/styles/06_Mosaic_Story_Atlas/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1431
+  },
+  {
+    "path": "references/styles/07_Lenslight_Field_Journal/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2817
+  },
+  {
+    "path": "assets/styles/07_Lenslight_Field_Journal/lenslight_field_journal_style_guide.png",
+    "type": "image",
+    "bytes": 3036441
+  },
+  {
+    "path": "references/styles/07_Lenslight_Field_Journal/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1417
+  },
+  {
+    "path": "references/styles/08_Piano_Rain_Geometry/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2728
+  },
+  {
+    "path": "assets/styles/08_Piano_Rain_Geometry/piano_rain_geometry_style_board.png",
+    "type": "image",
+    "bytes": 2388932
+  },
+  {
+    "path": "references/styles/08_Piano_Rain_Geometry/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1368
+  },
+  {
+    "path": "references/styles/09_Wonder_Workshop_Toymaker/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2705
+  },
+  {
+    "path": "assets/styles/09_Wonder_Workshop_Toymaker/wonder_workshop_family_maker_moodboard.png",
+    "type": "image",
+    "bytes": 2859599
+  },
+  {
+    "path": "references/styles/09_Wonder_Workshop_Toymaker/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1346
+  },
+  {
+    "path": "references/styles/10_Hearthlight_Future_Garden/STYLE_GUIDE.md",
+    "type": "document",
+    "bytes": 2886
+  },
+  {
+    "path": "assets/styles/10_Hearthlight_Future_Garden/hearthlight_future_garden_styleboard.png",
+    "type": "image",
+    "bytes": 2541664
+  },
+  {
+    "path": "references/styles/10_Hearthlight_Future_Garden/style_spec.yaml",
+    "type": "machine-readable",
+    "bytes": 1496
+  },
+  {
+    "path": "assets/visual-stories/a_brighter_tomorrow_together.png",
+    "type": "image",
+    "bytes": 3240838
+  },
+  {
+    "path": "assets/visual-stories/blue_ridge_family_field_journal.png",
+    "type": "image",
+    "bytes": 3312220
+  },
+  {
+    "path": "assets/visual-stories/build_wonder_together.png",
+    "type": "image",
+    "bytes": 2872872
+  },
+  {
+    "path": "assets/visual-stories/storyworld_adventures_in_your_pocket.png",
+    "type": "image",
+    "bytes": 2649209
+  },
+  {
+    "path": "assets/visual-stories/the_future_we_grow.png",
+    "type": "image",
+    "bytes": 3062736
+  },
+  {
+    "path": "assets/visual-stories/when_the_river_grows_quiet.png",
+    "type": "image",
+    "bytes": 3050163
+  },
+  {
+    "path": "references/canon/CANON_NOTES.md",
+    "type": "document",
+    "bytes": 692
+  },
+  {
+    "path": "references/canon/CHARACTER_BIBLE.md",
+    "type": "document",
+    "bytes": 1743
+  },
+  {
+    "path": "references/canon/DEVELOPMENT_CONTEXT.md",
+    "type": "document",
+    "bytes": 1310
+  },
+  {
+    "path": "references/canon/INFLUENCES_AND_DERIVATIONS.md",
+    "type": "document",
+    "bytes": 2606
+  },
+  {
+    "path": "references/templates/ARTIFACT_RECIPES.md",
+    "type": "document",
+    "bytes": 1238
+  },
+  {
+    "path": "references/templates/PROMPT_PATTERNS.md",
+    "type": "document",
+    "bytes": 2180
+  }
+]

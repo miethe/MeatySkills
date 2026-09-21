@@ -1,0 +1,67 @@
+name: Miethe Illustration Constitution
+version: 1.0.0
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+core_values:
+- curiosity
+- kindness
+- family closeness
+- meaningful noticing
+- nature + making + imagination
+- brighter tomorrows
+non_negotiables:
+- emotionally safe
+- child-honoring
+- beautiful but useful
+- warm and hopeful
+- specific not generic
+- usable across print and digital
+shared_motifs:
+- rivers
+- stars
+- mountains
+- trees
+- books
+- notebooks
+- maps
+- cameras
+- lanterns
+- leaves
+- flowers
+- terrariums
+- tools
+- signs
+typography:
+  titles: literary serif
+  labels: friendly small caps
+  annotations: handwritten notes
+common_palette:
+- paper cream
+- atlas blue
+- moon blue
+- sage
+- moss
+- blush
+- starlight gold
+- warm timber
+- lavender mist
+approved_media:
+- books
+- posters
+- cards
+- apps
+- keepsakes
+- storyboards
+- educational graphics
+anti_patterns:
+- cynicism
+- overstimulation
+- dystopia
+- cold corporate sterility
+- genericity

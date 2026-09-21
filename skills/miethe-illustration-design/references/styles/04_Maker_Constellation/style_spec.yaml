@@ -1,0 +1,61 @@
+id: '04'
+name: Maker Constellation
+asset: assets/maker_constellation_a_family_of_curious_makers.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Ideas become systems you can see. Diagrams, constellations, tools, and wonder
+  share one visual grammar.
+role: 'The intellectual identity style: systems, tools, cosmos, and hopeful making.'
+best_for:
+- STEM content
+- maker education
+- innovation posters
+- agentic/digital explainers for family audiences
+- project branding
+core_metaphors:
+- constellations
+- blueprints
+- telescopes
+- notebooks
+- tools
+- orbital paths
+materials:
+- storybook illustration with diagram overlays
+- chalkboard and blueprint accents
+- soft glows
+- wood-and-metal workshop texture
+palette:
+- atlas blue
+- starlight gold
+- timber oak
+- orbit lilac
+- sage green
+- blueprint cream
+composition_rules:
+- mix narrative scenes with explanatory notation
+- integrate tools naturally
+- use celestial arcs to connect ideas
+- make complexity feel inviting
+- balance wonder with legibility
+influences:
+- observatory charts
+- maker culture
+- scientific illustration
+- informational children's books
+- the user's systems/maker identity
+prompt_focus: Make intelligence feel warm and shareable, not cold or elite.
+anti_patterns:
+- corporate sterility
+- overly technical abstraction
+- grim dystopian tech
+- visual clutter that kills legibility
+blend_with:
+- 09 Wonder Workshop Toymaker
+- 07 Lenslight Field Journal
+- 10 Hearthlight Future Garden

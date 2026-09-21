@@ -1,0 +1,59 @@
+id: '07'
+name: Lenslight Field Journal
+asset: assets/lenslight_field_journal_style_guide.png
+canonical_family:
+- Nick
+- Wife/Mom
+- Peyton
+- Parker
+- Penelope
+default_exclusions:
+- dogs unless explicitly requested
+thesis: Attention is the artistic act. Observation turns everyday life into story.
+role: 'The noticing style: photography, observation, and the extraordinary hidden
+  in the ordinary.'
+best_for:
+- field journals
+- nature graphics
+- photo-rich family books
+- educational observation prompts
+- science/nature apps
+core_metaphors:
+- camera frames
+- field notes
+- pressed plants
+- specimen pages
+- backpacks
+- trail treasures
+materials:
+- watercolor plus journal ephemera
+- handwriting overlays
+- specimen sheet composition
+- vintage camera motifs
+palette:
+- forest green
+- paper tan
+- sunset gold
+- lake blue
+- fern green
+- ink brown
+composition_rules:
+- mix scene illustration with labeled notes
+- foreground collected objects
+- clear sense of discovery
+- keep observational detail high but gentle
+influences:
+- nature journaling
+- field guides
+- photo essays
+- botanical illustration
+- the user's photography and curiosity
+prompt_focus: Make noticing feel sacred, intimate, and quietly exciting.
+anti_patterns:
+- overprocessed tech UI look
+- aggressive adventure macho energy
+- clutter without hierarchy
+blend_with:
+- 02 Blue Ridge Campfire Quilt
+- 05 Montessori Meadow Cut-Paper
+- 04 Maker Constellation
