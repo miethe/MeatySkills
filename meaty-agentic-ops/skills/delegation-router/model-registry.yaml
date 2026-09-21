@@ -173,9 +173,184 @@ routing_policy:
   orchestration:    { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
   mode_d:           { chain: ["claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5 supersedes Opus 4.8 2026-07-24)
 
-# Invariant: these classes can never be routed off primary Claude, regardless of
-# registry state. Enforced unconditionally by the resolver MUST-stay override.
+# LEGACY COMPATIBILITY KEY — superseded by `task_class_sovereignty` below.
+# Retained because foreign/older registries (per-project overrides, test fixtures, the copies
+# frozen into workflow-sets/) still carry only this key; for those the resolver desugars each
+# entry to {min_rung: subscription, reason: quality_bar}, and a registry with NO `lanes:` table
+# at all keeps the pre-ladder behavior verbatim (claude, which is strictly narrower than
+# `>= subscription`). THIS registry declares its floors explicitly below and does not rely on
+# the desugar — the widening from "claude specifically" to "any subscription lane" must be
+# visible in a diff, not arrive as a side effect.
 must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# THE SOVEREIGNTY LADDER
+#
+#   local          (highest)  runs on our own hardware; nothing leaves the LAN
+#   subscription              an account we control and pay for directly (Claude sub, Codex sub)
+#   shared_gateway (lowest)   third-party-mediated shared pool (ICA)
+#
+# A task class declares a MINIMUM RUNG, never a named vendor or model.
+# "verdict requires >= subscription" REPLACES "verdict pins to subscription Claude" — a Codex
+# subscription then satisfies it with no rule naming a vendor.
+#
+# ⚠️ INVARIANT — THE CLASS BELONGS TO THE LANE, NEVER TO A VENDOR OR A MODEL ID.
+# Codex reached THROUGH the shared ICA gateway is NOT a Codex subscription: `codex/gpt-5.6-terra`
+# and `ica/gpt-5.6-terra-dzus` are the same weights on different sovereignty. This estate has
+# already been bitten by treating a model-id SUFFIX (`[1m]`) as a lane marker; the resolver reads
+# the DECLARED `lane:` on each provider instance and never pattern-matches an id.
+#
+# ⚠️ THE `local` RUNG HAS ZERO MEMBERS TODAY. Declared deliberately, and named here rather than
+# discovered later (`.claude/rules/built-lane-no-writers.md`): no ollama/vLLM/local-inference lane
+# exists in this registry. A class declaring `min_rung: local` is therefore UNROUTABLE and the
+# resolver REFUSES rather than dropping a rung — which is the correct fail-closed outcome for an
+# egress rule, and is why `journal_reflect` below is written the way it is.
+# ──────────────────────────────────────────────────────────────────────────────
+sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
+
+# A LANE is an ENDPOINT + AUTH unit. It is the thing sovereignty attaches to. Before this table
+# there was no lane concept in the registry at all — only a bare `provider:` string — and the
+# actual endpoint was selected by REGEXing the model id inside buildRegistryInvocation()
+# (`/-dzus$/` -> ica-codex.sh, `/gpt/` -> ica-gpt.sh, else ica-claude.sh). The three ICA rows
+# below are exactly those three branches, so this table is grounded in the invocation code
+# rather than in the ids.
+lanes:
+  claude_subscription:
+    sovereignty: subscription
+    endpoint: anthropic_default          # ANTHROPIC_BASE_URL unset
+    auth: anthropic_oauth_subscription
+    invocation: "claude -p"
+    note: >-
+      The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription
+      session legitimately reports a `[1m]` model id; that suffix is a context-window marker.
+
+  ica_gateway_messages:
+    sovereignty: shared_gateway
+    endpoint: ica_gateway_messages       # ANTHROPIC_BASE_URL = the ICA gateway
+    auth: ica_team_key                   # ~/.dotfiles/ICA_CLAUDE
+    invocation: "~/ica-claude.sh"
+
+  ica_gateway_messages_shim:
+    sovereignty: shared_gateway
+    endpoint: ica_gateway_messages_via_param_strip_proxy
+    auth: ica_team_key
+    invocation: "~/ica-gpt.sh"
+    note: >-
+      Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane
+      is the local param-strip proxy in front of the same shared gateway. Same sovereignty.
+
+  ica_gateway_responses_shim:
+    sovereignty: shared_gateway
+    endpoint: ica_gateway_via_local_responses_to_chat_shim
+    auth: ica_team_key
+    invocation: "~/ica-codex.sh"
+    note: >-
+      Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not
+      make it local: the tokens are still served by the third-party shared pool. This row is the
+      concrete case invariant 2 exists for.
+
+  codex_subscription:
+    sovereignty: subscription
+    endpoint: openai_default
+    auth: codex_account
+    invocation: "codex exec"
+    verified: false
+    probe: >-
+      UNCONFIRMED, and this is the load-bearing open question of the ladder. Classified
+      `subscription` because the brief names "Codex sub" as satisfying that rung — but every
+      codex row in this file carries `allowance: billed`, which reads as a metered API account
+      rather than a seat. It decides whether `verdict` widens to codex at all. Ask Nick; this is
+      a definitional call, not a measurement.
+
+  gemini_direct:
+    sovereignty: subscription
+    endpoint: google_ai_studio
+    auth: gemini_api_key                 # ~/.config/aos/secrets.env
+    verified: false
+    probe: >-
+      UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we
+      control, not a seat. No class currently declares a floor that would route here, so the
+      classification is not yet load-bearing. Ask Nick alongside codex.
+
+  bob_ibm_shell:
+    sovereignty: unknown
+    endpoint: unknown
+    auth: unknown
+    invocation: "bob -p"
+    verified: false
+    probe: >-
+      DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor,
+      which is the fail-closed answer. The registry entry says `family: local` / `allowance:
+      local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e.
+      IBM-hosted. `allowance: local` most likely means "a locally-run CLI binary", which is a
+      statement about where the PROCESS runs, not where INFERENCE runs — and inference is what
+      sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for
+      a gateway URL + credential. Do not classify it from the `allowance` field.
+
+  nano_banana_api:
+    sovereignty: unknown
+    endpoint: unknown
+    auth: unknown
+    verified: false
+    probe: >-
+      Never classified; has no branch in buildRegistryInvocation() either. No floored class routes
+      to image generation today, so `unknown` costs nothing and asserts nothing.
+
+  sora_api:
+    sovereignty: unknown
+    endpoint: unknown
+    auth: unknown
+    verified: false
+    probe: Same as nano_banana_api — unclassified, and no floored class reaches it.
+
+  external_candidate:
+    sovereignty: unknown
+    endpoint: unknown
+    auth: unknown
+    verified: false
+    probe: >-
+      Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash,
+      kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`.
+      Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to
+      any of them today, so `unknown` costs nothing and asserts nothing.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# TASK CLASS → MINIMUM RUNG. `reason` is REQUIRED and the resolver THROWS without a valid one
+# (validateSovereigntyDeclarations) — a registry with an unreasoned minimum does not load.
+#
+#   cost_policy      negotiable; a tuning pass may revisit it
+#   quality_bar      negotiable on evidence
+#   egress_absolute  NOT negotiable by ANY automated, empirical, or feedback path
+#
+# WHY THE REASON IS MANDATORY: "stay off the shared gateway for the verdict" is a cost/quality
+# judgement; "stay local for the private journal" is an EGRESS rule with no sign-off path at all.
+# If both were merely "a minimum rung" a future cost-tuning pass could not tell them apart, and
+# the one it would relax is the privacy boundary.
+#
+# ⚠️ MIGRATION NOTE — THIS IS A DELIBERATE WIDENING, WRITTEN OUT SO IT IS VISIBLE.
+# The seven classes below were previously pinned to claude SPECIFICALLY (the resolver hardcoded
+# `chosen_plugin_id: 'claude'`). `>= subscription` also admits `codex_subscription`. In practice
+# `orchestration` and `mode_d` are unchanged — their routing_policy chains still pin
+# claude/claude-opus-5 — and the other five have no chain, so they only reach a codex lane when a
+# caller explicitly asks for a gpt model. But the boundary DID move, and it moved on purpose.
+# ──────────────────────────────────────────────────────────────────────────────
+task_class_sovereignty:
+  orchestration:    { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  verdict:          { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  mode_d:           { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  council_review:   { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  synthesis:        { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  schema_recovery:  { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  cross_wave_merge: { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  # ⚠️ NO WRITER TODAY — declared so `egress_absolute` is not a paper reason class with no
+  # instance in the real registry. Metis's private-journal reflect lane is a launchd single-shot
+  # that does NOT currently resolve through delegation-router, so nothing writes this class here
+  # (`.claude/rules/built-lane-no-writers.md` — naming the absent writer rather than discovering
+  # it later). It is DELIBERATELY UNROUTABLE while the `local` rung has zero members: the
+  # resolver refuses rather than dropping a rung, which for an egress rule is the correct
+  # outcome. If the journal lane is ever routed through here, provision a local lane first —
+  # never relax this minimum. Rule: .claude/rules/metis-journal.md § Egress — absolute.
+  journal_reflect:  { min_rung: local, reason: egress_absolute, set_by: nick, set_on: 2026-08-25 }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MODELS — one entry per DISTINCT model. Provider sub-instances carry the exact
@@ -198,9 +373,9 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: claude, model_id: "claude-opus-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
       # ICA: PROMOTED to enabled 2026-07-31 — claude-opus-5 appeared on the gateway /models list and passed the full executor-path verification (see the `updated:` changelog above). This is now THE ICA spine-offload lane; claude-opus-4-8[1m] is the fallback. Keep the [1m] variant ranked first per the file-header 1M invariant. NOTE max_output 64000 on ICA (< the 128000 first-party ceiling). Raw transports must use the PLAIN id — "[1m]" is a Claude-Code client hint and 403s on /v1/messages.
-      - { provider: ica,    model_id: "claude-opus-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000 }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000 }
 
   claude-opus-4-8:
     family: claude
@@ -216,9 +391,9 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: claude, model_id: "claude-opus-4-8",     cost_tier: premium,  allowance: billed,            enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-opus-4-8",     cost_tier: premium,  allowance: billed,            enabled: true, priority: 1 }
       # ICA claude-opus-4-8[1m]: stays enabled, but DEMOTED to the spine-offload FALLBACK 2026-07-31 — claude-opus-5[1m] is verified on the gateway and takes the primary spine-offload lane. Prefer opus-5[1m]; reach here only if opus-5 is unavailable or you need 4.8's older/lighter tokenizer.
-      - { provider: ica,    model_id: "claude-opus-4-8", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-4-8", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   claude-opus-4-7:
     family: claude
@@ -234,7 +409,7 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
-      - { provider: ica, model_id: "claude-opus-4-7", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-4-7", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
 
   claude-opus-4-6:
     family: claude
@@ -250,7 +425,7 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
-      - { provider: ica, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
 
   claude-sonnet-5:
     family: claude
@@ -268,10 +443,10 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: claude, model_id: "claude-sonnet-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback. Verified 2026-07-08: [1m]=1M, plain=200k via modelUsage.
       # ✅ reasoning WORKS on this ICA lane via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent legs OK here. Only gap: output_config.format (structured JSON) dropped by the gateway — use a tool-call.
-      - { provider: ica,    model_id: "claude-sonnet-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-sonnet-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   claude-sonnet-4-6:
     family: claude
@@ -286,9 +461,9 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: claude, model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: billed,            enabled: true, priority: 1, cost_score: 5 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-4-6",     cost_tier: standard, allowance: billed,            enabled: true, priority: 1, cost_score: 5 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is demoted fallback.
-      - { provider: ica,    model_id: "claude-sonnet-4-6",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-sonnet-4-6",        cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000 }
 
   claude-sonnet-4-5:
     family: claude
@@ -312,7 +487,7 @@ models:
     observed_ids: ["claude-sonnet-4-5-20250929"]
     providers:
       # ICA-only lane (no subscription entry — sonnet-5 is the subscription default). 1m preferred over plain 200k.
-      - { provider: ica, model_id: "claude-sonnet-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-sonnet-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
 
   claude-haiku-4-5:
     family: claude
@@ -331,8 +506,8 @@ models:
     # rows carried the dated `claude-haiku-4-5-20251001`.
     observed_ids: ["claude-haiku-4-5-20251001"]
     providers:
-      - { provider: ica,    model_id: "claude-haiku-4-5", cost_tier: free,   allowance: unlimited, enabled: true, priority: 1 }
-      - { provider: claude, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-4-5", cost_tier: free,   allowance: unlimited, enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }
 
   # ── Frontier (Claude Fable 5 — Mythos-class; 2× Opus cost; EXPLICIT OPT-IN ONLY) ─────
   #
@@ -380,6 +555,7 @@ models:
     selection_posture: explicit_or_advanced_sol_contract
     providers:
       - provider: claude
+        lane: claude_subscription
         model_id: "claude-fable-5-1"
         cost_tier: premium
         allowance: billed
@@ -401,7 +577,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: claude, model_id: "claude-fable-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription, model_id: "claude-fable-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
 
   # ── ICA free-tier open models (allowance: unlimited — genuinely free) ────────
 
@@ -418,7 +594,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: ica, model_id: "gemma-4-26b-a4b-it", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "gemma-4-26b-a4b-it", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
 
   llama-4-maverick:
     family: open
@@ -433,7 +609,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: ica, model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
 
   granite-4-small:
     family: open
@@ -448,7 +624,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: ica, model_id: "ibm/granite-4-h-small", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "ibm/granite-4-h-small", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
 
   # ── ICA-served OpenAI / Gemini (allowance: shared_token_pool — NOT free) ─────
 
@@ -465,7 +641,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: ica, model_id: "gpt-4o", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-4o", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
 
   gpt-5.1:
     family: openai
@@ -480,7 +656,7 @@ models:
     sampling: stochastic
     status: degraded   # regressed 2026-07-21 — not servable on any tested key/endpoint
     providers:
-      - { provider: ica, model_id: "gpt-5.1-chat-gus", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.1-chat-gus", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   gpt-5.4:
     family: openai
@@ -495,7 +671,7 @@ models:
     sampling: stochastic
     status: degraded   # regressed 2026-07-21 — not servable on any tested key/endpoint
     providers:
-      - { provider: ica, model_id: "gpt-5.4-gus", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.4-gus", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   gpt-5.5-gus:
     family: openai
@@ -512,7 +688,7 @@ models:
     sampling: stochastic
     status: active   # 2026-07-21: wired through the ica-gpt.sh shim in resolver.js buildRegistryInvocation (gpt-* → ica-gpt.sh); explicit-selectable, not in any auto chain
     providers:
-      - { provider: ica, model_id: "gpt-5.5-gus", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.5-gus", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1 }
 
   gemini-3.1-pro-preview-ica:
     family: google
@@ -528,7 +704,7 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback.
-      - { provider: ica, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, tools: [one_million_context], max_context: 1000000 }
 
   # ── Google (native gemini-cli, AI Studio GEMINI_API_KEY — metered; free Code Assist OAuth tier sunset 2026-07) ──
 
@@ -545,9 +721,9 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
+      - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.5-flash:
     family: google
@@ -562,9 +738,9 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
+      - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.1-pro-preview:
     family: google
@@ -579,7 +755,7 @@ models:
     sampling: stochastic
     status: preview
     providers:
-      - { provider: gemini, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native lane returned hard 429 with limit:0 in the SOTA retune" } }
+      - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native lane returned hard 429 with limit:0 in the SOTA retune" } }
 
   gemini-3.1-flash-lite:
     family: google
@@ -594,7 +770,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: gemini, model_id: "gemini-3.1-flash-lite", cost_tier: free, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "same native AI Studio account-level limit:0 lane" } }
+      - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.1-flash-lite", cost_tier: free, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "same native AI Studio account-level limit:0 lane" } }
 
   # ── Codex (OpenAI gpt-5.6 line via codex CLI, sandbox-gated) ────────────────
   # Verified codex-cli v0.144.0-alpha.4 (2026-07-09): three-model gpt-5.6 line —
@@ -626,6 +802,7 @@ models:
     selection_posture: escalation_or_explicit_itt_advanced_sol_contract
     providers:
       - provider: codex
+        lane: codex_subscription
         model_id: "gpt-6-astra"
         cost_tier: premium
         allowance: billed
@@ -648,7 +825,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
       # ICA ccx lane — measured 2026-08-26, re-probed 2026-08-27 (node_01M0Z7JP9YT7W15X94Z843AM9Y,
       # won't-wire-direct-tools decision recorded there). SERVABLE (all 3 CCx keys, bare id,
       # 600,007 prompt tokens) but tools and reasoning are mutually exclusive there on BOTH
@@ -662,7 +839,7 @@ models:
       # review/adjudication/critique routing_policy chains or an explicit needs_tools:false call.
       # Do not flip capability_gap's premise on the strength of a 200 — assert reasoning_tokens>0
       # WITH NO tool call made before trusting any future retest.
-      - { provider: ica, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, max_context: 600000, tool_mode: "none", capability_gap: "tools+reasoning mutually exclusive on BOTH transports (reasoning_tokens=0 whenever a tool call is made) — measured 2026-08-26/27; tool_mode:none is how the resolver keeps this instance out of any tool-requiring request" }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, max_context: 600000, tool_mode: "none", capability_gap: "tools+reasoning mutually exclusive on BOTH transports (reasoning_tokens=0 whenever a tool call is made) — measured 2026-08-26/27; tool_mode:none is how the resolver keeps this instance out of any tool-requiring request" }
 
   gpt-5.6-terra:
     family: openai
@@ -692,7 +869,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-luna:
     family: openai
@@ -707,7 +884,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-terra-dzus:
     family: openai
@@ -722,7 +899,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: ica, model_id: "gpt-5.6-terra-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-terra-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
 
   gpt-5.6-luna-dzus:
     family: openai
@@ -737,7 +914,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: ica, model_id: "gpt-5.6-luna-dzus", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
+      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-luna-dzus", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
 
@@ -755,7 +932,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.5-pro:
     family: openai
@@ -771,7 +948,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   # ── ICA ccx-only, newly discovered 2026-08-26 — scaffolded per the header's ─────
   # "ADDING A NEW MODEL" convention: registered so agents know they exist, every
@@ -794,7 +971,7 @@ models:
       # ICA ccx gateway ONLY (2026-08-26). `[1m]` is RETIRED on this gateway and 403s on every id as
       # of 2026-08-26 — do not add a `gemini-3.7-flash[1m]` row. The bare id already carries native
       # ~950k-token context on ccx.
-      - { provider: ica, model_id: "gemini-3.7-flash", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1, cost_score: 8, max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.7-flash", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1, cost_score: 8, max_context: 1000000 }
 
   gpt-5.4-gus:
     family: openai
@@ -809,7 +986,7 @@ models:
     sampling: deterministic
     status: scaffolded
     providers:
-      - { provider: ica, model_id: "gpt-5.4-gus", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.4-gus", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   meta-llama/llama-3-3-70b-instruct:
     family: meta
@@ -824,7 +1001,7 @@ models:
     sampling: stochastic
     status: scaffolded
     providers:
-      - { provider: ica, model_id: "meta-llama/llama-3-3-70b-instruct", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "meta-llama/llama-3-3-70b-instruct", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   mistral-medium-2505:
     family: mistral
@@ -839,7 +1016,7 @@ models:
     sampling: stochastic
     status: scaffolded
     providers:
-      - { provider: ica, model_id: "mistral-medium-2505", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "mistral-medium-2505", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
 
   # ── External-lane scaffolds — no executor, no routing chain (M5b owns executor) ──
   deepseek-v4-flash:
@@ -848,7 +1025,7 @@ models:
     descriptor: "Direct DeepSeek candidate. Public-only fan-out is possible only after M5b supplies an executor and a concrete eligibility decision."
     status: candidate
     providers:
-      - { provider: external, model_id: "deepseek-v4-flash", endpoint: "https://api.deepseek.com/anthropic", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+      - { provider: external, lane: external_candidate, model_id: "deepseek-v4-flash", endpoint: "https://api.deepseek.com/anthropic", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
 
   qwen3-flash:
     family: qwen
@@ -856,7 +1033,7 @@ models:
     descriptor: "Alibaba Model Studio candidate; endpoint-specific compatibility and retention remain unverified."
     status: candidate
     providers:
-      - { provider: external, model_id: "qwen3-flash", endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+      - { provider: external, lane: external_candidate, model_id: "qwen3-flash", endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
 
   kimi-k2:
     family: kimi
@@ -864,7 +1041,7 @@ models:
     descriptor: "Moonshot direct-lane candidate; public fan-out only after executor and lane approval."
     status: candidate
     providers:
-      - { provider: external, model_id: "kimi-k2", endpoint: "https://api.moonshot.cn/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
+      - { provider: external, lane: external_candidate, model_id: "kimi-k2", endpoint: "https://api.moonshot.cn/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: CN, account_relationship: unknown } }
 
   glm:
     family: glm
@@ -872,7 +1049,7 @@ models:
     descriptor: "Z.AI direct endpoint candidate; no declared executor or protected-work eligibility."
     status: candidate
     providers:
-      - { provider: external, model_id: "glm", endpoint: "https://open.bigmodel.cn/api/paas/v4", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
+      - { provider: external, lane: external_candidate, model_id: "glm", endpoint: "https://open.bigmodel.cn/api/paas/v4", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
 
   grok:
     family: xai
@@ -880,7 +1057,7 @@ models:
     descriptor: "xAI Grok candidate for an out-of-family judge only after a concrete executor and endpoint declaration."
     status: candidate
     providers:
-      - { provider: external, model_id: "grok", endpoint: "https://api.x.ai/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
+      - { provider: external, lane: external_candidate, model_id: "grok", endpoint: "https://api.x.ai/v1", cost_tier: unknown, allowance: unknown, enabled: false, priority: 1, executor_status: absent, eligibility: { compute_custody: vendor_hosted, retention: unknown, jurisdiction: unknown, account_relationship: unknown } }
 
   # ── Bob (local, zero-cost, stateless) ───────────────────────────────────────
 
@@ -897,7 +1074,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: bob, model_id: "bob-local", cost_tier: free, allowance: local, enabled: true, priority: 1 }
+      - { provider: bob, lane: bob_ibm_shell, model_id: "bob-local", cost_tier: free, allowance: local, enabled: true, priority: 1 }
 
   # ── Image / video generation ────────────────────────────────────────────────
 
@@ -911,7 +1088,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: nano-banana, model_id: "nano-banana-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
+      - { provider: nano-banana, lane: nano_banana_api, model_id: "nano-banana-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
 
   nano-banana-pro:
     family: google
@@ -923,7 +1100,7 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: nano-banana, model_id: "nano-banana-pro", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
+      - { provider: nano-banana, lane: nano_banana_api, model_id: "nano-banana-pro", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
 
   sora-2:
     family: openai
@@ -935,4 +1112,4 @@ models:
     sampling: stochastic
     status: active
     providers:
-      - { provider: sora, model_id: "sora-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }
+      - { provider: sora, lane: sora_api, model_id: "sora-2", cost_tier: billed, allowance: billed, enabled: true, priority: 1 }

@@ -46,6 +46,11 @@ const {
   MUST_STAY_PRIMARY_CLASSES,
   AGENT_TYPE_ID_MAP,
   WRITE_INCAPABLE_PROVIDERS,
+  SOVEREIGNTY_CLASSES,
+  SOVEREIGNTY_UNKNOWN,
+  SOVEREIGNTY_UNKNOWN_RUNG,
+  SOVEREIGNTY_MINIMUM_REASONS,
+  sovereigntyRung,
   validateRoutingRecord,
 } = require('./routing-record.js');
 
@@ -404,9 +409,11 @@ function loadLocalOverrides(input) {
  * @param {Object} registry          loaded registry
  * @param {Object|null} overrides     parsed routing.local.toml (or null)
  * @param {string[]} registryMustStay normalized must_stay_primary class list
+ * @param {(taskClass: string) => Object|null} [floorFor] resolves a class's declared sovereignty
+ *        minimum. A class with a floor is as un-overridable as a MUST-stay class — see below.
  * @returns {Object} possibly-overridden registry (new object when overrides applied)
  */
-function applyLocalOverrides(registry, overrides, registryMustStay) {
+function applyLocalOverrides(registry, overrides, registryMustStay, floorFor = null) {
   if (!overrides) return registry;
 
   const disabledProviders = new Set(
@@ -469,6 +476,21 @@ function applyLocalOverrides(registry, overrides, registryMustStay) {
         );
         continue;
       }
+      // A class that declares a sovereignty minimum is equally un-overridable, whether or not it
+      // is MUST-stay. Belt and braces with the floor filter in selection (which would reject a
+      // sub-floor chain entry anyway): dropping the override here means the ignored override is
+      // WARNED about rather than silently walked and skipped, which is what an operator needs to
+      // see. An `egress_absolute` minimum must be immune to the human override channel too — a
+      // routing.local.toml is not a sign-off path for an egress boundary.
+      const declaredFloor = floorFor ? floorFor(taskClass) : null;
+      if (declaredFloor) {
+        console.warn(
+          `[delegation-router] routing.local.toml routing_policy_overrides['${taskClass}'] ` +
+          `targets a class declaring a sovereignty minimum of '${declaredFloor.min_rung}' ` +
+          `(reason: ${declaredFloor.reason}); IGNORED.`
+        );
+        continue;
+      }
       nextPolicy[taskClass] = { ...(basePolicy[taskClass] || {}), ...override };
     }
     next.routing_policy = nextPolicy;
@@ -516,6 +538,184 @@ function isStructural(task_class) {
 // Providers whose sampling is stochastic at the gateway level (nondeterministic).
 // Used by the registry path's determinism filter (resume + structural).
 const NONDETERMINISTIC_PROVIDERS = ['gemini', 'ica'];
+
+// ---------------------------------------------------------------------------
+// Sovereignty ladder (registry path) — the THIRD selection axis
+// ---------------------------------------------------------------------------
+//
+// This axis rides the same rails as the determinism filter and the write-authority filter:
+// a per-candidate predicate applied at every selection site, never a vendor pin. What it
+// REPLACES is the old unconditional "MUST-stay ⇒ chosen_plugin_id = 'claude'" jump, which
+// asserted a vendor before any candidate was ever ranked.
+//
+// A task class declares a MINIMUM RUNG; a lane carries a rung; selection keeps only candidates
+// whose lane clears the floor. `verdict requires >= subscription` is satisfied by ANY
+// subscription lane — Claude sub or Codex sub — with no rule naming a vendor.
+//
+// TWO LEGACY/LIVE REGIMES, and the difference is load-bearing:
+//
+//   (A) The registry declares NO `lanes:` table at all. The ladder is not deployed in that
+//       registry — there is no sovereignty data anywhere in it, so no rung can be measured.
+//       Behavior falls back to the PRE-LADDER contract verbatim: MUST-stay classes force
+//       claude. This is not a weakening: claude-only is STRICTER than `>= subscription`
+//       (claude_subscription is one member of that rung), so the legacy path can only ever be
+//       narrower than the ladder, never wider. Every pre-ladder fixture and every un-migrated
+//       project registry keeps its exact previous behavior.
+//
+//   (B) The registry declares `lanes:`. The ladder is live. An instance with no `lane`, or a
+//       `lane` absent from the table, is UNCLASSIFIED — rung -1 — and clears no floor. If
+//       nothing clears the floor the resolution REFUSES rather than silently dropping a rung.
+//
+// (A) is "the ladder is not deployed here, use the old stricter rule". (B) is "the ladder is
+// deployed and this row is unclassified, so it is not trusted". Collapsing the two — treating
+// an unclassified row in a live registry as fine — would be the "couldn't check ⇒ it's fine"
+// degradation this estate has paid for repeatedly.
+
+/**
+ * Is the sovereignty ladder LIVE for this registry? True iff it declares a `lanes:` table with
+ * at least one entry. Regime (A) vs (B) above turns on this one predicate.
+ *
+ * @param {Object} registry
+ * @returns {boolean}
+ */
+function ladderIsLive(registry) {
+  const lanes = registry && registry.lanes;
+  return !!lanes && typeof lanes === 'object' && !Array.isArray(lanes) && Object.keys(lanes).length > 0;
+}
+
+/**
+ * Resolve a provider instance to its LANE and that lane's rung.
+ *
+ * ⚠️ The lane comes from the instance's DECLARED `lane` key and from nowhere else. It is never
+ * derived from the provider string and never pattern-matched off the model id — the id carries
+ * no lane information (`[1m]` is a context-window marker; `-dzus` names a shim in the
+ * invocation table, not a sovereignty class). Deriving a rung from an id here would re-create
+ * the exact defect the ladder exists to remove.
+ *
+ * @param {Object} registry
+ * @param {Object} instance   a provider sub-instance from the registry
+ * @returns {{lane: string|null, sovereignty: string, rung: number}}
+ */
+function laneFor(registry, instance) {
+  const unclassified = { lane: null, sovereignty: SOVEREIGNTY_UNKNOWN, rung: SOVEREIGNTY_UNKNOWN_RUNG };
+  if (!instance) return unclassified;
+  const laneId = instance.lane;
+  if (typeof laneId !== 'string' || !laneId) return unclassified;
+  const lanes = (registry && registry.lanes) || {};
+  const lane = lanes[laneId];
+  if (!lane || typeof lane !== 'object') {
+    // Declared a lane the table does not define — a dangling reference, not a pass.
+    return { lane: laneId, sovereignty: SOVEREIGNTY_UNKNOWN, rung: SOVEREIGNTY_UNKNOWN_RUNG };
+  }
+  const sovereignty = SOVEREIGNTY_CLASSES.includes(lane.sovereignty)
+    ? lane.sovereignty
+    : SOVEREIGNTY_UNKNOWN;
+  return { lane: laneId, sovereignty, rung: sovereigntyRung(sovereignty) };
+}
+
+/**
+ * Validate the registry's sovereignty declarations. HARD-FAILS (throws) rather than warning.
+ *
+ * The one thing that MUST fail loudly is a `task_class_sovereignty` entry missing its `reason`
+ * or carrying one outside the vocabulary. A minimum with no reason is precisely what a future
+ * cost-tuning pass relaxes without noticing it moved an egress boundary; making such a registry
+ * UNLOADABLE is the cheapest possible place to stop that, and it is cheaper than any review.
+ *
+ * @param {Object} registry
+ * @throws {Error} on a malformed lane table or a reason-less minimum
+ */
+function validateSovereigntyDeclarations(registry) {
+  const lanes = (registry && registry.lanes) || {};
+  for (const [laneId, lane] of Object.entries(lanes)) {
+    if (!lane || typeof lane !== 'object' || Array.isArray(lane)) {
+      throw new Error(`[delegation-router] lanes['${laneId}'] must be a mapping`);
+    }
+    if (lane.sovereignty !== SOVEREIGNTY_UNKNOWN && !SOVEREIGNTY_CLASSES.includes(lane.sovereignty)) {
+      throw new Error(
+        `[delegation-router] lanes['${laneId}'].sovereignty must be one of ` +
+        `${SOVEREIGNTY_CLASSES.join('|')}|${SOVEREIGNTY_UNKNOWN}; got ${JSON.stringify(lane.sovereignty)}`
+      );
+    }
+  }
+
+  const decls = (registry && registry.task_class_sovereignty) || {};
+  for (const [taskClass, decl] of Object.entries(decls)) {
+    if (!decl || typeof decl !== 'object' || Array.isArray(decl)) {
+      throw new Error(`[delegation-router] task_class_sovereignty['${taskClass}'] must be a mapping`);
+    }
+    if (!SOVEREIGNTY_CLASSES.includes(decl.min_rung)) {
+      throw new Error(
+        `[delegation-router] task_class_sovereignty['${taskClass}'].min_rung must be one of ` +
+        `${SOVEREIGNTY_CLASSES.join('|')}; got ${JSON.stringify(decl.min_rung)}`
+      );
+    }
+    if (!SOVEREIGNTY_MINIMUM_REASONS.includes(decl.reason)) {
+      throw new Error(
+        `[delegation-router] task_class_sovereignty['${taskClass}'] declares min_rung ` +
+        `'${decl.min_rung}' with no valid reason. reason is REQUIRED and must be one of ` +
+        `${SOVEREIGNTY_MINIMUM_REASONS.join('|')} — an unreasoned minimum cannot be told apart ` +
+        `from a cost knob by whoever tunes cost next, and the one it would move is the egress ` +
+        `boundary. Got ${JSON.stringify(decl.reason)}.`
+      );
+    }
+  }
+}
+
+/**
+ * Resolve the sovereignty FLOOR a task class declares, or null when it declares none.
+ *
+ * Precedence:
+ *   1. registry `task_class_sovereignty` (explicit, carries its own reason)
+ *   2. legacy desugar — a class in `must_stay_primary` or in the routing-record literal list
+ *      becomes `{min_rung: 'subscription', reason: 'quality_bar'}`.
+ *
+ * ⚠️ THE DESUGAR IS A REAL WIDENING and is deliberately kept as a compatibility shim for
+ * FOREIGN/legacy registries only. `must_stay_primary` means claude SPECIFICALLY; `>= subscription`
+ * also admits a Codex subscription lane. That is the intended contract change, but it must be
+ * visible in a diff rather than arriving as a side effect — which is why the canonical registry
+ * writes all its floors out explicitly in `task_class_sovereignty` instead of relying on this.
+ *
+ * @param {Object} registry
+ * @param {string} task_class
+ * @param {string[]} registryMustStay
+ * @returns {{min_rung: string, rung: number, reason: string, source: string}|null}
+ */
+function minRungFor(registry, task_class, registryMustStay) {
+  if (!task_class) return null;
+  const decls = (registry && registry.task_class_sovereignty) || {};
+  // Same hyphen/underscore variant normalization isMustStay uses — `mode_d` and `mode-d` are
+  // both live spellings in the registry and in the pinned vocabulary.
+  const variants = [task_class, task_class.replace(/-/g, '_'), task_class.replace(/_/g, '-')];
+  for (const v of variants) {
+    const decl = decls[v];
+    if (decl && SOVEREIGNTY_CLASSES.includes(decl.min_rung)) {
+      return {
+        min_rung: decl.min_rung,
+        rung: sovereigntyRung(decl.min_rung),
+        reason: decl.reason,
+        source: `task_class_sovereignty['${v}']`,
+      };
+    }
+  }
+  if (isMustStay(task_class, registryMustStay)) {
+    return {
+      min_rung: 'subscription',
+      rung: sovereigntyRung('subscription'),
+      reason: 'quality_bar',
+      source: 'legacy must_stay_primary desugar',
+    };
+  }
+  return null;
+}
+
+/**
+ * Does this candidate's lane clear the declared floor? A null floor clears trivially; an
+ * unclassified lane (rung -1) clears nothing.
+ */
+function clearsFloor(candidate, floor) {
+  if (!floor) return true;
+  return candidate.rung >= floor.rung;
+}
 
 // ---------------------------------------------------------------------------
 // Registry resolution helpers
@@ -569,8 +769,13 @@ function matchRegistryModels(registry, model) {
 
 /**
  * Build a candidate instance descriptor from a registry model + provider instance.
+ *
+ * `lane`/`sovereignty`/`rung` are resolved HERE, at the single point every candidate is built,
+ * so the sovereignty axis is available at every downstream filter site without any of them
+ * re-deriving it (and therefore without any of them being able to derive it differently).
  */
-function makeInstanceCandidate(modelKey, modelEntry, instance) {
+function makeInstanceCandidate(modelKey, modelEntry, instance, registry) {
+  const lane = laneFor(registry, instance);
   return {
     modelKey,
     modelEntry,
@@ -588,6 +793,9 @@ function makeInstanceCandidate(modelKey, modelEntry, instance) {
     // NOT restricted — only the ICA row is), so it lives on the instance rather than a provider-id
     // set.
     toolRestricted: instance.tool_mode === 'none',
+    lane: lane.lane,
+    sovereignty: lane.sovereignty,
+    rung: lane.rung,
   };
 }
 
@@ -605,7 +813,7 @@ function enabledInstancesForModels(registry, modelKeys) {
     if (entry.enabled === false) continue;  // model-level master toggle
     for (const inst of (entry.providers || [])) {
       if (inst.enabled === false) continue;  // per-instance toggle
-      out.push(makeInstanceCandidate(key, entry, inst));
+      out.push(makeInstanceCandidate(key, entry, inst, registry));
     }
   }
   return out;
@@ -628,7 +836,7 @@ function resolveChainEntry(registry, entry) {
       if (inst.provider !== providerId) continue;
       if (inst.model_id !== modelId) continue;
       if (inst.enabled === false) return null;  // explicitly disabled instance
-      return makeInstanceCandidate(key, mEntry, inst);
+      return makeInstanceCandidate(key, mEntry, inst, registry);
     }
   }
   return null;
@@ -716,19 +924,41 @@ function resolveFromRegistry(input) {
   const loadedRegistry = loadRegistry(_registryPath);
   const registryMustStay = (loadedRegistry.must_stay_primary || []).map(normalizeClass);
 
-  // ----- Project-local overrides (routing.local.toml) — selection-only, MUST-stay-safe -----
+  // Hard-fail on a malformed lane table or a reason-less minimum. Deliberately a THROW and
+  // deliberately before anything else reads the registry: an unreasoned floor must make the
+  // registry unloadable, not merely warn.
+  validateSovereigntyDeclarations(loadedRegistry);
+
+  // ----- Project-local overrides (routing.local.toml) — selection-only, floor-safe -----
   const localOverrides = loadLocalOverrides(input);
-  const registry = applyLocalOverrides(loadedRegistry, localOverrides, registryMustStay);
+  const registry = applyLocalOverrides(
+    loadedRegistry, localOverrides, registryMustStay,
+    tc => minRungFor(loadedRegistry, tc, registryMustStay)
+  );
   const routingPolicy = registry.routing_policy || {};
 
-  // ----- MUST-stay-primary override (registry ∪ routing-record literals) -----
-  if (isMustStay(task_class, registryMustStay)) {
+  // ----- Sovereignty floor (registry task_class_sovereignty ∪ legacy must_stay desugar) -----
+  //
+  // This REPLACES the old unconditional "MUST-stay ⇒ claude" early return. The floor is not a
+  // destination, it is a PREDICATE: selection proceeds normally and every candidate site below
+  // additionally requires `candidate.rung >= floor.rung`. A class needing >= subscription is
+  // satisfied by any subscription lane, so no rule here names a vendor.
+  //
+  // Regime (A) — a registry with no `lanes:` table cannot measure a rung on anything, so it
+  // keeps the pre-ladder contract verbatim (claude, which is strictly narrower than the floor
+  // would be). See the ladder commentary above `ladderIsLive`.
+  const ladderLive = ladderIsLive(loadedRegistry);
+  const floor = ladderLive ? minRungFor(registry, task_class, registryMustStay) : null;
+
+  if (!ladderLive && isMustStay(task_class, registryMustStay)) {
     // MUST-stay model lookup must be override-independent: pass the PRE-override
     // loadedRegistry so a project's disabled_providers/disabled_models cannot strip
     // the real claude instance and force a degraded hardcoded sonnet fallback.
     return buildRegistryMustStayRecord(
       loadedRegistry, model, effort,
-      `MUST-stay-primary: task_class='${task_class}' is protected; non-claude providers are rejected`
+      `MUST-stay-primary: task_class='${task_class}' is protected; non-claude providers are rejected ` +
+      `(registry declares no lanes: table, so the sovereignty ladder is not live here and the ` +
+      `pre-ladder claude pin applies)`
     );
   }
 
@@ -736,7 +966,13 @@ function resolveFromRegistry(input) {
   const structural = isStructural(task_class);
   const excludeNondeterministic = resume_active && structural;
 
-  if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(requestedProvider)) {
+  // `!floor` guard: AXIS PRECEDENCE. When a class declares a sovereignty minimum, the FLOOR is
+  // the stated cause of any exclusion, not the determinism/write axis — otherwise a mode_d leg
+  // that also happened to set requires_write would report the write filter as its reason and the
+  // sovereignty boundary would vanish from the record. With a floor present, selection runs
+  // below with all three predicates applied together (strictly narrower than any one of them)
+  // and the floor record explains the outcome.
+  if (!floor && excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(requestedProvider)) {
     // Override-independent MUST-stay lookup (see note above): use loadedRegistry so the
     // claude fallback resolves to the real requested-model instance, not a degraded one.
     return buildRegistryMustStayRecord(
@@ -754,7 +990,8 @@ function resolveFromRegistry(input) {
   // for every caller that does not opt in.
   const excludeWriteIncapable = requires_write === true;
 
-  if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(requestedProvider)) {
+  // `!floor` guard: same axis-precedence reason as the determinism return above.
+  if (!floor && excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(requestedProvider)) {
     // Override-independent MUST-stay lookup (same reason as the two returns above).
     return buildRegistryMustStayRecord(
       loadedRegistry, model, effort,
@@ -792,6 +1029,19 @@ function resolveFromRegistry(input) {
   const humanTargets = humanOverriddenTargets(localOverrides);
   let feedbackProvenance = null;
 
+  // FEEDBACK IMMUNITY IS NOW KEYED ON "DECLARES A MINIMUM", NOT ON "IS MUST-STAY".
+  //
+  // The old key was membership in must_stay_primary. That was sufficient while every protected
+  // class was a MUST-stay class — but the whole point of the ladder is that a class can declare
+  // a floor WITHOUT being MUST-stay, and the first such class is an `egress_absolute` one. An
+  // egress minimum that an empirical loop can nudge is not a boundary, it is a suggestion. So
+  // any class carrying a declared floor is immune to empirical re-ranking, and an
+  // `egress_absolute` floor is immune by construction as a member of that set.
+  //
+  // This is strictly WIDER immunity than before (every MUST-stay class still desugars to a
+  // floor), so it can only remove adjustable surface, never add it.
+  const feedbackImmune = isMustStay(task_class, registryMustStay) || floor !== null;
+
   // ----- Candidate selection -----
   let chosen = null;
   let selectionReason = '';
@@ -822,6 +1072,9 @@ function resolveFromRegistry(input) {
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeToolRestricted && c.toolRestricted))
+      // Sovereignty floor. An explicitly REQUESTED provider does not outrank a declared minimum:
+      // asking for a lane below the floor is exactly the request the floor exists to refuse.
+      .filter(c => clearsFloor(c, floor))
       .sort(byModelThenPriority)[0];
     if (explicit) {
       chosen = explicit;
@@ -847,7 +1100,7 @@ function resolveFromRegistry(input) {
         chain: policy.chain,
         feedbackOverrides,
         humanTargets,
-        isMustStay: isMustStay(policyKey, registryMustStay),
+        isMustStay: feedbackImmune,
         registry,
       });
       for (const entry of fb.chain) {
@@ -856,6 +1109,11 @@ function resolveFromRegistry(input) {
         if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
         if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
         if (excludeToolRestricted && cand.toolRestricted) continue;
+        // Sovereignty floor, applied AFTER the empirical re-rank above and as a SKIP rather than
+        // a reorder. That ordering is what makes the floor hard: feedback may only demote within
+        // a list and never removes, so a floor enforced downstream of it cannot be re-ranked
+        // across. Never express the floor as a ranking preference.
+        if (!clearsFloor(cand, floor)) continue;
         chosen = cand;
         selectionReason = fb.applied
           ? `routing_policy['${policyKey}'] chain free-first (empirical-feedback re-ranked): selected '${entry}'`
@@ -882,6 +1140,7 @@ function resolveFromRegistry(input) {
       .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
       .filter(c => !(excludeToolRestricted && c.toolRestricted))
+      .filter(c => clearsFloor(c, floor))   // sovereignty floor — see the chain-walk note above
       .sort((a, b) => {
         // Genuinely-free first.
         if (a.free !== b.free) return a.free ? -1 : 1;
@@ -901,7 +1160,7 @@ function resolveFromRegistry(input) {
       taskClass: task_class,
       feedbackOverrides,
       humanTargets,
-      isMustStay: isMustStay(task_class, registryMustStay),
+      isMustStay: feedbackImmune,
       registry,
     });
     const finalRanked = fbRanked.applied ? fbRanked.ranked : ranked;
@@ -921,15 +1180,25 @@ function resolveFromRegistry(input) {
     }
   }
 
-  // 4. Last resort: claude fallback.
+  // 4. Last resort.
   if (!chosen) {
+    if (floor) {
+      // A floored class found nothing that clears its minimum. This is the one path that must
+      // NEVER quietly drop a rung, so it is handled by the floor record — which either finds the
+      // best lane at-or-above the floor across the whole registry, or REFUSES.
+      return buildSovereigntyFloorRecord(
+        registry, model, effort, task_class, floor,
+        `No candidate for (model='${model}', provider='${requestedProvider}', ` +
+        `task_class='${task_class}') clears the declared sovereignty minimum`
+      );
+    }
     return buildRegistryMustStayRecord(
       registry, model, effort,
       `No enabled candidates for (model='${model}', provider='${requestedProvider}', task_class='${task_class}'); falling back to claude`
     );
   }
 
-  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted);
+  const fallbackChain = buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted, floor);
   const agentTypeId = AGENT_TYPE_ID_MAP[chosen.providerId] || 'claude';
   const sampling = chosen.modelEntry.sampling;
   const continuityMode = sampling === 'stochastic' ? 'stateless' : 'resumable';
@@ -952,13 +1221,25 @@ function resolveFromRegistry(input) {
     validation_contract: inferValidationContract(chosen.providerId, task_class),
     continuity_mode: continuityMode,
     fallback_chain: fallbackChain,
-    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted),
+    reason: buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable, excludeToolRestricted, floor),
     // 14th field (additive, optional). Non-null ONLY when an empirical adjustment was actually
     // applied, so its presence in the audit log is itself the signal that feedback moved a
     // decision — `skillmeat routing audit` can filter on it without parsing the reason string.
     routing_feedback: feedbackProvenance,
+    // 15th–17th fields (additive, optional). Emitted only when the ladder is live for this
+    // registry, so a pre-ladder registry keeps emitting byte-identical records. `chosen_plugin_id`
+    // alone cannot identify a lane (codex/gpt-5.6-terra and ica/gpt-5.6-terra-dzus are the same
+    // weights on different sovereignty), which is why `lane` is recorded rather than left to an
+    // auditor to re-derive from the model id.
+    lane: ladderLive ? chosen.lane : null,
+    sovereignty: ladderLive ? chosen.sovereignty : null,
+    sovereignty_floor: floor ? { min_rung: floor.min_rung, reason: floor.reason } : null,
   };
 
+  // validateRoutingRecord asserts sovereignty >= sovereignty_floor when both are present. That
+  // assertion is the emit-time backstop for every selection site above; it is here rather than in
+  // finalizeRoutingRecord because this is the function every emitted record actually passes
+  // through (resolver.js has never called finalizeRoutingRecord).
   return validateRoutingRecord(record);
 }
 
@@ -997,7 +1278,7 @@ function isMustStay(task_class, registryMustStay) {
   return false;
 }
 
-function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false) {
+function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false, floor = null) {
   const chain = [];
   const seen = new Set();
 
@@ -1015,6 +1296,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
       if (excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(cand.providerId)) continue;
       if (excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(cand.providerId)) continue;
       if (excludeToolRestricted && cand.toolRestricted) continue;
+      if (!clearsFloor(cand, floor)) continue;   // a fallback below the floor is not a fallback
       const sig = `${cand.providerId}/${cand.modelId}`;
       if (seen.has(sig)) continue;
       seen.add(sig);
@@ -1028,6 +1310,7 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
     .filter(c => !(excludeNondeterministic && NONDETERMINISTIC_PROVIDERS.includes(c.providerId)))
     .filter(c => !(excludeWriteIncapable && WRITE_INCAPABLE_PROVIDERS.includes(c.providerId)))
     .filter(c => !(excludeToolRestricted && c.toolRestricted))
+    .filter(c => clearsFloor(c, floor))
     .sort((a, b) => a.priority - b.priority);
   for (const c of sameModel) {
     const sig = `${c.providerId}/${c.modelId}`;
@@ -1036,7 +1319,24 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
     chain.push({ plugin_id: c.providerId, model: c.modelId });
   }
 
-  // Always ensure claude is the final safety net.
+  // Final safety net. Under a declared floor this is "the best lane that clears the floor",
+  // NOT "claude" — pinning a vendor here would reintroduce the exact rule the ladder replaces,
+  // and would do it on the path nobody reads. With no floor the historical claude pin stands.
+  if (floor) {
+    const netCand = bestInstanceClearingFloor(registry, floor);
+    if (netCand) {
+      const sig = `${netCand.providerId}/${netCand.modelId}`;
+      if (!seen.has(sig) &&
+          !(netCand.providerId === chosen.providerId && netCand.modelId === chosen.modelId)) {
+        seen.add(sig);
+        chain.push({ plugin_id: netCand.providerId, model: netCand.modelId });
+      }
+    }
+    // No net when nothing in the registry clears the floor. An empty fallback_chain is the
+    // honest answer there; appending a sub-floor entry would make the record lie.
+    return chain;
+  }
+
   const hasClaude = chain.some(e => e.plugin_id === 'claude');
   if (!hasClaude && chosen.providerId !== 'claude') {
     const claudeSonnet = findClaudeSonnet(registry);
@@ -1044,6 +1344,34 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
   }
 
   return chain;
+}
+
+/**
+ * The best-ranked enabled instance ANYWHERE in the registry whose lane clears `floor`.
+ *
+ * This is the ladder's replacement for `findClaudeSonnet` as a safety net: it answers "what is
+ * the strongest thing we are allowed to use", where the old code answered "claude". It returns
+ * null when nothing clears the floor — the caller must treat null as REFUSE, never as a cue to
+ * relax the floor.
+ *
+ * Ranking mirrors the primary path: prefer the highest rung actually available (more sovereign
+ * is better as a safety net), then registry declaration order, then within-model priority.
+ *
+ * @param {Object} registry
+ * @param {{rung: number}} floor
+ * @returns {Object|null} candidate
+ */
+function bestInstanceClearingFloor(registry, floor) {
+  const models = registry.models || {};
+  const keys = Object.keys(models);
+  const keyRank = new Map(keys.map((k, i) => [k, i]));
+  const eligible = enabledInstancesForModels(registry, keys)
+    .filter(c => clearsFloor(c, floor))
+    .sort((a, b) =>
+      (b.rung - a.rung) ||
+      ((keyRank.get(a.modelKey) ?? 999) - (keyRank.get(b.modelKey) ?? 999)) ||
+      (a.priority - b.priority));
+  return eligible[0] || null;
 }
 
 function findClaudeSonnet(registry) {
@@ -1054,6 +1382,61 @@ function findClaudeSonnet(registry) {
     if (claudeInst) return claudeInst.model_id;
   }
   return 'claude-sonnet-5';
+}
+
+/**
+ * Emit a record for a floored class when ordinary selection found nothing that clears its
+ * minimum. The ladder's replacement for `buildRegistryMustStayRecord`, which was the "primary
+ * == subscription Claude" assumption in its purest form: it looked only for
+ * `p.provider === 'claude'`, fell back to a literal `'claude-sonnet-5'`, and hardcoded both
+ * `chosen_plugin_id: 'claude'` and a `claude -p` invocation.
+ *
+ * Here the last resort is A LANE THAT SATISFIES THE FLOOR, chosen by rung — which is usually a
+ * claude lane in practice, but never because a rule named claude.
+ *
+ * ⚠️ WHEN NOTHING CLEARS THE FLOOR THIS THROWS. That is the intended behavior and it is the
+ * whole reason `egress_absolute` exists as a reason class: for an egress rule, being unroutable
+ * is the CORRECT outcome, and silently dropping to a lower rung is the failure. The realistic
+ * case today is a `min_rung: local` class in a registry with zero local lanes.
+ *
+ * @throws {Error} when no enabled instance in the registry clears the floor
+ */
+function buildSovereigntyFloorRecord(registry, model, effort, task_class, floor, reason) {
+  const chosen = bestInstanceClearingFloor(registry, floor);
+  if (!chosen) {
+    throw new Error(
+      `[delegation-router] UNROUTABLE: task_class='${task_class}' declares a sovereignty ` +
+      `minimum of '${floor.min_rung}' (reason: ${floor.reason}, via ${floor.source}) and NO ` +
+      `enabled lane in the registry carries that rung or higher. Refusing to route. ` +
+      `This is a refusal, not a failure to find a fallback — dropping to a lower rung here ` +
+      `would defeat the declared minimum. Provision a lane at '${floor.min_rung}' (declare it ` +
+      `in lanes: and attach it to a provider instance), or change the declared minimum ` +
+      `deliberately and on the record. ${reason}`
+    );
+  }
+
+  const record = {
+    chosen_plugin_id: chosen.providerId,
+    model: deriveModelLabel(model, chosen),
+    effort,
+    agent_type_id: AGENT_TYPE_ID_MAP[chosen.providerId] || 'claude',
+    invocation_template: buildRegistryInvocation(chosen, null, effort),
+    scope_flags: [],
+    stage: 'A',
+    validation_contract: 'none',
+    continuity_mode: chosen.modelEntry.sampling === 'stochastic' ? 'stateless' : 'resumable',
+    fallback_chain: [],
+    reason:
+      `Sovereignty floor: task_class='${task_class}' requires >= '${floor.min_rung}' ` +
+      `(reason: ${floor.reason}, via ${floor.source}). ${reason}. Routed to the ` +
+      `highest-rung enabled lane satisfying it: lane='${chosen.lane}' ` +
+      `(${chosen.sovereignty}), provider='${chosen.providerId}', model_id='${chosen.modelId}'.`,
+    lane: chosen.lane,
+    sovereignty: chosen.sovereignty,
+    sovereignty_floor: { min_rung: floor.min_rung, reason: floor.reason },
+  };
+
+  return validateRoutingRecord(record);
 }
 
 function buildRegistryMustStayRecord(registry, model, effort, reason) {
@@ -1088,6 +1471,14 @@ function buildRegistryMustStayRecord(registry, model, effort, reason) {
     continuity_mode: 'resumable',
     fallback_chain: [],
     reason,
+    // Explicitly null, not absent. This path is reached for a pre-ladder registry and for the
+    // determinism/write-authority filters, none of which measured a rung — and "unmeasured" must
+    // be stated rather than left as `undefined`, so a consumer reading this record cannot tell
+    // "no ladder here" apart from "field not populated" only by luck. Deliberately not routed
+    // through finalizeRoutingRecord's defaulting: the resolver has never called that function.
+    lane: null,
+    sovereignty: null,
+    sovereignty_floor: null,
   };
 
   return validateRoutingRecord(record);
@@ -1142,10 +1533,18 @@ function buildRegistryInvocation(chosen, profile, effort) {
   }
 }
 
-function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false) {
+function buildRegistryReason(chosen, requestedProvider, task_class, selectionReason, excludeNondeterministic, excludeWriteIncapable = false, excludeToolRestricted = false, floor = null) {
   let reason = `Selected provider='${chosen.providerId}', model_id='${chosen.modelId}' for task_class='${task_class}'`;
   reason += `; cost_tier='${chosen.cost_tier}', allowance='${chosen.allowance}'`;
   reason += `, free=${chosen.free}`;
+  // Name the FLOOR, its REASON CLASS, and the LANE that satisfied it. Without all three a
+  // rung-filtered decision is unauditable from the record alone.
+  if (floor) {
+    reason += `; sovereignty floor >= '${floor.min_rung}' (reason: ${floor.reason}, ` +
+      `via ${floor.source}) satisfied by lane='${chosen.lane}' (${chosen.sovereignty})`;
+  } else if (chosen.lane) {
+    reason += `; lane='${chosen.lane}' (${chosen.sovereignty}), no declared minimum`;
+  }
   if (selectionReason) reason += `; ${selectionReason}`;
   if (requestedProvider !== chosen.providerId) {
     reason += `; requested provider '${requestedProvider}' not used`;
@@ -1494,4 +1893,12 @@ module.exports = {
   AGENT_TYPE_ID_MAP,
   findModel,
   matchRegistryModels,
+  // Sovereignty ladder — exported for tests and for any auditor that needs to answer
+  // "what rung did this lane carry / what did this class require" without re-deriving either.
+  ladderIsLive,
+  laneFor,
+  minRungFor,
+  clearsFloor,
+  bestInstanceClearingFloor,
+  validateSovereigntyDeclarations,
 };

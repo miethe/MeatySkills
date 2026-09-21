@@ -464,15 +464,38 @@ Headless writer: `log-cli.js --blocked`.
 
 ## 3. Invariants & Constraints
 
-1. **Five MUST-stay-primary classes can never route off `claude`.** Orchestration / master plan
-   / final synthesis, verdict sign-off (`status: needs_opus`), Mode-D phases (auth, secret
-   rotation, payment, deletion, force-push, infra/DB migrations), council-tier reviews
-   (`review_intensity: council`) and final-gate reviews, schema-recovery structurers. The
-   resolver returns `claude` unconditionally for these. Breaking this is a MAJOR bump.
+1. **A protected task class can never route BELOW its declared sovereignty minimum.**
+   Orchestration / master plan / final synthesis, verdict sign-off (`status: needs_opus`), Mode-D
+   phases (auth, secret rotation, payment, deletion, force-push, infra/DB migrations),
+   council-tier reviews (`review_intensity: council`) and final-gate reviews, schema-recovery
+   structurers, cross-wave merges. Breaking this is a MAJOR bump.
+
+   ⚠️ **RESTATED 2026-08-25 — this invariant previously read "can never route off `claude`".** A
+   class now declares a **minimum rung on the sovereignty ladder**, never a named vendor:
+   `verdict requires >= subscription` REPLACES `verdict pins to subscription Claude`, so a Codex
+   subscription satisfies it with no rule naming a vendor. The rung attaches to the **LANE**
+   (endpoint + auth), never to a provider string or a model id — Codex reached *through* the
+   shared ICA gateway is not a Codex subscription, and a model-id suffix carries no sovereignty.
+   Full semantics: [`references/model-registry.md`](references/model-registry.md) §
+   The sovereignty ladder.
+
    **This is absolute and cannot be weakened by `routing.local.toml`** — a project-local
-   `routing_policy_overrides` entry targeting a MUST-stay class is ignored (and warned), and
-   the unconditional MUST-stay short-circuit runs on the original `task_class` regardless of
-   any local override.
+   `routing_policy_overrides` entry targeting a MUST-stay class, or any class declaring a
+   minimum, is ignored (and warned), and the floor is evaluated on the original `task_class`
+   regardless of any local override. A minimum whose `reason` is `egress_absolute` is
+   additionally immune to every empirical/feedback path, and when **nothing** clears such a floor
+   the resolver **REFUSES** rather than dropping a rung.
+
+   ⚠️ **Coverage is asymmetric across the two resolution paths, on purpose.** The registry path
+   (live) enforces the ladder at the requested-provider filter, all three candidate-selection
+   sites, the fallback chain, and once more at `validateRoutingRecord` over the emitted record's
+   own `sovereignty` / `sovereignty_floor` pair. The legacy `provider-plugins.toml` path
+   (`input._configPath`, test fixtures only) **does not implement the ladder** and keeps its
+   original unconditional `claude` pin — as does any registry that declares no `lanes:` table.
+   Both are strictly *narrower* than `>= subscription` (claude is one member of that rung), so
+   neither can be wider than the ladder; that is written down here rather than left to be
+   discovered, the same posture §5 already takes for the write-authority filter.
+
    _Source_: `docs/project_plans/design-specs/model-registry-router-globalization-v1.md § 2, § 7`
 
 2. **The resolver is pure — no shell or filesystem I/O at route time.** It reads the registry
@@ -510,6 +533,20 @@ Headless writer: `log-cli.js --blocked`.
    `.claude/logs/routing-decisions.jsonl` is append-only; `skillmeat routing audit --violations`
    must report zero MUST-stay breaches at the feature-end gate.
    _Source_: `model-registry-router-globalization-v1.md § 4`
+
+   ⚠️ **THE AUDITOR DOES NOT YET UNDERSTAND THE LADDER — say so rather than citing a green run.**
+   `skillmeat routing audit --violations` is implemented in **skillmeat**, not in this skill, and
+   its predicate is `MUST_STAY.has(task_class) && chosen_plugin_id !== 'claude'`. Under the
+   sovereignty ladder that predicate is wrong in **both** directions: it flags a legitimate
+   `codex_subscription` verdict as a breach (false positive), and it clears an
+   `ica/gpt-5.6-terra-dzus` decision that a `codex/gpt-5.6-terra` policy would have refused,
+   because the two differ only by lane (false negative). `chosen_plugin_id` cannot identify a
+   lane; an auditor forced to re-derive one from the model id would rebuild the exact
+   suffix-as-lane-marker defect this change removes. Fields 15–17 (`lane`, `sovereignty`,
+   `sovereignty_floor`) are on the record precisely so the auditor does not have to.
+   **Until skillmeat's predicate is changed, the ladder is ENFORCED IN THE RESOLVER AND
+   UNAUDITED** — a green `--violations` run says nothing about sovereignty. A v1/v2 log entry
+   carrying no `lane` must normalize to *unmeasurable*, never to clean (§7b's posture).
 
 7b. **An audit entry separates INTENT from REALIZATION, and PROVIDER from MODEL.** A realized
    provider/model is never defaulted from the intent, and `realization_confirmed` is true only
@@ -676,7 +713,10 @@ Headless writer: `log-cli.js --blocked`.
 ## 7. Success Signals
 
 - Every emitted record has all 11 fields and an `agent_type_id` that matches a real agentType file.
-- MUST-stay task classes always resolve to `claude` — `skillmeat routing audit --violations` exits 0 at the feature-end gate.
+- Protected task classes always resolve to a lane at or above their declared sovereignty minimum
+  (`sovereignty_floor` on the record, asserted at `validateRoutingRecord`). ⚠️ `skillmeat routing
+  audit --violations` exiting 0 is **not** evidence of this — its predicate still tests for
+  `chosen_plugin_id === 'claude'` and is lane-blind (invariant 7).
 - Free-eligible legs (exploration, mechanical, documentation, second-opinion) resolve to an ICA
   free-tier instance in the happy path — primary tokens are not burned for free-eligible work.
 - ICA Sonnet/Opus never resolve as a default free route — they appear only on explicit opt-in.

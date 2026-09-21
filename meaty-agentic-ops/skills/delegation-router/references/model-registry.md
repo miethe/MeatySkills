@@ -47,7 +47,15 @@ updated: YYYY-MM-DD
 routing_policy:        # task-class → ordered preference chain (the chain IS priority/free-first)
   <task_class>: { chain: ["<provider>/<model_id>", ...], enabled: <bool> }
 
-must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
+must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]   # LEGACY — see below
+
+sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
+
+lanes:                 # the ENDPOINT + AUTH unit that sovereignty attaches to
+  <lane-id>: { sovereignty: local|subscription|shared_gateway|unknown, endpoint: ..., auth: ... }
+
+task_class_sovereignty:   # task class → MINIMUM rung, with a MANDATORY reason
+  <task_class>: { min_rung: ..., reason: cost_policy|quality_bar|egress_absolute }
 
 routing_attributes:    # additive lane metadata; does not add RoutingRecord fields
   health: {...}        # unavailable / limit:0 is a hard gate before advisory scores
@@ -65,7 +73,7 @@ models:                # model-keyed descriptors, each with provider sub-instanc
     status: active | scaffolded | deprecated
     scores: { cost: ..., intelligence: ..., taste: ..., speed: ... }   # advisory; see § Scores block
     providers:
-      - { provider: ..., model_id: ..., cost_tier: ..., allowance: ..., enabled: ..., priority: ..., cost_score: ... }
+      - { provider: ..., lane: ..., model_id: ..., cost_tier: ..., allowance: ..., enabled: ..., priority: ..., cost_score: ... }
 ```
 
 ### `routing_policy` — chains are priority + free-first
@@ -77,11 +85,81 @@ instance first and the primary `claude/*` instance in the chain tail — so the 
 and primary is only reached on fallback. `enabled: false` on a class disables routing for it
 entirely (the resolver treats it as no-route → primary default).
 
-### `must_stay_primary` — the invariant list
+## The sovereignty ladder
 
-The five MUST-stay concepts. Any task class in this set resolves to `claude` unconditionally,
-regardless of what the chain or the requested `provider` says. This list is an invariant; changing
-it is a MAJOR change to the skill contract (SPEC §3 invariant 1).
+**A task class declares a MINIMUM RUNG, never a named vendor or model.** `verdict requires
+>= subscription` REPLACES `verdict pins to subscription Claude` — a Codex subscription then
+satisfies it with no rule naming a vendor.
+
+| Rung | Meaning |
+|---|---|
+| `local` (highest) | runs on our own hardware; nothing leaves the LAN |
+| `subscription` | an account we control and pay for directly (Claude sub, Codex sub) |
+| `shared_gateway` (lowest) | third-party-mediated shared pool (ICA) |
+
+### `lanes` — the unit sovereignty attaches to
+
+Before this table the registry had no lane concept: only a bare `provider:` string, while the
+actual endpoint was chosen by REGEXing the model id inside `buildRegistryInvocation()`
+(`/-dzus$/` → `ica-codex.sh`, `/gpt/` → `ica-gpt.sh`, else `ica-claude.sh`). The three ICA lanes
+are exactly those three branches, so the table is grounded in the invocation code rather than
+in the ids.
+
+⚠️ **INVARIANT — the class belongs to the LANE, never to a vendor or a model id.** Codex reached
+*through* the shared ICA gateway is **not** a Codex subscription: `codex/gpt-5.6-terra` and
+`ica/gpt-5.6-terra-dzus` are the same weights on different sovereignty. The resolver reads the
+declared `lane:` on each provider instance and never pattern-matches an id — deriving a rung from
+a suffix is the defect this replaces (`[1m]` is a context-window marker, not a lane marker).
+
+⚠️ **Fail-closed.** An instance with no `lane`, a `lane` absent from the table, or a lane declared
+`sovereignty: unknown` sits at rung **-1** and satisfies **no** minimum. "Could not determine the
+lane" must never read as "the lane is fine". Never default an unclassified lane to `subscription`.
+
+⚠️ **The `local` rung has ZERO members today.** No local-inference lane exists in this registry.
+A class declaring `min_rung: local` is therefore UNROUTABLE and the resolver **refuses** rather
+than dropping a rung — the correct fail-closed outcome for an egress rule.
+
+⚠️ **Two lane classifications are UNVERIFIED** and carry a `probe:` naming what would settle them:
+`codex_subscription` (classified `subscription` per the ladder's own definition, but every codex
+row carries `allowance: billed`, which reads as a metered API rather than a seat — this decides
+whether `verdict` widens to codex at all) and `gemini_direct` (same shape). `bob_ibm_shell`,
+`nano_banana_api` and `sora_api` are deliberately left `unknown`.
+
+### `task_class_sovereignty` — the minimum, and its mandatory reason
+
+| Reason | Negotiability |
+|---|---|
+| `cost_policy` | negotiable; a tuning pass may revisit it |
+| `quality_bar` | negotiable on evidence |
+| `egress_absolute` | **NOT** negotiable by any automated, empirical, or feedback path |
+
+`reason` is **REQUIRED**: `validateSovereigntyDeclarations()` **throws** on a missing or
+out-of-vocabulary reason, so a registry carrying an unreasoned minimum does not load. The reason
+is what keeps *"stay off the shared gateway for the verdict"* (a cost/quality judgement)
+separable from *"stay local for the private journal"* (an egress rule with no sign-off path at
+all). If both were merely "a minimum rung" a cost-tuning pass could not tell them apart — and the
+one it would relax is the privacy boundary.
+
+An `egress_absolute` minimum is immune to empirical feedback **and** to `routing.local.toml`.
+
+### `must_stay_primary` — LEGACY compatibility key
+
+Superseded by `task_class_sovereignty`. Retained only for foreign/older registries (per-project
+overrides, test fixtures, the copies frozen into `workflow-sets/`). Two regimes:
+
+- **A registry with NO `lanes:` table** keeps the pre-ladder contract verbatim: MUST-stay classes
+  force `claude`. That is *strictly narrower* than `>= subscription` (claude is one member of that
+  rung), so the legacy path can never be wider than the ladder.
+- **A ladder-live registry** carrying a MUST-stay class it has not declared explicitly desugars it
+  to `{min_rung: subscription, reason: quality_bar}`.
+
+⚠️ **That desugar is a real widening** — `must_stay_primary` means claude *specifically*, while
+`>= subscription` also admits a Codex subscription lane. It is the intended contract change, but
+this registry writes all its floors out explicitly rather than relying on the desugar, so the
+widening is visible in a diff instead of arriving as a side effect.
+
+Changing the ladder, a lane's rung, or a declared minimum is a MAJOR change to the skill contract
+(SPEC §3 invariant 1).
 
 ## Field semantics — model level
 
