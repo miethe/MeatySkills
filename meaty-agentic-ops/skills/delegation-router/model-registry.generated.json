@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "575da0df4e2d5d6f9b0e30d4965fa3bde46d0e8b667273252cfecbb9b5a34247",
+  "_yaml_sha256": "6f104a82c44db3bd611f6e76f76a97bd965dfeb5aabb1c16a4bb43e4af03d645",
   "version": 1,
   "updated": "2026-09-09",
   "routing_attributes": {
@@ -406,6 +406,134 @@
     "council_review",
     "synthesis"
   ],
+  "sovereignty_ladder": [
+    "shared_gateway",
+    "subscription",
+    "local"
+  ],
+  "lanes": {
+    "claude_subscription": {
+      "sovereignty": "subscription",
+      "endpoint": "anthropic_default",
+      "auth": "anthropic_oauth_subscription",
+      "invocation": "claude -p",
+      "note": "The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription session legitimately reports a `[1m]` model id; that suffix is a context-window marker."
+    },
+    "ica_gateway_messages": {
+      "sovereignty": "shared_gateway",
+      "endpoint": "ica_gateway_messages",
+      "auth": "ica_team_key",
+      "invocation": "~/ica-claude.sh"
+    },
+    "ica_gateway_messages_shim": {
+      "sovereignty": "shared_gateway",
+      "endpoint": "ica_gateway_messages_via_param_strip_proxy",
+      "auth": "ica_team_key",
+      "invocation": "~/ica-gpt.sh",
+      "note": "Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane is the local param-strip proxy in front of the same shared gateway. Same sovereignty."
+    },
+    "ica_gateway_responses_shim": {
+      "sovereignty": "shared_gateway",
+      "endpoint": "ica_gateway_via_local_responses_to_chat_shim",
+      "auth": "ica_team_key",
+      "invocation": "~/ica-codex.sh",
+      "note": "Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not make it local: the tokens are still served by the third-party shared pool. This row is the concrete case invariant 2 exists for."
+    },
+    "codex_subscription": {
+      "sovereignty": "subscription",
+      "endpoint": "openai_default",
+      "auth": "codex_account",
+      "invocation": "codex exec",
+      "verified": false,
+      "probe": "UNCONFIRMED, and this is the load-bearing open question of the ladder. Classified `subscription` because the brief names \"Codex sub\" as satisfying that rung — but every codex row in this file carries `allowance: billed`, which reads as a metered API account rather than a seat. It decides whether `verdict` widens to codex at all. Ask Nick; this is a definitional call, not a measurement."
+    },
+    "gemini_direct": {
+      "sovereignty": "subscription",
+      "endpoint": "google_ai_studio",
+      "auth": "gemini_api_key",
+      "verified": false,
+      "probe": "UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we control, not a seat. No class currently declares a floor that would route here, so the classification is not yet load-bearing. Ask Nick alongside codex."
+    },
+    "bob_ibm_shell": {
+      "sovereignty": "unknown",
+      "endpoint": "unknown",
+      "auth": "unknown",
+      "invocation": "bob -p",
+      "verified": false,
+      "probe": "DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor, which is the fail-closed answer. The registry entry says `family: local` / `allowance: local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e. IBM-hosted. `allowance: local` most likely means \"a locally-run CLI binary\", which is a statement about where the PROCESS runs, not where INFERENCE runs — and inference is what sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for a gateway URL + credential. Do not classify it from the `allowance` field."
+    },
+    "nano_banana_api": {
+      "sovereignty": "unknown",
+      "endpoint": "unknown",
+      "auth": "unknown",
+      "verified": false,
+      "probe": "Never classified; has no branch in buildRegistryInvocation() either. No floored class routes to image generation today, so `unknown` costs nothing and asserts nothing."
+    },
+    "sora_api": {
+      "sovereignty": "unknown",
+      "endpoint": "unknown",
+      "auth": "unknown",
+      "verified": false,
+      "probe": "Same as nano_banana_api — unclassified, and no floored class reaches it."
+    },
+    "external_candidate": {
+      "sovereignty": "unknown",
+      "endpoint": "unknown",
+      "auth": "unknown",
+      "verified": false,
+      "probe": "Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash, kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`. Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to any of them today, so `unknown` costs nothing and asserts nothing."
+    }
+  },
+  "task_class_sovereignty": {
+    "orchestration": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "verdict": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "mode_d": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "council_review": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "synthesis": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "schema_recovery": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "cross_wave_merge": {
+      "min_rung": "subscription",
+      "reason": "quality_bar",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    },
+    "journal_reflect": {
+      "min_rung": "local",
+      "reason": "egress_absolute",
+      "set_by": "nick",
+      "set_on": "2026-08-25"
+    }
+  },
   "models": {
     "claude-opus-5": {
       "family": "claude",
@@ -440,6 +568,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-opus-5",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -448,6 +577,7 @@
         },
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-opus-5",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -491,6 +621,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-opus-4-8",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -499,6 +630,7 @@
         },
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-opus-4-8",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -538,6 +670,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-opus-4-7",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -576,6 +709,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-opus-4-6",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -627,6 +761,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-sonnet-5",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -635,6 +770,7 @@
         },
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-sonnet-5",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -677,6 +813,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-sonnet-4-6",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -686,6 +823,7 @@
         },
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-sonnet-4-6",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -728,6 +866,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-sonnet-4-5",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -770,6 +909,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "claude-haiku-4-5",
           "cost_tier": "free",
           "allowance": "unlimited",
@@ -778,6 +918,7 @@
         },
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-haiku-4-5",
           "cost_tier": "billed",
           "allowance": "billed",
@@ -834,6 +975,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-fable-5-1",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -882,6 +1024,7 @@
       "providers": [
         {
           "provider": "claude",
+          "lane": "claude_subscription",
           "model_id": "claude-fable-5",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -917,6 +1060,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "gemma-4-26b-a4b-it",
           "cost_tier": "free",
           "allowance": "unlimited",
@@ -952,6 +1096,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
           "cost_tier": "free",
           "allowance": "unlimited",
@@ -986,6 +1131,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "ibm/granite-4-h-small",
           "cost_tier": "free",
           "allowance": "unlimited",
@@ -1022,6 +1168,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-4o",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1056,6 +1203,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-5.1-chat-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -1090,6 +1238,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-5.4-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -1129,6 +1278,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-5.5-gus",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -1166,6 +1316,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1211,6 +1362,7 @@
       "providers": [
         {
           "provider": "gemini",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.6-flash",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -1225,6 +1377,7 @@
         },
         {
           "provider": "ica",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.6-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1271,6 +1424,7 @@
       "providers": [
         {
           "provider": "gemini",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.5-flash",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -1285,6 +1439,7 @@
         },
         {
           "provider": "ica",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.5-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1329,6 +1484,7 @@
       "providers": [
         {
           "provider": "gemini",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -1370,6 +1526,7 @@
       "providers": [
         {
           "provider": "gemini",
+          "lane": "gemini_direct",
           "model_id": "gemini-3.1-flash-lite",
           "cost_tier": "free",
           "allowance": "billed",
@@ -1430,6 +1587,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-6-astra",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -1473,6 +1631,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-5.6-sol",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -1482,6 +1641,7 @@
         },
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-5.6-sol",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
@@ -1529,6 +1689,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-5.6-terra",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -1566,6 +1727,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-5.6-luna",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -1607,6 +1769,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_responses_shim",
           "model_id": "gpt-5.6-terra-dzus",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1643,6 +1806,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_responses_shim",
           "model_id": "gpt-5.6-luna-dzus",
           "cost_tier": "free",
           "allowance": "unlimited",
@@ -1679,6 +1843,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-5.5",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -1715,6 +1880,7 @@
       "providers": [
         {
           "provider": "codex",
+          "lane": "codex_subscription",
           "model_id": "gpt-5.5-pro",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -1753,6 +1919,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "gemini-3.7-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1785,6 +1952,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
           "model_id": "gpt-5.4-gus",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1813,6 +1981,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "meta-llama/llama-3-3-70b-instruct",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1841,6 +2010,7 @@
       "providers": [
         {
           "provider": "ica",
+          "lane": "ica_gateway_messages",
           "model_id": "mistral-medium-2505",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1857,6 +2027,7 @@
       "providers": [
         {
           "provider": "external",
+          "lane": "external_candidate",
           "model_id": "deepseek-v4-flash",
           "endpoint": "https://api.deepseek.com/anthropic",
           "cost_tier": "unknown",
@@ -1881,6 +2052,7 @@
       "providers": [
         {
           "provider": "external",
+          "lane": "external_candidate",
           "model_id": "qwen3-flash",
           "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
           "cost_tier": "unknown",
@@ -1905,6 +2077,7 @@
       "providers": [
         {
           "provider": "external",
+          "lane": "external_candidate",
           "model_id": "kimi-k2",
           "endpoint": "https://api.moonshot.cn/v1",
           "cost_tier": "unknown",
@@ -1929,6 +2102,7 @@
       "providers": [
         {
           "provider": "external",
+          "lane": "external_candidate",
           "model_id": "glm",
           "endpoint": "https://open.bigmodel.cn/api/paas/v4",
           "cost_tier": "unknown",
@@ -1953,6 +2127,7 @@
       "providers": [
         {
           "provider": "external",
+          "lane": "external_candidate",
           "model_id": "grok",
           "endpoint": "https://api.x.ai/v1",
           "cost_tier": "unknown",
@@ -1996,6 +2171,7 @@
       "providers": [
         {
           "provider": "bob",
+          "lane": "bob_ibm_shell",
           "model_id": "bob-local",
           "cost_tier": "free",
           "allowance": "local",
@@ -2025,6 +2201,7 @@
       "providers": [
         {
           "provider": "nano-banana",
+          "lane": "nano_banana_api",
           "model_id": "nano-banana-2",
           "cost_tier": "billed",
           "allowance": "billed",
@@ -2054,6 +2231,7 @@
       "providers": [
         {
           "provider": "nano-banana",
+          "lane": "nano_banana_api",
           "model_id": "nano-banana-pro",
           "cost_tier": "billed",
           "allowance": "billed",
@@ -2082,6 +2260,7 @@
       "providers": [
         {
           "provider": "sora",
+          "lane": "sora_api",
           "model_id": "sora-2",
           "cost_tier": "billed",
           "allowance": "billed",

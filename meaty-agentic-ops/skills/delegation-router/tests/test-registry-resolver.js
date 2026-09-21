@@ -306,9 +306,21 @@ describe('(d) shared_token_pool (ICA sonnet) is NOT auto-selected as free', () =
 
 // ---------------------------------------------------------------------------
 // (e) MUST-stay forces claude even when a cheaper enabled instance exists
+//
+// ⚠️ READ BEFORE CHANGING THESE FOUR. `baseRegistry()` declares NO `lanes:` table, so the
+// sovereignty ladder is NOT live for it and the pre-ladder MUST-stay claude pin applies verbatim.
+// That is what these four assertions now pin: the LEGACY regime, which must keep behaving exactly
+// as it did for every un-migrated project registry and every frozen bundle copy.
+//
+// They are deliberately NOT the ladder's guard. Asserting `chosen_plugin_id === 'claude'` here
+// would keep passing for the wrong reason the moment someone added a codex row to this fixture,
+// because the fixture only contains claude and ica. The ladder's own guard — "the chosen lane
+// clears the declared minimum, whoever the vendor is" — lives in (e2) below and in
+// tests/test-sovereignty-ladder.js, where the fixture actually has two subscription vendors to
+// tell apart.
 // ---------------------------------------------------------------------------
 
-describe('(e) MUST-stay forces claude even when a cheaper enabled instance exists', () => {
+describe('(e) MUST-stay forces claude when the ladder is NOT live (pre-ladder registry)', () => {
   test('orchestration with provider=ica + free haiku available → claude', () => {
     const reg = baseRegistry();
     const record = resolveWithRegistry(reg, {
@@ -342,6 +354,78 @@ describe('(e) MUST-stay forces claude even when a cheaper enabled instance exist
     });
     assert.strictEqual(record.chosen_plugin_id, 'claude',
       'registry must_stay_primary entry (synthesis) must force claude');
+  });
+
+  test('and the record SAYS the ladder was not live, so the reason is not silently the old one', () => {
+    const record = resolveWithRegistry(baseRegistry(), {
+      model: 'haiku', provider: 'ica', task_class: 'orchestration', effort: 'low',
+    });
+    assert.ok(/no lanes: table/.test(record.reason),
+      `a legacy-regime decision must name the regime it took; got: ${record.reason}`);
+    assert.strictEqual(record.sovereignty, null,
+      'never assert a rung for a registry that declares none');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (e2) The LADDER's guard: the same fixture, ladder-live, with a SECOND subscription vendor.
+//
+// This is the assertion (e) cannot make. `>= subscription` must be satisfiable by a vendor that
+// is not claude — otherwise the ladder is "claude" wearing a new name — while a shared-gateway
+// lane must still be refused. The fixture below adds a codex subscription row precisely so a
+// vendor-shaped assertion would FAIL here and a rung-shaped one passes.
+// ---------------------------------------------------------------------------
+
+function ladderRegistryWithCodex() {
+  const reg = registryWithCodex();
+  reg.lanes = {
+    claude_subscription:  { sovereignty: 'subscription',   endpoint: 'anthropic_default', auth: 'anthropic_oauth_subscription' },
+    codex_subscription:   { sovereignty: 'subscription',   endpoint: 'openai_default',    auth: 'codex_account' },
+    ica_gateway_messages: { sovereignty: 'shared_gateway', endpoint: 'ica_gateway',       auth: 'ica_team_key' },
+  };
+  reg.task_class_sovereignty = {
+    orchestration: { min_rung: 'subscription', reason: 'quality_bar' },
+    synthesis:     { min_rung: 'subscription', reason: 'quality_bar' },
+  };
+  // No chain for these classes here — force the ranking path, which is where a vendor pin used
+  // to be unreachable and a rung filter has to do the work.
+  delete reg.routing_policy.orchestration;
+  for (const m of Object.values(reg.models)) {
+    for (const p of m.providers) {
+      p.lane = p.provider === 'claude' ? 'claude_subscription'
+        : p.provider === 'codex' ? 'codex_subscription'
+        : 'ica_gateway_messages';
+    }
+  }
+  return reg;
+}
+
+describe('(e2) ladder-live: a floored class is satisfied by RUNG, not by vendor', () => {
+  test('a codex SUBSCRIPTION lane satisfies orchestration — no rule names claude', () => {
+    const record = resolveWithRegistry(ladderRegistryWithCodex(), {
+      model: 'gpt-5.6-terra', provider: 'codex', task_class: 'orchestration', effort: 'low',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'codex',
+      `>= subscription must be satisfiable by a non-claude subscription; got ${record.chosen_plugin_id}`);
+    assert.strictEqual(record.sovereignty, 'subscription');
+    assert.strictEqual(record.sovereignty_floor.min_rung, 'subscription');
+  });
+
+  test('but the SHARED-GATEWAY lane is still refused for the same class', () => {
+    const record = resolveWithRegistry(ladderRegistryWithCodex(), {
+      model: 'haiku', provider: 'ica', task_class: 'orchestration', effort: 'low',
+    });
+    assert.notStrictEqual(record.chosen_plugin_id, 'ica',
+      'free ICA haiku must not satisfy a subscription floor');
+    assert.strictEqual(record.sovereignty, 'subscription');
+  });
+
+  test('the free ICA lane is untouched for an UNFLOORED class', () => {
+    const record = resolveWithRegistry(ladderRegistryWithCodex(), {
+      model: 'haiku', task_class: 'exploration', effort: 'low',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'ica',
+      'the ladder must not quietly ban offload for work that declares no minimum');
   });
 });
 

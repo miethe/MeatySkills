@@ -33,6 +33,77 @@ plan → tools-required execute → tool-less review) for tasks needing both. Se
 ⚠️ Deploy deliberately withheld — see the HOLD note in `model-registry.yaml`'s header
 (`node_01M0X28GWQYPZFGH8TQC9V9DAB`).
 
+## 2026-08-25 — the sovereignty ladder: a task class declares a MINIMUM RUNG, not a vendor
+
+The router had **no lane concept at all** — only a bare `provider:` string on each model instance —
+and the actual endpoint was selected by REGEXing the model id inside `buildRegistryInvocation()`
+(`/-dzus$/` → `ica-codex.sh`, `/gpt/` → `ica-gpt.sh`, else `ica-claude.sh`). Three different
+endpoint+auth+transport combinations, chosen by string-matching an id: the exact
+suffix-as-lane-marker defect this estate has already been bitten by, live and load-bearing.
+Meanwhile `SKILL.md` carried the correct doctrine (*"the lane discriminator is
+`ANTHROPIC_BASE_URL`, not the id"*) as prose, sitting next to code that violated it.
+
+`verdict requires >= subscription` now REPLACES `verdict pins to subscription Claude`. A Codex
+subscription satisfies it with no rule naming a vendor.
+
+- **`SOVEREIGNTY_RUNGS`** (`routing-record.js`, next to `MAX_RANK_DISPLACEMENT` and for the same
+  reason — the ladder is a property of what a valid record may *claim*): `local` (2) >
+  `subscription` (1) > `shared_gateway` (0), with `unknown` at **-1** so an unclassified lane
+  satisfies nothing. Never default an unclassified lane to `subscription`.
+- **`lanes:`** in `model-registry.yaml` — the ENDPOINT + AUTH unit sovereignty attaches to, and the
+  thing that did not previously exist. Nine lanes; the three ICA ones are exactly the three
+  `buildRegistryInvocation` branches, so the table is grounded in the invocation code rather than in
+  ids. Every one of the 47 provider instances now declares a `lane:`, and the resolver reads only
+  that. ⚠️ `codex_subscription` and `gemini_direct` are `verified: false` with a `probe:` — both are
+  metered API accounts rather than seats, and whether that counts as "subscription" is Nick's call.
+  `bob`, `nano-banana` and `sora` are deliberately left `unknown`.
+- **`task_class_sovereignty:`** — the minimum, with a **MANDATORY** `reason` ∈ {`cost_policy`,
+  `quality_bar`, `egress_absolute`}. `validateSovereigntyDeclarations()` **throws** on a missing or
+  out-of-vocabulary reason: a registry with an unreasoned minimum does not load. That is the
+  cheapest available place to stop a future cost-tuning pass from relaxing a privacy boundary it
+  could not tell apart from a cost knob.
+- **The MUST-stay early return became a FILTER.** `resolveFromRegistry` no longer jumps to
+  `chosen_plugin_id: 'claude'` before ranking anything; it computes the floor and applies
+  `candidate.rung >= floor.rung` at the explicit-provider honor, the chain walk (as a *skip*,
+  applied AFTER the empirical re-rank so feedback cannot re-rank across it), the cost/priority
+  ranking, and the fallback chain. `buildSovereigntyFloorRecord` replaces the vendor-pinned last
+  resort with "the highest-rung lane that clears the floor".
+- **When nothing clears the floor the resolver REFUSES.** Not a downgrade, not a claude fallback —
+  a throw naming the floor, the reason, and the fact that it is a refusal. `journal_reflect`
+  (`min_rung: local`, `egress_absolute`) is unroutable today because the `local` rung has zero
+  members, and that is the correct fail-closed outcome for an egress rule.
+- **Feedback immunity widened from "is MUST-stay" to "declares a minimum"**, so an `egress_absolute`
+  class that is not MUST-stay is still immune. Strictly wider — it can only remove adjustable
+  surface. `routing.local.toml` cannot override a floored class either.
+- **Record fields 15–17: `lane`, `sovereignty`, `sovereignty_floor`** (additive, optional).
+  `chosen_plugin_id` alone cannot identify a lane, so an auditor without these would have to
+  re-derive one from the model id — rebuilding the defect one layer down. `validateRoutingRecord`
+  asserts `sovereignty >= sovereignty_floor`. That assertion is deliberately NOT in
+  `finalizeRoutingRecord`, which documents itself as the emitter's enforcement point but which
+  **resolver.js has never called** (verified: zero call sites outside tests).
+- **Backward compatibility is a REGIME, not a flag.** A registry with no `lanes:` table keeps the
+  pre-ladder contract verbatim (MUST-stay → claude), which is strictly *narrower* than
+  `>= subscription`, so no legacy registry can widen. The legacy `provider-plugins.toml` path does
+  not implement the ladder at all; that asymmetry is declared in SPEC §3 invariant 1.
+- **48 new tests** (`tests/test-sovereignty-ladder.js`) plus 4 in `test-registry-resolver.js` §(e2),
+  which is the first fixture with **two different subscription vendors** — a vendor-shaped
+  assertion fails there and a rung-shaped one passes.
+
+⚠️ **KNOWN GAP — the ladder is enforced in the resolver and UNAUDITED.** `skillmeat routing audit
+--violations` lives in skillmeat and still tests `chosen_plugin_id !== 'claude'`, which is now wrong
+in both directions: it flags a legitimate codex-subscription verdict, and it clears an
+`ica/gpt-5.6-terra-dzus` decision that differs from `codex/gpt-5.6-terra` only by lane. A green
+`--violations` run says nothing about sovereignty until that predicate reads fields 15–17.
+
+⚠️ **KNOWN WIDENING, deliberate and written out.** The seven formerly-MUST-stay classes were pinned
+to claude *specifically*; `>= subscription` also admits codex. `orchestration` and `mode_d` are
+unchanged in practice (their chains still pin `claude/claude-opus-5`); the other five have no chain
+and reach a codex lane only when a caller explicitly asks for a gpt model.
+
+⚠️ **NOT UPDATED — the frozen bundle copies.** `workflow-sets/v3.5/artifacts/skill/delegation-router/`
+and `.../v4.1/...` carry their own `routing-record.js` + tests. They are pinned snapshots and were
+deliberately left alone; whoever owns bundle versioning decides whether they move.
+
 ## 2026-08-17 — `requires_write`: the router can finally decline to send authoring work to an agent that cannot write
 
 The RoutingRecord had **no write-authority dimension at all**, and `task-class-vocabulary.v1.json`

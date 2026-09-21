@@ -211,6 +211,19 @@ shelled-out `invocation_template` decides the provider itself.
   client-side convention orthogonal to who serves the tokens; a native subscription session
   legitimately reports `claude-opus-5[1m]`. The lane discriminator is **`ANTHROPIC_BASE_URL`**.
   Reading your own session's `[1m]` as "already on ICA" suppresses offload that should have happened.
+  This is now backed by code, not only by this bullet: the registry declares a `lane:` (endpoint +
+  auth) on every provider instance and the resolver reads *that*, never an id.
+- Do not say a MUST-stay class "pins to claude". A protected class declares a **minimum rung on the
+  sovereignty ladder** — `verdict requires >= subscription` — and any lane at or above it satisfies
+  it, including a Codex subscription. No rule names a vendor. See
+  [`references/model-registry.md`](references/model-registry.md) § The sovereignty ladder.
+- Do not say a **provider** tells you the sovereignty. `codex/gpt-5.6-terra` (subscription) and
+  `ica/gpt-5.6-terra-dzus` (shared gateway) are the same weights on different sovereignty: Codex
+  reached *through* the shared ICA gateway is **not** a Codex subscription.
+- Do not say an unclassified lane is fine. No `lane`, a dangling `lane`, or `sovereignty: unknown`
+  sits BELOW every real rung and satisfies no minimum — "could not check" is never "clear".
+- Do not say a green `skillmeat routing audit --violations` proves a sovereignty boundary held. That
+  predicate still tests `chosen_plugin_id === 'claude'` and is lane-blind (SPEC §3 invariant 7).
 - Do not say an audit entry's `actual_provider_used` is evidence of where a leg ran. Unless the entry
   carries `realization_confirmed: true` **with** `realization_evidence`, it is an intent or a
   self-report. Every v1 entry (no `schema_version`) is unconfirmed by definition.

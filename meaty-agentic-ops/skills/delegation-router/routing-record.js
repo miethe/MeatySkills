@@ -59,6 +59,31 @@
  *                                                    routing-feedback-router-merge-handoff.md §2.4.7);
  *                                                    `score_delta` must never reappear — there is no
  *                                                    score in the resolver for a delta to apply to.
+ * @property {string|null}     lane               - The LANE id (endpoint + auth unit) this decision
+ *                                                    landed on, e.g. 'claude_subscription' /
+ *                                                    'ica_gateway_messages'. 15th field (additive,
+ *                                                    optional; default null). Recorded because
+ *                                                    `chosen_plugin_id` ALONE CANNOT IDENTIFY A LANE:
+ *                                                    codex/gpt-5.6-terra (subscription) and
+ *                                                    ica/gpt-5.6-terra-dzus (shared gateway) are the
+ *                                                    same weights on different sovereignty, and an
+ *                                                    auditor forced to re-derive the lane from the
+ *                                                    model id would re-create the suffix-as-lane-marker
+ *                                                    defect one layer down.
+ * @property {string|null}     sovereignty        - The rung the chosen lane actually carries:
+ *                                                    'local'|'subscription'|'shared_gateway', the
+ *                                                    'unknown' sentinel, or null when the registry
+ *                                                    declares no ladder at all. 16th field (additive,
+ *                                                    optional; default null).
+ * @property {Object|null}     sovereignty_floor  - The minimum this task class REQUIRED and why:
+ *                                                    {min_rung, reason} where reason ∈
+ *                                                    SOVEREIGNTY_MINIMUM_REASONS. 17th field
+ *                                                    (additive, optional; default null). Non-null only
+ *                                                    when the ladder was live for this resolution.
+ *                                                    When BOTH this and `sovereignty` are present,
+ *                                                    validateRoutingRecord ASSERTS the ladder held —
+ *                                                    which is why the pair is on the record rather
+ *                                                    than only in the reason string.
  */
 
 /**
@@ -90,6 +115,91 @@ const CONTEXT_CLASSES = ['C1', 'C2', 'C3', 'C4'];
  * @type {number}
  */
 const MAX_RANK_DISPLACEMENT = 1;
+
+/**
+ * THE SOVEREIGNTY LADDER — three rungs, ascending.
+ *
+ * A LANE (endpoint + auth) carries a sovereignty class. A task class declares a MINIMUM RUNG,
+ * never a named vendor or model. `verdict requires >= subscription` REPLACES `verdict pins to
+ * subscription Claude`, so a Codex subscription satisfies it with no rule naming a vendor.
+ *
+ *   local          (2, highest)  runs on our own hardware; nothing leaves the LAN
+ *   subscription   (1)           an account we control and pay for directly (Claude sub, Codex sub)
+ *   shared_gateway (0, lowest)   third-party-mediated shared pool (ICA)
+ *
+ * ⚠️ INVARIANT — THE CLASS BELONGS TO THE LANE, NEVER TO A VENDOR OR A MODEL ID.
+ * Codex reached THROUGH the shared ICA gateway is NOT a Codex subscription. The same model id
+ * can arrive over a subscription lane or a shared lane and the sovereignty differs. This estate
+ * has already been bitten by treating a model-id SUFFIX (`[1m]`) as a lane marker — endpoint +
+ * auth define the lane; the id does not, and no consumer of this constant may derive a rung by
+ * pattern-matching a model id.
+ *
+ * Declared HERE, on the record schema, for the same reason MAX_RANK_DISPLACEMENT is: the ladder
+ * is a property of what a valid record may CLAIM, so a record asserting it ran below its own
+ * declared floor is rejected at validation regardless of which producer built it.
+ *
+ * @readonly
+ * @type {Record<string, number>}
+ */
+const SOVEREIGNTY_RUNGS = {
+  shared_gateway: 0,
+  subscription: 1,
+  local: 2,
+};
+
+/**
+ * The rung labels, ascending. The ARRAY INDEX is not the rung — read SOVEREIGNTY_RUNGS for that.
+ * @readonly
+ * @type {string[]}
+ */
+const SOVEREIGNTY_CLASSES = Object.keys(SOVEREIGNTY_RUNGS)
+  .sort((a, b) => SOVEREIGNTY_RUNGS[a] - SOVEREIGNTY_RUNGS[b]);
+
+/**
+ * Sentinel for a lane that could not be classified — an instance with no `lane`, or a `lane`
+ * absent from the registry's `lanes:` table.
+ *
+ * FAIL-CLOSED: `unknown` sits BELOW every real rung (-1) and therefore satisfies NO minimum.
+ * "I could not determine the lane" must never read as "the lane is fine" — same posture as
+ * `aos-git`'s UNMEASURED and artifact-provisioning's absence rule. Never default to
+ * `subscription`.
+ *
+ * @readonly
+ */
+const SOVEREIGNTY_UNKNOWN = 'unknown';
+const SOVEREIGNTY_UNKNOWN_RUNG = -1;
+
+/**
+ * The REASON vocabulary for a declared minimum. REQUIRED on every declaration — a minimum with
+ * no reason is exactly what a future cost-tuning pass relaxes silently.
+ *
+ *   cost_policy      negotiable; a tuning pass may revisit it
+ *   quality_bar      negotiable on evidence
+ *   egress_absolute  NOT negotiable by ANY automated, empirical, or feedback path
+ *
+ * WHY THE FIELD EXISTS AT ALL. "Stay off the shared gateway for the verdict" is a cost/quality
+ * judgement. "Stay local for the private journal / the personal-chat corpus" is an EGRESS rule
+ * with no sign-off path at all. If both were merely "a minimum rung" they would be
+ * indistinguishable to a tuning pass, and the privacy boundary is the one that would move. The
+ * reason field is what keeps them separable.
+ *
+ * @readonly
+ * @type {string[]}
+ */
+const SOVEREIGNTY_MINIMUM_REASONS = ['cost_policy', 'quality_bar', 'egress_absolute'];
+
+/**
+ * Resolve a sovereignty label to its numeric rung. Anything unrecognized (including null,
+ * undefined and the `unknown` sentinel) resolves to SOVEREIGNTY_UNKNOWN_RUNG, which clears no
+ * floor. Single point of truth so no caller hand-rolls the comparison.
+ *
+ * @param {string|null|undefined} sovereignty
+ * @returns {number}
+ */
+function sovereigntyRung(sovereignty) {
+  const r = SOVEREIGNTY_RUNGS[sovereignty];
+  return typeof r === 'number' ? r : SOVEREIGNTY_UNKNOWN_RUNG;
+}
 
 const MUST_STAY_PRIMARY_CLASSES = [
   'orchestration',
@@ -289,6 +399,66 @@ function validateRoutingRecord(record) {
     }
   }
 
+  // ---- Sovereignty ladder: fields 15–17, additive + optional, same backward-compatibility
+  // posture as context_ref/context_class/routing_feedback. Absent is tolerated (records emitted
+  // before the ladder, and records from a registry that declares no `lanes:` table).
+
+  if (record.lane !== undefined && record.lane !== null && typeof record.lane !== 'string') {
+    throw new Error(`RoutingRecord.lane must be a lane id string or null; got ${typeof record.lane}`);
+  }
+
+  if (record.sovereignty !== undefined && record.sovereignty !== null &&
+      !SOVEREIGNTY_CLASSES.includes(record.sovereignty) &&
+      record.sovereignty !== SOVEREIGNTY_UNKNOWN) {
+    throw new Error(
+      `RoutingRecord.sovereignty must be one of ${SOVEREIGNTY_CLASSES.join('|')}|` +
+      `${SOVEREIGNTY_UNKNOWN} or null; got ${JSON.stringify(record.sovereignty)}`
+    );
+  }
+
+  if (record.sovereignty_floor !== undefined && record.sovereignty_floor !== null) {
+    const floor = record.sovereignty_floor;
+    if (typeof floor !== 'object' || Array.isArray(floor)) {
+      throw new Error(
+        `RoutingRecord.sovereignty_floor must be an object or null; got ${typeof floor}`
+      );
+    }
+    if (!SOVEREIGNTY_CLASSES.includes(floor.min_rung)) {
+      throw new Error(
+        `RoutingRecord.sovereignty_floor.min_rung must be one of ` +
+        `${SOVEREIGNTY_CLASSES.join('|')}; got ${JSON.stringify(floor.min_rung)}`
+      );
+    }
+    // The REASON half is mandatory, for the same argument routing_feedback.combined_signal is:
+    // a minimum with no reason cannot be told apart from a cost knob by whoever tunes cost next,
+    // and the one it would move is the egress boundary. `undefined` is rejected, never defaulted.
+    if (!SOVEREIGNTY_MINIMUM_REASONS.includes(floor.reason)) {
+      throw new Error(
+        `RoutingRecord.sovereignty_floor.reason must be present and one of ` +
+        `${SOVEREIGNTY_MINIMUM_REASONS.join('|')} (a minimum with no stated reason is not a ` +
+        `valid record — see SOVEREIGNTY_MINIMUM_REASONS); got ${JSON.stringify(floor.reason)}`
+      );
+    }
+
+    // THE LADDER ASSERTION. This is the emit-time backstop, and it lives in
+    // validateRoutingRecord rather than finalizeRoutingRecord DELIBERATELY: finalizeRoutingRecord
+    // documents itself as the emitter's enforcement point but resolver.js has never called it
+    // (validateRoutingRecord is what every emitted record actually passes through). Putting the
+    // assertion on the path that is genuinely taken is the difference between an enforced
+    // invariant and a documented one.
+    if (record.sovereignty !== undefined && record.sovereignty !== null) {
+      const actual = sovereigntyRung(record.sovereignty);
+      const required = sovereigntyRung(floor.min_rung);
+      if (actual < required) {
+        throw new Error(
+          `RoutingRecord violates its own sovereignty floor: chose a '${record.sovereignty}' ` +
+          `lane (${record.lane || 'unclassified'}) for a class requiring >= '${floor.min_rung}' ` +
+          `(reason: ${floor.reason})`
+        );
+      }
+    }
+  }
+
   return record;
 }
 
@@ -317,6 +487,13 @@ function finalizeRoutingRecord(record, taskClass) {
   if (record.routing_feedback === undefined) {
     record.routing_feedback = null;
   }
+  // Sovereignty fields default like the audit passthroughs above; they are never FORCED here.
+  // A floor is a property of the decision the resolver made, not something the emitter can
+  // invent after the fact — clearing or synthesizing one here would make the ladder assertion
+  // in validateRoutingRecord un-triggerable, which is the opposite of enforcement.
+  if (record.lane === undefined) record.lane = null;
+  if (record.sovereignty === undefined) record.sovereignty = null;
+  if (record.sovereignty_floor === undefined) record.sovereignty_floor = null;
   const mustStay = taskClass !== undefined && MUST_STAY_PRIMARY_CLASSES.includes(taskClass);
   const nullProvider = CONTEXT_REF_NULL_PROVIDERS.includes(record.chosen_plugin_id);
   if (mustStay || nullProvider) {
@@ -353,6 +530,9 @@ function createEmptyRecord() {
     context_ref: null,
     context_class: null,
     routing_feedback: null,
+    lane: null,
+    sovereignty: null,
+    sovereignty_floor: null,
   };
 }
 
@@ -363,6 +543,12 @@ module.exports = {
   CONTEXT_REF_NULL_PROVIDERS,
   CONTEXT_CLASSES,
   MAX_RANK_DISPLACEMENT,
+  SOVEREIGNTY_RUNGS,
+  SOVEREIGNTY_CLASSES,
+  SOVEREIGNTY_UNKNOWN,
+  SOVEREIGNTY_UNKNOWN_RUNG,
+  SOVEREIGNTY_MINIMUM_REASONS,
+  sovereigntyRung,
   AGENT_TYPE_ID_MAP,
   validateRoutingRecord,
   finalizeRoutingRecord,
