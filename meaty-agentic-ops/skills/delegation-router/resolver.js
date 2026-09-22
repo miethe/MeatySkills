@@ -1464,7 +1464,7 @@ function buildRegistryMustStayRecord(registry, model, effort, reason) {
     model: deriveModelLabel(model, { modelId, modelEntry: modelEntry || {}, providerId: 'claude' }),
     effort,
     agent_type_id: AGENT_TYPE_ID_MAP['claude'],
-    invocation_template: `claude -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`,
+    invocation_template: `claude -p "{prompt}" --model ${modelId}`,
     scope_flags: [],
     stage: 'A',
     validation_contract: 'none',
@@ -1489,7 +1489,7 @@ function buildRegistryInvocation(chosen, profile, effort) {
   const modelId = chosen.modelId;
   switch (providerId) {
     case 'claude':
-      return `claude -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
+      return `claude -p "{prompt}" --model ${modelId}`;
     case 'ica': {
       // ICA gpt-5.6-*-dzus are a free-to-us agentic *Codex* lane: ICA can't serve them on
       // the /responses API Codex speaks (Azure api-version-gated), so ~/ica-codex.sh
@@ -1511,9 +1511,9 @@ function buildRegistryInvocation(chosen, profile, effort) {
         // enforcement here, not description-only — embedded directly in the invocation, mirroring
         // how --sandbox is embedded (not left to scope_flags alone) elsewhere in this function.
         const toolFlag = chosen.toolRestricted ? ' --allowedTools ""' : '';
-        return `~/ica-gpt.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions${toolFlag}`;
+        return `~/ica-gpt.sh -p "{prompt}" --model ${modelId}${toolFlag}`;
       }
-      return `~/ica-claude.sh -p "{prompt}" --model ${modelId} --dangerously-skip-permissions`;
+      return `~/ica-claude.sh -p "{prompt}" --model ${modelId}`;
     }
     case 'gemini':
       return `gemini "{prompt}" --model ${modelId} --yolo`;

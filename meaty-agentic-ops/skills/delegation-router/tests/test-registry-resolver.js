@@ -120,6 +120,21 @@ function registryWithCodex() {
   return registry;
 }
 
+// A GPT model served on the ICA provider (the "ica-gpt" sub-lane inside
+// buildRegistryInvocation's case 'ica': block — routed to ~/ica-gpt.sh when the model id
+// matches /gpt/i and is not a -dzus codex-shim id). Distinct from registryWithCodex(),
+// which puts the same model FAMILY on the 'codex' provider instead.
+function registryWithIcaGpt() {
+  const registry = baseRegistry();
+  registry.models['gpt-5.6-luna-ica'] = {
+    family: 'gpt', class: 'luna-ica', sampling: 'stochastic', status: 'active',
+    providers: [
+      { provider: 'ica', model_id: 'gpt-5.6-luna', cost_tier: 'free', allowance: 'unlimited', enabled: true, priority: 1 },
+    ],
+  };
+  return registry;
+}
+
 function writeRegistry(reg) {
   const p = path.join(os.tmpdir(), `test-registry-${process.pid}-${Math.floor(process.hrtime()[1])}.json`);
   fs.writeFileSync(p, JSON.stringify(reg), 'utf8');
@@ -637,6 +652,73 @@ describe('cross-model priority scope', () => {
     });
     assert.strictEqual(record.chosen_plugin_id, 'claude',
       'explicit provider must still select the requested lane within a model');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Positive control — --dangerously-skip-permissions must never appear in an
+// invocation_template for claude/ica/ica-gpt (node_01M34T2M6MVT8P9CY3ZXBCEC38).
+//
+// buildRegistryInvocation() and buildRegistryMustStayRecord() (resolver.js) previously
+// baked --dangerously-skip-permissions directly into every emitted invocation_template for
+// these three lanes. That flag gets an ICA/Claude dispatch DENIED by the auto-mode permission
+// classifier before it ever runs — grep-returns-zero over resolver.js is necessary but NOT
+// sufficient on its own (the flag could still be emitted at runtime by a code path grep
+// missed), so these assertions call resolve() end-to-end through the REGISTRY path (no
+// _configPath — this is resolveFromRegistry, the default/production path, not the legacy TOML
+// fixture path exercised by test-resolver.js) and assert against the actual emitted string.
+// ---------------------------------------------------------------------------
+
+describe('Invocation-template flag hygiene — --dangerously-skip-permissions must never appear', () => {
+  test('claude provider: invocation_template omits --dangerously-skip-permissions', () => {
+    const record = resolveWithRegistry(baseRegistry(), {
+      model: 'claude-sonnet-4-6', provider: 'claude', task_class: 'implementation',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'claude');
+    assert.ok(
+      !record.invocation_template.includes('--dangerously-skip-permissions'),
+      `claude invocation_template must not carry the flag: ${record.invocation_template}`);
+    assert.strictEqual(
+      record.invocation_template,
+      'claude -p "{prompt}" --model claude-sonnet-4-6');
+  });
+
+  test('ica provider (non-gpt model): invocation_template omits --dangerously-skip-permissions', () => {
+    const record = resolveWithRegistry(baseRegistry(), {
+      model: 'claude-haiku-4-5', provider: 'ica', task_class: 'mechanical',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'ica');
+    assert.ok(
+      !record.invocation_template.includes('--dangerously-skip-permissions'),
+      `ica invocation_template must not carry the flag: ${record.invocation_template}`);
+    assert.strictEqual(
+      record.invocation_template,
+      '~/ica-claude.sh -p "{prompt}" --model claude-haiku-4-5');
+  });
+
+  test('ica-gpt sub-lane (gpt model on ica provider): invocation_template omits --dangerously-skip-permissions', () => {
+    const record = resolveWithRegistry(registryWithIcaGpt(), {
+      model: 'gpt-5.6-luna', provider: 'ica', task_class: 'mechanical',
+    });
+    assert.strictEqual(record.chosen_plugin_id, 'ica');
+    assert.ok(
+      !record.invocation_template.includes('--dangerously-skip-permissions'),
+      `ica-gpt invocation_template must not carry the flag: ${record.invocation_template}`);
+    assert.strictEqual(
+      record.invocation_template,
+      '~/ica-gpt.sh -p "{prompt}" --model gpt-5.6-luna');
+  });
+
+  test('MUST-stay claude fallback record (buildRegistryMustStayRecord) also omits the flag', () => {
+    // task_class='orchestration' is in must_stay_primary and baseRegistry() has no `lanes`
+    // table (ladderLive=false), so this is forced through buildRegistryMustStayRecord — the
+    // SECOND, separate hardcoded-template site the fix touched (not buildRegistryInvocation).
+    const record = resolveWithRegistry(baseRegistry(), {
+      model: 'claude-opus-4-8', provider: 'claude', task_class: 'orchestration',
+    });
+    assert.ok(
+      !record.invocation_template.includes('--dangerously-skip-permissions'),
+      `MUST-stay claude invocation_template must not carry the flag: ${record.invocation_template}`);
   });
 });
 

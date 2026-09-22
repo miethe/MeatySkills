@@ -122,7 +122,7 @@ max_context = 200000
 sampling = "stochastic"
 
 [providers.ica.invocation_template]
-base = '~/ica-claude.sh -p "{prompt}" --model {model} --dangerously-skip-permissions'
+base = '~/ica-claude.sh -p "{prompt}" --model {model}'
 scope_flags = '--max-turns {max_turns}'
 output_format_json = '--json-schema "{schema}"'
 continuity = '--continue'

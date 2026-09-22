@@ -3,6 +3,26 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-09-22 — resolver.js no longer bakes `--dangerously-skip-permissions` into any invocation_template
+
+`buildRegistryInvocation()` and `buildRegistryMustStayRecord()` hardcoded
+`--dangerously-skip-permissions` directly into every `invocation_template` string emitted for the
+`claude`, `ica`, and `ica-gpt` (the GPT-on-ICA sub-lane inside `case 'ica':`) providers — the
+default, production `resolveFromRegistry()` path, not the legacy TOML-fixture path
+`test-resolver.js` exercises. That flag gets a Claude Code / ICA dispatch **denied by the
+auto-mode permission classifier before it ever runs**, per `ica-delegate` SKILL.md's own
+"Do Not Say" table — so every RoutingRecord this resolver ever emitted for those three
+providers carried a flag that got the resulting dispatch denied. Removed the flag from all four
+call sites (no replacement flag added — the grant lives in `ica-settings.json`'s `permissions`
+block instead, per `ica-delegate` SKILL.md § Invocation Flags). Fixed the `test-resolver.js` TOML
+fixture at the same time (it pinned the flag as the expected shape — a tautological-gate fixture
+that would have kept validating the broken shape). Added a positive-control suite in
+`tests/test-registry-resolver.js` that drives `resolve()` end-to-end through the registry path
+(not the config-injected TOML path) for `claude`/`ica`/`ica-gpt`/the MUST-stay fallback record and
+asserts the flag's absence in the actual emitted `invocation_template` string — confirmed to fail
+against the pre-fix resolver.js (4/4 failures reproducing the exact broken strings) and pass
+against the fix. `node_01M34T2M6MVT8P9CY3ZXBCEC38`.
+
 ## 2026-09-09 — Fable 5.1 / Astra registry posture and registry integrity gates
 
 - Added active `claude-fable-5-1` and `gpt-6-astra` rows with exact context/output/pricing and
