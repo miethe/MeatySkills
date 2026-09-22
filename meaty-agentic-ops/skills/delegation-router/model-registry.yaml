@@ -87,7 +87,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-09-22   # Adds scaffolded Claude Opus 5.5 after primary-source review and a bare-id ICA CCx tenancy probe; prior history: CHANGELOG.md.
+updated: 2026-09-22   # Adds GPT-6 Sol/Luna personal-Codex rows; ICA remains on GPT-5.6 ids. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -832,6 +832,42 @@ models:
         health: { status: available, checked_at: 2026-09-09, evidence: "Codex CLI 0.153.0+ official availability; local 0.153.4 measured" }
         write_capability: codex_sandbox
 
+  gpt-6-sol:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-6 Sol via the personal Codex account — frontier/hardest personal-Codex tier replacing GPT-5.6 Sol. GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6."
+    scores: { cost: 4, intelligence: 9, taste: 8, speed: 5 }
+    when_to_use: [debug-escalation, deep-reasoning, agentic-coding, architecture, novel-algorithm-design]
+    tools: [functions, web-search, file-search, computer-use]
+    related_skills: [codex]
+    max_context: 1050000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 2, output_per_mtok_usd: 10 }
+    reasoning_efforts: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+
+  gpt-6-luna:
+    family: openai
+    class: codex
+    descriptor: "OpenAI GPT-6 Luna via the personal Codex account — cheap/fast personal-Codex tier replacing GPT-5.6 Luna. Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6."
+    scores: { cost: 7, intelligence: 8, taste: 7, speed: 9 }
+    when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
+    tools: [functions, web-search, file-search, computer-use]
+    related_skills: [codex]
+    max_context: 1050000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 0.1, output_per_mtok_usd: 0.5 }
+    reasoning_efforts: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    sampling: deterministic
+    status: active
+    providers:
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+
   gpt-5.6-sol:
     family: openai
     class: codex
@@ -845,7 +881,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
       # ICA ccx lane — measured 2026-08-26, re-probed 2026-08-27 (node_01M0Z7JP9YT7W15X94Z843AM9Y,
       # won't-wire-direct-tools decision recorded there). SERVABLE (all 3 CCx keys, bare id,
       # 600,007 prompt tokens) but tools and reasoning are mutually exclusive there on BOTH
@@ -904,7 +940,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-terra-dzus:
     family: openai
