@@ -87,7 +87,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-09-09   # SOTA M1 registry retune: Fable 5.1/Astra, advanced_sol, hard health/write gates, Gemini quota gating, and duplicate-identity validation. Prior history: CHANGELOG.md.
+updated: 2026-09-22   # Adds scaffolded Claude Opus 5.5 after primary-source review and a bare-id ICA CCx tenancy probe; prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -115,6 +115,7 @@ ica_catalog:
   - { model_id: "claude-opus-4-6", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
   - { model_id: "claude-opus-4-8", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
   - { model_id: "claude-opus-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 team not allowed to access model (bare-id probe 2026-09-22)" } }
   - { model_id: "claude-sonnet-4-5", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-4-6", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
@@ -359,6 +360,25 @@ task_class_sovereignty:
 models:
 
   # ── Claude family ───────────────────────────────────────────────────────────
+
+  claude-opus-5-5:
+    family: claude
+    class: opus
+    descriptor: "Claude Opus 5.5 (released 2026-09-22). Exact API ID claude-opus-5-5; Anthropic documents 1M context, 128K maximum output, adaptive thinking always on, and $4/$20 per input/output MTok ($0.20 cache reads). Anthropic reports >30% faster output than Opus 5 and recommends starting most workloads here, escalating to Fable 5.1 after higher-effort Opus 5.5 falls short. Those routing/performance claims are vendor-reported, not locally measured. Harness caveat MEASURED FROM PRIMARY: preserved thinking applies to API accounts created on/after 2026-08-31, so prior Claude context cannot be edited. Forced-tool-choice and thinking-history behavior are UNKNOWN. ICA CCx bare-id probe returned 403 team not allowed to access model; no [1m] variant is documented. Native availability in this checkout is unmeasured because claude models requires login."
+    scores: { cost: 3, intelligence: 9, taste: 8, speed: 6 }   # Cost holds Opus 5's subscription score: actual spend unmeasured; lower published price alone does not change it. Intelligence/Taste/Speed are vendor-reported (not local evals); Speed 6 follows reported >30% gain vs Opus 5=5.
+    when_to_use: [long-running-agentic-coding, knowledge-work, explicit-opus-5-5-evaluation]
+    tools: [agent_tool, task_tool, one_million_context]
+    max_context: 1000000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 4, output_per_mtok_usd: 20, cache_read_per_mtok_usd: 0.20 }
+    reasoning_efforts: [low, medium, high, xhigh, max]
+    default_effort: medium
+    sampling: deterministic
+    status: active
+    selection_posture: default_spine
+    providers:
+      - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, health: { status: unknown, evidence: "launch page reports Claude Code availability; local model list unavailable while logged out" } }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, health: { status: unavailable, checked_at: 2026-09-22, evidence: "bare-id probe: 403 team not allowed to access model" } }
 
   claude-opus-5:
     family: claude
