@@ -103,7 +103,7 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
   re-probe before relying on this for Gemini specifically.
 - Prefer ICA-first for non-grounded cross-family second opinions; reach for native only to close
   a grounding/SVG/multimodal capability gap. Do not leave an ICA workflow solely to get Gemini
-  image generation: the `ica/gpt-5.6-terra-dzus` shim is the second image lane.
+  image generation: the `ica/gpt-5.6-terra` shim (registry `gpt-5.6-terra-ica`) is the second image lane.
 - Auth: `GEMINI_API_KEY` (AI Studio, metered) in `~/.config/aos/secrets.env`;
   `~/.gemini/settings.json` `selectedType=gemini-api-key`. `IneligibleTierError` means the
   settings reverted to `oauth-personal` — fix the settings, don't re-OAuth.

@@ -87,7 +87,7 @@ agentic_meta_dev MODEL-ROUTING for the current row.)
 
 `allowance: unlimited` (genuinely $0, cost-shifted off the primary budget) applies to **exactly
 5 models**: `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-...`,
-`ibm/granite-4-h-small`, `gpt-5.6-luna-dzus` (added 2026-08-26). Every other ICA instance —
+`ibm/granite-4-h-small`, `gpt-5.6-luna` (added 2026-08-26 as the beta alias `gpt-5.6-luna-dzus`; bare ccx id since the 2026-09-22 beta retirement). Every other ICA instance —
 Sonnet, Opus, GPT (other than Luna), Gemini — is `allowance: shared_token_pool`: token-limited
 against ICA's shared pool, an opt-in **cost-shift**, not free. Don't conflate "runs on ICA" with
 "free" — see `routes/open-models.md` for the free-5's capability profile.

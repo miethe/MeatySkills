@@ -26,16 +26,18 @@
 # CRITICAL ACCURACY INVARIANT (do not assume — encode it)
 #   ICA "free" (`allowance: unlimited`, $0, cost-shifted off the primary budget)
 #   applies to: claude-haiku-4-5, gemma-4-26b, llama-4-maverick, granite-4-small, AND
-#   (as of 2026-08-26, Nick authoritative) gpt-5.6-luna-dzus — FIVE models, not four.
+#   (as of 2026-08-26, Nick authoritative) gpt-5.6-luna — FIVE models, not four. (ICA ccx id
+#   `gpt-5.6-luna`; the beta alias `gpt-5.6-luna-dzus` was retired 2026-09-22 with the beta keys.)
 #   Any doc/note still saying "exactly 4" is stale.
 #   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
 # ICA ROUTING RESTATEMENT — 2026-08-28 (documentation-only; no chain/score change here):
 #   Prefer ccx / CCx1 (the one focus key for now) for generally eligible ICA work. CCx1 is approximately 2,000 credits/week
-#   (~$1,000/week in API credits) plus the independent free-model list above; the old beta keys
-#   (CC1-CC8, BB1) are retained for that fully-free unlimited list, not as the general-routing
-#   default. `5x` is renamed `1x` as of this date wherever that earlier subscription-key label
+#   (~$1,000/week in API credits) plus the independent free-model list above. (2026-09-22: the old
+#   beta keys and the beta gateway were DEACTIVATED — ccx is the only ICA lane; the one live key is
+#   CCx3 per `ica-key list`. The beta sentence that stood here is archived in agentic_meta_dev
+#   infra/dispatch/DEACTIVATED-beta-keys-2026-09-22.md.) `5x` is renamed `1x` as of this date wherever that earlier subscription-key label
 #   appears; this tracked registry has no `subscription-5x` row to rename. See MODEL-ROUTING.md
 #   Updated 2026-08-28 for the economic order and §1.4 for eligibility.
 #
@@ -155,7 +157,7 @@ routing_policy:
   # Raster images, mood boards, mock-up renders, illustrations, and PNG assets: native Codex
   # image_gen.imagegen first; use the ICA GPT shim only when already on ICA; Gemini/Nano Banana
   # remains an availability fallback. Native invocation verified from the installed imagegen skill.
-  image_generation: { chain: ["codex/gpt-5.6-terra", "ica/gpt-5.6-terra-dzus", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
+  image_generation: { chain: ["codex/gpt-5.6-terra", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
   svg_generation:   { chain: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
   video_generation: { chain: ["sora/sora-2"], enabled: true }
@@ -199,7 +201,7 @@ must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 #
 # ⚠️ INVARIANT — THE CLASS BELONGS TO THE LANE, NEVER TO A VENDOR OR A MODEL ID.
 # Codex reached THROUGH the shared ICA gateway is NOT a Codex subscription: `codex/gpt-5.6-terra`
-# and `ica/gpt-5.6-terra-dzus` are the same weights on different sovereignty. This estate has
+# and `ica/gpt-5.6-terra` are the same weights on different sovereignty (same id, two lanes). This estate has
 # already been bitten by treating a model-id SUFFIX (`[1m]`) as a lane marker; the resolver reads
 # the DECLARED `lane:` on each provider instance and never pattern-matches an id.
 #
@@ -216,7 +218,8 @@ sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
 # actual endpoint was selected by REGEXing the model id inside buildRegistryInvocation()
 # (`/-dzus$/` -> ica-codex.sh, `/gpt/` -> ica-gpt.sh, else ica-claude.sh). The three ICA rows
 # below are exactly those three branches, so this table is grounded in the invocation code
-# rather than in the ids.
+# rather than in the ids. (2026-09-24: the `-dzus` branch is gone with the retired beta aliases;
+# the ica-codex.sh branch now keys off `lane: ica_gateway_responses_shim`, not an id suffix.)
 lanes:
   claude_subscription:
     sovereignty: subscription
@@ -910,7 +913,7 @@ models:
     class: codex
     # Raster image routing is encoded in routing_policy.image_generation; use native
     # image_gen.imagegen first, the ICA GPT shim only when already on ICA, then Gemini fallback.
-    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the ICA gateway id `gpt-5.6-terra-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    descriptor: "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the free ICA lane for this model is the separate entry `gpt-5.6-terra-ica` (ccx id `gpt-5.6-terra`; the beta alias `gpt-5.6-terra-dzus` named in the history below was retired 2026-09-22). History: the ICA gateway id `gpt-5.6-terra-dzus` WORKED as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 4, intelligence: 8, taste: 7, speed: 6 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [agentic-coding, code-review, ac-validation, debug-escalation, implementation, image-generation, raster-asset, mock-up-render, mood-board, png-asset]
     # IMPLEMENTER LANE, measured 2026-08-09 (execution pilot, n=3; use-case-rankings.yaml
@@ -938,7 +941,7 @@ models:
   gpt-5.6-luna:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the ICA gateway id `gpt-5.6-luna-dzus` now WORKS as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). The free ICA lane now has its OWN routable entry `gpt-5.6-luna-dzus` (routes via `~/ica-codex.sh`); this metered `codex/gpt-5.6-luna` entry is unchanged. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
+    descriptor: "OpenAI GPT-5.6 Luna via codex CLI — the cheaper/faster codex tier (released 2026-07). Lighter review/analysis, quick fixes, mechanical edits, cost-efficient second opinions. Reasoning efforts: none|minimal|low|medium|high|xhigh (NO ultra — Sol/Terra only). Fastest of the gpt-5.6 line. NOTE: the free ICA lane for this model is the separate entry `gpt-5.6-luna-ica` (ccx id `gpt-5.6-luna`; the beta alias `gpt-5.6-luna-dzus` named in the history below was retired 2026-09-22). History: the ICA gateway id `gpt-5.6-luna-dzus` WORKED as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29, alongside terra-dzus). ICA fixed the deployment: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys — the earlier CODEX-key/no-effort-only limitation is gone). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-luna-dzus`, which auto-starts the local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/). The free ICA lane now has its OWN routable entry `gpt-5.6-luna-dzus` (routes via `~/ica-codex.sh`); this metered `codex/gpt-5.6-luna` entry is unchanged. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md."
     scores: { cost: 6, intelligence: 7, taste: 6, speed: 8 }   # 1-10, higher=better; cost = preferred-lane real spend
     when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna
@@ -950,35 +953,41 @@ models:
     providers:
       - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
 
-  gpt-5.6-terra-dzus:
+  # 2026-09-24 (node_01M3AA4SX9F7E8Q59QZ1KJHF8S): these two ICA-lane entries were keyed
+  # `gpt-5.6-terra-dzus` / `gpt-5.6-luna-dzus` with the beta-only `-dzus` model ids. The beta keys
+  # and aliases were deactivated 2026-09-22 (agentic_meta_dev #1395); the ccx lane serves the bare
+  # ids, so model_id is now bare and the keys are `-ica` (a registry key, not a wire id — the lane
+  # is still the declared `lane:`). Prior entries archived verbatim in agentic_meta_dev
+  # infra/dispatch/DEACTIVATED-beta-keys-2026-09-22.md.
+  gpt-5.6-terra-ica:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Terra via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable."
+    descriptor: "OpenAI GPT-5.6 Terra via the ICA ccx gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable."
     scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = real spend (free-to-us shared pool)
     when_to_use: [agentic-coding, code-review, ac-validation, implementation, second-opinion, image-generation, raster-asset]
-    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra-dzus
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra-ica
     tools: [imagegen]
     related_skills: [codex]
     max_context: 400000
     sampling: deterministic
     status: active
     providers:
-      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-terra-dzus", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
+      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-terra", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1 }
 
-  gpt-5.6-luna-dzus:
+  gpt-5.6-luna-ica:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-5.6 Luna via the ICA gateway (free-to-us shared pool) as an agentic Codex lane — the cheaper/faster dzus tier. Same routing as gpt-5.6-terra-dzus (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable."
+    descriptor: "OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable."
     scores: { cost: 8, intelligence: 7, taste: 6, speed: 6 }
     when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
-    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna-dzus
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna-ica
     tools: []
     related_skills: [codex]
     max_context: 400000
     sampling: deterministic
     status: active
     providers:
-      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-luna-dzus", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
+      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-luna", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
 

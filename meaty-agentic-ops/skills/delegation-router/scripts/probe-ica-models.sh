@@ -16,7 +16,7 @@
 #   • REASONING-CONTROL-PARAM TRAP: the Azure-backed GPT deployments 400 when the
 #     client attaches its reasoning-control param (`reasoning_effort` on chat).
 #     We probe WITHOUT it — effort defaults server-side — so a model that only
-#     works with the param stripped (e.g. gpt-5.6-luna-dzus via the CODEX key)
+#     works with the param stripped (e.g. the retired beta gpt-5.6-luna-dzus via the CODEX key)
 #     shows as working, matching how a param-strip proxy would reach it.
 #   • KEY SCOPE MATTERS: the CC key and the CODEX key see the same /models list
 #     but have different deployment access. Pass --key to probe a specific one;
@@ -28,11 +28,13 @@
 #
 #   --key <token>     ICA bearer token. Default: resolved from ~/.dotfiles/ICA_CLAUDE
 #                     (first uncommented ICA_CLAUDE_CODE_API_KEY=, i.e. the CC key).
-#   --key-block NAME  Pick a named block from ~/.dotfiles/ICA_CLAUDE instead:
-#                     CC1..CC6 (Claude keys) or CODEX (the OpenAI-line key). The
-#                     CODEX key is the one that reaches gpt-5.6-luna-dzus on chat.
+#   --key-block NAME  Pick a named block from ~/.dotfiles/ICA_CLAUDE instead (e.g. CCx3;
+#                     enumerate with `ica-key list`). One ccx key serves every model on
+#                     the gateway. (The beta CC1..CC6 / CODEX blocks and the -dzus ids
+#                     they reached were retired 2026-09-22.)
 #   --registry PATH   model-registry.yaml to diff against. Default: ../model-registry.yaml.
-#   --base URL        Gateway base. Default: https://api.nextgen-beta.ica.ibm.com/ica/v1
+#   --base URL        Gateway base. Default: https://api.servicesessentials.ibm.com/v1 (ccx;
+#                     the beta gateway was retired 2026-09-22)
 #   --json            Emit the drift result as JSON (for tooling) instead of the table.
 #   --no-diff         Just probe + print the live table; skip the registry diff.
 #
@@ -43,7 +45,7 @@ set -euo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_URL="https://api.nextgen-beta.ica.ibm.com/ica/v1"
+BASE_URL="https://api.servicesessentials.ibm.com/v1"
 REGISTRY="${SCRIPT_DIR}/../model-registry.yaml"
 ICA_DOTENV="${HOME}/.dotfiles/ICA_CLAUDE"
 KEY=""
@@ -60,7 +62,7 @@ while [[ $# -gt 0 ]]; do
     --base)      BASE_URL="$2"; shift 2 ;;
     --json)      AS_JSON=1; shift ;;
     --no-diff)   DO_DIFF=0; shift ;;
-    -h|--help)   sed -n '2,40p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)   sed -n '2,42p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -82,7 +84,7 @@ if [[ -z "${KEY}" ]]; then
   fi
 fi
 if [[ -z "${KEY}" ]]; then
-  echo "ERROR: no ICA key. Pass --key, --key-block CODEX, set ICA_PROBE_KEY, or populate ${ICA_DOTENV}." >&2
+  echo "ERROR: no ICA key. Pass --key, --key-block <NAME>, set ICA_PROBE_KEY, or populate ${ICA_DOTENV}." >&2
   exit 2
 fi
 

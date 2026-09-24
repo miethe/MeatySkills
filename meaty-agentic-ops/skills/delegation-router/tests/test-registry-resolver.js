@@ -122,7 +122,7 @@ function registryWithCodex() {
 
 // A GPT model served on the ICA provider (the "ica-gpt" sub-lane inside
 // buildRegistryInvocation's case 'ica': block — routed to ~/ica-gpt.sh when the model id
-// matches /gpt/i and is not a -dzus codex-shim id). Distinct from registryWithCodex(),
+// matches /gpt/i and its lane is not ica_gateway_responses_shim, the codex-shim lane). Distinct from registryWithCodex(),
 // which puts the same model FAMILY on the 'codex' provider instead.
 function registryWithIcaGpt() {
   const registry = baseRegistry();

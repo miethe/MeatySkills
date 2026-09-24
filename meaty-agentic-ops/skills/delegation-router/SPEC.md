@@ -539,7 +539,7 @@ Headless writer: `log-cli.js --blocked`.
    its predicate is `MUST_STAY.has(task_class) && chosen_plugin_id !== 'claude'`. Under the
    sovereignty ladder that predicate is wrong in **both** directions: it flags a legitimate
    `codex_subscription` verdict as a breach (false positive), and it clears an
-   `ica/gpt-5.6-terra-dzus` decision that a `codex/gpt-5.6-terra` policy would have refused,
+   `ica/gpt-5.6-terra` decision that a `codex/gpt-5.6-terra` policy would have refused,
    because the two differ only by lane (false negative). `chosen_plugin_id` cannot identify a
    lane; an auditor forced to re-derive one from the model id would rebuild the exact
    suffix-as-lane-marker defect this change removes. Fields 15–17 (`lane`, `sovereignty`,

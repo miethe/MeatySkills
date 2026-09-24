@@ -54,7 +54,7 @@ progressive-disclosure design and burns context on families you aren't using thi
 | Model key(s) (registry `models:`) | Route file |
 |---|---|
 | `claude-opus-5`, `claude-fable-5`, `claude-sonnet-5`, `claude-sonnet-4-6`, `claude-sonnet-4-5`, `claude-haiku-4-5`, `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6` | [`routes/anthropic-claude.md`](routes/anthropic-claude.md) |
-| `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-terra-dzus`, `gpt-5.6-luna`, `gpt-5.5-gus`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4`, `gpt-5.1`, `gpt-4o` — including image gen, mood boards, mock-up renders, raster illustrations, and PNG assets | [`routes/openai-gpt.md`](routes/openai-gpt.md) |
+| `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-terra-ica`, `gpt-5.6-luna`, `gpt-5.6-luna-ica`, `gpt-5.5-gus`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4`, `gpt-5.1`, `gpt-4o` — including image gen, mood boards, mock-up renders, raster illustrations, and PNG assets | [`routes/openai-gpt.md`](routes/openai-gpt.md) |
 | `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.1-pro-preview`, `gemini-3.1-pro-preview-ica`, `gemini-3.1-flash-lite` | [`routes/google-gemini.md`](routes/google-gemini.md) |
 | `gemma-4-26b`, `llama-4-maverick`, `granite-4-small`, `bob-local` | [`routes/open-models.md`](routes/open-models.md) |
 | any model where the chosen `provider` is `ica` (in addition to its family route above) | [`routes/ica-lanes.md`](routes/ica-lanes.md) |
