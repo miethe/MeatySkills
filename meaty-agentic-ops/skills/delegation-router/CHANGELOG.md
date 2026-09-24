@@ -3,6 +3,12 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-09-24 — Claude Opus 5.5 ICA ccx availability
+
+- Marked `claude-opus-5-5[1m]` enabled on the ICA ccx Claude-Code wrapper lane after the direct
+  smoke returned rc 0, canonical model `claude-opus-5-5`, and a 1M context window. Raw HTTP
+  bare-id behavior remains explicitly unmeasured.
+
 ## 2026-09-22 — resolver.js no longer bakes `--dangerously-skip-permissions` into any invocation_template
 
 `buildRegistryInvocation()` and `buildRegistryMustStayRecord()` hardcoded
