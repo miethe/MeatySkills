@@ -3,6 +3,19 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-09-24 — ICA beta keys and `-dzus` aliases retired; ccx only
+
+- The ICA beta keys (`CC1`–`CC8`, `BB1`) were deactivated 2026-09-22 and the beta-only
+  `gpt-5.6-{terra,luna}-dzus` aliases with them (agentic_meta_dev #1395,
+  node_01M3AA4SX9F7E8Q59QZ1KJHF8S). Registry: the two ICA Codex-shim entries are re-keyed
+  `gpt-5.6-terra-ica` / `gpt-5.6-luna-ica` with the bare ccx `model_id`s; `image_generation`
+  chain leg is now `ica/gpt-5.6-terra`; the header's beta-key sentence is replaced.
+- `resolver.js` routes ICA → `~/ica-codex.sh` by the declared `lane: ica_gateway_responses_shim`
+  instead of a `/-dzus$/` id regex (bare ccx ids would otherwise fall through to `ica-gpt.sh`).
+- `probe-ica-models.sh` defaults to the ccx gateway; `use-case-rankings.yaml` follows the rename.
+- Entries below that name `-dzus` ids or beta keys are history. Removed text is archived in
+  agentic_meta_dev `infra/dispatch/DEACTIVATED-beta-keys-2026-09-22.md`.
+
 ## 2026-09-24 — Claude Opus 5.5 ICA ccx availability
 
 - Marked `claude-opus-5-5[1m]` enabled on the ICA ccx Claude-Code wrapper lane after the direct

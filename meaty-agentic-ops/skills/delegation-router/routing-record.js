@@ -65,7 +65,7 @@
  *                                                    optional; default null). Recorded because
  *                                                    `chosen_plugin_id` ALONE CANNOT IDENTIFY A LANE:
  *                                                    codex/gpt-5.6-terra (subscription) and
- *                                                    ica/gpt-5.6-terra-dzus (shared gateway) are the
+ *                                                    ica/gpt-5.6-terra (shared gateway) are the
  *                                                    same weights on different sovereignty, and an
  *                                                    auditor forced to re-derive the lane from the
  *                                                    model id would re-create the suffix-as-lane-marker

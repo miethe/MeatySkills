@@ -1491,12 +1491,15 @@ function buildRegistryInvocation(chosen, profile, effort) {
     case 'claude':
       return `claude -p "{prompt}" --model ${modelId}`;
     case 'ica': {
-      // ICA gpt-5.6-*-dzus are a free-to-us agentic *Codex* lane: ICA can't serve them on
-      // the /responses API Codex speaks (Azure api-version-gated), so ~/ica-codex.sh
-      // auto-starts a local Responses→Chat shim and drives `codex` against it. Route them
-      // to that wrapper, NOT ica-gpt.sh (which is the Claude-Code /messages lane).
-      // See agentic_meta_dev/infra/ica-codex-shim/ (shipped 2026-07-29).
-      if (/-dzus$/i.test(modelId)) {
+      // ICA gpt-5.6-{terra,luna} on the ccx gateway are a free-to-us agentic *Codex* lane: ICA
+      // can't serve them on the /responses API Codex speaks (Azure api-version-gated), so
+      // ~/ica-codex.sh auto-starts a local Responses→Chat shim and drives `codex` against it.
+      // Route them to that wrapper, NOT ica-gpt.sh (which is the Claude-Code /messages lane).
+      // Keyed off the DECLARED lane, not the id: until 2026-09-22 this branch regexed a
+      // `-dzus` id suffix, but those beta-only aliases were retired with the beta keys and the
+      // ccx ids are bare (`gpt-5.6-terra` is also the codex-subscription id). The id carries no
+      // lane information — see laneFor(). ibm-agentic-tools/ica/ica-codex-shim/ (2026-07-29).
+      if (chosen.lane === 'ica_gateway_responses_shim') {
         const sandboxMode = sandboxModeFor(profile, effort);
         return `~/ica-codex.sh exec --skip-git-repo-check --sandbox ${sandboxMode} -m ${modelId} "{prompt}"`;
       }

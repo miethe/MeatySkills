@@ -103,11 +103,12 @@ Before this table the registry had no lane concept: only a bare `provider:` stri
 actual endpoint was chosen by REGEXing the model id inside `buildRegistryInvocation()`
 (`/-dzus$/` → `ica-codex.sh`, `/gpt/` → `ica-gpt.sh`, else `ica-claude.sh`). The three ICA lanes
 are exactly those three branches, so the table is grounded in the invocation code rather than
-in the ids.
+in the ids. (2026-09-24: the `-dzus` aliases were retired with the beta keys on 2026-09-22; the
+`ica-codex.sh` branch now keys off `lane: ica_gateway_responses_shim`, not an id suffix.)
 
 ⚠️ **INVARIANT — the class belongs to the LANE, never to a vendor or a model id.** Codex reached
 *through* the shared ICA gateway is **not** a Codex subscription: `codex/gpt-5.6-terra` and
-`ica/gpt-5.6-terra-dzus` are the same weights on different sovereignty. The resolver reads the
+`ica/gpt-5.6-terra` are the same weights on different sovereignty — the same id on two lanes. The resolver reads the
 declared `lane:` on each provider instance and never pattern-matches an id — deriving a rung from
 a suffix is the defect this replaces (`[1m]` is a context-window marker, not a lane marker).
 

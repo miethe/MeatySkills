@@ -218,7 +218,7 @@ shelled-out `invocation_template` decides the provider itself.
   it, including a Codex subscription. No rule names a vendor. See
   [`references/model-registry.md`](references/model-registry.md) § The sovereignty ladder.
 - Do not say a **provider** tells you the sovereignty. `codex/gpt-5.6-terra` (subscription) and
-  `ica/gpt-5.6-terra-dzus` (shared gateway) are the same weights on different sovereignty: Codex
+  `ica/gpt-5.6-terra` (shared gateway) are the same weights on different sovereignty: Codex
   reached *through* the shared ICA gateway is **not** a Codex subscription.
 - Do not say an unclassified lane is fine. No `lane`, a dangling `lane`, or `sovereignty: unknown`
   sits BELOW every real rung and satisfies no minimum — "could not check" is never "clear".

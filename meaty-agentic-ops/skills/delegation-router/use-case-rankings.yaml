@@ -132,7 +132,7 @@ use_cases:
       - { model: gpt-5.6-sol, rank: 3, score_hint: 7.3, rationale: "INFERENCE, not measured here — escalation tier above terra per standing org doctrine (two-failure rule). No implementation leg was run on Sol this pass. Reserve for a terra stall, not as a default implementer." }
       - { model: claude-sonnet-4-6, rank: 4, score_hint: 6.5, rationale: "INFERENCE from registry prior only — previous-gen Sonnet, superseded as the ICA offload default. Not measured this pass." }
       - { model: gpt-5.6-luna, rank: 5, score_hint: 6, rationale: "INFERENCE, not measured here. Cheapest GPT-line tier; the premise-verification weakness measured on terra is unlikely to improve at a lower tier, and this use case is where that weakness costs the most. Prefer for mechanical edits, not contract-clear implementation, until measured." }
-      - { model: gpt-5.6-terra-dzus, rank: 6, score_hint: 5.5, rationale: "NOT MEASURED, and deliberately not promoted despite being the free-to-us lane for the same weights. Its documented caveat is that reasoning_effort is DROPPED on tool turns, and an implementation leg is all tool turns — so the free lane is precisely where this model's reasoning is least available. Measure before treating it as a cost-free substitute for the metered lane." }
+      - { model: gpt-5.6-terra-ica, rank: 6, score_hint: 5.5, rationale: "NOT MEASURED, and deliberately not promoted despite being the free-to-us lane for the same weights. Its documented caveat is that reasoning_effort is DROPPED on tool turns, and an implementation leg is all tool turns — so the free lane is precisely where this model's reasoning is least available. Measure before treating it as a cost-free substitute for the metered lane." }
       - { model: claude-haiku-4-5, rank: 14, score_hint: 3.5, rationale: "NOTABLE EXCLUSION — capability floor is below contract-clear implementation; keep on exploration/mechanical/classification where it already ranks." }
     chain_applied: ["claude/claude-sonnet-5"]
     chain_recommendation: >-
@@ -197,7 +197,7 @@ use_cases:
     description: "Generating or editing raster images, mood boards, mock-up renders, illustrations, PNG assets, sprites, and final high-quality visuals."
     source_task_classes: [image_generation]
     status: unmeasured
-    chain_applied: ["codex/gpt-5.6-terra", "ica/gpt-5.6-terra-dzus", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"]
+    chain_applied: ["codex/gpt-5.6-terra", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"]
     chain_recommendation: "Use Codex native image_gen.imagegen first; use the ICA GPT shim only when already on ICA; retain Gemini/Nano Banana as fallback."
     caveats:
       - "This routing order is a capability/invocation decision verified from the installed Codex imagegen skill, not a comparative quality ranking; no benchmark score is implied."
