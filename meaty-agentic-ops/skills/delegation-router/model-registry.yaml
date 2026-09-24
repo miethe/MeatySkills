@@ -11,6 +11,8 @@
 #   This file is model-keyed: each model carries its provider sub-instances. The
 #   resolver reads this registry directly (or a derived in-memory structure) and
 #   honors `enabled`, `priority`, `allowance`, and the `routing_policy` chains.
+#   A model may also declare `allowed_dispatch_lanes`; when present, dispatchers
+#   must refuse every lane not named there before launching a provider.
 #
 #   THIS IS THE AUTHORITATIVE SOURCE. Provider-plugins.toml / multi-model.toml
 #   routing tables are derived from / reconciled against this file.
@@ -552,6 +554,10 @@ models:
     default_effort: high
     sampling: deterministic
     status: active
+    # Nick, 2026-09-24: "Fable must go to here, CC primary. cc1x and claude1x
+    # don't support fable. That should be noted in the routing registry."
+    # `native` is the Claude Code primary key (front session / native Agent model=fable).
+    allowed_dispatch_lanes: [native]
     selection_posture: explicit_or_advanced_sol_contract
     providers:
       - provider: claude
@@ -576,6 +582,8 @@ models:
     max_context: 1000000
     sampling: deterministic
     status: active
+    # Fable 5.0 shares 5.1's primary-key-only dispatch restriction.
+    allowed_dispatch_lanes: [native]
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-fable-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
 
