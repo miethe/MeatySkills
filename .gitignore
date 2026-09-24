@@ -9,3 +9,12 @@ skills/YT/scrape_watch_later.json
 __pycache__/
 *.pyc
 *.DS_Store
+
+# Internal documents never ship in this public repo (office/binary docs).
+*.pptx
+*.ppt
+*.key
+*.docx
+*.doc
+*.xlsx
+*.xls
