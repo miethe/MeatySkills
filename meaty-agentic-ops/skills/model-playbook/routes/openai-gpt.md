@@ -10,7 +10,7 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 - **Invocation:** use Codex's native built-in `image_gen.imagegen` tool (the installed `imagegen`
   skill's preferred invocation), not a guessed `codex exec` flag. It generates and edits raster
   images without an API key. When the work is already on ICA, use
-  `ica/gpt-5.6-terra-dzus` through `~/ica-codex.sh`; otherwise do not move work to ICA just for
+  `ica/gpt-5.6-terra` (registry entry `gpt-5.6-terra-ica`) through `~/ica-codex.sh`; otherwise do not move work to ICA just for
   this. Gemini/Nano Banana is the fallback chain after both Codex paths.
 - **Anti-pattern:** do not treat Gemini image generation as the default lane, and do not use this
   raster rule to select an SVG/vector/code-native implementation.
@@ -38,7 +38,7 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
   `~/.codex/config.toml` defaults Sol @ `xhigh`.
 - **Gotchas:** `max_context` 400000.
 - **Anti-patterns:** no *usable agentic* ICA lane for Sol (see above — tools kill reasoning there);
-  `gpt-5.6-terra-dzus`/`-luna-dzus` remain the ICA shim lanes that actually work agentically. Use
+  `ica/gpt-5.6-terra`/`ica/gpt-5.6-luna` (bare ccx ids; formerly `-dzus`) remain the ICA shim lanes that actually work agentically. Use
   metered `codex/gpt-5.6-sol` for real agentic Sol work.
 
 ## gpt-5.6-terra
@@ -50,53 +50,58 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
   chain has **zero** GPT-line legs despite `web_research` and `svg_generation` both being 100%
   Gemini. See `use-case-rankings.yaml`.
 - **Invocation lane:** `codex/gpt-5.6-terra` (metered). **Free ICA alternative SHIPPED 2026-07-29:**
-  `gpt-5.6-terra-dzus` — the same model at $0 to the metered budget, driven agentically via
-  `~/ica-codex.sh` + a local Responses shim (see the `gpt-5.6-terra-dzus` section below). Pick the
-  metered lane when the dzus caveat (no reasoning-effort control on tool turns) or shim overhead matters.
+  `gpt-5.6-terra-ica` (ccx id `gpt-5.6-terra`) — the same model at $0 to the metered budget, driven
+  agentically via `~/ica-codex.sh` + a local Responses shim (see the `gpt-5.6-terra-ica` section
+  below). Pick the metered lane when the ICA-shim caveat (no reasoning-effort control on tool turns) or shim overhead matters.
 - **Effort:** default `medium` for implementation/review; escalate to `xhigh` only when blocked
   with concrete artifacts (failing tests, stack traces); reserve `ultra` for genuinely
   intractable problems after `xhigh` has been tried.
 - **Gotchas:** `max_context` 400000. Can overfit to its own generated plan — re-check outputs
   against repo reality (existing types, APIs, test state) before committing.
 - **Anti-patterns:** for the metered lane, watch the plan-overfit gotcha above. For the free ICA
-  lane, see `gpt-5.6-terra-dzus` below (effort not controllable on tool turns).
+  lane, see `gpt-5.6-terra-ica` below (effort not controllable on tool turns).
 
 ## gpt-5.6-luna
 
 - **When to pick:** cheaper/faster codex tier — lighter review/analysis, quick fixes, mechanical
   edits, cost-efficient second opinions, exploration.
 - **Invocation lane:** `codex/gpt-5.6-luna` (metered). **Free ICA alternative SHIPPED 2026-07-29:**
-  `gpt-5.6-luna-dzus` — same model at $0 to the metered budget via `~/ica-codex.sh` + the local
-  Responses shim (see the `gpt-5.6-luna-dzus` section below).
+  `gpt-5.6-luna-ica` (ccx id `gpt-5.6-luna`) — same model at $0 to the metered budget via
+  `~/ica-codex.sh` + the local Responses shim (see the `gpt-5.6-luna-ica` section below).
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh` — **no `ultra`** (Sol/Terra only).
 - **Anti-patterns:** don't drive it at `ultra` (unsupported).
 
-## gpt-5.6-terra-dzus
+## gpt-5.6-terra-ica
+
+> Renamed 2026-09-24 from `gpt-5.6-terra-dzus`: the beta-only `-dzus` aliases were retired with the
+> ICA beta keys on 2026-09-22 (agentic_meta_dev #1395). The ccx lane serves the bare id.
 
 - **When to pick:** the **free-to-us agentic Codex lane** on gpt-5.6-terra — identical model, $0 to
   the metered budget (ICA shared pool). Prefer for cost-sensitive agentic coding, code-review,
   ac-validation, implementation, second-opinion, and raster image generation only when already on ICA. Escalate to metered
   `codex/gpt-5.6-terra` or `-sol` if the effort caveat or shim reliability bites.
-- **Invocation lane:** `ica/gpt-5.6-terra-dzus`. The delegation-router emits
-  `~/ica-codex.sh exec … -m gpt-5.6-terra-dzus "…"`; the wrapper auto-starts a local
-  Responses→ChatCompletions proxy (`agentic_meta_dev/infra/ica-codex-shim/`) and points Codex at it.
+- **Invocation lane:** `ica/gpt-5.6-terra` (lane `ica_gateway_responses_shim`). The delegation-router
+  emits `~/ica-codex.sh exec … -m gpt-5.6-terra "…"`; the wrapper auto-starts a local
+  Responses→ChatCompletions proxy (`ibm-agentic-tools/ica/ica-codex-shim/`) and points Codex at it.
   Verified agentic end-to-end (file edits + multi-turn tool loop) 2026-07-29.
 - **CAVEAT — effort:** `reasoning_effort` is DROPPED on tool turns (reasoning+tools together forces
   the api-version-gated `/responses` path). Effort defaults server-side — not controllable on
   agentic turns. Non-tool turns keep the requested effort.
 - **Deploy:** laptop `~/ica-codex.sh` (symlink) + node via bootstrap. The metered `codex/gpt-5.6-terra`
-  stays the `code_review` chain leg; this dzus lane is enabled + explicit-selectable, not auto-chained.
+  stays the `code_review` chain leg; this ICA lane is enabled + explicit-selectable, not auto-chained.
 - **Anti-patterns:** don't expect effort control on tool turns; use `codex/gpt-5.6-sol` for the
   hardest reasoning; on hosts without `~/ica-codex.sh`, fall back to a metered `codex/*` lane.
 
-## gpt-5.6-luna-dzus
+## gpt-5.6-luna-ica
 
-- **When to pick:** the free-to-us cheaper/faster dzus tier — lighter review, mechanical edits,
+> Renamed 2026-09-24 from `gpt-5.6-luna-dzus` (beta alias retired 2026-09-22; ccx id is bare).
+
+- **When to pick:** the free-to-us cheaper/faster ICA tier — lighter review, mechanical edits,
   cheap second opinions, exploration, when the free lane is worth the shim overhead.
-- **Invocation lane:** `ica/gpt-5.6-luna-dzus` — same mechanism as `gpt-5.6-terra-dzus`
+- **Invocation lane:** `ica/gpt-5.6-luna` — same mechanism as `gpt-5.6-terra-ica`
   (`~/ica-codex.sh` + local Responses shim). Same effort caveat (dropped on tool turns).
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh` — no `ultra`.
-- **Allowance (added 2026-08-26):** `gpt-5.6-luna-dzus` is now `allowance: unlimited` in the
+- **Allowance (added 2026-08-26):** the ICA Luna lane is now `allowance: unlimited` in the
   model registry — the fifth genuinely-free ICA model alongside Haiku 4.5 / Gemma 4 / Llama 4
   Maverick / Granite 4H Small (see `routes/ica-lanes.md`'s free-5 section). "Free-to-us" above
   was already describing the $0 cost; this is the same fact now encoded in the registry's
@@ -159,11 +164,12 @@ Still `active` (`ica/gpt-4o`), but legacy-tier. Grounded 2026-07-28, conf 0.6: r
 
 ## Do Not Say
 
-- `gpt-5.6-terra-dzus` / `gpt-5.6-luna-dzus` ARE reachable via ICA now — a free agentic Codex lane
+- `gpt-5.6-terra` / `gpt-5.6-luna` ARE reachable via ICA ccx now (bare ids; the beta `-dzus`
+  aliases were retired 2026-09-22) — a free agentic Codex lane
   via `~/ica-codex.sh` + the local Responses shim (shipped 2026-07-29). ⚠️ Do not say `gpt-5.6-sol`
   has no ICA lane at all — that is stale/scope-limited as of 2026-08-26: it **is** servable on the
   **ccx** gateway (see `gpt-5.6-sol` section above), just not usable agentically (tools kill
-  reasoning there). Don't claim reasoning-effort is controllable on dzus tool turns.
+  reasoning there). Don't claim reasoning-effort is controllable on ICA-shim tool turns.
 - Do not say `gpt-5.5-gus` works via plain `ica-claude.sh`/Claude Code — it needs the
   `ica-gpt.sh` param-strip shim (laptop-only).
 
