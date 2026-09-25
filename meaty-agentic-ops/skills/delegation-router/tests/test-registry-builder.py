@@ -15,6 +15,12 @@ import yaml  # noqa: E402
 
 registry = yaml.safe_load((ROOT / "model-registry.yaml").read_text())
 
+# Nick decision 2026-09-25: Codex subscription chains use GPT-6 Luna;
+# the separate ICA GPT-5.6 image fallback remains available.
+for task_class in ("second_opinion", "code_review", "image_generation"):
+    assert registry["routing_policy"][task_class]["chain"][0] == "codex/gpt-6-luna"
+assert "ica/gpt-5.6-terra" in registry["routing_policy"]["image_generation"]["chain"]
+
 # Negative control: the committed registry declares every required fact.
 assert validate_registry(registry, "negative-control") == []
 

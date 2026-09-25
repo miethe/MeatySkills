@@ -1679,7 +1679,7 @@ async function inlineDegradedCouncil(parsed, sprintResult) {
 
   if (validOutputs.length === 0) {
     log('Sprint review: inline degraded council — all lens reviewers failed or returned nothing.')
-    return { status: 'needs_opus', reason: 'inline_council_reviewers_failed', council_mode: 'inline_degraded', report: [] }
+    return withRouting({ status: 'needs_opus', reason: 'inline_council_reviewers_failed', council_mode: 'inline_degraded', report: [] })
   }
 
   const adjudicated = await agent(inlineAdjudicationPrompt(validOutputs), {
@@ -1691,7 +1691,7 @@ async function inlineDegradedCouncil(parsed, sprintResult) {
 
   if (!adjudicated) {
     log('Sprint review: inline degraded council — adjudication (karen) returned nothing.')
-    return { status: 'needs_opus', reason: 'inline_council_adjudication_failed', council_mode: 'inline_degraded', report: [] }
+    return withRouting({ status: 'needs_opus', reason: 'inline_council_adjudication_failed', council_mode: 'inline_degraded', report: [] })
   }
 
   const finalVerdict = await agent(inlineFinalVerdictPrompt(parsed.contract_path, adjudicated), {
@@ -1703,13 +1703,13 @@ async function inlineDegradedCouncil(parsed, sprintResult) {
 
   if (!finalVerdict) {
     log('Sprint review: inline degraded council — final-verdict reviewer returned nothing.')
-    return { status: 'needs_opus', reason: 'inline_council_final_verdict_failed', council_mode: 'inline_degraded', report: [] }
+    return withRouting({ status: 'needs_opus', reason: 'inline_council_final_verdict_failed', council_mode: 'inline_degraded', report: [] })
   }
 
   const blockingCount = (adjudicated.accepted ?? []).filter(f => f.severity === 'critical' || f.severity === 'high').length
   const approved = finalVerdict.approved === true && blockingCount === 0
 
-  return {
+  return withRouting({
     ...finalVerdict,
     approved,
     reviewer_type: 'council-review',
@@ -1725,7 +1725,7 @@ async function inlineDegradedCouncil(parsed, sprintResult) {
       blocking_count: blockingCount,
     },
     council_artifacts: { run_dir: 'inline_degraded_council (no run directory)' },
-  }
+  })
 }
 
 /**
