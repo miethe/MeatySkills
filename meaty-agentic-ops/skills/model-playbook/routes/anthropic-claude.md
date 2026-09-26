@@ -13,9 +13,14 @@ correction and the "instrument decides the layer" anti-pattern note.**
 
 ## claude-opus-5
 
-- **When to pick:** the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final
-  synthesis, architecture, mode-d, schema-recovery, cross-wave merge, deep-reasoning,
-  novel-algorithm-design. Current flagship as of 2026-07-24, supersedes claude-opus-4-8.
+⚠️ **LEGACY-SELECTABLE as of 2026-09-22 — superseded as the AOS SPINE by `claude-opus-5-5`.**
+Was flagship 2026-07-24–2026-09-22 (supersedes claude-opus-4-8); still selectable for the
+MUST-stay tier when Opus 5.5 is unavailable or an explicit comparison is needed. Current spine
+policy: `agentic_meta_dev/docs/agentic-operator/MODEL-ROUTING.md`.
+
+- **When to pick:** orchestration, verdict/adjudication, final synthesis, architecture, mode-d,
+  schema-recovery, cross-wave merge, deep-reasoning, novel-algorithm-design — the historical
+  MUST-stay tier; route to `claude-opus-5-5` first per current spine policy.
 - **Invocation lane:** `claude/claude-opus-5` (primary, billed, $5/$25 per M). ⚠️ **ICA offload
   RETRACTED 2026-08-26 (raw-HTTP transports) — no confirmed ICA Opus lane for routing purposes.**
   `claude-opus-5` (bare) 403s on all 11 ICA keys, both gateways, on raw-HTTP transports — a

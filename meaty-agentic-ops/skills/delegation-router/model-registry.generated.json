@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "55616d8f09af84d2e7a70ed19ed05f2460be840ec6a33afa65065e131ce0476e",
+  "_yaml_sha256": "bc7b75784c7b63a267e536e8257b7291b588bdba672e03dff82ea242731d4731",
   "version": 1,
   "updated": "2026-09-22",
   "routing_attributes": {
@@ -323,7 +323,7 @@
     },
     "second_opinion": {
       "chain": [
-        "codex/gpt-5.6-terra",
+        "codex/gpt-6-luna",
         "ica/gemini-3.6-flash",
         "ica/gemma-4-26b-a4b-it",
         "ica/claude-haiku-4-5"
@@ -346,14 +346,14 @@
     },
     "code_review": {
       "chain": [
-        "codex/gpt-5.6-terra",
+        "codex/gpt-6-luna",
         "claude/claude-sonnet-5"
       ],
       "enabled": true
     },
     "image_generation": {
       "chain": [
-        "codex/gpt-5.6-terra",
+        "codex/gpt-6-luna",
         "ica/gpt-5.6-terra",
         "nano-banana/nano-banana-2",
         "nano-banana/nano-banana-pro"
@@ -402,11 +402,13 @@
     },
     "orchestration": {
       "chain": [
+        "claude/claude-opus-5-5",
         "claude/claude-opus-5"
       ]
     },
     "mode_d": {
       "chain": [
+        "claude/claude-opus-5-5",
         "claude/claude-opus-5"
       ]
     }
@@ -624,7 +626,7 @@
     "claude-opus-5": {
       "family": "claude",
       "class": "opus",
-      "descriptor": "Claude Opus 5 (released 2026-07-24). The current flagship Opus and the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA: SERVABLE + VERIFIED 2026-07-31 — claude-opus-5[1m] is now the ICA spine-offload lane (claude-opus-4-8[1m] = fallback). On the ICA lane: 1M ctx via the [1m] id (plain id caps at 200k), maxOutputTokens reported 64,000 (ICA-side cap, below the 128K first-party ceiling), tool_use + adaptive thinking (output_config.effort) + legacy thinking.type:enabled + output_config.format (structured JSON) ALL work — Opus 5 has no structured-output gap on ICA, unlike Sonnet 5.",
+      "descriptor": "Claude Opus 5 (released 2026-07-24). LEGACY-SELECTABLE as of 2026-09-22 — superseded as the AOS SPINE / MUST-stay tier by claude-opus-5-5; was flagship 2026-07-24–2026-09-22 for orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge, and remains selectable there when Opus 5.5 is unavailable or an explicit comparison is needed. Supersedes Opus 4.8 (now legacy): same price ($5/$25 per M), >2x Opus 4.8's agentic performance at a lower cost per task, per Anthropic 'start here for complex agentic coding and enterprise work'. 1M context, 128K max output; adaptive thinking; effort defaults to `high` on the Claude API + Claude Code (set explicitly to change). New tokenizer (same ~30%-heavier family as Opus 4.7+/Sonnet 5). Knowledge cutoff May 2026. Trails Fable 5 but surpasses Opus 4.8. ICA: SERVABLE + VERIFIED 2026-07-31 — claude-opus-5[1m] is now the ICA spine-offload lane (claude-opus-4-8[1m] = fallback). On the ICA lane: 1M ctx via the [1m] id (plain id caps at 200k), maxOutputTokens reported 64,000 (ICA-side cap, below the 128K first-party ceiling), tool_use + adaptive thinking (output_config.effort) + legacy thinking.type:enabled + output_config.format (structured JSON) ALL work — Opus 5 has no structured-output gap on ICA, unlike Sonnet 5.",
       "scores": {
         "cost": 3,
         "intelligence": 9,
@@ -1698,7 +1700,7 @@
     "gpt-6-sol": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6 Sol via the personal Codex account — frontier/hardest personal-Codex tier replacing GPT-5.6 Sol. GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
+      "descriptor": "OpenAI GPT-6 Sol via the personal Codex account — frontier/hardest personal-Codex tier (replaces GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
       "scores": {
         "cost": 4,
         "intelligence": 9,
@@ -1755,7 +1757,7 @@
     "gpt-6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — cheap/fast personal-Codex tier replacing GPT-5.6 Luna. Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
+      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
       "scores": {
         "cost": 7,
         "intelligence": 8,
@@ -1812,7 +1814,7 @@
     "gpt-5.6-sol": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Sol via codex CLI — the new FRONTIER SOTA model (released 2026-07). Hardest reasoning / deep problem analysis; the escalation target when gpt-5.6-terra stalls. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Global ~/.codex/config.toml default (sol @ xhigh). Supersedes gpt-5.5-pro.",
+      "descriptor": "OpenAI GPT-5.6 Sol via codex CLI — legacy selectable Codex subscription model; GPT-6 Sol is the current frontier/hardest subscription tier (Nick, 2026-09-25). The separate ICA GPT-5.6 Sol option remains available for tool-less work. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Global ~/.codex/config.toml default (sol @ xhigh). Supersedes gpt-5.5-pro.",
       "scores": {
         "cost": 3,
         "intelligence": 9,
@@ -1863,7 +1865,7 @@
     "gpt-5.6-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — the new DEFAULT codex workhorse (released 2026-07). A stronger successor to gpt-5.5: agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). Escalate to gpt-5.6-sol for the hardest reasoning. This is the codex/* entry in the code_review routing chain. NOTE: the free ICA lane for this model is the separate entry `gpt-5.6-terra-ica` (ccx id `gpt-5.6-terra`; the beta alias `gpt-5.6-terra-dzus` named in the history below was retired 2026-09-22). History: the ICA gateway id `gpt-5.6-terra-dzus` WORKED as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); this metered `codex/gpt-5.6-terra` entry is unchanged and stays the code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
+      "descriptor": "OpenAI GPT-5.6 Terra via codex CLI — legacy selectable Codex subscription model; the Codex subscription default is GPT-6 Luna (Nick, 2026-09-25). It remains an ICA option in its separate ICA model entry. Previously used for agentic coding, code review, AC validation, second-opinion implementation. Reasoning efforts: none|minimal|low|medium|high|xhigh|ultra (ultra = Sol/Terra only). For frontier-class Codex subscription work, use gpt-6-sol. This is no longer an automatic code_review chain entry. NOTE: the free ICA lane for this model is the separate entry `gpt-5.6-terra-ica` (ccx id `gpt-5.6-terra`; the beta alias `gpt-5.6-terra-dzus` named in the history below was retired 2026-09-22). History: the ICA gateway id `gpt-5.6-terra-dzus` WORKED as a FREE-to-us agentic Codex lane (SHIPPED 2026-07-29). ICA fixed the prefix defect: /chat/completions + /messages serve real completions + tool-calling + reasoning_effort (both keys). /responses stays Azure-api-version-gated and Codex only speaks /responses, so reach it via `~/ica-codex.sh -m gpt-5.6-terra-dzus`, which auto-starts a local Responses→Chat shim (agentic_meta_dev/infra/ica-codex-shim/) — verified agentic (file edits, multi-turn). The free ICA lane now has its OWN routable entry `gpt-5.6-terra-dzus` (resolver.js `case 'ica'` routes any *-dzus id to `~/ica-codex.sh`); the explicit `codex/gpt-5.6-terra` entry remains selectable; GPT-6 Luna is the automatic code_review chain leg. See docs/project_plans/implementation_plans/features/ica-codex-responses-shim-v1.md.",
       "scores": {
         "cost": 4,
         "intelligence": 8,
