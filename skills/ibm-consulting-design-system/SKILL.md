@@ -1,9 +1,9 @@
 ---
 name: ibm-consulting-design-system
 description: >-
-  Generate IBM Consulting–branded interfaces, decks, battlecards, landing pages, and prototypes
+  Generate IBM Consulting–branded interfaces, decks, landing pages, and prototypes
   using IBM's Carbon Design System conventions and the IBM Plex type family. Trigger on: "IBM
-  Consulting deck", "battlecard", "IBM branding", "Carbon design", "IBM Plex", "IBM blue",
+  Consulting deck", "IBM branding", "Carbon design", "IBM Plex", "IBM blue",
   BoxBoat/Nordcloud co-brand assets, or any throwaway mock/prototype/marketing page that must look
   like IBM Consulting materials. Do NOT use for: real IBM.com or product-UI production work (use
   `@carbon/react` + `@carbon/icons-react` directly — see Deferred below), or any deliverable
@@ -24,13 +24,13 @@ rules that this file only summarizes.
 |---|---|
 | `colors_and_type.css` | Every design token — colors, type scale, spacing, radii, shadows, motion. `<link>` this into any static HTML artifact to inherit the full system in one line. |
 | `assets/logos/` | Official IBM logos: blue-on-white, white, black, dark-blue, wide variants. |
-| `assets/icons/` | 7 Carbon-style line icons (clock, dollar-chat, microscope, rocket, shield-hand, target, tools) pulled from battlecard decks. |
+| `assets/icons/` | 7 Carbon-style line icons (clock, dollar-chat, microscope, rocket, shield-hand, target, tools) provided as kit assets. |
 | `assets/backgrounds/` | Blue gradient washes + the signature white sculptural "IBM" renders (arches, columns, corner, iso). |
 | `assets/ui/` | Loose UI fragments (monitor bezel frame, vertical gradient decoration). |
 | `assets/misc/` | Unsorted extracted imagery — inspect before reuse. |
 | `fonts/` | IBM Plex Sans, full weight/italic set (Thin through Bold). OFL-licensed — see Deferred below before redistributing further. |
 | `ui_kits/ibm-consulting-web/` | React recreation of IBM Consulting marketing-site patterns (masthead, hero, offering card, stat block, footer). Marketing-layer approximation, not a pulled product codebase — see its own `README.md`. |
-| `uploads/` | Source decks this kit was extracted from. `Offering_battlecards.pptx` is the only one actually present. |
+| `uploads/` | Reserved for source materials; see repository documentation for applicable use. |
 
 ### `preview/*.html` — token & component specimens
 
@@ -45,7 +45,7 @@ Reach for the specific card instead of browsing the directory:
 ### `slides/*.html` — 16:9 (1280×720) slide templates
 
 `title-slide.html` · `quote-slide.html` · `big-stats.html` · `section-divider.html` ·
-`battlecard.html` — all share `_slide.css`.
+`service-overview.html` — all share `_slide.css`.
 
 ## Workflow
 
@@ -60,7 +60,7 @@ and [Carbon Icons](https://carbondesignsystem.com/elements/icons/library/) via `
 `@carbon/icons-react`. This kit is for presentation-layer speed, not a substitute for Carbon in a
 real codebase.
 
-**No brief given**: ask what's being built (deck? landing page? product UI? battlecard?), ask
+**No brief given**: ask what's being built (deck? landing page? product UI?), ask
 about audience and scope, then act as an expert IBM-brand designer producing HTML artifacts — or
 production React against Carbon — as appropriate.
 
@@ -88,27 +88,16 @@ production React against Carbon — as appropriate.
 
 ## Deferred / Do Not Say
 
-- **This is internal presentation material, not an IBM-published design system.** It was extracted
-  from an internal battlecard deck (`uploads/Offering_battlecards.pptx`) plus publicly documented
-  Carbon/IBM Plex conventions, for building throwaway prototypes, mocks, and IBM Consulting-styled
-  decks quickly. Never present output built with this skill as official or authoritative IBM
-  guidance, and never cite this kit itself as an IBM-sanctioned source.
+- **This kit summarizes publicly documented IBM brand conventions.** Never present its output as official or authoritative IBM guidance, and do not cite this kit as an IBM-sanctioned source.
 - **`Global Instructions - IBM branding.md` is deliberately NOT included in this skill.** It exists
   in the pre-ingestion working copy and was withheld pending a publish-safety decision on the
   content of that file (tracked: `node_01M329WNS6MD1407J4XMNB6A5X`). Do not add it, paraphrase it
   into this file, or treat its absence as an oversight to "fix."
-- **Three source decks referenced in `README.md`'s "Sources given" table were never uploaded**
-  (`2026 IBM Consulting Strategy & Capabilities Deck v26.02-1.pptx`, `...-2.pptx`,
-  `BoxBoat GTM-26-v1.pptx`). Everything in this kit derives from the one deck that *is* present
-  (`Offering_battlecards.pptx`) plus public Carbon/Plex conventions — not from those three.
 - **`fonts/*.ttf` (IBM Plex Sans) ship under the SIL Open Font License 1.1**, which permits bundling
   and redistribution but requires the OFL license text to accompany redistributed copies. This
   directory currently carries no `OFL.txt`/license file alongside the font binaries — a gap, not a
   clearance. Do not treat the repo root `LICENSE` (MIT, covers this skill's own authored content)
   as covering the fonts.
-- **`uploads/Offering_battlecards.pptx` is a real internal sales deck bundled in this skill** — a
-  separate publish-safety exposure already filed upstream; do not re-file it.
-
 ## Key References
 
 - `/Users/miethe/dev/homelab/development/MeatySkills/skills/ibm-consulting-design-system/README.md` — brand context, content fundamentals, visual foundations, iconography.
