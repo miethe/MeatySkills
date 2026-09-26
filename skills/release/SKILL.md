@@ -110,5 +110,5 @@ Full specification: `.claude/specs/changelog-spec.md §Pre-commit Hook`
 - **Capability contract**: `./SPEC.md`
 - **Version bump targets**: `.claude/specs/version-bump-spec.md`
 - **CHANGELOG rules**: `.claude/specs/changelog-spec.md`
-- **Audit script**: `.claude/skills/release/scripts/audit-coverage.py`
+- **Audit script**: `.claude/skills/changelog-sync/scripts/audit-coverage.py`
 - **Rollover script**: `.claude/skills/release/scripts/rollover-changelog.py`
