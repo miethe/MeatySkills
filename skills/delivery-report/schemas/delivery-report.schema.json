@@ -13,7 +13,7 @@
       "required": ["route", "title", "truth_status", "generated_by", "generated_at"],
       "additionalProperties": false,
       "properties": {
-        "route": { "enum": ["feature", "program", "phase", "readiness"] },
+        "route": { "enum": ["feature", "dossier", "program", "phase", "readiness"] },
         "title": { "type": "string", "minLength": 1 },
         "subject": { "type": "string", "description": "repo / program name (forward routes)" },
         "project": { "type": "string", "description": "project slug (feature route)" },
@@ -336,6 +336,81 @@
           "note": { "type": "string" }
         }
       }
+    },
+
+    "stages": {
+      "type": "array",
+      "description": "dossier lifecycle spine: research -> plan -> execute (one per phase) -> validate.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "kind", "state"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "description": "unique; research|plan|phase-N|validate" },
+          "label": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["research", "plan", "execute", "validate"] },
+          "state": { "enum": ["pending", "active", "done", "blocked"] },
+          "narrative": { "type": "string", "description": "what is being done and why (authored at phase close)" },
+          "outcome": { "type": "string", "description": "one-line result when done" },
+          "started": { "type": "string" },
+          "completed": { "type": ["string", "null"] },
+          "domains": { "$ref": "#/$defs/domain_list" },
+          "evidence_refs": { "$ref": "#/$defs/evidence_refs" },
+          "deviations": { "type": "string", "description": "from the completion note's Deviations & Risks" },
+          "commits": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "description": "present when open questions exist; answered questions must carry an answer.",
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "question": { "type": "string", "minLength": 1 },
+          "context": { "type": "string" },
+          "status": { "enum": ["open", "answered", "resolved", "superseded"] },
+          "blocking": { "type": "boolean" },
+          "raised_in_stage": { "type": "string" },
+          "raised_at": { "type": "string" },
+          "answer": { "type": ["string", "null"] },
+          "answered_by": { "type": ["string", "null"] },
+          "answered_at": { "type": ["string", "null"] },
+          "channel": {
+            "type": "object",
+            "description": "how a human answers this OQ (Phase A: instruction; Phase C: an IntentTree request ref)",
+            "additionalProperties": false,
+            "properties": {
+              "type": { "enum": ["instruction", "intenttree_request"] },
+              "detail": { "type": "string" },
+              "request_id": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "description": "the decision log; each entry may resolve an open_question via answers.",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "decision": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string" },
+          "alternatives": { "type": "array", "items": { "type": "string" } },
+          "decided_in_stage": { "type": "string" },
+          "decided_at": { "type": "string" },
+          "decided_by": { "type": "string" },
+          "answers": { "type": "string", "description": "the open_question id this decision resolves" },
+          "evidence_refs": { "$ref": "#/$defs/evidence_refs" }
+        }
+      }
     }
   },
 
@@ -343,6 +418,10 @@
     {
       "if": { "properties": { "report": { "properties": { "route": { "const": "feature" } } } } },
       "then": { "required": ["executive_summary", "problem", "solution", "value_adds", "changes", "validation", "evidence"] }
+    },
+    {
+      "if": { "properties": { "report": { "properties": { "route": { "const": "dossier" } } } } },
+      "then": { "required": ["stages"] }
     },
     {
       "if": { "properties": { "report": { "properties": { "route": { "enum": ["program", "phase", "readiness"] } } } } },

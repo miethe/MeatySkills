@@ -1,12 +1,14 @@
 # Route Policy — section matrices + eligibility
 
-`report.route` selects the report's shape and its mandatory sections. One renderer, four routes.
+`report.route` selects the report's shape and its mandatory sections. One skill, five routes across
+three renderers (retrospective `feature`, longitudinal `dossier`, forward `program`/`phase`/`readiness`).
 
 ## When to use which route
 
 | Route | Answers | Typical trigger |
 |---|---|---|
 | `feature` | "What did we finish, and how do we know?" (one completed thing, backward-looking) | "feature report", "completion showcase", "what did we deliver" |
+| `dossier` | "Where does this feature stand across its whole life — research → plan → execute → validate?" (one feature, longitudinal, regenerated each phase) | "delivery dossier", "living record", "where does this feature stand" |
 | `program` | "Where is this whole effort? What's blocked, what isn't?" | "project status", "where are we", "program status" |
 | `phase` | "How did this wave/phase land, and what's next?" | "phase report", "wave recap", "sprint report" |
 | `readiness` | "Should we invest further? Go or no-go?" | "readiness review", "go/no-go", "is this worth continuing" |
@@ -32,6 +34,46 @@ which sections are emphasised and the eligibility posture. They are not separate
 
 `readiness` leans on the two-track ladder + a clear "you are here" and an explicit recommendation in
 `report.scope_note`; it is the route where the reader is making an invest/stop decision.
+
+## Mandatory sections — `dossier`
+
+The `dossier` route has its own spine and reuses the forward-route machinery (items/handoffs,
+vitals, corrections, evidence, visuals) for the rest. It is a longitudinal per-feature record,
+regenerated at each phase boundary, with a stamped `generated_at` + `revision` + "you are here".
+
+| Section | dossier |
+|---|:--:|
+| `stages[]` (the lifecycle spine) | ✅ (≥1) |
+| `vitals[]` (each `measured_by`) | recommended |
+| `items[]` + `domains{}` (open work + handoffs) | recommended |
+| `open_questions[]` | when any exist |
+| `decisions[]` | recommended |
+| `validation[]` | required at the `validate` stage |
+| `evidence[]` | recommended |
+| `corrections[]` | on re-render |
+| a visual or `no_visual_reason` | recommended (the stage timeline itself is the primary visual) |
+
+Blocking honesty rules (`_validate_dossier`): `stages` non-empty with unique ids and valid
+`kind`∈{research,plan,execute,validate} / `state`∈{pending,active,done,blocked};
+`open_questions[].status`∈{open,answered,resolved,superseded} and `answered` ⇒ `answer` present;
+`decisions[]` well-formed; every `stages[]`/`decisions[]` `evidence_refs` entry resolves to an
+`evidence[].id`; deferred/blocked items still run the handoff checks. A `blocking: true` open
+question with no `channel` (how to answer) is a warning.
+
+Eligibility: `dossier` is **on-demand / recommended** for Tier 2/3 features (never tier-gated as
+required); an explicit request always wins — the same posture as the forward routes. It complements,
+never replaces, the enforced end-of-feature `feature` report.
+
+**You normally do not author a dossier manifest by hand — hooks own both ends of its lifecycle:**
+
+| Moment | Hook | Behaviour |
+|---|---|---|
+| Plan time (Tier 2/3) | `dev-execution/hooks/seed-dossier.sh` | Deterministically creates the manifest from the plan (spine from `wave_plan.phases[]` / phase headings; OQs + decisions from frontmatter). Tier 0/1 needs `DOSSIER_SEED_FORCE=1`. |
+| Each phase close | `dev-execution/hooks/update-dossier.sh` | The phase-closing agent authors that stage; the hook re-renders + re-validates. |
+
+Both share the `AOS_DELIVERY_DOSSIER` master switch, are binding-gated, non-fatal, and always exit 0.
+Seeding is what arms the loop — the regeneration hook no-ops when no manifest exists. Author one
+directly only when retrofitting a record onto a feature planned before the seed existed.
 
 ## Eligibility (feature route)
 

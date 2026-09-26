@@ -36,6 +36,18 @@
   var printBtn = document.querySelector("[data-print]");
   if (printBtn) printBtn.addEventListener("click", function () { window.print(); });
 
+  /* ---- dossier route: expand / collapse every stage narrative at once ---- */
+  var expander = document.querySelector("[data-expand-stages]");
+  if (expander) {
+    expander.addEventListener("click", function () {
+      var narrs = document.querySelectorAll(".stage-narr");
+      var anyClosed = false;
+      for (var i = 0; i < narrs.length; i++) { if (!narrs[i].open) { anyClosed = true; break; } }
+      for (var j = 0; j < narrs.length; j++) { narrs[j].open = anyClosed; }
+      expander.textContent = anyClosed ? "Collapse all" : "Expand all";
+    });
+  }
+
   /* ---- per-<code> inline copy (feature route, Sec 7.4) ---- */
   document.addEventListener("click", function (ev) {
     var c = ev.target && ev.target.closest ? ev.target.closest("code.copyable") : null;
@@ -99,6 +111,9 @@
     var payload = body ? body.querySelector(".ns-payload") : null;
     if (!payload) return;
     var text = payload.textContent.replace(/^\s+/, "").replace(/\s+$/, "") + "\n";
+    var aug = document.getElementById("dr-augment");
+    var extra = aug && aug.value ? aug.value.replace(/^\s+/, "").replace(/\s+$/, "") : "";
+    if (extra) { text += "\nAdditional instructions: " + extra + "\n"; }
     function degrade() {
       if (fallbackCopy(text)) { flash(btn, "Copied"); return; }
       revealForManualCopy(body, text);

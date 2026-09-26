@@ -12,7 +12,7 @@
   --ok:#2f6d43; --ok-dim:#dcecdf; --idle:#8493a0; --idle-dim:#e6eaed;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --maxw: 1180px;
+  --maxw: min(1900px, 94vw);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -325,12 +325,119 @@ figcaption { font-family:var(--mono); font-size:11px; color:var(--muted); line-h
   padding-left:10px; border-left:2px solid var(--rule-hard); max-width:78ch; }
 figcaption b { color:var(--ink-2); font-weight:600; }
 
+/* ==================================================================== */
+/* DOSSIER ROUTE — the living per-feature record (rides route-status)     */
+/* stage timeline + open-question panel + decision log; shares masthead,   */
+/* vitals, items table, corrections, handoff, and theming with route-status*/
+/* ==================================================================== */
+.route-dossier .dossier-meta { display:flex; flex-wrap:wrap; gap:9px; margin:16px 0 0; align-items:center; }
+.route-dossier .tstat { font-family:var(--mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+  font-weight:600; padding:4px 9px; border-radius:2px; border:1px solid currentColor; }
+.route-dossier .tstat.is-ok { color:var(--ok); }
+.route-dossier .tstat.is-warn { color:var(--warn); }
+.route-dossier .tstat.is-crit { color:var(--crit); }
+.route-dossier .rev-chip { font-family:var(--mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--muted); border:1px solid var(--rule-hard); border-radius:2px; padding:4px 9px; }
+
+/* stage timeline — the heart */
+.route-dossier .stage-tools { display:flex; justify-content:flex-end; margin:16px 0 0; }
+.route-dossier .stages { list-style:none; margin:12px 0 0; padding:0; display:grid; gap:1px;
+  background:var(--rule); border:1px solid var(--rule); }
+.route-dossier .stage { display:grid; grid-template-columns:96px minmax(0,1fr); gap:16px; background:var(--paper-2);
+  padding:15px 16px; border-left:4px solid var(--idle); }
+.route-dossier .stage.st-done { border-left-color:var(--ok); }
+.route-dossier .stage.st-active { border-left-color:var(--accent); background:var(--accent-dim); }
+.route-dossier .stage.st-pending { border-left-color:var(--rule-hard); }
+.route-dossier .stage.st-blocked { border-left-color:var(--warn); }
+.route-dossier .stage-rail { font-family:var(--mono); }
+.route-dossier .stage-kind { display:block; font-size:12px; font-weight:700; letter-spacing:-0.01em;
+  color:var(--ink); text-transform:capitalize; }
+.route-dossier .stage-state { display:block; font-size:9.5px; font-weight:600; letter-spacing:0.09em;
+  text-transform:uppercase; margin-top:3px; color:var(--idle); }
+.route-dossier .st-done .stage-state { color:var(--ok); }
+.route-dossier .st-active .stage-state { color:var(--accent); }
+.route-dossier .st-blocked .stage-state { color:var(--warn); }
+.route-dossier .stage-main { min-width:0; }
+.route-dossier .stage-head { display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; }
+.route-dossier .stage-head h3 { margin:0; font-size:17px; font-weight:650; letter-spacing:-0.01em; }
+.route-dossier .stage-time { font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:5px;
+  display:flex; flex-wrap:wrap; gap:12px; }
+.route-dossier .stage-outcome { margin:8px 0 0; font-size:14px; }
+.route-dossier .stage-dev { color:var(--warn); font-size:13px; margin:6px 0 0; }
+.route-dossier details.stage-narr { margin-top:9px; }
+.route-dossier details.stage-narr > summary { cursor:pointer; list-style:none; font-family:var(--mono);
+  font-size:10px; letter-spacing:0.11em; text-transform:uppercase; color:var(--accent); font-weight:600;
+  display:flex; align-items:center; gap:7px; user-select:none; }
+.route-dossier details.stage-narr > summary::-webkit-details-marker { display:none; }
+.route-dossier details.stage-narr > summary::before { content:"\25B8"; display:inline-block; transition:transform 0.14s ease; }
+.route-dossier details.stage-narr[open] > summary::before { transform:rotate(90deg); }
+.route-dossier details.stage-narr p { margin:9px 0 0; font-size:13.5px; max-width:74ch; }
+.route-dossier .stage-shots { display:flex; flex-wrap:wrap; gap:12px; margin:12px 0 0; }
+.route-dossier .stage-shot { margin:0; max-width:300px; }
+.route-dossier .stage-shot img { width:100%; height:auto; display:block; border:1px solid var(--rule-hard); }
+.route-dossier .stage-shot figcaption { font-family:var(--mono); font-size:10.5px; color:var(--muted);
+  margin-top:6px; padding-left:8px; border-left:2px solid var(--rule-hard); }
+.route-dossier .stage-commits { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.route-dossier .stage .refs { margin-top:10px; }
+@media (max-width:640px) { .route-dossier .stage { grid-template-columns:1fr; gap:8px; } }
+
+/* open-question cards — blocking first */
+.route-dossier .oq-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; margin-top:22px; }
+.route-dossier .oq { border:1px solid var(--rule); border-left:4px solid var(--muted); background:var(--paper-2);
+  padding:15px 16px; }
+.route-dossier .oq.is-blocking { border-left-color:var(--crit); }
+.route-dossier .oq.oq-answered, .route-dossier .oq.oq-resolved { border-left-color:var(--ok); }
+.route-dossier .oq.oq-superseded { border-left-color:var(--idle); opacity:0.82; }
+.route-dossier .oq-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+.route-dossier .oq-id { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--ink); }
+.route-dossier .oq-status { font-family:var(--mono); font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase;
+  font-weight:600; padding:2px 7px; border-radius:2px; border:1px solid currentColor; }
+.route-dossier .oq-status.oq-open { color:var(--crit); }
+.route-dossier .oq-status.oq-answered, .route-dossier .oq-status.oq-resolved { color:var(--ok); }
+.route-dossier .oq-status.oq-superseded { color:var(--idle); }
+.route-dossier .oq-block { font-family:var(--mono); font-size:9px; letter-spacing:0.09em; text-transform:uppercase;
+  font-weight:700; color:var(--crit); background:var(--crit-dim); padding:2px 7px; border-radius:2px; }
+.route-dossier .oq-raised { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--muted); }
+.route-dossier .oq-q { margin:0 0 8px; font-size:14.5px; font-weight:600; max-width:none; }
+.route-dossier .oq-ctx { margin:0 0 8px; font-size:13px; color:var(--ink-2); max-width:none; }
+.route-dossier .oq-ans, .route-dossier .oq-chan { margin-top:10px; padding-top:9px; border-top:1px solid var(--rule); }
+.route-dossier .oq-ans p { margin:5px 0 0; font-size:13.5px; max-width:none; }
+.route-dossier .oq-k { font-family:var(--mono); font-size:9.5px; letter-spacing:0.09em; text-transform:uppercase;
+  font-weight:600; color:var(--muted); }
+.route-dossier .oq-chan span:last-child { display:block; margin-top:4px; font-size:12.5px; color:var(--ink-2); }
+
+/* decision log */
+.route-dossier .dec-log { display:grid; gap:12px; margin-top:22px; }
+.route-dossier .dec { border:1px solid var(--rule); background:var(--paper-2); padding:14px 16px;
+  border-left:4px solid var(--know); }
+.route-dossier .dec-head { display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; margin-bottom:6px; }
+.route-dossier .dec-id { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--know); }
+.route-dossier .dec-meta { font-family:var(--mono); font-size:10.5px; color:var(--muted); }
+.route-dossier .dec-what { margin:0; font-size:14.5px; font-weight:600; max-width:none; }
+.route-dossier .dec-why, .route-dossier .dec-alts { margin:8px 0 0; font-size:13px; color:var(--ink-2); max-width:none; }
+.route-dossier .dec-answers { margin:8px 0 0; font-size:12.5px; max-width:none; }
+.route-dossier .dec .refs { margin-top:10px; }
+.route-dossier .stages + .stage-tools { margin-top:0; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition:none !important; }
   html { scroll-behavior:auto; }
 }
 @media print {
-  .theme-toggle, .toolbar, .route-feature .toc { display:none; }
+  .theme-toggle, .toolbar, .route-feature .toc, .stage-tools { display:none; }
   body { background:#fff; color:#111; }
-  .card, .visual, .chart, .diagram, .callout, .step { break-inside:avoid; }
+  .card, .visual, .chart, .diagram, .callout, .step, .stage, .oq, .dec { break-inside:avoid; }
 }
+
+/* ----- augment field: text appended to every copied handoff (page-local, never persisted) ----- */
+.augment { margin:18px 0 10px; padding:14px 16px; border:1px solid var(--rule);
+  background:var(--paper-2); display:flex; flex-direction:column; gap:8px; }
+.augment label { font-family:var(--mono); font-size:10px; letter-spacing:0.09em;
+  text-transform:uppercase; color:var(--ink-2); }
+.augment input { width:100%; box-sizing:border-box; font-family:var(--mono); font-size:12.5px;
+  padding:9px 11px; color:var(--ink); background:var(--paper); border:1px solid var(--rule-hard);
+  border-radius:2px; }
+.augment input::placeholder { color:var(--ink-2); opacity:0.7; }
+.augment input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.augment .augment-hint { margin:0; font-size:11.5px; color:var(--ink-2); max-width:none; }
+.augment .augment-hint code { font-size:11px; }

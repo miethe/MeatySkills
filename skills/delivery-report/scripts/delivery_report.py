@@ -26,8 +26,19 @@ from typing import Any, Iterable
 VERSION = "0.1.0"
 SCHEMA_VERSION = "1.0"
 FEATURE_ROUTE = "feature"
+DOSSIER_ROUTE = "dossier"
 STATUS_ROUTES = {"program", "phase", "readiness"}
-ALL_ROUTES = {FEATURE_ROUTE} | STATUS_ROUTES
+ALL_ROUTES = {FEATURE_ROUTE, DOSSIER_ROUTE} | STATUS_ROUTES
+
+# dossier route vocabularies (spec Sec A.2 / A.5)
+STAGE_KINDS = {"research", "plan", "execute", "validate"}
+STAGE_STATES = {"pending", "active", "done", "blocked"}
+OQ_STATUSES = {"open", "answered", "resolved", "superseded"}
+TRUTH_SEVERITY = {
+    "verified": "ok", "shipped": "ok",
+    "partially_verified": "warn", "branch_local": "warn",
+    "not_executed": "crit", "owner_data_absent": "crit",
+}
 
 MAX_MEDIA_BYTES = 8 * 1024 * 1024
 MAX_TOTAL_MEDIA_BYTES = 25 * 1024 * 1024
@@ -46,7 +57,7 @@ DEFAULT_DOMAINS = {
     "Evidence": "knowledge", "Research": "knowledge", "Validation": "knowledge",
     "Governance": "governance", "Compliance": "governance", "Legal": "governance", "Release": "governance",
 }
-EXPORT_TARGETS = {"skillmeat", "intenttree", "meatywiki", "ccdash"}
+EXPORT_TARGETS = {"skillmeat", "intenttree", "meatywiki", "ccdash", "atlas"}
 
 
 class ReportError(ValueError):
@@ -91,7 +102,21 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 
 def route_of(data: dict[str, Any]) -> str:
-    return str((data.get("report") or {}).get("route") or "")
+    """Canonical route accessor — the ONE place `report.route` is normalized.
+
+    Always `.strip().lower()`s the raw value. Every downstream `in STATUS_ROUTES` / `in
+    ALL_ROUTES` / dict lookup consumes this canonical form, so casing/whitespace differences
+    (`"PROGRAM"`, `"program "`, `" phase"`) can never again split a guard from its input — the
+    identity-bypass class a second review round found (D1's no-collapse gates were being
+    defeated by a route value none of them normalized before comparing).
+
+    Deliberately does NOT raise on an unrecognized value: `render_report`/`render_status` fall
+    through unknown routes today, and turning this shared accessor into a throwing function would
+    change render behaviour for manifests outside this feature's blast radius. Rejecting garbage
+    routes is the job of the two callers that must not accept them — `build_export` and
+    `validate_manifest` — not this accessor.
+    """
+    return str((data.get("report") or {}).get("route") or "").strip().lower()
 
 
 def repo_root_of(data: dict[str, Any]) -> Path | None:
@@ -122,11 +147,12 @@ def media_data_uri(path: Path) -> str:
 def eligibility(data: dict[str, Any]) -> dict[str, Any]:
     """Feature-route tier/size gate (ported). Forward routes are on-demand."""
     route = route_of(data)
-    if route in STATUS_ROUTES:
+    if route in STATUS_ROUTES or route == DOSSIER_ROUTE:
         policy = data.get("report_policy") or {}
         decision = "required" if policy.get("explicit_request") or policy.get("required") else "on_demand"
-        return {"decision": decision, "effective_decision": decision, "route": route,
-                "reasons": ["forward-looking status report is produced on request"]}
+        reason = ("dossier is on-demand / recommended for Tier 2/3, never tier-gated as required"
+                  if route == DOSSIER_ROUTE else "forward-looking status report is produced on request")
+        return {"decision": decision, "effective_decision": decision, "route": route, "reasons": [reason]}
 
     policy = data.get("report_policy") or {}
     system = policy.get("tier_system", "custom")
@@ -163,7 +189,8 @@ def eligibility(data: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------- validation
 
 def all_evidence_refs(data: dict[str, Any]) -> Iterable[tuple[str, str]]:
-    for section in ("value_adds", "changes", "findings", "items"):
+    # dossier stages[] / decisions[] carry evidence_refs; harmless on other routes (absent → skipped).
+    for section in ("value_adds", "changes", "findings", "items", "stages", "decisions"):
         for index, item in enumerate(data.get(section) or []):
             if isinstance(item, dict):
                 for ref in item.get("evidence_refs") or []:
@@ -206,9 +233,17 @@ def _grep_present(repo: Path | None, rel: str, needle: str) -> bool | None:
     return needle in text
 
 
-def validate_handoff(prefix: str, handoff: dict[str, Any], kind: str,
+def validate_handoff(prefix: str, handoff: Any, kind: str,
                      default_repo: Path | None, errors: list[str], warnings: list[str]) -> None:
-    """Blocking handoff rules (spec Sec 3.3). Filesystem-only checks; no network."""
+    """Blocking handoff rules (spec Sec 3.3). Filesystem-only checks; no network.
+
+    `handoff` is typed `Any`, not `dict[str, Any]`: a manifest can carry a malformed handoff
+    (e.g. `followups[i].handoff` defaulting through `fu.get("handoff", {})` at a call site where
+    `fu["handoff"]` is present but not itself a dict — a string, say). A `dict[str, Any]`
+    annotation here would make the isinstance guard below statically unreachable under a type
+    checker (that promise is what a fix-3 pyright pass flagged) while it is very much reachable
+    at runtime; widening the annotation is the honest fix, not deleting the guard.
+    """
     if not isinstance(handoff, dict):
         errors.append(f"{prefix}.handoff must be an object")
         return
@@ -244,10 +279,27 @@ def validate_handoff(prefix: str, handoff: dict[str, Any], kind: str,
     if kind == "deferred" and not str(handoff.get("trigger") or "").strip():
         errors.append(f"{prefix} is deferred but its handoff carries no re-entry trigger")
 
+    # Rule 7 (spec Sec 3.3): `deferred` and `finding` require a REAL tracker.
+    #
+    # These are the two kinds that represent newly-discovered work, so the report may be the only
+    # place the item is written down at all. The predecessor rule ("node ids must be real") policed
+    # id *validity* and was therefore satisfied by omitting the id entirely and putting a file path
+    # in the Target column — a fully spec-conformant deferral with nothing filed behind it. Presence
+    # is what makes the row a pointer into the tracker rather than a note that dies with the report.
+    # The filing itself is ungated and happens at detection time (docs/rules/finding-capture.md).
     tracker = handoff.get("tracker")
-    if isinstance(tracker, str) and tracker.strip() and "node_" in tracker:
-        if not re.search(r"node_[A-Za-z0-9]+", tracker):
-            warnings.append(f"{prefix}.handoff.tracker looks like an IntentTree node but the id is malformed")
+    tracker_str = tracker.strip() if isinstance(tracker, str) else ""
+    if kind in ("deferred", "finding") and not tracker_str:
+        errors.append(
+            f"{prefix} is {kind} but its handoff carries no tracker — file a node at detection "
+            f"time (docs/rules/finding-capture.md) and quote its id"
+        )
+    elif tracker_str and "node_" in tracker_str and not re.search(r"node_[A-Za-z0-9]+", tracker_str):
+        # An IntentTree-shaped tracker with a malformed id is a hard error for the two kinds whose
+        # only record this may be, and stays a warning elsewhere (a typo in a shipped item's
+        # back-reference is untidy, not load-bearing).
+        msg = f"{prefix}.handoff.tracker looks like an IntentTree node but the id is malformed"
+        (errors if kind in ("deferred", "finding") else warnings).append(msg)
 
 
 def _validate_common(data: dict[str, Any], asset_root: Path,
@@ -259,8 +311,12 @@ def _validate_common(data: dict[str, Any], asset_root: Path,
     if not isinstance(report, dict):
         errors.append("report must be an object")
         report = {}
-    if route_of(data) not in ALL_ROUTES:
-        errors.append("report.route must be feature, program, phase, or readiness")
+    route = route_of(data)
+    if route not in ALL_ROUTES:
+        errors.append(
+            f"report.route {route!r} is not a recognized route — must be one of "
+            f"{sorted(ALL_ROUTES)}"
+        )
     if report.get("truth_status") not in TRUTH_LABELS:
         errors.append("report.truth_status uses an unknown truth label")
     for field in ("title", "generated_by", "generated_at"):
@@ -327,6 +383,64 @@ def _validate_common(data: dict[str, Any], asset_root: Path,
     return evidence_ids
 
 
+def _validate_vitals(vitals: Any, errors: list[str], *, required: bool) -> None:
+    if required and (not isinstance(vitals, list) or not vitals):
+        errors.append("vitals must contain at least one headline number")
+    for index, v in enumerate(vitals or []):
+        if not isinstance(v, dict):
+            errors.append(f"vitals[{index}] must be an object")
+            continue
+        for field in ("key", "value"):
+            if not str(v.get(field) or "").strip():
+                errors.append(f"vitals[{index}].{field} is required")
+        if not str(v.get("measured_by") or "").strip():
+            errors.append(f"vitals[{index}] needs a measured_by (a headline number with no method is an assertion)")
+
+
+def _validate_items(items: Any, domains: dict[str, Any], repo: Path | None,
+                    errors: list[str], warnings: list[str]) -> None:
+    """Per-item kind/domain/handoff rules, shared by the status and dossier routes."""
+    seen_ids: set[str] = set()
+    for index, item in enumerate(items or []):
+        if not isinstance(item, dict):
+            errors.append(f"items[{index}] must be an object")
+            continue
+        iid = str(item.get("id") or "")
+        prefix = f"items[{index}]({iid or '?'})"
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", iid):
+            errors.append(f"{prefix}.id is invalid")
+        elif iid in seen_ids:
+            errors.append(f"duplicate item id: {iid}")
+        seen_ids.add(iid)
+        if not str(item.get("title") or "").strip():
+            errors.append(f"{prefix}.title is required")
+        kind = item.get("kind")
+        if kind not in ITEM_KINDS:
+            errors.append(f"{prefix}.kind must be one of {sorted(ITEM_KINDS)}")
+        doms = item.get("domains") or []
+        if not 1 <= len(doms) <= 3:
+            errors.append(f"{prefix}.domains must carry 1 to 3 domains")
+        for d in doms:
+            if domains and d not in domains:
+                errors.append(f"{prefix} uses domain '{d}' absent from the closed vocabulary")
+        handoff = item.get("handoff")
+        needs_handoff = kind in HANDOFF_REQUIRED_KINDS
+        if needs_handoff and not isinstance(handoff, dict):
+            errors.append(f"{prefix} kind={kind} requires a handoff")
+        elif isinstance(handoff, dict):
+            validate_handoff(prefix, handoff, str(kind), repo, errors, warnings)
+
+
+def _validate_corrections(corrections: Any, errors: list[str]) -> None:
+    for index, c in enumerate(corrections or []):
+        if not isinstance(c, dict):
+            errors.append(f"corrections[{index}] must be an object")
+            continue
+        for field in ("claimed", "actual", "verified_by"):
+            if not str(c.get(field) or "").strip():
+                errors.append(f"corrections[{index}].{field} is required")
+
+
 def _validate_feature(data: dict[str, Any], errors: list[str], warnings: list[str]) -> None:
     for field in ("executive_summary", "problem", "solution"):
         if not isinstance(data.get(field), str) or not data[field].strip():
@@ -369,18 +483,7 @@ def _validate_feature(data: dict[str, Any], errors: list[str], warnings: list[st
 
 
 def _validate_status(data: dict[str, Any], errors: list[str], warnings: list[str]) -> None:
-    vitals = data.get("vitals")
-    if not isinstance(vitals, list) or not vitals:
-        errors.append("vitals must contain at least one headline number")
-    for index, v in enumerate(vitals or []):
-        if not isinstance(v, dict):
-            errors.append(f"vitals[{index}] must be an object")
-            continue
-        for field in ("key", "value"):
-            if not str(v.get(field) or "").strip():
-                errors.append(f"vitals[{index}].{field} is required")
-        if not str(v.get("measured_by") or "").strip():
-            errors.append(f"vitals[{index}] needs a measured_by (a headline number with no method is an assertion)")
+    _validate_vitals(data.get("vitals"), errors, required=True)
 
     domains = data.get("domains")
     if not isinstance(domains, dict) or not domains:
@@ -393,45 +496,110 @@ def _validate_status(data: dict[str, Any], errors: list[str], warnings: list[str
     items = data.get("items")
     if not isinstance(items, list) or not items:
         errors.append("items must contain at least one reportable item")
-    seen_ids: set[str] = set()
-    repo = repo_root_of(data)
-    for index, item in enumerate(items or []):
-        if not isinstance(item, dict):
-            errors.append(f"items[{index}] must be an object")
+    _validate_items(items, domains, repo_root_of(data), errors, warnings)
+
+    _validate_corrections(data.get("corrections"), errors)
+    _validate_visuals(data.get("visuals") or {}, errors)
+
+
+def _validate_dossier(data: dict[str, Any], errors: list[str], warnings: list[str]) -> None:
+    """Blocking honesty rules for the living per-feature record (spec Sec A.5).
+
+    Reuses _validate_common for report/evidence/media and the shared item/vital/correction
+    helpers; every stages[]/decisions[] evidence_ref is resolved against the evidence index
+    that _validate_common builds. Adds the stage-spine, open-question, and decision-log rules.
+    """
+    domains = data.get("domains")
+    if not isinstance(domains, dict):
+        domains = {}
+    for name, group in domains.items():
+        if group not in DOMAIN_GROUP_CLASS:
+            errors.append(f"domains[{name}] group must be build, knowledge, or governance")
+
+    # stages — the required lifecycle spine
+    stages = data.get("stages")
+    if not isinstance(stages, list) or not stages:
+        errors.append("stages must contain at least one lifecycle stage")
+        stages = []
+    seen_stage_ids: set[str] = set()
+    for index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            errors.append(f"stages[{index}] must be an object")
             continue
-        iid = str(item.get("id") or "")
-        prefix = f"items[{index}]({iid or '?'})"
-        if not re.fullmatch(r"[A-Za-z0-9._-]+", iid):
+        sid = str(stage.get("id") or "")
+        prefix = f"stages[{index}]({sid or '?'})"
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", sid):
             errors.append(f"{prefix}.id is invalid")
-        elif iid in seen_ids:
-            errors.append(f"duplicate item id: {iid}")
-        seen_ids.add(iid)
-        if not str(item.get("title") or "").strip():
-            errors.append(f"{prefix}.title is required")
-        kind = item.get("kind")
-        if kind not in ITEM_KINDS:
-            errors.append(f"{prefix}.kind must be one of {sorted(ITEM_KINDS)}")
-        doms = item.get("domains") or []
-        if not 1 <= len(doms) <= 3:
+        elif sid in seen_stage_ids:
+            errors.append(f"duplicate stage id: {sid}")
+        seen_stage_ids.add(sid)
+        if not str(stage.get("label") or "").strip():
+            errors.append(f"{prefix}.label is required")
+        if stage.get("kind") not in STAGE_KINDS:
+            errors.append(f"{prefix}.kind must be one of {sorted(STAGE_KINDS)}")
+        if stage.get("state") not in STAGE_STATES:
+            errors.append(f"{prefix}.state must be one of {sorted(STAGE_STATES)}")
+        doms = stage.get("domains") or []
+        if doms and not 1 <= len(doms) <= 3:
             errors.append(f"{prefix}.domains must carry 1 to 3 domains")
         for d in doms:
             if domains and d not in domains:
                 errors.append(f"{prefix} uses domain '{d}' absent from the closed vocabulary")
-        handoff = item.get("handoff")
-        needs_handoff = kind in HANDOFF_REQUIRED_KINDS
-        if needs_handoff and not isinstance(handoff, dict):
-            errors.append(f"{prefix} kind={kind} requires a handoff")
-        elif isinstance(handoff, dict):
-            validate_handoff(prefix, handoff, str(kind), repo, errors, warnings)
 
-    for index, c in enumerate(data.get("corrections") or []):
-        if not isinstance(c, dict):
-            errors.append(f"corrections[{index}] must be an object")
+    # open questions — the honesty surface; answered must carry an answer
+    oq_ids: set[str] = set()
+    for index, oq in enumerate(data.get("open_questions") or []):
+        if not isinstance(oq, dict):
+            errors.append(f"open_questions[{index}] must be an object")
             continue
-        for field in ("claimed", "actual", "verified_by"):
-            if not str(c.get(field) or "").strip():
-                errors.append(f"corrections[{index}].{field} is required")
+        qid = str(oq.get("id") or "")
+        prefix = f"open_questions[{index}]({qid or '?'})"
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", qid):
+            errors.append(f"{prefix}.id is invalid")
+        elif qid in oq_ids:
+            errors.append(f"duplicate open_question id: {qid}")
+        oq_ids.add(qid)
+        if not str(oq.get("question") or "").strip():
+            errors.append(f"{prefix}.question is required")
+        status = oq.get("status")
+        if status not in OQ_STATUSES:
+            errors.append(f"{prefix}.status must be one of {sorted(OQ_STATUSES)}")
+        if status == "answered" and not str(oq.get("answer") or "").strip():
+            errors.append(f"{prefix} is marked answered but carries no answer")
+        raised = oq.get("raised_in_stage")
+        if raised and seen_stage_ids and str(raised) not in seen_stage_ids:
+            warnings.append(f"{prefix}.raised_in_stage '{raised}' is not a known stage id")
+        channel = oq.get("channel")
+        if not isinstance(channel, dict):
+            channel = {}
+        if oq.get("blocking") and not str(channel.get("type") or "").strip():
+            warnings.append(f"{prefix} is blocking but has no channel telling a human how to answer")
 
+    # decisions — the decision log
+    seen_dec_ids: set[str] = set()
+    for index, dec in enumerate(data.get("decisions") or []):
+        if not isinstance(dec, dict):
+            errors.append(f"decisions[{index}] must be an object")
+            continue
+        did = str(dec.get("id") or "")
+        prefix = f"decisions[{index}]({did or '?'})"
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", did):
+            errors.append(f"{prefix}.id is invalid")
+        elif did in seen_dec_ids:
+            errors.append(f"duplicate decision id: {did}")
+        seen_dec_ids.add(did)
+        if not str(dec.get("decision") or "").strip():
+            errors.append(f"{prefix}.decision is required")
+        answers = dec.get("answers")
+        if answers and oq_ids and str(answers) not in oq_ids:
+            warnings.append(f"{prefix}.answers '{answers}' is not a known open_question id")
+
+    # open items reuse the forward-route item + handoff contract (recommended, not required)
+    _validate_items(data.get("items") or [], domains, repo_root_of(data), errors, warnings)
+
+    # vitals recommended; validate measured_by when present. corrections on re-render; optional visuals.
+    _validate_vitals(data.get("vitals"), errors, required=False)
+    _validate_corrections(data.get("corrections"), errors)
     _validate_visuals(data.get("visuals") or {}, errors)
 
 
@@ -463,6 +631,8 @@ def validate_manifest(data: dict[str, Any], asset_root: Path,
     evidence_ids = _validate_common(data, asset_root, errors, warnings)
     if route == FEATURE_ROUTE:
         _validate_feature(data, errors, warnings)
+    elif route == DOSSIER_ROUTE:
+        _validate_dossier(data, errors, warnings)
     elif route in STATUS_ROUTES:
         _validate_status(data, errors, warnings)
 
@@ -838,9 +1008,13 @@ def render_ladder(ladder: dict[str, Any], domains_map: dict[str, str]) -> str:
             doms = dom_chips(domains_map, step.get("domains") or []) if step.get("domains") else ""
             ev = f'<span class="ev">{e(step["ev"])}</span>' if step.get("ev") else ""
             label = f'<strong>{e(step["label"])}</strong> ' if step.get("label") else ""
+            # Hoisted out of the f-string below: a backslash inside an f-string *expression* is a
+            # SyntaxError before Python 3.12 (PEP 701), which made this whole CLI unimportable on
+            # the agentic node (3.11). Keep expressions backslash-free — 3.10+ is the stated floor.
+            domline = f'<div class="domline">{doms}</div>' if doms else ""
             steps.append(
                 f'<div class="step s-{e(state)}"><div class="code">{e(step.get("code"))}<small>{e(state)}</small></div>'
-                f'<div class="body">{("<div class=\"domline\">"+doms+"</div>") if doms else ""}{label}{e(step.get("body"))}{ev}</div></div>'
+                f'<div class="body">{domline}{label}{e(step.get("body"))}{ev}</div></div>'
             )
         tracks_html.append(f'<div><div class="track-h">{e(track.get("title"))}{note}</div>{"".join(steps)}</div>')
     here = ""
@@ -850,6 +1024,66 @@ def render_ladder(ladder: dict[str, Any], domains_map: dict[str, str]) -> str:
     note = f'<span class="h2-note">{e(ladder.get("caption"))}</span>' if ladder.get("caption") else ""
     return (f'<section><h2>{e(ladder.get("title") or "Tracks")} {note}</h2>'
             f'<div class="tracks">{"".join(tracks_html)}</div>{here}</section>')
+
+
+def render_corrections_section(data: dict[str, Any]) -> str:
+    """Prior-revision claims now known wrong. Shared by the status and dossier routes."""
+    if not data.get("corrections"):
+        return ""
+    rows = "".join(
+        f'<p><strong>Rev {e(c.get("revision"))} claimed:</strong> {e(c.get("claimed"))}<br>'
+        f'<strong>Actually:</strong> {e(c.get("actual"))}<br>'
+        f'<span class="muted">Verified by: {e(c.get("verified_by"))}</span></p>'
+        for c in data["corrections"]
+    )
+    return ('<section><h2>Corrections <span class="h2-note">prior-revision claims now known wrong</span></h2>'
+            f'<div class="callout warn"><div class="ct">What changed since the last revision</div>{rows}</div></section>')
+
+
+def render_items_table(items: list[dict[str, Any]], domains_map: dict[str, str], repo: Path | None,
+                       constraints: str, heading: str = "Items",
+                       note: str = "every open item carries a copyable handoff") -> str:
+    """The open-item table (state pill + copyable handoff), shared by status and dossier."""
+    pill_class = {"shipped": "p-ok", "partial": "p-part", "not_started": "p-none",
+                  "blocked_external": "p-crit", "deferred": "p-deferred", "finding": "p-blocked"}
+    item_rows = []
+    for item in items or []:
+        kind = item.get("kind", "")
+        label = item.get("status_label") or kind.replace("_", " ")
+        doms = dom_chips(domains_map, item.get("domains") or [])
+        handoff = item.get("handoff")
+        hb = handoff_block(item.get("title", ""), item.get("domains") or [], handoff, repo, constraints) if isinstance(handoff, dict) else ""
+        vb = f'<span class="muted"> &middot; {e(item.get("verified_by"))}</span>' if item.get("verified_by") else ""
+        note_cell = e(item.get("note")) if item.get("note") else ""
+        item_rows.append(
+            f'<tr><td>{e(item.get("title"))}</td><td>{doms}</td>'
+            f'<td class="nowrap"><span class="pill {pill_class.get(kind,"p-none")}">{e(label)}</span>{vb}</td>'
+            f'<td>{note_cell}{hb}</td></tr>'
+        )
+    return (
+        f'<section><h2>{e(heading)} <span class="h2-note">{note}</span></h2>'
+        '<div class="augment">'
+        '<label for="dr-augment">Append to every copied handoff</label>'
+        '<input id="dr-augment" type="text" autocomplete="off" spellcheck="false" '
+        'placeholder="e.g. Work in a worktree and open a draft PR. Report blockers rather than guessing.">'
+        '<p class="augment-hint">Typed here, appended to each <em>Copy handoff</em> payload under '
+        '<code>Additional instructions</code>. Local to this page; nothing is saved or sent.</p></div>'
+        '<div class="scroller"><table class="data"><thead><tr><th>Item</th><th>Domains</th><th>State</th>'
+        f'<th>Notes &amp; next step</th></tr></thead><tbody>{"".join(item_rows)}</tbody></table></div></section>'
+    )
+
+
+def render_evidence_index(evidence: list[dict[str, Any]]) -> str:
+    """Evidence cards with #evidence-<id> anchors that refs_html links resolve to."""
+    return "".join(
+        f'<article class="evidence" id="evidence-{e(i.get("id"))}"><div class="evidence-id">{e(i.get("id"))}</div><div>'
+        f'<strong>{e(i.get("label"))}</strong><div class="evidence-meta">{e(i.get("kind"))}'
+        + (f' &middot; <code>{e(i.get("path"))}</code>' if i.get("path") else "")
+        + (f' &middot; commit <code>{e(i.get("commit"))}</code>' if i.get("commit") else "")
+        + (f'<br>{e(i.get("note"))}' if i.get("note") else "")
+        + "</div></div></article>"
+        for i in evidence or []
+    )
 
 
 def render_status(data: dict[str, Any], asset_root: Path) -> str:
@@ -878,42 +1112,13 @@ def render_status(data: dict[str, Any], asset_root: Path) -> str:
         for v in data.get("vitals") or []
     )
 
-    corrections = ""
-    if data.get("corrections"):
-        rows = "".join(
-            f'<p><strong>Rev {e(c.get("revision"))} claimed:</strong> {e(c.get("claimed"))}<br>'
-            f'<strong>Actually:</strong> {e(c.get("actual"))}<br>'
-            f'<span class="muted">Verified by: {e(c.get("verified_by"))}</span></p>'
-            for c in data["corrections"]
-        )
-        corrections = ('<section><h2>Corrections <span class="h2-note">prior-revision claims now known wrong</span></h2>'
-                       f'<div class="callout warn"><div class="ct">What changed since the last revision</div>{rows}</div></section>')
+    corrections = render_corrections_section(data)
 
     visuals = data.get("visuals") or {}
     flowsheet = render_flowsheet(visuals["flowsheet"]) if visuals.get("flowsheet") else ""
     ladder = render_ladder(visuals["ladder"], domains_map) if visuals.get("ladder") else ""
 
-    pill_class = {"shipped": "p-ok", "partial": "p-part", "not_started": "p-none",
-                  "blocked_external": "p-crit", "deferred": "p-deferred", "finding": "p-blocked"}
-    item_rows = []
-    for item in data.get("items") or []:
-        kind = item.get("kind", "")
-        label = item.get("status_label") or kind.replace("_", " ")
-        doms = dom_chips(domains_map, item.get("domains") or [])
-        handoff = item.get("handoff")
-        hb = handoff_block(item.get("title", ""), item.get("domains") or [], handoff, repo, constraints) if isinstance(handoff, dict) else ""
-        vb = f'<span class="muted"> &middot; {e(item.get("verified_by"))}</span>' if item.get("verified_by") else ""
-        note = e(item.get("note")) if item.get("note") else ""
-        item_rows.append(
-            f'<tr><td>{e(item.get("title"))}</td><td>{doms}</td>'
-            f'<td class="nowrap"><span class="pill {pill_class.get(kind,"p-none")}">{e(label)}</span>{vb}</td>'
-            f'<td>{note}{hb}</td></tr>'
-        )
-    items_table = (
-        '<section><h2>Items <span class="h2-note">every open item carries a copyable handoff</span></h2>'
-        '<div class="scroller"><table class="data"><thead><tr><th>Item</th><th>Domains</th><th>State</th>'
-        f'<th>Notes &amp; next step</th></tr></thead><tbody>{"".join(item_rows)}</tbody></table></div></section>'
-    )
+    items_table = render_items_table(data.get("items") or [], domains_map, repo, constraints)
 
     # domain key
     groups: dict[str, list[str]] = {"build": [], "know": [], "gov": []}
@@ -967,6 +1172,231 @@ def render_status(data: dict[str, Any], asset_root: Path) -> str:
     return _document(title, f"{route.title()} Status", css, body)
 
 
+# --------------------------------------------------------------------- dossier render
+
+def render_dossier(data: dict[str, Any], asset_root: Path) -> str:
+    """The living per-feature record: stage timeline + open-question panel + decision log,
+    over the same evidence/handoff machinery. Inherits the editorial `route-status` chrome
+    (masthead/vitals/items/corrections) and adds the dossier-only sections under route-dossier."""
+    css, js = _assets()
+    report = data["report"]
+    domains_map = data.get("domains") or {}
+    title = report["title"]
+    constraints = str(report.get("constraints") or "")
+    repo = repo_root_of(data)
+    truth = str(report.get("truth_status") or "")
+    draft = truth not in {"verified", "shipped"}
+
+    gf = report.get("generated_from") or {}
+    eyebrow_parts = ["Delivery dossier", e(report.get("project") or report.get("subject") or "")]
+    if report.get("revision"):
+        eyebrow_parts.append(f"rev {e(report['revision'])}")
+    if gf.get("ref") or gf.get("commit"):
+        eyebrow_parts.append(e(f"{gf.get('ref','')} {gf.get('commit','')}".strip()))
+    eyebrow_parts.append(e(report.get("generated_at")))
+    eyebrow = '<span class="sep">/</span>'.join(f"<span>{p}</span>" for p in eyebrow_parts if p)
+
+    stages = [s for s in (data.get("stages") or []) if isinstance(s, dict)]
+
+    # "you are here" — the active stage, else the next queued/blocked one, else complete
+    here_stage = next((s for s in stages if s.get("state") == "active"), None)
+    here_label = "You are here"
+    if not here_stage:
+        if stages and all(s.get("state") == "done" for s in stages):
+            here_label, here_stage = "Complete", stages[-1]
+        else:
+            here_stage = next((s for s in stages if s.get("state") in {"pending", "blocked"}), None)
+            here_label = "Up next"
+    here_html = ""
+    if here_stage:
+        snippet = str(here_stage.get("outcome") or here_stage.get("narrative") or "").strip()
+        if len(snippet) > 120:
+            snippet = snippet[:117].rstrip() + "..."
+        here_html = (f'<div class="here"><span>{e(here_label)}</span>'
+                     f'<span>{e(here_stage.get("label") or here_stage.get("id"))}'
+                     + (f' &mdash; {e(snippet)}' if snippet else "") + '</span></div>')
+
+    tstat = TRUTH_SEVERITY.get(truth, "warn")
+    draft_banner = ('<div class="draft-banner">DRAFT &mdash; a living record regenerated at each phase boundary; '
+                    'not a completed-work claim.</div>' if draft else "")
+
+    vitals_html = "".join(
+        f'<div class="vital is-{e(v.get("severity","neutral"))}"><div class="k">{e(v.get("key"))}</div>'
+        f'<div class="v">{e(v.get("value"))}</div>'
+        + (f'<div class="sub">{e(v.get("sub"))}</div>' if v.get("sub") else "")
+        + f'<div class="measured">{e(v.get("measured_by"))}</div></div>'
+        for v in data.get("vitals") or []
+    )
+    vitals_section = (f'<section><h2>Vitals <span class="h2-note">current state</span></h2>'
+                      f'<div class="vitals">{vitals_html}</div></section>' if vitals_html else "")
+
+    # stage timeline — the heart
+    media_by_ref = {str(m["evidence_ref"]): m for m in data.get("media") or []
+                    if isinstance(m, dict) and m.get("evidence_ref")}
+    state_class = {"done": "st-done", "active": "st-active", "pending": "st-pending", "blocked": "st-blocked"}
+    stage_items = []
+    for stage in stages:
+        st = stage.get("state", "pending")
+        sid = str(stage.get("id") or "")
+        doms = dom_chips(domains_map, stage.get("domains") or []) if stage.get("domains") else ""
+        shots = ""
+        for ref in stage.get("evidence_refs") or []:
+            m = media_by_ref.get(str(ref))
+            if m:
+                shots += ('<figure class="stage-shot">'
+                          f'<img src="{media_data_uri(resolve_asset(str(m["path"]), asset_root))}" alt="{e(m["alt"])}">'
+                          f'<figcaption>{e(m["caption"])}</figcaption></figure>')
+        narrative = ""
+        if stage.get("narrative"):
+            narrative = (f'<details class="stage-narr"{" open" if st == "active" else ""}>'
+                         f'<summary>Narrative</summary><p>{e(stage.get("narrative"))}</p>'
+                         + (f'<p class="stage-dev"><strong>Deviations &amp; risks:</strong> {e(stage.get("deviations"))}</p>'
+                            if stage.get("deviations") else "")
+                         + '</details>')
+        outcome = f'<p class="stage-outcome">{e(stage.get("outcome"))}</p>' if stage.get("outcome") else ""
+        timing = ""
+        for tf, tlabel in (("started", "started"), ("completed", "completed")):
+            if stage.get(tf):
+                timing += f'<span class="stage-t">{tlabel} {e(stage.get(tf))}</span>'
+        commits = ""
+        if stage.get("commits"):
+            commits = '<div class="stage-commits">' + "".join(f'<code>{e(c)}</code>' for c in stage["commits"]) + "</div>"
+        stage_items.append(
+            f'<li class="stage {state_class.get(st, "st-pending")}" id="stage-{e(sid)}">'
+            f'<div class="stage-rail"><span class="stage-kind">{e(stage.get("kind"))}</span>'
+            f'<span class="stage-state">{e(st)}</span></div>'
+            f'<div class="stage-main"><div class="stage-head"><h3>{e(stage.get("label"))}</h3>{doms}</div>'
+            + (f'<div class="stage-time">{timing}</div>' if timing else "")
+            + outcome + narrative
+            + (f'<div class="stage-shots">{shots}</div>' if shots else "")
+            + refs_html(stage.get("evidence_refs") or [])
+            + commits
+            + "</div></li>"
+        )
+    stage_section = (
+        '<section><h2><span>Lifecycle <span class="h2-note">research &rarr; plan &rarr; execute &rarr; validate</span></span></h2>'
+        '<div class="stage-tools"><button class="btn" type="button" data-expand-stages>Expand all</button></div>'
+        f'<ol class="stages">{"".join(stage_items)}</ol></section>'
+    ) if stage_items else ""
+
+    # open questions — blocking first
+    oq_status_class = {"open": "oq-open", "answered": "oq-answered", "resolved": "oq-resolved",
+                       "superseded": "oq-superseded"}
+    oqs = [q for q in (data.get("open_questions") or []) if isinstance(q, dict)]
+    oqs_sorted = sorted(enumerate(oqs), key=lambda t: (0 if t[1].get("blocking") else 1, t[0]))
+    oq_cards = []
+    for _, oq in oqs_sorted:
+        status = oq.get("status", "open")
+        blocking = bool(oq.get("blocking"))
+        scls = oq_status_class.get(status, "oq-open")
+        head = (f'<span class="oq-id">{e(oq.get("id"))}</span>'
+                f'<span class="oq-status {scls}">{e(status)}</span>'
+                + ('<span class="oq-block">blocking</span>' if blocking else ''))
+        raised = f'<span class="oq-raised">raised in {e(oq.get("raised_in_stage"))}</span>' if oq.get("raised_in_stage") else ""
+        ctx = f'<p class="oq-ctx">{e(oq.get("context"))}</p>' if oq.get("context") else ""
+        ans = ""
+        if oq.get("answer"):
+            attrib = ""
+            if oq.get("answered_by"):
+                attrib = f' <span class="muted">&mdash; {e(oq.get("answered_by"))}'
+                attrib += (f', {e(oq.get("answered_at"))}' if oq.get("answered_at") else "") + '</span>'
+            ans = f'<div class="oq-ans"><span class="oq-k">Answer</span><p>{e(oq.get("answer"))}{attrib}</p></div>'
+        chan = ""
+        channel = oq.get("channel") or {}
+        if channel:
+            detail = channel.get("detail") or ""
+            rid = f' <code>{e(channel.get("request_id"))}</code>' if channel.get("request_id") else ""
+            chan = (f'<div class="oq-chan"><span class="oq-k">How to answer</span>'
+                    f'<span>{e(channel.get("type"))}{(" &mdash; " + e(detail)) if detail else ""}{rid}</span></div>')
+        oq_cards.append(
+            f'<article class="oq {scls}{" is-blocking" if blocking else ""}" id="{e(oq.get("id"))}">'
+            f'<div class="oq-head">{head}{raised}</div>'
+            f'<p class="oq-q">{e(oq.get("question"))}</p>{ctx}{ans}{chan}</article>'
+        )
+    oq_section = (f'<section><h2>Open questions <span class="h2-note">blocking first &mdash; answer to unblock</span></h2>'
+                  f'<div class="oq-grid">{"".join(oq_cards)}</div></section>') if oq_cards else ""
+
+    # decisions — the log
+    dec_cards = []
+    for dec in data.get("decisions") or []:
+        if not isinstance(dec, dict):
+            continue
+        meta_bits = []
+        if dec.get("decided_in_stage"):
+            meta_bits.append(f'in {e(dec.get("decided_in_stage"))}')
+        if dec.get("decided_by"):
+            meta_bits.append(f'by {e(dec.get("decided_by"))}')
+        if dec.get("decided_at"):
+            meta_bits.append(e(dec.get("decided_at")))
+        meta = f'<span class="dec-meta">{" &middot; ".join(meta_bits)}</span>' if meta_bits else ""
+        rationale = f'<p class="dec-why"><strong>Rationale:</strong> {e(dec.get("rationale"))}</p>' if dec.get("rationale") else ""
+        alts = ""
+        if dec.get("alternatives"):
+            alts = '<p class="dec-alts"><strong>Alternatives:</strong> ' + ", ".join(e(a) for a in dec["alternatives"]) + "</p>"
+        answers = ""
+        if dec.get("answers"):
+            answers = f'<p class="dec-answers">Answers <a class="ref" href="#{e(dec.get("answers"))}">{e(dec.get("answers"))}</a></p>'
+        dec_cards.append(
+            '<article class="dec">'
+            f'<div class="dec-head"><span class="dec-id">{e(dec.get("id"))}</span>{meta}</div>'
+            f'<p class="dec-what">{e(dec.get("decision"))}</p>{rationale}{alts}{answers}'
+            + refs_html(dec.get("evidence_refs") or []) + "</article>"
+        )
+    dec_section = (f'<section><h2>Decisions <span class="h2-note">what was decided, and why</span></h2>'
+                   f'<div class="dec-log">{"".join(dec_cards)}</div></section>') if dec_cards else ""
+
+    items_section = (render_items_table(data.get("items") or [], domains_map, repo, constraints,
+                                        heading="Open items",
+                                        note="the next action on each &mdash; a copyable handoff")
+                     if data.get("items") else "")
+
+    evidence_html = render_evidence_index(data.get("evidence") or [])
+    evidence_section = f'<section><h2>Evidence index</h2>{evidence_html}</section>' if evidence_html else ""
+
+    media_html = "".join(
+        '<figure>'
+        f'<img src="{media_data_uri(resolve_asset(str(i["path"]), asset_root))}" alt="{e(i["alt"])}">'
+        f'<figcaption><b>{e(i["type"])}</b> &mdash; {e(i["caption"])}'
+        + (f' (via {e(i.get("provider"))})' if i.get("provider") else "")
+        + '</figcaption></figure>'
+        for i in data.get("media") or []
+    )
+    media_section = f'<section><h2>Media</h2>{media_html}</section>' if media_html else ""
+    no_visual = (f'<section><h2>Visuals</h2><div class="callout"><div class="ct">No visual</div><p>{e(data.get("no_visual_reason"))}</p></div></section>'
+                 if data.get("no_visual_reason") and not media_html and not stage_items else "")
+
+    corrections = render_corrections_section(data)
+    footer_constraints = f'<strong>{e(constraints)}</strong><br /><br />' if constraints else ""
+
+    body = f'''<body class="dr route-status route-dossier" data-route="dossier">
+{theme_toggle()}
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">{eyebrow}</div>
+  <h1>{e(title)}</h1>
+  <div class="dossier-meta">
+    <span class="tstat is-{tstat}">{e(truth)}</span>
+    {(f'<span class="rev-chip">revision {e(report.get("revision"))}</span>' if report.get("revision") else "")}
+  </div>
+  {here_html}
+  {draft_banner}
+  {(f'<p class="dek">{e(report.get("scope_note"))}</p>' if report.get("scope_note") else "")}
+</header>
+{vitals_section}
+{stage_section}
+{oq_section}
+{dec_section}
+{items_section}
+{evidence_section}
+{media_section}{no_visual}
+{corrections}
+<footer>{footer_constraints}Revision {e(report.get("revision") or 1)}, generated by {e(report.get("generated_by"))} at {e(report.get("generated_at"))}. The manifest remains canonical; this dossier is a point-in-time view over canonical sources (progress notes, node status, evidence), regenerated at each phase boundary &mdash; never a hand-maintained parallel tracker.</footer>
+</div>
+<script>{js}</script>
+</body>'''
+    return _document(title, "Delivery Dossier", css, body)
+
+
 def _document(title: str, kind: str, css: str, body: str) -> str:
     head = (
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -984,16 +1414,84 @@ def render_report(data: dict[str, Any], asset_root: Path) -> str:
     route = route_of(data)
     if route == FEATURE_ROUTE:
         return render_feature(data, asset_root)
+    if route == DOSSIER_ROUTE:
+        return render_dossier(data, asset_root)
     return render_status(data, asset_root)
 
 
 # ------------------------------------------------------------------------ export
 
+def compute_instance_key(data: dict[str, Any]) -> str | None:
+    """D1: the per-instance discriminator for the recurring routes.
+
+    `feature`/`dossier` collapse on (route, subject) by design -> always None, even if a
+    stray value sits in the manifest. `phase`/`program`/`readiness` recur (one report per
+    phase boundary / milestone / go-no-go decision), so their identity needs the field the
+    caller sourced into `report.instance_key` (settable via `init --instance-key` /
+    `export --instance-key`). Never derived here from `subject` or `generated_at` — see the
+    build_export docstring for why both fallbacks are wrong.
+    """
+    if route_of(data) not in STATUS_ROUTES:
+        return None
+    key = (data.get("report") or {}).get("instance_key")
+    return str(key) if key not in (None, "") else None
+
+
+def compute_link_identity(route: str, subject: str, instance_key: str | None) -> str | None:
+    """D2: the ONE place the atlas asset identity and the IntentTree `external_id` are
+    computed, so the two cannot drift apart. Actuators pass this verbatim to
+    `itt link report --ref`.
+
+    feature|dossier            -> report:{route}:{subject}                    (collapse is
+                                   correct by design: one per feature / a regenerated record)
+    phase|program|readiness    -> report:{route}:{subject}:{instance_key}, or None when
+                                   `instance_key` is falsy.
+
+    A recurring route with no `instance_key` returns None rather than falling back to the
+    collapsing `report:{route}:{subject}` form. That fallback is EXACTLY the DI-283 collapse
+    hazard this design exists to prevent, and this helper is the one place both `build_export`
+    (target-scoped loud failure, below) and `publish_report.py` (target-independent refusal)
+    derive their behavior from — so the identity layer itself must never manufacture a
+    misleadingly-collapsing identity for a route that recurs, regardless of export target.
+    """
+    base = f"report:{route}:{subject}"
+    if route not in STATUS_ROUTES:
+        return base
+    return f"{base}:{instance_key}" if instance_key else None
+
+
 def build_export(data: dict[str, Any], target: str, html_path: Path | None,
                  manifest_path: Path) -> dict[str, Any]:
     """Deterministic, offline writeback envelope. Ingestion via subsystem CLIs is
-    a documented follow-on (references/aos-integration.md) — never on the render path."""
+    a documented follow-on (references/aos-integration.md) — never on the render path.
+
+    D1/D2 (design contract, `.claude/worknotes/delivery-report-hosting-and-linking/
+    implementation-notes.md`): the envelope carries `instance_key` and the precomputed
+    `link_identity`. A recurring route (`phase`/`program`/`readiness`) exported to `atlas`
+    or `intenttree` without an `instance_key` is a LOUD failure — raise rather than default,
+    because both tempting fallbacks are wrong: `subject` alone recreates the silent-collapse
+    hazard (DI-283), and `generated_at`/a timestamp breaks idempotency by minting a new row
+    on every re-publish of the same instance.
+    """
     report = data.get("report") or {}
+    route = route_of(data)
+    if route not in ALL_ROUTES:
+        raise ReportError(
+            f"report.route {route!r} is not a recognized route — must be one of "
+            f"{sorted(ALL_ROUTES)}"
+        )
+    subject = report.get("subject") or report.get("project")
+    instance_key = compute_instance_key(data)
+    if route in STATUS_ROUTES and target in {"atlas", "intenttree"} and not instance_key:
+        raise ReportError(
+            f"report.instance_key is required for route {route!r} when exporting to "
+            f"target {target!r} (D1): recurring routes must not collapse their link "
+            "identity onto a bare subject. Supply --instance-key at init or export time "
+            "with the thing that actually distinguishes this instance — the phase/"
+            "milestone id for phase, the milestone id for program, the decision date for "
+            "readiness. Never default it to subject or to generated_at/a timestamp."
+        )
+    link_identity = compute_link_identity(route, str(subject), instance_key)
     trackers = []
     for item in data.get("items") or []:
         h = item.get("handoff") or {}
@@ -1003,9 +1501,11 @@ def build_export(data: dict[str, Any], target: str, html_path: Path | None,
         "envelope_version": "1.0",
         "artifact_type": "delivery-report",
         "target": target,
-        "route": route_of(data),
+        "route": route,
         "title": report.get("title"),
-        "subject": report.get("subject") or report.get("project"),
+        "subject": subject,
+        "instance_key": instance_key,
+        "link_identity": link_identity,
         "revision": report.get("revision"),
         "truth_status": report.get("truth_status"),
         "generated_from": report.get("generated_from"),
@@ -1024,11 +1524,61 @@ def init_manifest(args: argparse.Namespace) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     common_report = {
         "route": args.route, "title": args.title, "revision": 1,
+        "instance_key": getattr(args, "instance_key", None),
         "generated_from": {"repo": "/ABSOLUTE/PATH/TO/REPO", "ref": "origin/main", "commit": "TODO"},
         "truth_status": "partially_verified",
         "generated_by": f"delivery-report {VERSION}", "generated_at": now,
         "constraints": "TODO: project invariants a dispatched agent must never violate.",
     }
+    if args.route == DOSSIER_ROUTE:
+        common_report["project"] = args.subject
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "report": common_report,
+            "report_policy": {"tier_system": args.tier_system, "tier": args.tier,
+                              "estimated_points": args.points, "explicit_request": False, "signals": []},
+            "vitals": [
+                {"key": "Phases", "value": "0/1", "sub": "done", "severity": "neutral",
+                 "measured_by": "TODO: stages[] state==done vs total execute stages"},
+                {"key": "Open questions", "value": "1", "sub": "1 blocking", "severity": "warn",
+                 "measured_by": "TODO: open_questions[] with status open"},
+            ],
+            "domains": dict(DEFAULT_DOMAINS),
+            "stages": [
+                {"id": "research", "label": "TODO research / feasibility", "kind": "research", "state": "pending",
+                 "narrative": "TODO: what was investigated and what it concluded.",
+                 "domains": ["Research"], "evidence_refs": []},
+                {"id": "plan", "label": "TODO planning pass", "kind": "plan", "state": "pending",
+                 "narrative": "TODO: the plan shape and per-phase breakdown.",
+                 "domains": ["Engine"], "evidence_refs": []},
+                {"id": "phase-1", "label": "TODO first execution phase", "kind": "execute", "state": "pending",
+                 "narrative": "TODO: what this phase builds and why (authored at phase close).",
+                 "domains": ["Engine"], "evidence_refs": []},
+                {"id": "validate", "label": "TODO end-to-end validation", "kind": "validate", "state": "pending",
+                 "narrative": "TODO: how completion was verified + final evidence.",
+                 "domains": ["Validation"], "evidence_refs": []},
+            ],
+            "open_questions": [
+                {"id": "oq-1", "question": "TODO: the open decision blocking progress.",
+                 "context": "TODO: what it blocks.", "status": "open", "blocking": True,
+                 "raised_in_stage": "phase-1", "answer": None, "answered_by": None, "answered_at": None,
+                 "channel": {"type": "instruction",
+                             "detail": "Reply in chat, or edit this OQ's answer in the manifest.",
+                             "request_id": None}},
+            ],
+            "decisions": [
+                {"id": "dec-1", "decision": "TODO: a decision made during execution.",
+                 "rationale": "TODO: why, against the report.constraints.", "alternatives": [],
+                 "decided_in_stage": "plan", "decided_by": "TODO", "evidence_refs": []},
+            ],
+            "items": [{"id": "todo-1", "title": "TODO: open work item", "kind": "not_started", "domains": ["Engine"],
+                       "handoff": {"command": "/plan-feature", "repo": "/ABSOLUTE/PATH/TO/REPO",
+                                   "paths": [], "requirement_ids": [], "gates": [], "tracker": None,
+                                   "prompt": "TODO: self-contained imperative first action + one constraint."}}],
+            "corrections": [],
+            "media": [], "no_visual_reason": "TODO: the stage timeline carries the visual story, or add screenshots.",
+            "evidence": [],
+        }
     if args.route == FEATURE_ROUTE:
         common_report["project"] = args.subject
         return {
@@ -1078,6 +1628,10 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--tier-system", choices=("dev-execution", "aos", "custom"), default="dev-execution")
     init.add_argument("--tier", type=int, choices=range(0, 5), default=2)
     init.add_argument("--points", type=float, default=0)
+    init.add_argument("--instance-key", default=None,
+                       help="D1: the per-instance discriminator (required at export time for "
+                            "phase/program/readiness; ignored for feature/dossier, which collapse "
+                            "on subject by design). E.g. a phase id, milestone id, or decision date.")
     init.add_argument("--out", type=Path, required=True)
 
     for name in ("eligibility", "render", "validate", "export"):
@@ -1096,6 +1650,9 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "export":
             cmd.add_argument("--target", choices=sorted(EXPORT_TARGETS), required=True)
             cmd.add_argument("--html", type=Path)
+            cmd.add_argument("--instance-key", default=None,
+                              help="D1: override/supply report.instance_key for this export "
+                                   "without editing the manifest file on disk.")
             cmd.add_argument("--out", type=Path, required=True)
     return parser
 
@@ -1116,6 +1673,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "export":
+            if getattr(args, "instance_key", None) is not None:
+                data.setdefault("report", {})["instance_key"] = args.instance_key
             envelope = build_export(data, args.target, args.html, args.manifest)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(json.dumps(envelope, indent=2) + "\n", encoding="utf-8")

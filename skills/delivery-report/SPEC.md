@@ -31,11 +31,17 @@ not exist and one that was singular by construction:
 - **forward-looking** (`route: program | phase | readiness`) — many things in flight, at a point in
   time, where **every open item carries a copyable agent handoff** so a reader goes from "this is
   behind" to a dispatched agent in one click.
+- **longitudinal** (`route: dossier`) — one feature across its whole life (research → plan → execute
+  → validate): a living record seeded at plan time and regenerated at each phase boundary, carrying
+  the stage narrative, open questions, decisions, and the evidence behind each. It is a **view over
+  canonical sources, never a second tracker**.
 
 In scope:
 
 - Route-discriminated JSON/YAML report manifests and a deterministic, offline renderer.
-- Feature eligibility (tier/size); forward reports produced on request.
+- Feature eligibility (tier/size); forward reports and the dossier produced on request/at plan time.
+- The dossier lifecycle: deterministic plan-time seeding and phase-boundary regeneration, both via
+  dev-execution hooks (no model call on either path).
 - Per-item domain tagging from a closed, project-configurable vocabulary; per-item handoffs,
   including for deferrals and externally blocked work.
 - Signature visualisations (activity flowsheet, two-track ladder), inline SVG flows/metrics,
@@ -56,7 +62,9 @@ Out of scope:
 |---|---|---|
 | Choose a route + (feature) decide if a report is needed | `delivery_report.py eligibility` | `references/route-policy.md` |
 | Create a manifest skeleton per route | `delivery_report.py init --route` | `schemas/delivery-report.schema.json` |
-| Render a feature or status report | `delivery_report.py render` | `references/report-contract.md` |
+| Render a feature, dossier, or status report | `delivery_report.py render` | `references/report-contract.md` |
+| Seed a living dossier from an implementation plan | `dev-execution/hooks/seed-dossier.sh` (engine `seed_dossier.py`) | delivery-dossier spec §A.1 |
+| Accrete a dossier stage at a phase boundary | agent authors the stage → `dev-execution/hooks/update-dossier.sh` | delivery-dossier spec §A.6 |
 | Author a dispatchable per-item handoff | `items[].handoff` / feature `followups[]` | `references/handoff-contract.md` |
 | Render signature visualisations | `visuals.flowsheet`, `visuals.ladder` | renderer + `references/visual-evidence.md` |
 | Embed screenshots/illustrations, inline flows/metrics | `media[]`, `diagrams[]`, `metrics[]` | `references/visual-evidence.md` |
@@ -89,6 +97,14 @@ Out of scope:
     claimed, what is true, and how it was verified — never silently.
 12. **Deployment/ingestion is separate truth.** Local render, `export` envelope emission, enterprise
     registration, and subsystem ingestion are reported independently; `export` never ingests.
+13. **The dossier is never hand-maintained.** Its manifest is seeded deterministically from the plan
+    and written only at decision points (phase closes) by the agent already closing the phase; the
+    hooks render and validate but never author. Narrative authored anywhere else, or a record kept in
+    parallel with the progress YAML and completion notes, is the failure mode this route exists to
+    avoid. Re-seeding an existing dossier is opt-in (`DOSSIER_SEED_RESEED=1`) because the manifest
+    accretes.
+14. **The dossier never gates.** Both dossier hooks are default-on, binding-gated, non-fatal, and
+    always exit 0. The enforced end-of-feature artifact remains the `feature` route DoD report.
 
 ## 4. Enhancement Backlog
 
@@ -109,6 +125,21 @@ Out of scope:
 
 ## 5. Changelog
 
+### Unreleased - 2026-07-28
+
+- **`dossier` lifecycle closed at the front.** Plan-time seeding shipped
+  (`dev-execution/hooks/seed-dossier.sh` + `seed_dossier.py`): a Tier 2/3 plan deterministically
+  produces the dossier manifest — stage spine from `wave_plan.phases[]` + `### Phase P1:` headings,
+  open questions and decisions from plan frontmatter — so the phase-boundary regeneration hook is
+  armed instead of dormant. Wired into `planning` Workflow 2 and `/plan:plan-feature` (Tier 2/3
+  auto; Tier 0/1 via `DOSSIER_SEED_FORCE=1`, spec OD-4). Invariants 13–14 added.
+
+### Unreleased - 2026-07-27
+
+- **`dossier` route (Phase A)** — the living per-feature record: `stages[]` spine,
+  `open_questions[]`, `decisions[]`, a dedicated renderer + validator, and phase-boundary
+  regeneration via `dev-execution/hooks/update-dossier.sh`. Full detail in `CHANGELOG.md`.
+
 ### 0.1.0 - 2026-07-23
 
 - Initial ready contract. Unified, route-discriminated report skill.
@@ -126,6 +157,8 @@ Out of scope:
 | System | Integration | State |
 |---|---|---|
 | `dev-execution` | End-of-feature completion criteria invoke eligibility and require a `feature` report at configured tiers via `hooks/verify-delivery-report.sh` | shipped with v0.1 |
+| `dev-execution` (dossier) | `hooks/update-dossier.sh` re-renders + re-validates the dossier at each phase boundary (`modes/phase-execution.md` §5.2b, `modes/plan-execution.md` §3c-dossier / §7) | shipped 2026-07-27 |
+| `planning` (dossier seed) | Workflow 2 step 10 + `/plan:plan-feature` Tier 2/3 call `dev-execution/hooks/seed-dossier.sh` to create the manifest at plan time | shipped 2026-07-28 |
 | `html-capsules` | Shared safe-HTML principles + writeback target vocabulary; no runtime dependency | compatible |
 | IntentTree | `items[].handoff.tracker` links to nodes; `export --target intenttree` emits an envelope | shipped (link/read); write deferred (DR-BL-3) |
 | MeatyWiki / SkillMeat / CCDash | `export --target …` writeback envelope for gated ingestion | envelope shipped; ingestion via subsystem CLIs |
@@ -137,8 +170,8 @@ Runtime dependencies: Python 3.10+ standard library. PyYAML optional (YAML manif
 
 ## 7. Success Signals
 
-1. Each example manifest (feature + program) renders to one self-contained HTML file with no external
-   resource attributes and a strict CSP.
+1. Each example manifest (feature + dossier + program) renders to one self-contained HTML file with
+   no external resource attributes and a strict CSP.
 2. The same manifest renders byte-identically twice (determinism).
 3. Invalid evidence references, path escapes, sensitive/missing media, missing handoff paths,
    invented requirement IDs, a `deferred` item without a trigger, a `blocked_external` item with a
@@ -148,6 +181,8 @@ Runtime dependencies: Python 3.10+ standard library. PyYAML optional (YAML manif
 5. The skill directory passes its tests from a scratch working directory, offline.
 6. Both themes render legibly and the viewer toggle overrides the media-query default.
 7. SkillMeat enterprise returns the artifact file set; both global roots resolve a valid `SKILL.md`.
+8. Planning a Tier 2/3 feature leaves a valid dossier manifest whose execute stages match the plan's
+   phases, with no hand-authoring and no model call — and the next phase close re-renders it.
 
 ## 8. File Layout
 
@@ -168,7 +203,18 @@ delivery-report/
 ├── references/aos-integration.md
 ├── templates/overclaim-addendum.md
 ├── examples/feature.example.json
+├── examples/dossier.example.json
 ├── examples/program-status.example.json
 ├── examples/reference-program-status.html
 └── tests/test_delivery_report.py
+```
+
+The dossier lifecycle hooks live with the execution engine that fires them, not here:
+
+```text
+dev-execution/hooks/
+├── seed-dossier.sh        # plan time  — creates the manifest (engine: seed_dossier.py)
+├── seed_dossier.py
+├── update-dossier.sh      # phase close — re-renders + re-validates
+└── tests/test_seed_dossier.sh
 ```
