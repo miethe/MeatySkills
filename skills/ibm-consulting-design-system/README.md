@@ -24,7 +24,7 @@ Root manifest:
 | `assets/logos/` | IBM master-brand logos (blue, white, black, dark-blue variants). |
 | `assets/icons/` | Line icon assets. |
 | `assets/backgrounds/` | Blue gradient washes + white sculptural "IBM" brand renders. |
-| `assets/ui/` | UI fragments pulled from the deck (monitor bezel, gradient rules). |
+| `assets/ui/` | Interface decorations (monitor bezel, gradient rules). |
 | `preview/*.html` | Individual cards shown in the Design System tab — tokens, specimens, components. |
 | `ui_kits/ibm-consulting-web/` | React recreation of IBM Consulting's site patterns. |
 | `slides/` | Presentation slide templates (16:9, 1280×720). |
@@ -36,30 +36,27 @@ Root manifest:
 For IBM Consulting branded work, use a **corporate, precise, and credentialed** voice. A few durable rules:
 
 ### Voice & tone
-- **Third-person institutional.** "IBM Consulting delivers…", "BoxBoat's engineers build…". First-person plural ("we") appears only in "Why IBM Consulting" sections and always paired with concrete credentials ("Largest Red Hat and HashiCorp certified practice within IBM Consulting").
+- **Third-person institutional.** Use clear, organization-focused wording. First-person plural ("we") may appear when it makes the speaker clear.
 - **Second-person ("you") is rare** and only shows up in client-facing CTAs ("Let's work together").
-- **No rhetorical flourish.** No "imagine if…", no "what if we told you…", no "the future is…". Every sentence is a claim backed by a number or a proper noun.
-- **Specific technology names are the hero.** Red Hat Ansible Automation Platform, HashiCorp Terraform / OpenTofu, Red Hat ACS (StackRox), GitHub Copilot. Spell products out in full on first mention; partner brands earn the full name.
+- **No rhetorical flourish.** No "imagine if…", no "what if we told you…", no "the future is…". Use specific language and substantiate factual claims.
+- **Specific technology names are the hero.** Spell products out in full on first mention; use partner brand names accurately.
 
 ### Casing
 - **Sentence case for all headings** — "Designing for cloud infrastructure", not "DESIGNING FOR CLOUD INFRASTRUCTURE".
-- **Capitalize proper nouns aggressively**, including internal IBM terms: "Everything-as-Code", "Agentic SDLC", "Day-0", "Shadow AI Crisis", "Jumpstart Investment". These are positioned as trademarkable concepts.
+- **Capitalize proper nouns consistently**, while keeping ordinary concepts in sentence case.
 - **ALL CAPS only for abbreviations** (DORA, NIST, SSDF, SOC2, CIS, SBOM, SLSA, RHOV).
-- **Kebab-case compound concepts**: "policy-as-code", "Everything-as-Code", "shift-left security", "lift-and-modernize".
+- **Kebab-case compound concepts**: "policy-as-code", "shift-left security", "lift-and-modernize".
 
 ### Number discipline
-Every value claim is quantified:
+Support factual value claims with a source and context:
 
-- "2.5X faster software delivery with 40% fewer release failures"
-- "Reduce operational toil by ~50%"
-- "30–50% TCO reduction on virtualization"
-- "1:1000+ admin-to-container ratio"
+- Quantify a value claim only when its source and context are available.
 
-Ranges (`30–50%`) are preferred over single numbers — IBM Consulting is giving itself headroom for variability across engagements. The **en-dash `–`** is used for ranges, not hyphens.
+Use an en dash (`–`) for numeric ranges.
 
 ### Punctuation quirks
-- **Em-dashes** (`—`) set off value props: "Engineering-first DNA — we build and code alongside clients, not just advise".
-- **Parenthetical asides** for technical clarifications: "Red Hat OpenShift (or EKS/AKS with opinionated governance)".
+- **Em-dashes** (`—`) can set off a concise aside.
+- **Parenthetical asides** clarify technical details when needed.
 - **Bullet lists with no terminal period**, each bullet a compressed fragment — never a full sentence.
 - Serial comma (Oxford) used.
 
@@ -68,11 +65,11 @@ Ranges (`30–50%`) are preferred over single numbers — IBM Consulting is givi
 
 ### Example
 
-> **Objective:** Eliminate manual, error-prone infrastructure and configuration management.
+> **Objective:** Improve a process with clear, measurable outcomes.
 >
 > Public IBM Consulting brand materials use a precise, evidence-backed institutional voice.
 >
-> **Key Value Lever:** 10X faster infrastructure provisioning; eliminate configuration drift enterprise-wide.
+> **Key Value Lever:** Reduce repetitive work; improve consistency across environments.
 
 Note: semicolons used instead of periods inside list items. Claims are scannable at a glance.
 

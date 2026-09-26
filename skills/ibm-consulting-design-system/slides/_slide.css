@@ -21,7 +21,7 @@ html, body {
   margin: 0 auto;
 }
 
-/* Standard deck margins mirror the deck: ~40px outside, content grid below. */
+/* Standard presentation margins: ~40px outside, content grid below. */
 .slide-pad { padding: 40px 48px; height: 100%; display: flex; flex-direction: column; }
 
 .slide-logo {
