@@ -77,7 +77,7 @@ function Button({ kind = "primary", size = "md", children, onClick, withArrow = 
   );
 }
 
-// --- Offering tile (battlecard thumbnail) ------------------------------------
+// --- Example tile ------------------------------------
 function OfferingCard({ eyebrow, title, body, onClick }) {
   return (
     <div className="tile" onClick={onClick} tabIndex={0} role="button" onKeyDown={e=>{if(e.key==='Enter')onClick?.();}}>

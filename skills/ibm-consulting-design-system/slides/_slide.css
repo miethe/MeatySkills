@@ -1,5 +1,5 @@
 /* Slide chrome — 1280×720, 16:9. Based on IBM's Plex-Sans-Light
-   template from Offering_battlecards.pptx. */
+   template informed by publicly documented IBM brand conventions. */
 @import url('../colors_and_type.css');
 
 *, *::before, *::after { box-sizing: border-box; }

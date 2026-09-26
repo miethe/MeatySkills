@@ -1,32 +1,6 @@
 # IBM Consulting Design System
 
-A design kit for designing interfaces, decks, battlecards, and marketing assets on behalf of **IBM Consulting** — IBM's global professional-services arm (and its business-unit partners like BoxBoat). The system is rooted in **IBM's Carbon Design System** and the **IBM Plex** type family — both of which IBM publishes as open source — layered with the marketing-side conventions seen in IBM Consulting's internal sales decks and battlecards.
-
----
-
-## Sources given
-
-All material was extracted from files in `uploads/`:
-
-| File | Status | Notes |
-|---|---|---|
-| `uploads/Offering_battlecards.pptx` | 🚫 **removed from public repo 2026-09-24** | IBM internal sales material; not redistributable. Removed from `main`; history intentionally not rewritten. |
-| `uploads/2026 IBM Consulting Strategy & Capabilities Deck v26.02-1.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
-| `uploads/2026 IBM Consulting Strategy & Capabilities Deck v26.02-2.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
-| `uploads/BoxBoat GTM-26-v1.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
-
-Only the battlecards deck was actually present in the filesystem. Everything below is derived from that deck **plus** publicly-documented IBM brand conventions (Carbon, IBM Plex, the 2022 "IBM Consulting" sub-brand refresh). If the missing decks show up, the system should be revisited — they likely contain additional layouts and cover-slide compositions.
-
-### The battlecards themselves
-
-Four one-pagers, one per offering, each pitched at $500K–$10M+ engagements:
-
-1. **Automation Transformation** — Red Hat Ansible + HashiCorp Terraform "Everything-as-Code"
-2. **Cloud-Native Foundations (Day-0)** — OpenShift/Kubernetes landing zones
-3. **Modern & Agentic SDLC (DevEx)** — GitHub Enterprise + AI copilots + governed agents
-4. **VMware Estate Transformation** — RHOV migration, Broadcom escape-hatch
-
-All four follow the same rigid template: Objectives → Activities In-Scope → Tools → 3-Phase Offer Structure → Value Levers → Why IBM / BoxBoat → Deliverables → Timelines → Commercials.
+A design kit for designing interfaces, decks, and marketing assets using publicly documented IBM brand conventions. It is rooted in **IBM's Carbon Design System**, the **IBM Plex** type family, and the public IBM Consulting sub-brand.
 
 ---
 
@@ -48,18 +22,18 @@ Root manifest:
 | `SKILL.md` | Claude Code skill manifest — makes this kit portable. |
 | `colors_and_type.css` | All design tokens: colors, type scale, spacing, radii, shadows, motion. |
 | `assets/logos/` | IBM master-brand logos (blue, white, black, dark-blue variants). |
-| `assets/icons/` | Battlecard-style line icons (7 @ 112px) extracted from the deck. |
+| `assets/icons/` | Line icon assets. |
 | `assets/backgrounds/` | Blue gradient washes + white sculptural "IBM" brand renders. |
 | `assets/ui/` | UI fragments pulled from the deck (monitor bezel, gradient rules). |
 | `preview/*.html` | Individual cards shown in the Design System tab — tokens, specimens, components. |
 | `ui_kits/ibm-consulting-web/` | React recreation of IBM Consulting's site patterns. |
-| `slides/` | Battlecard + title + section-header slide templates (16:9, 1280×720). |
+| `slides/` | Presentation slide templates (16:9, 1280×720). |
 
 ---
 
 ## CONTENT FUNDAMENTALS
 
-IBM Consulting copy is **corporate, precise, and credentialed**. It reads like a McKinsey deck, not a SaaS landing page. A few durable rules:
+For IBM Consulting branded work, use a **corporate, precise, and credentialed** voice. A few durable rules:
 
 ### Voice & tone
 - **Third-person institutional.** "IBM Consulting delivers…", "BoxBoat's engineers build…". First-person plural ("we") appears only in "Why IBM Consulting" sections and always paired with concrete credentials ("Largest Red Hat and HashiCorp certified practice within IBM Consulting").
@@ -68,7 +42,7 @@ IBM Consulting copy is **corporate, precise, and credentialed**. It reads like a
 - **Specific technology names are the hero.** Red Hat Ansible Automation Platform, HashiCorp Terraform / OpenTofu, Red Hat ACS (StackRox), GitHub Copilot. Spell products out in full on first mention; partner brands earn the full name.
 
 ### Casing
-- **Sentence case for all headings** — "Cloud-Native Foundations (Day-0)", not "CLOUD-NATIVE FOUNDATIONS".
+- **Sentence case for all headings** — "Designing for cloud infrastructure", not "DESIGNING FOR CLOUD INFRASTRUCTURE".
 - **Capitalize proper nouns aggressively**, including internal IBM terms: "Everything-as-Code", "Agentic SDLC", "Day-0", "Shadow AI Crisis", "Jumpstart Investment". These are positioned as trademarkable concepts.
 - **ALL CAPS only for abbreviations** (DORA, NIST, SSDF, SOC2, CIS, SBOM, SLSA, RHOV).
 - **Kebab-case compound concepts**: "policy-as-code", "Everything-as-Code", "shift-left security", "lift-and-modernize".
@@ -90,13 +64,13 @@ Ranges (`30–50%`) are preferred over single numbers — IBM Consulting is givi
 - Serial comma (Oxford) used.
 
 ### Emoji usage
-**None.** Zero emoji in IBM Consulting materials, ever. Not in slides, not in battlecards, not in CTA copy. Emoji would read as consumer and undermine the enterprise positioning. Unicode decorations (✓ ★ →) also absent; the deck uses monochrome line icons (see ICONOGRAPHY) for everything visual.
+**None.** Zero emoji in IBM Consulting materials, ever. Not in slides or CTA copy. Emoji would read as consumer and undermine the enterprise positioning. Unicode decorations (✓ ★ →) also absent; the public IBM materials use monochrome line icons (see ICONOGRAPHY) for everything visual.
 
-### Examples (lifted from the source deck)
+### Example
 
 > **Objective:** Eliminate manual, error-prone infrastructure and configuration management.
 >
-> **Why IBM Consulting / BoxBoat:** Largest Red Hat and HashiCorp certified practice within IBM Consulting. Engineering-first DNA — we build and code alongside clients, not just advise. Natural pull-through to Cloud-Native Foundations, SDLC, and VMware exit.
+> Public IBM Consulting brand materials use a precise, evidence-backed institutional voice.
 >
 > **Key Value Lever:** 10X faster infrastructure provisioning; eliminate configuration drift enterprise-wide.
 
@@ -112,16 +86,16 @@ The palette is **Carbon**, IBM's open-source design system. See `colors_and_type
 
 - **Neutrals.** The backbone is a 10-step gray scale (`#f4f4f4` → `#161616`). IBM does *not* use pure black for text — body copy is `#161616` (Gray 100). Almost every UI is built from these grays alone.
 - **IBM Blue.** `#0f62fe` (Blue 60) is the single most important brand color — primary buttons, links, focus rings, brand accents. Darker shades (`--blue-70`/`--blue-80`) for hover/active and for deep "corporate" hero backgrounds.
-- **Accent swatches (used sparingly).** `#a56eff` (Purple 60), `#009d9a` (Teal 60), `#9f1853` (Magenta 70), `#fa4d56` (Red 50). Present in the deck theme for data viz and category tags, but interface never leads with them.
+- **Accent swatches (used sparingly).** `#a56eff` (Purple 60), `#009d9a` (Teal 60), `#9f1853` (Magenta 70), `#fa4d56` (Red 50). Use for data visualization and category tags; interfaces should not lead with them.
 
 Status colors follow Carbon: error = Red 60, success = Green 60, warning = Yellow 30, info = Blue 70.
 
 ### Type
 
-**IBM Plex** across the board. The deck uses five Plex weights/styles that the system formalizes:
+**IBM Plex** across the board. The system formalizes several IBM Plex weights and styles:
 
 - **Plex Sans** (300 Light, 400 Regular, 500 Medium, 600 SemiBold) — UI body, headings.
-- **Plex Sans Condensed** — data-dense tables and battlecard body copy (the four-pane layouts lean on Condensed to cram more text).
+- **Plex Sans Condensed** — data-dense tables and compact interface labels.
 - **Plex Mono** — code snippets, technical annotations.
 - **Plex Serif** — editorial/thought-leadership surfaces only; rare in product UI.
 
@@ -133,13 +107,13 @@ Carbon type scale lives in CSS vars `--type-heading-01` through `--type-display-
 
 - **Carbon's 8px base grid.** All spacing tokens are multiples (`--space-01` = 2px through `--space-13` = 160px).
 - **2x grid** — 16-column on desktop, 16px gutter on mobile, 32px on desktop. Content can extend **edge-to-edge** (Carbon allows it) rather than being locked to a capped container.
-- **Generous whitespace at hero scale**, tight density in tables/battlecards. The battlecards are intentionally DENSE — lots of text in small boxes, with clear visual hierarchy from type weight alone.
+- **Generous whitespace at hero scale**, balanced density in tables, with clear visual hierarchy from type weight alone.
 
 ### Backgrounds
 
-IBM Consulting uses four distinct background treatments:
+Public IBM brand materials use several background treatments:
 
-1. **Pure white (`#ffffff`)** for the vast majority of product UI and battlecard bodies. Clean, utilitarian.
+1. **Pure white (`#ffffff`)** for the vast majority of product UI and content surfaces. Clean, utilitarian.
 2. **Gray 10 (`#f4f4f4`)** as the "layer-01" subtle surface — inset cards, sidebars, filters.
 3. **Deep IBM blue** (`--blue-80` / `--blue-90` / `--blue-100`) for marketing hero sections and deck covers. See `assets/backgrounds/blue-gradient-full.jpeg` — a confident flat-to-subtle-gradient blue used behind IBM logos.
 4. **White sculptural "IBM" renders** — high-key 3D letterforms cast in matte-white material with soft shadows (`assets/backgrounds/ibm-sculpt-*.jpg`). These are IBM Consulting's signature marketing imagery: abstract, architectural, non-photographic, slightly isometric. NOT gradients, NOT photos of people, NOT hand-drawn.
@@ -221,7 +195,7 @@ IBM's "card" is barely a card by modern standards — usually just a **bordered 
 - **High key, never moody.** Backgrounds are bright; objects float in neutral space.
 - **No grain, no film, no analog textures.** IBM imagery is clean, precise, modern.
 - When photography is used, it's usually of a real team or architecture/equipment — never stock-smile portraits.
-- **Signature imagery**: studio-rendered 3D geometric compositions in matte white with soft blue highlights, often forming abstract "IBM" letterforms. These are the deck covers.
+- **Signature imagery**: studio-rendered 3D geometric compositions in matte white with soft blue highlights, often forming abstract "IBM" letterforms. These are public brand compositions.
 
 ### Fixed elements
 
@@ -237,9 +211,7 @@ IBM Consulting uses **IBM Carbon Icons** — the open-source icon library publis
 
 ### In this system
 
-Seven line icons from the battlecards deck have been copied into `assets/icons/` at 112×112 (all PNG). They are the exact icons IBM Consulting picks for deck body content: **microscope** (assessment), **shield-with-hand** (security/governance), **target** (objectives), **tools** (tooling), **dollar-in-chat-bubble** (commercials), **clock** (timelines), **rocket** (launch). Each is a square 112×112 black-on-white PNG.
-
-These seven cover the battlecard vocabulary but are a tiny slice of the full library.
+The `assets/icons/` directory contains PNG icon assets. For new work, use the public Carbon icon library as the canonical source.
 
 ### For new designs — pull from CDN
 
@@ -283,5 +255,4 @@ The 8-bar IBM logotype has **protected clearspace** — minimum margin on all si
 ## Known substitutions & caveats
 
 - **Fonts**: IBM Plex Sans is loaded from **local TTF files** in `fonts/` (16 files, full weight + italic range — Thin 100 through Bold 700, including the "Text" weight at ~450). IBM Plex Sans Condensed, Mono, and Serif are still loaded from Google Fonts (the official IBM-published distribution) until local TTFs for those families are provided.
-- **Icons**: Only 7 were extracted from the deck. For UI, the system delegates to the Carbon CDN.
-- **Missing decks**: The strategy/capabilities decks and the BoxBoat GTM deck mentioned in the brief are not in `uploads/`. Cover slides, section dividers, and some marketing layouts are therefore **inferred from public IBM brand conventions**, not lifted from source. If those decks arrive, the `slides/` folder should be revisited.
+- **Icons**: For UI, use the Carbon CDN as the canonical source.
