@@ -144,5 +144,3 @@ Beyond the MVP, explore advanced features such as:
 ## 8. Appendix: Design Language Infographic
 
 The following infographic summarises the product vision, core principles, research influences and key interface components.  It can serve as a quick reference for onboarding new team members.
-
-![IntentTree Design Overview](../assets/images/intenttree_design_overview_card.png)
