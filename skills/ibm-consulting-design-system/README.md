@@ -10,7 +10,7 @@ All material was extracted from files in `uploads/`:
 
 | File | Status | Notes |
 |---|---|---|
-| `uploads/Offering_battlecards.pptx` | 🚫 **removed from public repo 2026-09-24** | IBM internal sales material; not redistributable. Removed from `main`; history intentionally not rewritten. |
+| `uploads/Offering_battlecards.pptx` | ✅ read | 4 battlecards for IBM Consulting's hybrid-cloud offerings. Full IBM template: 5 slide masters, 273 layouts, 31 media assets. Theme colors + fonts extracted. |
 | `uploads/2026 IBM Consulting Strategy & Capabilities Deck v26.02-1.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
 | `uploads/2026 IBM Consulting Strategy & Capabilities Deck v26.02-2.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
 | `uploads/BoxBoat GTM-26-v1.pptx` | ⚠️ **not in project** | Referenced in the brief but not uploaded. Flag to user. |
