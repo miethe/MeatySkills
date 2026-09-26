@@ -1,0 +1,12 @@
+provider: moonshot
+models:
+- id: kimi-k2
+  label: Kimi K2
+  family: kimi
+  generation: '2'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'
