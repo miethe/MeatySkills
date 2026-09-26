@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meatyskills.example/registry/providers.schema.json",
+  "title": "Public provider facts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider",
+    "models"
+  ],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/model"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "family",
+        "generation",
+        "context_windows",
+        "context_window_variants",
+        "capabilities",
+        "lifecycle",
+        "as_of"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context_windows": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "context_window_variants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "marker",
+              "tokens"
+            ],
+            "properties": {
+              "marker": {
+                "const": "[1m]"
+              },
+              "tokens": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "text_generation",
+              "tool_use",
+              "extended_context",
+              "image_input",
+              "image_generation",
+              "audio_input",
+              "audio_output",
+              "video_generation",
+              "structured_output"
+            ]
+          }
+        },
+        "lifecycle": {
+          "enum": [
+            "current",
+            "legacy-selectable",
+            "superseded"
+          ]
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+provider: deepseek
+models:
+- id: deepseek-v4-flash
+  label: Deepseek V4 Flash
+  family: deepseek
+  generation: '4'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'

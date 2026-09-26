@@ -1,0 +1,143 @@
+provider: openai
+models:
+- id: gpt-4o
+  label: GPT 4O
+  family: openai
+  generation: '4'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.1
+  label: GPT 5.1
+  family: openai
+  generation: '5.1'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.4
+  label: GPT 5.4
+  family: openai
+  generation: '5.4'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-6-astra
+  label: GPT 6 ASTRA
+  family: openai
+  generation: '6'
+  context_windows:
+  - 1050000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-6-sol
+  label: GPT 6 SOL
+  family: openai
+  generation: '6'
+  context_windows:
+  - 1050000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-6-luna
+  label: GPT 6 LUNA
+  family: openai
+  generation: '6'
+  context_windows:
+  - 1050000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.6-sol
+  label: GPT 5.6 SOL
+  family: openai
+  generation: '5.6'
+  context_windows:
+  - 400000
+  - 600000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.6-terra
+  label: GPT 5.6 TERRA
+  family: openai
+  generation: '5.6'
+  context_windows:
+  - 400000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.6-luna
+  label: GPT 5.6 LUNA
+  family: openai
+  generation: '5.6'
+  context_windows:
+  - 400000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gpt-5.5
+  label: GPT 5.5
+  family: openai
+  generation: '5.5'
+  context_windows:
+  - 400000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: superseded
+  as_of: '2026-09-26'
+- id: gpt-5.5-pro
+  label: GPT 5.5 PRO
+  family: openai
+  generation: '5.5'
+  context_windows:
+  - 400000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: superseded
+  as_of: '2026-09-26'
+- id: sora-2
+  label: Sora 2
+  family: openai
+  generation: '2'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  lifecycle: current
+  as_of: '2026-09-26'

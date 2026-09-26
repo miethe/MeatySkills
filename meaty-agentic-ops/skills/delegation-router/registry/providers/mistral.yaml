@@ -1,0 +1,13 @@
+provider: mistral
+models:
+- id: mistral-medium-2505
+  label: Mistral Medium 2505
+  family: mistral
+  generation: '2505'
+  context_windows:
+  - 127200
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'

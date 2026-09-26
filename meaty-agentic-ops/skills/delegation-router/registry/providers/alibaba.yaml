@@ -1,0 +1,12 @@
+provider: alibaba
+models:
+- id: qwen3-flash
+  label: Qwen3 Flash
+  family: qwen
+  generation: '3'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'
