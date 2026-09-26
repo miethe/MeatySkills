@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IntentTree — UI Kit</title>
+<link rel="stylesheet" href="../../tokens/components.css" />
+<style>
+  body { background: var(--it-bg-app); padding: 48px 40px 80px; }
+  .doc { max-width: 1480px; margin: 0 auto; }
+  .doc-head { margin-bottom: 28px; display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+  .doc-head h1 { margin: 0; font-size: var(--it-text-2xl); font-weight: 600; letter-spacing: -0.02em; }
+  .doc-head .lede { margin: 0; max-width: 60ch; color: var(--it-text-secondary); font-size: var(--it-text-md); }
+  .scene-wrap { margin-top: 56px; }
+  .scene-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .scene-head .num {
+    width: 26px; height: 26px; border-radius: 999px;
+    background: var(--it-green-500); color: #fff;
+    font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .scene-head h2 { margin: 0; font-size: var(--it-text-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .scene-head .desc { font-size: var(--it-text-sm); color: var(--it-text-secondary); }
+
+  /* iPad frame */
+  .ipad {
+    width: 1180px;
+    aspect-ratio: 4/3;
+    background: #1a1c22;
+    border-radius: 36px;
+    padding: 14px;
+    box-shadow: 0 24px 60px rgba(20,26,44,0.18), 0 4px 12px rgba(20,26,44,0.10);
+    margin: 0 auto;
+    position: relative;
+  }
+  .ipad-screen {
+    width: 100%; height: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--it-bg-canvas);
+    position: relative;
+  }
+  .ipad.dark .ipad-screen { background: #0c0f17; }
+
+  /* Status bar */
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    font-size: 12px; font-weight: 600;
+    color: var(--it-text-primary);
+    z-index: 5;
+    font-variant-numeric: tabular-nums;
+  }
+  .ipad.dark .statusbar { color: #fff; }
+  .statusbar .right { display: flex; gap: 6px; align-items: center; }
+
+  /* App layout */
+  .app {
+    position: absolute; inset: 28px 0 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    height: calc(100% - 28px);
+  }
+  .app.with-right {
+    grid-template-columns: 220px 1fr 280px;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--it-sidebar-bg);
+    backdrop-filter: var(--it-blur-md);
+    -webkit-backdrop-filter: var(--it-blur-md);
+    border-right: 1px solid var(--it-border-subtle);
+    padding: 14px 12px;
+    display: flex; flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .ipad.dark .sidebar { background: rgba(14,18,30,0.85); border-right-color: rgba(255,255,255,0.06); }
+  .ipad.dark .sidebar .it-nav-item { color: var(--it-text-secondary); }
+  .ipad.dark .sidebar .it-nav-item:hover { background: rgba(255,255,255,0.04); color: #fff; }
+  .ipad.dark .sidebar .it-nav-item.active { background: rgba(47,143,74,0.18); color: var(--it-green-300); }
+  .ipad.dark .sidebar .it-nav-item.active::before { background: var(--it-green-400); }
+
+  .sb-brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 14px; }
+  .sb-brand .mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(180deg, var(--it-green-50), var(--it-green-100));
+    display:flex; align-items:center; justify-content:center;
+    color: var(--it-green-600);
+    border: 1px solid rgba(47,143,74,0.22);
+  }
+  .ipad.dark .sb-brand .mark { background: rgba(47,143,74,0.18); border-color: rgba(47,143,74,0.30); color: var(--it-green-300); }
+  .sb-brand .mark svg { width: 18px; height: 18px; }
+  .sb-brand .name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+  .sb-brand .sub  { font-size: 11px; color: var(--it-text-tertiary); }
+  .ipad.dark .sb-brand .name { color: #fff; }
+
+  .sb-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--it-text-tertiary); padding: 8px 10px 2px; font-weight: 600; }
+
+  .sb-user {
+    margin-top: auto;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px;
+    background: var(--it-surface-base);
+    border-radius: var(--it-radius-md);
+    border: 1px solid var(--it-border-subtle);
+  }
+  .ipad.dark .sb-user { background: rgba(28,36,60,0.62); border-color: rgba(255,255,255,0.06); }
+  .sb-user .nm { font-size: 12.5px; font-weight: 600; }
+  .sb-user .role { font-size: 11px; color: var(--it-text-tertiary); }
+
+  /* MAIN content */
+  .main {
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--it-border-subtle);
+    background: var(--it-surface-glass);
+    backdrop-filter: var(--it-blur-md); -webkit-backdrop-filter: var(--it-blur-md);
+    flex-shrink: 0;
+  }
+  .ipad.dark .top-bar { background: rgba(20,26,44,0.6); border-bottom-color: rgba(255,255,255,0.06); }
+
+  /* RIGHT inspector */
+  .right-panel {
+    background: var(--it-surface-glass);
+    backdrop-filter: var(--it-blur-md); -webkit-backdrop-filter: var(--it-blur-md);
+    border-left: 1px solid var(--it-border-subtle);
+    padding: 18px 16px;
+    overflow: auto;
+    font-size: 13px;
+  }
+  .ipad.dark .right-panel { background: rgba(20,26,44,0.55); border-left-color: rgba(255,255,255,0.06); }
+
+  .rp-section { margin-bottom: 18px; }
+  .rp-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--it-text-tertiary); font-weight: 600; margin-bottom: 8px; }
+  .rp-value { font-size: 13px; color: var(--it-text-primary); }
+  .ipad.dark .rp-value { color: var(--it-text-primary); }
+  .rp-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+
+  /* SCENE 1: Project Map */
+  .map-canvas {
+    position: relative;
+    flex: 1; padding: 22px;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(138,174,226,0.18) 0%, transparent 35%),
+      radial-gradient(circle at 80% 70%, rgba(168,150,226,0.14) 0%, transparent 38%),
+      var(--it-bg-canvas);
+    overflow: hidden;
+  }
+  .map-title { text-align: center; margin: 14px 0 28px; }
+  .map-title .ns { display: inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; letter-spacing:0.10em; text-transform:uppercase; color:var(--it-gold-500); background: var(--it-gold-50); border:1px solid rgba(184,138,43,0.30); padding:4px 10px; border-radius:999px; }
+  .map-title h2 { margin: 12px 0 4px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  .map-title p { margin: 0; font-size: 14px; color: var(--it-text-secondary); }
+  .branches {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+  .branch {
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: var(--it-blur-md); -webkit-backdrop-filter: var(--it-blur-md);
+    border-radius: var(--it-radius-lg);
+    padding: 12px 12px 10px;
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: var(--it-shadow-sm);
+    display: flex; flex-direction: column;
+    gap: 6px;
+    min-height: 158px;
+    position: relative;
+  }
+  .branch .head { display: flex; align-items: center; justify-content: space-between; }
+  .branch .name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+  .branch .desc { font-size: 11px; color: var(--it-text-secondary); line-height: 1.35; }
+  .branch .ft { display: flex; align-items: center; justify-content: space-between; margin-top: auto; font-size: 11px; color: var(--it-text-tertiary); }
+  .branch.selected { box-shadow: var(--it-shadow-glow-blue); border-color: var(--it-blue-300); }
+
+  .map-side-panel {
+    position: absolute;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: var(--it-blur-md); -webkit-backdrop-filter: var(--it-blur-md);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: var(--it-radius-lg);
+    padding: 12px 14px;
+    box-shadow: var(--it-shadow-md);
+    width: 200px;
+    font-size: 12px;
+  }
+  .map-side-panel .lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--it-orange-500); display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+  .map-side-panel.sq .lbl { color: var(--it-purple-500); }
+  .map-side-panel ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .map-side-panel li { display:flex; align-items:center; gap:6px; font-size:12px; color: var(--it-text-secondary); }
+  .map-side-panel li::before { content: ""; width:6px; height:6px; border-radius:999px; background: var(--it-green-400); }
+  .map-side-panel.sq li::before { background: var(--it-purple-400); }
+
+  .legend {
+    position: absolute;
+    bottom: 18px; right: 18px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: var(--it-radius-md);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--it-text-secondary);
+    box-shadow: var(--it-shadow-sm);
+  }
+  .legend .row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .legend .row::before { content: ""; width: 18px; height: 0; border-top: 2px solid var(--it-blue-400); }
+  .legend .row.dot::before { border-style: dotted; border-color: var(--it-purple-400); }
+  .legend .row.dash::before { border-style: dashed; border-color: var(--it-neutral-400); }
+
+  /* Connector lines */
+  .connectors {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  /* SCENE 2: Pillar (Execution Core) detail */
+  .content {
+    flex: 1; padding: 20px 22px;
+    overflow: auto;
+  }
+  .pillar-head {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    box-shadow: var(--it-shadow-sm);
+    margin-bottom: 16px;
+  }
+  .pillar-head h2 { margin:0 0 2px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+  .pillar-head p { margin:0; font-size: 13px; color: var(--it-text-secondary); }
+
+  .work-area {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--it-shadow-sm);
+  }
+  .wa-row {
+    display: grid;
+    grid-template-columns: 32px 1fr 110px 120px 1fr 18px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--it-border-subtle);
+    font-size: 13px;
+  }
+  .wa-row:last-child { border-bottom: 0; }
+  .wa-row .name { font-size: 14px; font-weight: 500; }
+  .wa-row .desc { font-size: 12px; color: var(--it-text-secondary); margin-top:1px; }
+  .wa-row.selected { background: var(--it-blue-50); }
+
+  /* SCENE 4 — Daily Train */
+  .day-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--it-border-subtle);
+  }
+  .day-header h2 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .day-header h2 small { font-size: 14px; font-weight: 400; color: var(--it-text-secondary); margin-left: 8px; }
+  .day-stats { display: flex; gap: 16px; align-items: center; }
+  .day-stat { display: flex; flex-direction: column; align-items: flex-end; }
+  .day-stat .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--it-text-tertiary); font-weight: 600; }
+  .day-stat .v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .timeline {
+    padding: 16px 22px;
+  }
+  .time-axis {
+    display: grid;
+    grid-template-columns: 110px repeat(8, 1fr);
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--it-text-tertiary);
+    margin-bottom: 8px;
+  }
+  .lane {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 8px;
+  }
+  .lane-label {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-md);
+    padding: 8px 10px;
+    font-size: 11px;
+    display: flex; flex-direction: column; gap: 2px; justify-content: center;
+  }
+  .lane-label .n { font-weight: 600; font-size: 12px; line-height: 1.1; }
+  .lane-label .t { color: var(--it-text-tertiary); font-size: 10px; }
+  .lane-track {
+    position: relative;
+    height: 64px;
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-md);
+  }
+  .task-card {
+    position: absolute;
+    top: 6px; bottom: 6px;
+    background: var(--it-surface-elevated);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    box-shadow: var(--it-shadow-xs);
+    overflow: hidden;
+  }
+  .task-card .t { font-weight: 600; line-height: 1.2; }
+  .task-card .m { color: var(--it-text-tertiary); font-size: 10px; margin-top: 1px; }
+  .task-card.active { box-shadow: var(--it-shadow-glow-blue); border-color: var(--it-blue-300); }
+  .task-card.agent  { background: var(--it-purple-50); border-color: rgba(111,86,194,0.20); }
+
+  /* Theme toggle pill */
+  .theme-tag {
+    display: inline-flex; gap: 6px; align-items: center;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--it-text-tertiary);
+  }
+  .theme-tag .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--it-blue-400); }
+  .theme-tag.dark .dot { background: var(--it-purple-400); }
+
+  /* Atomic-task scene */
+  .at-card {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-xl);
+    box-shadow: var(--it-shadow-md);
+    padding: 18px 22px;
+  }
+  .at-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--it-neutral-50);
+    border-radius: 8px;
+    margin-top: 6px;
+  }
+  .at-row .num { color: var(--it-text-tertiary); font-size: 13px; font-variant-numeric: tabular-nums; min-width: 16px; }
+  .at-row .body { flex: 1; font-size: 13px; }
+  .at-row .body code { font-family: var(--it-font-mono); font-size: 12px; background: var(--it-surface-base); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--it-border-subtle); }
+  .at-row .est { color: var(--it-text-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ipad.dark .at-row { background: rgba(255,255,255,0.04); }
+  .ipad.dark .at-row .body code { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+
+  /* Dark theme override fixups for cards/rows used inside the dark ipad */
+  .ipad.dark .it-card,
+  .ipad.dark .at-card,
+  .ipad.dark .pillar-head,
+  .ipad.dark .work-area,
+  .ipad.dark .lane-label,
+  .ipad.dark .lane-track,
+  .ipad.dark .task-card { background: var(--it-surface-elevated); border-color: rgba(255,255,255,0.08); color: var(--it-text-primary); }
+  .ipad.dark .top-bar h1 { color: #fff; }
+  .ipad.dark .it-pill.idle { background: rgba(255,255,255,0.06); color: var(--it-neutral-300); }
+
+  .ipad.dark .it-search { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); color: var(--it-text-secondary); }
+  .ipad.dark .it-search input { color: #fff; }
+  .ipad.dark .it-btn { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); color: var(--it-text-primary); }
+  .ipad.dark .it-btn.ghost { background: transparent; }
+  .ipad.dark .it-btn.primary { background: var(--it-green-500); color: #fff; }
+  .ipad.dark .it-btn.secondary { background: var(--it-blue-500); color: #fff; }
+
+  .crumb-light { color: var(--it-text-secondary); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .crumb-light .sep { color: var(--it-text-muted); }
+  .crumb-light .cur { color: var(--it-blue-600); font-weight: 500; }
+  .ipad.dark .crumb-light { color: var(--it-text-secondary); }
+  .ipad.dark .crumb-light .cur { color: var(--it-blue-300); }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <header class="doc-head">
+    <div>
+      <div class="dsc-eyebrow" style="font-size:11px; text-transform:uppercase; letter-spacing:0.10em; color:var(--it-text-tertiary); font-weight:600; margin-bottom:6px;">Design System · UI Kit</div>
+      <h1>The IntentTree app</h1>
+      <p class="lede" style="margin-top:6px;">Four canonical screens — Project Map, Pillar Detail, Atomic Task, and Daily Train —
+        composed entirely from the tokens and components in this system. The map and atomic task are shown in the light theme;
+        the pillar list in light, the daily train in dark.</p>
+    </div>
+    <a href="../../preview/index.html" class="it-btn">← Back to system</a>
+  </header>
+
+  <!-- ============================================================ SCENE 1 -->
+  <section class="scene-wrap">
+    <div class="scene-head">
+      <span class="num">1</span>
+      <h2>Project Map · Zoomed Out</h2>
+      <span class="desc">— see the whole intent. Tap a branch to zoom in.</span>
+      <span class="theme-tag" style="margin-left:auto;"><span class="dot"></span>Light theme</span>
+    </div>
+
+    <div class="ipad">
+      <div class="ipad-screen">
+        <div class="statusbar"><span>9:41 AM · Tue May 13</span><span class="right"><span>Wi-Fi</span><span>100%</span></span></div>
+        <div class="app">
+
+          <!-- Sidebar -->
+          <aside class="sidebar">
+            <div class="sb-brand">
+              <div class="mark">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="16" cy="6" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="26" cy="20" r="2"/>
+                  <circle cx="11" cy="28" r="1.4"/><circle cx="21" cy="28" r="1.4"/>
+                  <path d="M16 8 L16 18"/><path d="M16 8 L6 18"/><path d="M16 8 L26 18"/>
+                  <path d="M11 26.6 L11 22"/><path d="M21 26.6 L21 22"/>
+                </svg>
+              </div>
+              <div><div class="name">IntentTree</div><div class="sub">Execution OS</div></div>
+            </div>
+            <div class="it-search"><span class="icon">⌕</span><input placeholder="Search the tree…"/><span class="kbd">⌘K</span></div>
+
+            <div style="display:flex; flex-direction:column; gap:2px; margin-top:6px;">
+              <div class="it-nav-item"><span class="icon">◎</span>Overview</div>
+              <div class="it-nav-item active"><span class="icon">⊞</span>Tree</div>
+              <div class="it-nav-item"><span class="icon">☀</span>Today</div>
+              <div class="it-nav-item"><span class="icon">▦</span>Tasks</div>
+              <div class="it-nav-item"><span class="icon">⚛</span>Agents</div>
+              <div class="it-nav-item"><span class="icon">✉</span>Inbox<span class="badge">7</span></div>
+              <div class="it-nav-item"><span class="icon">⚙</span>Settings</div>
+            </div>
+
+            <div class="sb-user" style="margin-top:auto;">
+              <div class="it-avatar" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+              <div><div class="nm">Alex Morgan</div><div class="role">Founder</div></div>
+            </div>
+          </aside>
+
+          <!-- Main / map -->
+          <main class="main">
+            <div class="top-bar">
+              <div class="crumb-light">
+                <span>IntentTree</span><span class="sep">›</span>
+                <span>Execution OS</span><span class="sep">›</span>
+                <span class="cur">Project Map</span>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <span class="it-pill ready">On Track</span>
+                <button class="it-btn sm">Filter</button>
+                <button class="it-btn sm secondary">Focus</button>
+                <button class="it-btn sm icon-only">⋯</button>
+              </div>
+            </div>
+
+            <div class="map-canvas">
+              <div class="map-title">
+                <span class="ns">★ North Star</span>
+                <h2>Execution OS / Agentic OS</h2>
+                <p>Build the operating system for intent-driven execution.</p>
+              </div>
+
+              <div class="branches">
+                <div class="branch selected">
+                  <div class="head"><div class="it-tile sm blue">◎</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">68%</span></div>
+                  <div class="name">Execution Core</div>
+                  <div class="desc">The engine that runs everything. Fast, reliable, observable.</div>
+                  <div class="ft"><span>6 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm teal">📖</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">52%</span></div>
+                  <div class="name">Knowledge Brain</div>
+                  <div class="desc">Capture, connect, and activate all domain knowledge.</div>
+                  <div class="ft"><span>4 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm green">🏠</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">41%</span></div>
+                  <div class="name">Homelab Recovery</div>
+                  <div class="desc">Resilient home infrastructure. Self-hosted &amp; sovereign.</div>
+                  <div class="ft"><span>5 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm purple">⚛</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">35%</span></div>
+                  <div class="name">Agent Runtime</div>
+                  <div class="desc">Runtime for agents. Memory, tools, reasoning loops.</div>
+                  <div class="ft"><span>5 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm blue">⚭</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">28%</span></div>
+                  <div class="name">Integrations</div>
+                  <div class="desc">Connect external services and extend capabilities.</div>
+                  <div class="ft"><span>4 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm orange">🚀</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">22%</span></div>
+                  <div class="name">Productionize First Service</div>
+                  <div class="desc">Ship a real service. Learn by doing.</div>
+                  <div class="ft"><span>3 areas</span><span>›</span></div>
+                </div>
+                <div class="branch">
+                  <div class="head"><div class="it-tile sm gold">★</div><span class="it-pill progress" style="font-size:10px; padding:2px 6px;">30%</span></div>
+                  <div class="name">Control Plane</div>
+                  <div class="desc">Observe, orchestrate, and govern the system.</div>
+                  <div class="ft"><span>4 areas</span><span>›</span></div>
+                </div>
+              </div>
+
+              <!-- Quick wins floating panel -->
+              <div class="map-side-panel" style="top: 78px; left: 22px;">
+                <div class="lbl">⚡ Quick Wins</div>
+                <ul>
+                  <li>CLI bootstrap script · 30m</li>
+                  <li>Local dev environment · 45m</li>
+                  <li>Readme &amp; project brief · 20m</li>
+                </ul>
+              </div>
+
+              <!-- Side quests -->
+              <div class="map-side-panel sq" style="top: 78px; right: 22px;">
+                <div class="lbl">✦ Side Quests</div>
+                <ul>
+                  <li>Design system polish</li>
+                  <li>Agent marketplace</li>
+                  <li>Voice interface experiment</li>
+                </ul>
+              </div>
+
+              <!-- Shared work pill -->
+              <div style="position:absolute; left:50%; bottom:100px; transform:translateX(-50%);">
+                <span class="it-shared">⚭ Shared Work</span>
+              </div>
+
+              <!-- Legend -->
+              <div class="legend">
+                <div class="row"><span>Parent / Child</span></div>
+                <div class="row dot"><span>Cross-Goal Link</span></div>
+                <div class="row dash"><span>Speculative</span></div>
+              </div>
+            </div>
+          </main>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCENE 2 -->
+  <section class="scene-wrap">
+    <div class="scene-head">
+      <span class="num">2</span>
+      <h2>Pillar · Execution Core</h2>
+      <span class="desc">— zoom into a major branch, see its work areas.</span>
+      <span class="theme-tag" style="margin-left:auto;"><span class="dot"></span>Light theme</span>
+    </div>
+
+    <div class="ipad">
+      <div class="ipad-screen">
+        <div class="statusbar"><span>9:41 AM · Tue May 20</span><span class="right"><span>Wi-Fi</span><span>100%</span></span></div>
+        <div class="app">
+          <aside class="sidebar">
+            <div class="sb-brand">
+              <div class="mark">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="16" cy="6" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="26" cy="20" r="2"/>
+                  <circle cx="11" cy="28" r="1.4"/><circle cx="21" cy="28" r="1.4"/>
+                  <path d="M16 8 L16 18"/><path d="M16 8 L6 18"/><path d="M16 8 L26 18"/>
+                  <path d="M11 26.6 L11 22"/><path d="M21 26.6 L21 22"/>
+                </svg>
+              </div>
+              <div><div class="name">IntentTree</div><div class="sub">Execution OS</div></div>
+            </div>
+            <div class="it-search"><span class="icon">⌕</span><input placeholder="Search the tree…"/></div>
+            <div style="display:flex; flex-direction:column; gap:2px; margin-top:6px;">
+              <div class="it-nav-item"><span class="icon">◎</span>Project Map</div>
+              <div class="it-nav-item active"><span class="icon">▷</span>Execution Core</div>
+              <div class="it-nav-item"><span class="icon">⊟</span>Platform Layer</div>
+              <div class="it-nav-item"><span class="icon">⚛</span>Interfaces</div>
+              <div class="it-nav-item"><span class="icon">⚙</span>Governance</div>
+              <div class="it-nav-item"><span class="icon">✦</span>Side Quests</div>
+            </div>
+            <div class="sb-user">
+              <div class="it-avatar" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+              <div><div class="nm">Alex Morgan</div><div class="role">Product Lead</div></div>
+            </div>
+          </aside>
+
+          <main class="main">
+            <div class="top-bar">
+              <div class="crumb-light">
+                <span>IntentTree</span><span class="sep">›</span>
+                <span class="cur">Execution Core</span>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="it-btn sm">Tree map</button>
+                <button class="it-btn sm icon-only">⋯</button>
+                <button class="it-btn sm secondary">View: Map</button>
+              </div>
+            </div>
+
+            <div class="content">
+              <div class="pillar-head">
+                <div class="it-tile lg blue">◎</div>
+                <div>
+                  <div style="display:flex; gap:10px; align-items:center;">
+                    <h2>Execution Core</h2>
+                    <span class="it-chip blue">Core Pillar</span>
+                  </div>
+                  <p>The central runtime and orchestration layer that turns intent into action.</p>
+                  <div class="it-progress blue" style="max-width: 380px; margin-top: 10px;"><div class="fill" style="width:68%"></div></div>
+                  <div style="font-size:11px; color: var(--it-text-tertiary); margin-top:4px; font-variant-numeric: tabular-nums;">68% Complete</div>
+                </div>
+                <div style="text-align:right;">
+                  <span class="it-pill ready">On Track</span>
+                  <div style="font-size: 11px; color: var(--it-text-tertiary); margin-top: 6px;">All systems nominal</div>
+                </div>
+              </div>
+
+              <div class="work-area">
+                <div class="wa-row">
+                  <div class="it-tile sm blue">📅</div>
+                  <div><div class="name">Planning Engine</div><div class="desc">Breaks intent into plans, steps, and dependencies.</div></div>
+                  <div class="it-progress blue"><div class="fill" style="width:72%"></div></div>
+                  <span class="it-pill progress">In Progress</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ Plan Templates</span><span class="it-qw">⚡ Auto-Decompose</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+                <div class="wa-row">
+                  <div class="it-tile sm green">⊟</div>
+                  <div><div class="name">Task &amp; State Model</div><div class="desc">Defines task schema, state transitions, and persistence.</div></div>
+                  <div class="it-progress"><div class="fill" style="width:65%"></div></div>
+                  <span class="it-pill progress">In Progress</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ State Visualizer</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+                <div class="wa-row">
+                  <div class="it-tile sm purple">▷</div>
+                  <div><div class="name">Execution Engine</div><div class="desc">Runs tasks, manages orchestration and concurrency.</div></div>
+                  <div class="it-progress purple"><div class="fill" style="width:70%"></div></div>
+                  <span class="it-pill progress">In Progress</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ Dry Run Mode</span><span class="it-qw">⚡ Step Retry</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+                <div class="wa-row">
+                  <div class="it-tile sm teal">📖</div>
+                  <div><div class="name">Context &amp; Memory</div><div class="desc">Manages context windows, memory, and retrieval.</div></div>
+                  <div class="it-progress" style="--c:var(--it-teal-500)"><div class="fill" style="width:60%; background:var(--it-teal-500)"></div></div>
+                  <span class="it-pill warn">Waiting Review</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ Memory Inspector</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+                <div class="wa-row">
+                  <div class="it-tile sm gold">★</div>
+                  <div><div class="name">Observability</div><div class="desc">Logs, traces, metrics, and real-time visibility.</div></div>
+                  <div class="it-progress gold"><div class="fill" style="width:68%"></div></div>
+                  <span class="it-pill progress">In Progress</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ Trace Explorer</span><span class="it-qw">⚡ Live Dashboard</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+                <div class="wa-row">
+                  <div class="it-tile sm red">⚠</div>
+                  <div><div class="name">Error Handling</div><div class="desc">Retries, backoffs, fallbacks, and error semantics.</div></div>
+                  <div class="it-progress" style=""><div class="fill" style="width:55%; background:var(--it-red-400)"></div></div>
+                  <span class="it-pill progress">In Progress</span>
+                  <div style="display:flex; gap:6px;"><span class="it-qw">⚡ Error Taxonomy</span></div>
+                  <span style="color:var(--it-text-muted)">›</span>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCENE 3 -->
+  <section class="scene-wrap">
+    <div class="scene-head">
+      <span class="num">3</span>
+      <h2>Atomic Task · Define Node Schema</h2>
+      <span class="desc">— the leaf of the tree. Execute Next is the only primary CTA.</span>
+      <span class="theme-tag" style="margin-left:auto;"><span class="dot"></span>Light theme · with right inspector</span>
+    </div>
+
+    <div class="ipad">
+      <div class="ipad-screen">
+        <div class="statusbar"><span>9:41 AM · Tue May 13</span><span class="right"><span>Wi-Fi</span><span>100%</span></span></div>
+        <div class="app with-right">
+
+          <aside class="sidebar">
+            <div class="sb-brand">
+              <div class="mark">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="16" cy="6" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="26" cy="20" r="2"/>
+                  <circle cx="11" cy="28" r="1.4"/><circle cx="21" cy="28" r="1.4"/>
+                  <path d="M16 8 L16 18"/><path d="M16 8 L6 18"/><path d="M16 8 L26 18"/>
+                  <path d="M11 26.6 L11 22"/><path d="M21 26.6 L21 22"/>
+                </svg>
+              </div>
+              <div><div class="name">IntentTree</div><div class="sub">Execution OS</div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div class="it-nav-item"><span class="icon">◎</span>Overview</div>
+              <div class="it-nav-item"><span class="icon">⊞</span>Tree</div>
+              <div class="it-nav-item"><span class="icon">▦</span>Backlog</div>
+              <div class="it-nav-item active"><span class="icon">▷</span>Execution</div>
+              <div class="it-nav-item"><span class="icon">⚛</span>Agents</div>
+              <div class="it-nav-item"><span class="icon">📊</span>Insights</div>
+            </div>
+            <div class="sb-user">
+              <div class="it-avatar" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+              <div><div class="nm">Alex Morgan</div><div class="role">Founder</div></div>
+            </div>
+          </aside>
+
+          <main class="main">
+            <div class="top-bar">
+              <div class="crumb-light">
+                <span>‹</span>
+                <span>Execution</span><span class="sep">›</span>
+                <span>Phase 1: Foundation</span><span class="sep">›</span>
+                <span>Data Model</span><span class="sep">›</span>
+                <span class="cur">Define Node Schema</span>
+              </div>
+              <div style="display:flex; gap:8px;"><button class="it-btn sm">↗ Share</button><button class="it-btn sm icon-only">⋯</button></div>
+            </div>
+
+            <div class="content">
+              <div class="at-card">
+                <div style="display:grid; grid-template-columns: 1fr 140px; gap:24px; align-items:flex-start;">
+                  <div>
+                    <div style="font-size:11px; font-weight:600; letter-spacing:0.10em; text-transform:uppercase; color:var(--it-green-600); margin-bottom:6px;">Atomic Task</div>
+                    <h2 style="margin:0; font-size:30px; font-weight:600; letter-spacing:-0.02em;">Define Node Schema <span style="color:var(--it-text-muted); font-weight:400;">☆</span></h2>
+                    <p style="margin:6px 0 0; font-size:13px; color:var(--it-text-secondary); max-width:54ch;">Define the core Node schema with required fields and types in the data model layer.</p>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                      <span class="it-chip green">Data Model</span>
+                      <span class="it-chip blue">P1</span>
+                      <span class="it-chip">AT-1.2.1</span>
+                    </div>
+                  </div>
+                  <div style="text-align:center; padding:14px; border:1px solid var(--it-border-subtle); border-radius:var(--it-radius-md);">
+                    <div style="font-size:10px; color:var(--it-text-tertiary); text-transform:uppercase; letter-spacing:0.10em; font-weight:600;">Estimated Effort</div>
+                    <div style="font-size:24px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:6px;">⏱ 45m</div>
+                    <div style="font-size:11px; color:var(--it-text-tertiary);">± 10m</div>
+                    <span class="it-chip green" style="margin-top:8px;"><span class="dot"></span>Small</span>
+                  </div>
+                </div>
+                <hr class="it-divider" style="margin:16px 0;"/>
+                <div style="font-size:10px; color:var(--it-text-tertiary); text-transform:uppercase; letter-spacing:0.10em; font-weight:600;">Subtasks · 0 / 6</div>
+                <div class="at-row"><div class="it-check"></div><span class="num">1.</span><div class="body">Create <code>Node</code> interface/type</div><div class="est">⏱ 5m</div></div>
+                <div class="at-row"><div class="it-check"></div><span class="num">2.</span><div class="body">Add <code>id: UUID</code> field</div><div class="est">⏱ 3m</div></div>
+                <div class="at-row"><div class="it-check"></div><span class="num">3.</span><div class="body">Add <code>title: string</code> field</div><div class="est">⏱ 5m</div></div>
+                <div class="at-row"><div class="it-check"></div><span class="num">4.</span><div class="body">Add <code>description?: string</code> field</div><div class="est">⏱ 5m</div></div>
+                <div class="at-row"><div class="it-check"></div><span class="num">5.</span><div class="body">Add <code>type: NodeType</code> enum</div><div class="est">⏱ 5m</div></div>
+                <div class="at-row"><div class="it-check"></div><span class="num">6.</span><div class="body">Add <code>createdAt</code> / <code>updatedAt</code> timestamps</div><div class="est">⏱ 5m</div></div>
+                <hr class="it-divider" style="margin:16px 0;"/>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span class="it-pill ready">Ready to execute</span>
+                  <button class="it-btn primary lg">Execute Next →</button>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          <aside class="right-panel">
+            <div class="rp-section">
+              <div class="rp-label">Assignment</div>
+              <div class="it-exec" style="width:100%;">
+                <button>👤 Human</button>
+                <button>🤖 Agent</button>
+                <button class="active hybrid">✦ Hybrid</button>
+              </div>
+              <div style="font-size:11px; color:var(--it-text-tertiary); margin-top:8px;">Recommended: <strong style="color:var(--it-green-700)">Hybrid</strong> ⓘ</div>
+              <div style="font-size:11px; color:var(--it-text-secondary); margin-top:4px;">AI scaffolds, you validate and refine.</div>
+            </div>
+
+            <div class="rp-section">
+              <div class="rp-label">Dependencies</div>
+              <div class="rp-row"><span>Blocks:</span><span style="color:var(--it-text-secondary)">None ✓</span></div>
+              <div class="rp-row"><span>Blocked by:</span><span style="color:var(--it-text-secondary)">Set up Data Layer (AT-1.1.3) ✓</span></div>
+              <button class="it-btn sm" style="margin-top:8px; width:100%;">View in Tree</button>
+            </div>
+
+            <div class="rp-section">
+              <div class="rp-label">Progress History</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px;">
+                  <div style="width:14px; height:14px; border-radius:999px; background:var(--it-green-500); color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; margin-top:2px;">✓</div>
+                  <div style="flex:1;"><div style="font-weight:500;">Created</div><div style="color:var(--it-text-tertiary);">May 12, 9:14 AM</div></div>
+                  <div style="color:var(--it-text-tertiary);">Alex</div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px;">
+                  <div style="width:14px; height:14px; border-radius:999px; background:var(--it-green-500); color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; margin-top:2px;">✓</div>
+                  <div style="flex:1;"><div style="font-weight:500;">Ready</div><div style="color:var(--it-text-tertiary);">May 13, 8:50 AM</div></div>
+                  <div style="color:var(--it-text-tertiary);">System</div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px;">
+                  <div style="width:14px; height:14px; border-radius:999px; border:1.5px solid var(--it-neutral-300); margin-top:2px;"></div>
+                  <div style="flex:1;"><div style="font-weight:500; color:var(--it-text-tertiary);">Not Started</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rp-section">
+              <div class="rp-label">Notes</div>
+              <p style="font-size:12px; color:var(--it-text-secondary); margin:0; line-height:1.5;">Keep this schema minimal and extensible. Additional fields will be added in later phases.</p>
+              <button class="it-btn sm ghost" style="margin-top:8px;">✎ Edit Notes</button>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCENE 4 -->
+  <section class="scene-wrap">
+    <div class="scene-head">
+      <span class="num">4</span>
+      <h2>Daily Train · Today</h2>
+      <span class="desc">— the tree, sequenced as the day. Active task is the only blue-glow card.</span>
+      <span class="theme-tag dark" style="margin-left:auto;"><span class="dot"></span>Dark theme</span>
+    </div>
+
+    <div class="ipad dark" data-theme="dark" style="--it-text-primary:#f4f6fb;">
+      <div class="ipad-screen">
+        <div class="statusbar"><span>9:41 AM · Tue May 20</span><span class="right"><span>Wi-Fi</span><span>100%</span></span></div>
+        <div class="app">
+          <aside class="sidebar">
+            <div class="sb-brand">
+              <div class="mark">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="16" cy="6" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="26" cy="20" r="2"/>
+                  <circle cx="11" cy="28" r="1.4"/><circle cx="21" cy="28" r="1.4"/>
+                  <path d="M16 8 L16 18"/><path d="M16 8 L6 18"/><path d="M16 8 L26 18"/>
+                  <path d="M11 26.6 L11 22"/><path d="M21 26.6 L21 22"/>
+                </svg>
+              </div>
+              <div><div class="name">IntentTree</div><div class="sub">Execution OS</div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div class="it-nav-item"><span class="icon">◎</span>Overview</div>
+              <div class="it-nav-item"><span class="icon">▦</span>Projects</div>
+              <div class="it-nav-item active"><span class="icon">☀</span>Today</div>
+              <div class="it-nav-item"><span class="icon">📅</span>Calendar</div>
+              <div class="it-nav-item"><span class="icon">⚛</span>Agents</div>
+              <div class="it-nav-item"><span class="icon">📊</span>Analytics</div>
+            </div>
+
+            <div style="margin-top:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:var(--it-radius-md); padding:12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.10em; color: var(--it-text-tertiary); font-weight:600; margin-bottom:6px;">Focus Mode</div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="it-ring purple" style="width:32px; height:32px;">
+                  <svg viewBox="0 0 44 44">
+                    <circle class="track" cx="22" cy="22" r="18" style="stroke:rgba(255,255,255,0.10)"/>
+                    <circle class="value" cx="22" cy="22" r="18" stroke-dasharray="84 113.1" style="stroke:var(--it-purple-300);"/>
+                  </svg>
+                </div>
+                <div><div style="font-size:12px; font-weight:600;">Deep Work</div><div style="font-size:10px; color:var(--it-text-tertiary);">Until 12:00 PM</div></div>
+              </div>
+              <button class="it-btn sm" style="width:100%; margin-top:10px;">⏸ Pause Focus</button>
+            </div>
+
+            <div class="sb-user">
+              <div class="it-avatar" style="background:var(--it-blue-200); color:var(--it-blue-700)">AM</div>
+              <div><div class="nm">Alex Morgan</div><div class="role">Premium Plan</div></div>
+            </div>
+          </aside>
+
+          <main class="main">
+            <div class="day-header">
+              <div>
+                <h2>Today <small>May 20, 2026 ▾</small></h2>
+                <div style="font-size:13px; color:var(--it-text-secondary); margin-top:2px;">Your execution train for today.</div>
+              </div>
+              <div class="day-stats">
+                <div class="day-stat"><div class="l">Status</div><div class="v" style="color:var(--it-green-400);">● On Track</div></div>
+                <div class="day-stat"><div class="l">Score</div><div class="v">82</div></div>
+                <button class="it-btn sm secondary">+ Add Task</button>
+              </div>
+            </div>
+
+            <div class="timeline">
+              <div class="time-axis">
+                <div></div>
+                <div>9:00</div><div>10:00</div><div>11:00</div><div>12:00</div><div>1:00</div><div>2:00</div><div>3:00</div><div>4:00</div>
+              </div>
+              <div class="lane">
+                <div class="lane-label"><div class="n">Northstar</div><div class="t">Product Launch</div></div>
+                <div class="lane-track">
+                  <div class="task-card" style="left:1%; width:14%; background:var(--it-blue-50); border-color:rgba(59,111,189,0.20);"><div class="t">Define pricing strategy</div><div class="m">9:00 · 75%</div></div>
+                  <div class="task-card" style="left:16%; width:13%; background:var(--it-blue-50); border-color:rgba(59,111,189,0.20);"><div class="t">Competitor analysis</div><div class="m">10:15 · 60%</div></div>
+                  <div class="task-card active" style="left:30%; width:14%;"><div class="t">Go-to-market messaging</div><div class="m">11:30 · In Progress</div></div>
+                  <div class="task-card" style="left:45%; width:14%;"><div class="t">Deck review with team</div><div class="m">1:15</div></div>
+                  <div class="task-card" style="left:60%; width:14%;"><div class="t">Launch plan alignment</div><div class="m">2:15</div></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label"><div class="n">IntentTree</div><div class="t">Platform</div></div>
+                <div class="lane-track">
+                  <div class="task-card agent" style="left:1%; width:14%;"><div class="t">⚛ Agent: Research feedback</div><div class="m">9:00 · Running</div></div>
+                  <div class="task-card" style="left:16%; width:18%;"><div class="t">Build Daily View enhancements</div><div class="m">10:00 · 65%</div></div>
+                  <div class="task-card" style="left:36%; width:14%;"><div class="t">Integrate calendar intel</div><div class="m">12:00 · 40%</div></div>
+                  <div class="task-card agent" style="left:51%; width:14%;"><div class="t">⚛ Test: Smart rescheduling</div><div class="m">2:45</div></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label"><div class="n">Personal</div><div class="t">Growth</div></div>
+                <div class="lane-track">
+                  <div class="task-card" style="left:0%; width:11%; background:var(--it-orange-50); border-color:rgba(194,100,26,0.20);"><div class="t">Morning workout</div><div class="m">8:30</div></div>
+                  <div class="task-card" style="left:12%; width:11%; background:var(--it-orange-50); border-color:rgba(194,100,26,0.20);"><div class="t">Reading time</div><div class="m">9:30</div></div>
+                  <div class="task-card" style="left:24%; width:11%; background:var(--it-orange-50); border-color:rgba(194,100,26,0.20);"><div class="t">Meditation</div><div class="m">11:00</div></div>
+                  <div class="task-card" style="left:90%; width:10%; background:var(--it-orange-50); border-color:rgba(194,100,26,0.20);"><div class="t">Learn Spanish</div><div class="m">4:30</div></div>
+                </div>
+              </div>
+
+              <!-- Bottom panels: quick wins / time blocks / side quests -->
+              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 18px;">
+                <div style="background: var(--it-surface-elevated); border:1px solid rgba(255,255,255,0.06); border-radius: var(--it-radius-md); padding: 14px;">
+                  <div style="font-size: 11px; color:var(--it-orange-400); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">⚡ Quick Wins · 3</div>
+                  <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
+                    <div style="display:flex; justify-content:space-between;"><span>✓ Reply to 3 emails</span><span style="color:var(--it-text-tertiary);">5 min</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>✓ Update launch doc status</span><span style="color:var(--it-text-tertiary);">7 min</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>○ Review PR #142</span><span style="color:var(--it-text-tertiary);">10 min</span></div>
+                  </div>
+                </div>
+                <div style="background: var(--it-surface-elevated); border:1px solid rgba(255,255,255,0.06); border-radius: var(--it-radius-md); padding: 14px;">
+                  <div style="font-size: 11px; color:var(--it-blue-300); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">⏱ Time Blocks</div>
+                  <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
+                    <div style="display:flex; justify-content:space-between;"><span style="color:var(--it-purple-300);">● Deep Work</span><span style="color:var(--it-text-tertiary);">9:00 – 12:00</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span style="color:var(--it-blue-300);">● Collaboration</span><span style="color:var(--it-text-tertiary);">12:00 – 2:00</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span style="color:var(--it-neutral-400);">● Shallow Work</span><span style="color:var(--it-text-tertiary);">2:00 – 5:00</span></div>
+                  </div>
+                </div>
+                <div style="background: var(--it-surface-elevated); border:1px solid rgba(255,255,255,0.06); border-radius: var(--it-radius-md); padding: 14px;">
+                  <div style="font-size: 11px; color:var(--it-purple-300); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">✦ Side Quests · 3</div>
+                  <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
+                    <div style="display:flex; justify-content:space-between;"><span>Plan weekend getaway</span><span style="color:var(--it-text-tertiary);">Personal</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Organize photos</span><span style="color:var(--it-text-tertiary);">Personal</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Explore AI tools</span><span style="color:var(--it-text-tertiary);">Learning</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

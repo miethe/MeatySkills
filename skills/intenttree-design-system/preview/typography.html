@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IntentTree — Typography</title>
+<link rel="stylesheet" href="_preview.css" />
+<style>
+  .type-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    align-items: baseline;
+    gap: 28px;
+    padding: 22px 0;
+    border-top: 1px solid var(--it-border-subtle);
+  }
+  .type-row:first-of-type { border-top: 0; padding-top: 4px; }
+  .type-meta {
+    font-family: var(--it-font-mono);
+    font-size: 11.5px;
+    color: var(--it-text-tertiary);
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+  .type-meta strong {
+    display: block;
+    color: var(--it-text-secondary);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .type-sample { color: var(--it-text-primary); letter-spacing: var(--it-tracking-tight); }
+  .t-4xl { font-size: var(--it-text-4xl); font-weight: 700; line-height: var(--it-leading-tight); }
+  .t-3xl { font-size: var(--it-text-3xl); font-weight: 600; line-height: var(--it-leading-tight); }
+  .t-2xl { font-size: var(--it-text-2xl); font-weight: 600; line-height: var(--it-leading-snug); }
+  .t-xl  { font-size: var(--it-text-xl);  font-weight: 600; line-height: var(--it-leading-snug); }
+  .t-lg  { font-size: var(--it-text-lg);  font-weight: 600; line-height: var(--it-leading-snug); }
+  .t-md  { font-size: var(--it-text-md);  font-weight: 500; line-height: var(--it-leading-normal); }
+  .t-base{ font-size: var(--it-text-base);font-weight: 400; line-height: var(--it-leading-normal); color: var(--it-text-secondary); }
+  .t-sm  { font-size: var(--it-text-sm);  font-weight: 400; line-height: var(--it-leading-normal); color: var(--it-text-tertiary); }
+  .t-xs  { font-size: var(--it-text-xs);  font-weight: 600; text-transform: uppercase; letter-spacing: var(--it-tracking-eyebrow); color: var(--it-text-tertiary); }
+
+  .num-block {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .num-tile {
+    background: var(--it-surface-base);
+    border: 1px solid var(--it-border-subtle);
+    border-radius: var(--it-radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--it-shadow-xs);
+  }
+  .num-tile .label { font-size: var(--it-text-xs); color: var(--it-text-tertiary); text-transform: uppercase; letter-spacing: var(--it-tracking-eyebrow); }
+  .num-tile .value { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 4px; }
+
+  .voice-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--it-text-base);
+  }
+  .voice-tbl th, .voice-tbl td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--it-border-subtle);
+    vertical-align: top;
+  }
+  .voice-tbl th { color: var(--it-text-tertiary); font-weight: 600; font-size: var(--it-text-xs); text-transform: uppercase; letter-spacing: var(--it-tracking-eyebrow); }
+  .voice-tbl .avoid { color: var(--it-red-600); }
+  .voice-tbl .prefer { color: var(--it-text-primary); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="dsc-doc">
+
+  <header class="dsc-header">
+    <div>
+      <div class="dsc-eyebrow">Design System · Typography</div>
+      <h1>Typography</h1>
+    </div>
+    <div class="dsc-mono">SF Pro · Inter fallback · 4pt grid</div>
+  </header>
+  <p class="dsc-lede">Apple-native hierarchy. Big, confident page titles; compact section headings;
+    readable body; muted metadata. Numeric metrics use <strong>tabular figures</strong> so they
+    align in tables. We never set paragraphs of body copy inside graph nodes — summarize, then link.</p>
+
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Type ramp</h2>
+      <span class="dsc-section-note">Eight steps. Sizes in px on a 4pt baseline.</span>
+    </div>
+    <div class="dsc-card">
+
+      <div class="type-row">
+        <div class="type-meta"><strong>Display / 4xl</strong>48 / 56 · 700 · -0.02em<br/>--it-text-4xl</div>
+        <div class="type-sample t-4xl">Execution OS / Agentic OS</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Hero / 3xl</strong>38 / 44 · 600 · -0.02em<br/>--it-text-3xl</div>
+        <div class="type-sample t-3xl">Plan deeply. Zoom in. Execute.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Page / 2xl</strong>30 / 38 · 600 · -0.02em<br/>--it-text-2xl</div>
+        <div class="type-sample t-2xl">Define Node Schema</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Section / xl</strong>24 / 30 · 600<br/>--it-text-xl</div>
+        <div class="type-sample t-xl">Subtasks · 0 of 6</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Subsection / lg</strong>20 / 26 · 600<br/>--it-text-lg</div>
+        <div class="type-sample t-lg">Shared with 4 branches</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Card title / md</strong>17 / 24 · 500<br/>--it-text-md</div>
+        <div class="type-sample t-md">Plan Authoring — turn intent into structured plans.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Body / base</strong>15 / 22 · 400<br/>--it-text-base</div>
+        <div class="type-sample t-base">Define the core Node schema with required fields and types in the data model layer. The schema must remain minimal and extensible; additional fields will be added in later phases.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Meta / sm</strong>13 / 19 · 400<br/>--it-text-sm</div>
+        <div class="type-sample t-sm">Last updated May 13, 2025 · 6 subtasks · Owner: Alicia Chen</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Eyebrow / xs</strong>11 / 14 · 600 · 0.10em uppercase<br/>--it-text-xs</div>
+        <div class="type-sample t-xs">Atomic Task</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Numeric -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Numeric · tabular figures</h2>
+      <span class="dsc-section-note">Every metric in the system uses <code class="dsc-mono">font-variant-numeric: tabular-nums</code>.</span>
+    </div>
+    <div class="num-block">
+      <div class="num-tile"><div class="label">Progress</div><div class="value it-numeric">62%</div></div>
+      <div class="num-tile"><div class="label">Estimate</div><div class="value it-numeric">21 pts</div></div>
+      <div class="num-tile"><div class="label">Score</div><div class="value it-numeric">82</div></div>
+      <div class="num-tile"><div class="label">Effort</div><div class="value it-numeric">45m</div></div>
+    </div>
+  </section>
+
+  <!-- Voice samples -->
+  <section class="dsc-section">
+    <div class="dsc-section-head">
+      <h2>Voice & tone</h2>
+      <span class="dsc-section-note">Concise, operational, low-drama. Verbs first.</span>
+    </div>
+    <div class="dsc-card" style="padding: 0;">
+      <table class="voice-tbl">
+        <thead><tr><th style="width:50%">Avoid</th><th>Prefer</th></tr></thead>
+        <tbody>
+          <tr><td class="avoid">"🎉 Awesome — you crushed it!"</td><td class="prefer">"Task complete. Tree updated."</td></tr>
+          <tr><td class="avoid">"Time to grind some tasks!"</td><td class="prefer">"Today's execution train is ready."</td></tr>
+          <tr><td class="avoid">"AI thinks you should try Hybrid…"</td><td class="prefer">"Recommended: Hybrid. AI scaffolds, you refine."</td></tr>
+          <tr><td class="avoid">"You're behind!"</td><td class="prefer">"Two tasks blocked. Resolve to continue."</td></tr>
+          <tr><td class="avoid">"Wow! 4 branches affected!"</td><td class="prefer">"This work unlocks 4 branches."</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
