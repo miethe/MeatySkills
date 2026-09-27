@@ -96,7 +96,7 @@
         "paths": ["modules/growth_suite_v1/evidence.json", "schemas/evidence.schema.json"],
         "requirement_ids": [],
         "gates": [],
-        "tracker": null,
+        "tracker": "node_01KXQ7XCJ44733CEGXJ00EVDN2 — Evidence schema drift across growth + kidney suites",
         "prompt": "Regenerate growth_suite_v1 and kidney_suite_v1 evidence.json against the current evidence.schema.json and backfill rights/rights-ledger.json. Never invent field values — mark unresolved fields explicitly. npm run check must be green before commit."
       }
     },
@@ -107,7 +107,7 @@
       "handoff": {
         "command": "/execute-plan",
         "repo": "/ABSOLUTE/PATH/TO/pediatric-anemia-site",
-        "paths": ["docs/project_plans/implementation_plans/infrastructure/clinical-review-workflow-v1.md"],
+        "paths": ["docs/project_plans/implementation_plans/clinical-review-workflow-v1.md"],
         "requirement_ids": [],
         "gates": [],
         "tracker": "node_01KXQ7XCJ44733CEGXJ00CKNFK — P1-WP7 Clinical-review portal concept",
@@ -152,7 +152,7 @@
         "paths": ["docs/architecture.md"],
         "requirement_ids": [],
         "gates": [],
-        "tracker": null,
+        "tracker": "node_01KXQ7XCJ44733CEGXJ00LNGTD1 — Browser-local longitudinal workspace",
         "trigger": "Deferred until the module switcher lands and a second module renders; re-enter to test the commercial thesis before committing to the clinical-review pipeline.",
         "prompt": "Scope a localStorage-only case timeline, unresolved-abnormality list, and printable referral packet. Preserve the browser-only invariant in docs/architecture.md section 4 — no server, no PHI."
       }

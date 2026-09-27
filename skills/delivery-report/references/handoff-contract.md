@@ -14,7 +14,7 @@ handoff:
   paths: ["docs/.../plan.md"]   # must exist at render time (checked when the repo is present)
   requirement_ids: ["FR-11"]    # real IDs; grep-verified present in at least one path
   gates: ["G0"]                 # blocking gate ids, or []
-  tracker: "node_01… — title"   # IntentTree / Linear / Jira node, or null
+  tracker: "node_01… — title"   # IntentTree / Linear / Jira node; REQUIRED for deferred + finding
   trigger: "..."                # REQUIRED when the item kind is deferred
   prompt: "..."                 # <=60 words, imperative, self-contained
 ```
@@ -41,6 +41,15 @@ authored per item — the project invariants a dispatched agent must not violate
 6. **`deferred` requires a non-empty `trigger`.** A deferral asserts *we decided not to do this
    yet, and here is what would change that*. Without a trigger it is just untracked work wearing a
    label, and validation rejects it.
+7. **`deferred` and `finding` require a real `tracker`.** These are the two kinds that represent
+   *newly discovered work* — the only ones whose sole record might be this report. A row is not a
+   tracking system: once the report is read, an item with no node behind it is gone. So the tracker
+   is **present-checked, not just shape-checked**, and an IntentTree-shaped value must carry a
+   well-formed `node_…` id. The earlier rule ("node ids must be real") policed *validity* and was
+   satisfied by omitting the id entirely; that loophole is what let a deferral ship with nothing
+   filed behind it. File the node at detection time — `docs/rules/finding-capture.md` — then
+   quote its id here. A non-IntentTree tracker (`JIRA-123`, a URL) satisfies the rule; a bare
+   file path does not.
 
 ## Copy payload format (plain text — pasted into a chat prompt, not parsed)
 
@@ -56,7 +65,7 @@ Paths:
 
 Requirement IDs: <ids>
 Gates: <gates> (blocked-external, human-only)
-Tracker: <node — title>
+Tracker: <node — title>              # required for deferred + finding
 Re-entry trigger: <trigger>          # deferrals only
 
 Prompt:
@@ -73,8 +82,18 @@ Constraints: <report-global report.constraints>
 | `partial` | started, incomplete, **or built-but-unmerged** | **required** |
 | `not_started` | planned, nothing built | **required** |
 | `blocked_external` | waiting on a named human act; no agent path | **required**, `command: null` |
-| `deferred` | consciously postponed with a re-entry trigger | **required**, with `trigger` |
-| `finding` | a defect, surprise, or negative result | **required** when actionable |
+| `deferred` | consciously postponed with a re-entry trigger | **required**, with `trigger` + `tracker` |
+| `finding` | a defect, surprise, or negative result | **required** when actionable, with `tracker` |
 
 `partial` explicitly covers unmerged branch work — see the reconcile-against-git note in
 `aos-integration.md` §2.
+
+## The flat-table projection — the Next Actions table
+
+This same vocabulary has a second, always-on rendering: the **Next Actions table** that every
+execution and planning response emits as its closing section (no HTML render required). It collapses
+each open item to one row — `command → Next action`, `paths`/`tracker` → `Target`, `gates` +
+kind → `Gates / blockers`, plus a recommended-model column — ordered by priority. A full
+`delivery-report` and the inline table are two renderings of one contract: keep field names and
+item-kind semantics identical across both. Canonical format + per-command row semantics:
+`dev-execution/references/next-actions-table.md`.
