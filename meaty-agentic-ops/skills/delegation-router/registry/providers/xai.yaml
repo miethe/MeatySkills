@@ -1,0 +1,12 @@
+provider: xai
+models:
+- id: grok
+  label: Grok
+  family: xai
+  generation: unspecified
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'

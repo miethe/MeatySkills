@@ -1,0 +1,19 @@
+private_only:
+- id: bob-local
+  reason: Local delegate identifier; implementation and runtime details are private
+    infrastructure.
+- id: gemini-3.1-pro-preview-ica
+  reason: Registry alias encodes a private gateway association; canonical public model
+    is listed separately.
+- id: gpt-5.6-terra-ica
+  reason: Registry alias encodes a private gateway association; canonical public model
+    is listed separately.
+- id: gpt-5.6-luna-ica
+  reason: Registry alias encodes a private gateway association; canonical public model
+    is listed separately.
+- id: gpt-5.5-gus
+  reason: Registry-specific deployment alias; public upstream model mapping is not
+    established in the on-disk registry.
+- id: gpt-5.4-gus
+  reason: Registry-specific deployment alias; public upstream model mapping is not
+    established in the on-disk registry.

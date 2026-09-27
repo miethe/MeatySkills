@@ -1,0 +1,12 @@
+provider: zai
+models:
+- id: glm
+  label: Glm
+  family: glm
+  generation: unspecified
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'

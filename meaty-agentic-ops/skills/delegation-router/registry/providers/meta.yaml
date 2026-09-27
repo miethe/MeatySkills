@@ -1,0 +1,24 @@
+provider: meta
+models:
+- id: llama-4-maverick
+  label: Llama 4 Maverick
+  family: open
+  generation: '4'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: meta-llama/llama-3-3-70b-instruct
+  label: Llama 3 3 70B Instruct
+  family: meta
+  generation: 3.3.70
+  context_windows:
+  - 127200
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'

@@ -1,0 +1,100 @@
+provider: google
+models:
+- id: gemma-4-26b
+  label: Gemma 4 26B
+  family: open
+  generation: '4.26'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'
+- id: gemini-3.6-flash
+  label: Gemini 3.6 Flash
+  family: google
+  generation: '3.6'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gemini-3.5-flash
+  label: Gemini 3.5 Flash
+  family: google
+  generation: '3.5'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gemini-3.1-pro-preview
+  label: Gemini 3.1 Pro Preview
+  family: google
+  generation: '3.1'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gemini-3.1-flash-lite
+  label: Gemini 3.1 Flash Lite
+  family: google
+  generation: '3.1'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: gemini-3.7-flash
+  label: Gemini 3.7 Flash
+  family: google
+  generation: '3.7'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: legacy-selectable
+  as_of: '2026-09-26'
+- id: nano-banana-2
+  label: Nano Banana 2
+  family: google
+  generation: '2'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  lifecycle: current
+  as_of: '2026-09-26'
+- id: nano-banana-pro
+  label: Nano Banana Pro
+  family: google
+  generation: unspecified
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  lifecycle: current
+  as_of: '2026-09-26'

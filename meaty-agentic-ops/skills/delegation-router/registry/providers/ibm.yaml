@@ -1,0 +1,13 @@
+provider: ibm
+models:
+- id: granite-4-small
+  label: Granite 4 Small
+  family: open
+  generation: '4'
+  context_windows:
+  - 200000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-09-26'
