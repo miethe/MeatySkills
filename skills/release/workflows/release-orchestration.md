@@ -4,7 +4,7 @@ Single linear flow for executing a complete, validated SkillMeat release.
 Steps are ordered and non-optional. Do not reorder or skip steps.
 
 **Canonical specs**: `.claude/specs/version-bump-spec.md`, `.claude/specs/changelog-spec.md`
-**Scripts**: `.claude/skills/release/scripts/rollover-changelog.py`, `.claude/skills/release/scripts/audit-coverage.py`
+**Scripts**: `.claude/skills/release/scripts/rollover-changelog.py`, `.claude/skills/changelog-sync/scripts/audit-coverage.py`
 
 ---
 
@@ -112,7 +112,7 @@ Generated files (do not edit manually):
 Run `audit-coverage.py` to validate that `[Unreleased]` in `CHANGELOG.md` covers all commits since the last tagged release. **This step gates tagging.** The audit must exit zero before proceeding to Step 5.
 
 ```bash
-python .claude/skills/release/scripts/audit-coverage.py \
+python .claude/skills/changelog-sync/scripts/audit-coverage.py \
   --changelog CHANGELOG.md \
   --version ${NEW_VERSION}
 ```

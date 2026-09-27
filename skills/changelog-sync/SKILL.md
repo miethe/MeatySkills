@@ -60,6 +60,35 @@ Do not inline categorization rules here. Load `changelog-spec.md` when answering
 
 This skill and its script never write to CHANGELOG.md, the git index, or any tracked file. If a gap is found, surface it and stop. Do not propose entries or auto-commit fixes.
 
+### Matching a Commit to a CHANGELOG Entry
+
+A reportable commit is considered covered when ANY of the following appears literally in the
+`[Unreleased]` (or target version) section:
+
+1. Its short (7-char) commit SHA.
+2. The first 40 characters of its de-prefixed, lowercased subject.
+3. Its cited PR number, e.g. `#403` — matched against `(PR #403)`/`(#403)` style citations, the
+   house convention for attributing an entry to its originating pull request.
+4. A **consolidated-coverage declaration**: an HTML comment anywhere in the section,
+   `<!-- covers: <token> [<token> ...] -->`, where each token is either a commit SHA (7-40 hex
+   chars) or a `#NNN` PR number. This lets one prose entry claim several commits at once — the
+   normal case for a squashed campaign, where the individual commit subjects (e.g. `squash: M5
+   memory — ...`) don't read as changelog prose but the campaign's PR number or constituent SHAs
+   are known. Example:
+
+   ```markdown
+   ### Added
+   - Enterprise/project memory now binds to PostgreSQL (PR #470).
+     <!-- covers: 1f4379da4, 80db25ab1, #470 -->
+   ```
+
+Prefixes `squash`, `campaign`, `papercuts`, and `test-infra` are skip-exempt (see
+`.claude/specs/changelog-spec.md`) — they mark process/consolidation commits, not standalone
+user-facing changes; the work they carry is expected to already have its own `feat`/`fix` entry or
+a consolidated-coverage declaration as above. A release's own tagging/rollover commit (house style:
+`Release vX.Y.Z (#NNN)`, no Conventional Commit prefix) is likewise skip-exempt — its content IS the
+changelog rollover, not a change that needs its own entry.
+
 ### v1.1 Extension Point
 
 Nightly reconciliation (scheduled audit against the active branch) is a planned v1.1 capability tracked as BL-1 in `./SPEC.md`. It is blocked on the scheduled-ops-framework-v1 Phase 0 milestone. When that framework is available, the audit workflow will gain a `nightly` mode section. Until then, the only supported invocation is the manual CLI call documented above.

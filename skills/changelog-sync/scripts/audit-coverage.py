@@ -2,7 +2,9 @@
 """audit-coverage.py — Verify CHANGELOG [Unreleased] covers all user-facing commits.
 
 Checks that every reportable commit between two git refs appears in the
-[Unreleased] section of CHANGELOG.md (matched by short SHA or subject substring).
+[Unreleased] section of CHANGELOG.md, matched by short SHA, subject substring,
+cited PR number (#NNN), or an explicit consolidated-coverage declaration
+(<!-- covers: <sha-or-#pr> ... -->; see SKILL.md).
 
 Skip patterns are hardcoded below; for the authoritative list see:
   .claude/specs/changelog-spec.md
@@ -42,6 +44,15 @@ SKIP_PREFIXES = {
     "build",
     "style",
     "merge",
+    # Process/campaign-shaped prefixes: these commits are consolidation or
+    # internal-tooling markers, not standalone user-facing changes. The real
+    # user-facing work they carry is expected to already appear under its own
+    # feat/fix entry, or under a consolidated-coverage declaration (see
+    # extract_coverage_declarations()) when a whole campaign was squashed.
+    "squash",
+    "campaign",
+    "papercuts",
+    "test-infra",
 }
 
 
@@ -128,6 +139,14 @@ def get_commits(from_tag, to_ref):
     return commits
 
 
+# The tagging/rollover commit itself (e.g. "Release v0.82.0 (#475)") is not
+# Conventional-Commit-prefixed and carries no user-facing content of its own —
+# its content IS the changelog rollover, so it is a structural analog of the
+# skip-listed process prefixes above, not a gap. Matched independently of
+# REPORTABLE/SKIP_PREFIXES since it has no ":"-delimited prefix at all.
+_RELEASE_TAG_RE = re.compile(r"^release\s+v\d+\.\d+\.\d+\b", re.IGNORECASE)
+
+
 def categorize_commit(subject):
     """Categorize a commit subject by its Conventional Commit prefix.
 
@@ -136,8 +155,13 @@ def categorize_commit(subject):
     - is_reportable: True if this commit should appear in CHANGELOG
     - warning: non-empty string if the commit has no recognised prefix
     """
-    # Match "type(scope)!: ..." or "type!: ..." or "type: ..."
-    match = re.match(r"^([a-zA-Z]+)(?:\([^)]*\))?!?:\s+", subject)
+    if _RELEASE_TAG_RE.match(subject):
+        return "release-tag", False, None
+
+    # Match "type(scope)!: ..." or "type!: ..." or "type: ...". The prefix
+    # itself may contain internal hyphens (e.g. "test-infra:") — only the
+    # separator before "(scope)"/"!"/":" is significant.
+    match = re.match(r"^([a-zA-Z][a-zA-Z0-9-]*)(?:\([^)]*\))?!?:\s+", subject)
     if not match:
         return "unknown", True, f"No Conventional Commit prefix: {subject!r}"
 
@@ -174,12 +198,70 @@ def normalize_subject(subject):
     Strips the CC prefix and scope, lowercases, takes first 40 chars.
     """
     # Strip "type(scope)!: " prefix if present
-    stripped = re.sub(r"^[a-zA-Z]+(?:\([^)]*\))?!?:\s+", "", subject)
+    stripped = re.sub(r"^[a-zA-Z][a-zA-Z0-9-]*(?:\([^)]*\))?!?:\s+", "", subject)
     return stripped.lower()[:40]
+
+
+def extract_pr_number(subject):
+    """Return the PR number string (no '#') cited at the end of *subject*, if any.
+
+    House style cites work as ``(PR #403)`` or a trailing ``(#403)`` on the
+    squash/merge title — either is accepted.
+    """
+    match = re.search(r"#(\d+)", subject)
+    return match.group(1) if match else None
+
+
+# A consolidated-coverage declaration lets one CHANGELOG entry claim several
+# commits explicitly, for cases (e.g. a squashed campaign) where no single
+# commit subject or PR number reads naturally as prose. Syntax, documented in
+# SKILL.md:
+#   <!-- covers: <sha-or-#pr> [<sha-or-#pr> ...] -->
+# Tokens are whitespace/comma separated; a token starting with "#" is a PR
+# number, a bare 7-40 char hex token is a (short or full) commit SHA.
+_COVERS_COMMENT_RE = re.compile(r"<!--\s*covers:\s*(.*?)-->", re.IGNORECASE | re.DOTALL)
+_COVERS_SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+_COVERS_PR_RE = re.compile(r"^#(\d+)$")
+
+
+def extract_coverage_declarations(unreleased_text):
+    """Parse ``<!-- covers: ... -->`` declarations out of *unreleased_text*.
+
+    Returns ``(covered_shas, covered_prs)`` — a set of lowercased SHA/prefix
+    tokens and a set of PR-number strings (no ``#``).
+    """
+    covered_shas = set()
+    covered_prs = set()
+    for comment in _COVERS_COMMENT_RE.findall(unreleased_text):
+        for token in re.split(r"[\s,]+", comment.strip()):
+            if not token:
+                continue
+            pr_match = _COVERS_PR_RE.match(token)
+            if pr_match:
+                covered_prs.add(pr_match.group(1))
+            elif _COVERS_SHA_RE.match(token):
+                covered_shas.add(token.lower())
+    return covered_shas, covered_prs
+
+
+def _sha_covered(full_sha, short_sha, covered_shas):
+    """Whether a commit's SHA matches any declared covered-SHA token."""
+    full_lower = full_sha.lower()
+    short_lower = short_sha.lower()
+    for token in covered_shas:
+        if full_lower.startswith(token) or token.startswith(short_lower):
+            return True
+    return False
 
 
 def check_coverage(commits, unreleased_text):
     """Check each commit against the unreleased changelog section.
+
+    A commit is matched by any of: its short SHA appearing literally in the
+    text, its normalized subject appearing as a substring, its cited PR
+    number (``#NNN``) appearing literally in the text or in a consolidated
+    coverage declaration, or its SHA appearing in a consolidated coverage
+    declaration.
 
     Returns list of dicts:
       {sha, short_sha, subject, category, is_reportable, matched, warning}
@@ -187,6 +269,7 @@ def check_coverage(commits, unreleased_text):
     results = []
     # Lowercase the whole section once for fast substring search
     unreleased_lower = unreleased_text.lower()
+    covered_shas, covered_prs = extract_coverage_declarations(unreleased_text)
 
     for full_sha, subject in commits:
         short_sha = full_sha[:7]
@@ -201,6 +284,17 @@ def check_coverage(commits, unreleased_text):
                 # Match by normalised subject substring
                 needle = normalize_subject(subject)
                 if needle and needle in unreleased_lower:
+                    matched = True
+
+            if not matched:
+                pr_number = extract_pr_number(subject)
+                if pr_number and (
+                    f"#{pr_number}" in unreleased_lower or pr_number in covered_prs
+                ):
+                    matched = True
+
+            if not matched and covered_shas:
+                if _sha_covered(full_sha, short_sha, covered_shas):
                     matched = True
 
         results.append(
