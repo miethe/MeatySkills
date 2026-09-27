@@ -63,4 +63,21 @@ class ProviderFactsTests(unittest.TestCase):
             self.assertTrue(item['reason'].strip(), item['id'])
         self.assertEqual(len(self.provider_models), 40)
 
+    def test_label_renders_a_dotted_generation_with_a_literal_dot(self):
+        # `op registry render-values` copies model.label verbatim into @@MODEL.*.LABEL@@,
+        # which lands directly in rendered playbook prose. A dashed/spaced generation
+        # (e.g. "Claude Opus 5 5" for id claude-opus-5-5, generation '5.5') is unfit for
+        # that render — the vendor generation must appear in the label with a literal
+        # dot, exactly as declared in the model's `generation` field. `generation:
+        # unspecified` models (no dotted/dashed version to render) are exempt.
+        violations = []
+        for doc in self.docs:
+            for model in doc['models']:
+                generation = str(model['generation'])
+                if generation == 'unspecified':
+                    continue
+                if generation not in model['label']:
+                    violations.append((doc.get('provider'), model['id'], model['label'], generation))
+        self.assertEqual(violations, [], violations)
+
 if __name__ == '__main__': unittest.main(verbosity=2)

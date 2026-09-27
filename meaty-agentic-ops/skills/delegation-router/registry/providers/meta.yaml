@@ -12,7 +12,7 @@ models:
   lifecycle: current
   as_of: '2026-09-26'
 - id: meta-llama/llama-3-3-70b-instruct
-  label: Llama 3 3 70B Instruct
+  label: Llama 3.3.70B Instruct
   family: meta
   generation: 3.3.70
   context_windows:
