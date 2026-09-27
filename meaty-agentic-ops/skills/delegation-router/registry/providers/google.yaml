@@ -1,7 +1,7 @@
 provider: google
 models:
 - id: gemma-4-26b
-  label: Gemma 4 26B
+  label: Gemma 4.26B
   family: open
   generation: '4.26'
   context_windows:
