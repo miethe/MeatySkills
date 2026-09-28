@@ -13,9 +13,16 @@ correction and the "instrument decides the layer" anti-pattern note.**
 
 ## claude-opus-5
 
-- **When to pick:** the AOS SPINE / MUST-stay tier — orchestration, verdict/adjudication, final
-  synthesis, architecture, mode-d, schema-recovery, cross-wave merge, deep-reasoning,
-  novel-algorithm-design. Current flagship as of 2026-07-24, supersedes claude-opus-4-8.
+⚠️ **LEGACY-SELECTABLE as of 2026-09-22 — superseded as the AOS SPINE by `claude-opus-5-5`**
+(reconciled `node_01M3F4F5G93P21P1WAH565MAYQ` 2026-09-27; see the `claude-opus-5-5` entry in
+`model-registry.yaml` for the current descriptor). Was flagship 2026-07-24–2026-09-22 (supersedes
+claude-opus-4-8); still selectable for the MUST-stay tier as the in-chain legacy/fallback entry
+behind `claude-opus-5-5` for `orchestration` and `mode_d`.
+
+- **When to pick:** orchestration, verdict/adjudication, final synthesis, architecture, mode-d,
+  schema-recovery, cross-wave merge, deep-reasoning, novel-algorithm-design — the historical
+  MUST-stay tier; route to `claude-opus-5-5` first per current spine policy
+  (`agentic_meta_dev/docs/agentic-operator/MODEL-ROUTING.md`).
 - **Invocation lane:** `claude/claude-opus-5` (primary, billed, $5/$25 per M). ⚠️ **ICA offload
   RETRACTED 2026-08-26 (raw-HTTP transports) — no confirmed ICA Opus lane for routing purposes.**
   `claude-opus-5` (bare) 403s on all 11 ICA keys, both gateways, on raw-HTTP transports — a
@@ -25,8 +32,8 @@ correction and the "instrument decides the layer" anti-pattern note.**
   measurement was scoped to the context-window question only and does not by itself re-establish
   ICA Opus as a routable spine-offload lane; re-probe the 2026-08-26 tenancy finding on the
   Claude Code path specifically before changing routing. MUST-stay-primary classes
-  (`orchestration`, `mode_d`) route to `claude/claude-opus-5` regardless — that was never
-  contingent on ICA availability.
+  (`orchestration`, `mode_d`) route to `claude/claude-opus-5-5` first, then `claude/claude-opus-5`
+  as fallback — that was never contingent on ICA availability.
 
   <details>
   <summary>Historical (superseded 2026-08-26, `[1m]`-retirement claim partially retracted 2026-09-10) — the 2026-07-31 "ICA spine-offload lane" verification</summary>
