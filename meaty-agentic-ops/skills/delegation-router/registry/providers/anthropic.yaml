@@ -65,10 +65,10 @@ models:
   - text_generation
   lifecycle: current
   as_of: '2026-09-26'
-- id: claude-sonnet-5
-  label: Claude Sonnet 5
+- id: claude-sonnet-5-5
+  label: Claude Sonnet 5.5
   family: claude
-  generation: '5'
+  generation: '5.5'
   context_windows:
   - 1000000
   context_window_variants: []
@@ -77,7 +77,22 @@ models:
   - tool_use
   - extended_context
   lifecycle: current
-  as_of: '2026-09-26'
+  as_of: '2026-09-28'
+- id: claude-sonnet-5
+  label: Claude Sonnet 5
+  family: claude
+  generation: '5'
+  context_windows:
+  - 1000000
+  context_window_variants:
+  - marker: '[1m]'
+    tokens: 1000000
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: legacy-selectable
+  as_of: '2026-09-28'
 - id: claude-sonnet-4-6
   label: Claude Sonnet 4.6
   family: claude

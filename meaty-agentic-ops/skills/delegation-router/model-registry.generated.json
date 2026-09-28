@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "69ffbea77ebd5f11feb27bf2739cc42d7a586369d651a2f3351c5d85608dd9c2",
+  "_yaml_sha256": "0b5000b5b867f8b9c035d1c58cb135f47bcdc9b5852c1c165f86e3b0e2a4e081",
   "version": 1,
   "updated": "2026-09-22",
   "routing_attributes": {
@@ -332,6 +332,7 @@
     },
     "implementation": {
       "chain": [
+        "claude/claude-sonnet-5-5",
         "claude/claude-sonnet-5"
       ],
       "enabled": true
@@ -347,6 +348,7 @@
     "code_review": {
       "chain": [
         "codex/gpt-6-luna",
+        "claude/claude-sonnet-5-5",
         "claude/claude-sonnet-5"
       ],
       "enabled": true
@@ -819,10 +821,56 @@
         }
       ]
     },
+    "claude-sonnet-5-5": {
+      "family": "claude",
+      "class": "sonnet",
+      "descriptor": "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). NEW DEFAULT subscription/native-execution Sonnet, superseding claude-sonnet-5 (Nick, 2026-09-28). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ⚠️ ICA does NOT yet serve Sonnet 5.5 as of 2026-09-28 (same shape as the Codex-subscription/ICA GPT-5.6 split) — the ICA Sonnet offload lane stays `claude-sonnet-5[1m]` until ICA adds it. Tracker filed in tree_01KVTH95ETM8YRYCV2ENHVR124 ('Update ICA Sonnet mapping to 5.5 when ICA serves it'); probe = a bare-id HTTP 200 check against the ICA gateway (see `ica-ccx-bare-ids-only` lesson) with model_id `claude-sonnet-5-5` (not `[1m]`).",
+      "scores": {
+        "cost": 5,
+        "intelligence": 8,
+        "taste": 8,
+        "speed": 8
+      },
+      "when_to_use": [
+        "implementation",
+        "agentic-coding",
+        "code-review",
+        "multi-file-refactoring",
+        "planning",
+        "exploration",
+        "deep-reasoning"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-sonnet-5-5",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 2,
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": 0.2,
+        "cache_write_per_mtok_usd": 2.5
+      },
+      "sampling": "deterministic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "lane": "claude_subscription",
+          "model_id": "claude-sonnet-5-5",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
     "claude-sonnet-5": {
       "family": "claude",
       "class": "sonnet",
-      "descriptor": "Claude Sonnet 5 (released 2026-06-30). Near-Opus coding/agentic quality at Sonnet cost — the DEFAULT subscription implementation/workhorse tier. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
+      "descriptor": "Claude Sonnet 5 (released 2026-06-30). LEGACY BUT SELECTABLE as of 2026-09-28 — claude-sonnet-5-5 is now the default subscription/native-execution Sonnet (see that entry above); Sonnet 5 stays the live ICA offload lane (`claude-sonnet-5[1m]`, shared pool) since ICA does not yet serve 5.5. Near-Opus coding/agentic quality at Sonnet cost. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
       "scores": {
         "cost": 5,
         "intelligence": 8,

@@ -61,7 +61,7 @@ class ProviderFactsTests(unittest.TestCase):
         if installed.exists(): self.assertEqual(model_ids(installed)-covered, set())
         for item in self.private:
             self.assertTrue(item['reason'].strip(), item['id'])
-        self.assertEqual(len(self.provider_models), 40)
+        self.assertEqual(len(self.provider_models), 41)  # 2026-09-28: claude-sonnet-5-5 added to registry/providers/anthropic.yaml
 
     def test_label_renders_a_dotted_generation_with_a_literal_dot(self):
         # `op registry render-values` copies model.label verbatim into @@MODEL.*.LABEL@@,
