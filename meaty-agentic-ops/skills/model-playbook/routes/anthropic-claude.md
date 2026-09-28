@@ -35,6 +35,14 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   (`orchestration`, `mode_d`) route to `claude/claude-opus-5-5` first, then `claude/claude-opus-5`
   as fallback — that was never contingent on ICA availability.
 
+- **⚠️ 2026-09-28 (evening), Nick:** `claude-opus-5-5[1m]` on ICA is now the **preferred** Claude
+  model there (see `model-registry.yaml`'s `claude-opus-5-5` ICA provider row) — since Opus 5.5 is
+  already servable on ICA, there is no reason to keep the ICA default on Sonnet 5 until ICA serves
+  Sonnet 5.5. This is a capability call, not a cost saving: Opus 5.5 draws more of the shared
+  weekly ccx credit allowance per call than Sonnet 5, roughly double per-MTok. Opus 5.5 also
+  carries a real routing role beyond spine/escalation as of the same date — the `design_judgment`
+  task class (architecture, UX/visual design, hard judgment, ambiguous synthesis).
+
   <details>
   <summary>Historical (superseded 2026-08-26, `[1m]`-retirement claim partially retracted 2026-09-10) — the 2026-07-31 "ICA spine-offload lane" verification</summary>
 
@@ -83,15 +91,23 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
 
 ## claude-sonnet-5-5
 
-- **When to pick:** the NEW DEFAULT subscription/native-execution Sonnet as of 2026-09-28 (Nick),
-  superseding `claude-sonnet-5` below — agentic coding, code review, multi-file refactoring,
-  planning, exploration, deep-reasoning.
+- **When to pick:** the default subscription/native-execution Sonnet as of 2026-09-28 (Nick) **for
+  contract-clear execution, review, and research** — agentic coding, code review, multi-file
+  refactoring, planning, exploration, bounded/contract-clear whole-node legs. Supersedes
+  `claude-sonnet-5` below for that scope. ⚠️ **Updated 2026-09-28 (evening), Nick: this is a
+  task-class default, not a blanket one.** Sonnet 5.5 is very strong but not a powerhouse — route
+  `design_judgment` work (architecture, UX/visual design, hard judgment, ambiguous synthesis) to
+  `claude-opus-5-5` instead, and route `raw_strength` work (hard algorithmic problems, debugging,
+  reasoning-heavy legs) to `gpt-6-sol` instead; a Sonnet-5.5-first leg that misses twice still
+  escalates to Opus 5.5.
 - **Invocation lanes:** `claude/claude-sonnet-5-5` (primary, billed, $2/$10 per MTok, cache read
   $0.20/MTok, cache write $2.50/MTok). ⚠️ **ICA does NOT serve this model yet (measured
-  2026-09-28)** — there is no `[1m]` ICA offload lane for it. ICA Sonnet offload stays
-  `claude-sonnet-5[1m]` (see the `claude-sonnet-5` entry below) until ICA adds 5.5; probe with a
+  2026-09-28)** — there is no `[1m]` ICA offload lane for it. Until it lands, ICA's **preferred
+  Claude model is `claude-opus-5-5[1m]`**, not `claude-sonnet-5[1m]` — a capability call, not a
+  cost saving (Opus 5.5 draws more of the shared weekly ccx credit allowance per call). See the
+  `claude-opus-5-5` entry above and `claude-sonnet-5` below for the interim fallback; probe with a
   bare-id HTTP 200 check against the gateway per `ica-ccx-bare-ids-only`, and update this route
-  when it lands (tracker `tree_01KVTH95ETM8YRYCV2ENHVR124`).
+  when it lands (tracker `node_01M3MWZ6564YV32VCMMGAV5DN2`, tree `tree_01KVTH95ETM8YRYCV2ENHVR124`).
 - **Effort/context:** 1M context, 128K output (300K via Batches API with the
   `output-300k-2026-03-24` beta header). Adaptive thinking; API default effort `high`, but Claude
   Code itself defaults the model to Medium effort. Extended-thinking params
@@ -99,12 +115,15 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
 - **Benchmarks (self-reported, vs Sonnet 5 / Opus 5.5):** Terminal-Bench 4.0 70.6%/10.3%/66.4%;
   FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%;
   OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools)
-  61.6%/15.6%/64.4%. Beats Sonnet 5 on every listed benchmark; close to Opus 5.5 at half its price.
-  Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5.
+  61.6%/15.6%/64.4%. Beats Sonnet 5 on every listed benchmark; within a few points of Opus 5.5 on
+  several, at half its price. Anthropic claims 30%+ faster output and up to 30% lower cost-per-task
+  vs Sonnet 5. These benchmark/community-review claims are vendor- and community-reported, not
+  independently measured by us (scorecard Intelligence raised 8→9 on this basis, 2026-09-28 evening).
 - **Gotchas:** local Claude Code probe (2026-09-28) — `claude -p --model claude-sonnet-5-5 'reply
   ok'` returns stderr `[claude-code:unrecognized_model]` (benign) + stdout `ok`, exit 0; the
   harness accepts the id despite the stderr line.
-- **Anti-patterns:** don't route to `claude-sonnet-5-5[1m]` on ICA — it doesn't exist yet.
+- **Anti-patterns:** don't route to `claude-sonnet-5-5[1m]` on ICA — it doesn't exist yet. Don't
+  route `design_judgment` or `raw_strength` work here just because it's the new cheaper default.
 
 ## claude-sonnet-5
 
