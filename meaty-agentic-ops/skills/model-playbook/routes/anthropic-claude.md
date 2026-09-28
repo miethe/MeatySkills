@@ -81,9 +81,36 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   interactive loops, or anything run dozens of times where the 2x premium compounds. Not
   evidenced or cost-appropriate as a default second-opinion/critique leg.
 
+## claude-sonnet-5-5
+
+- **When to pick:** the NEW DEFAULT subscription/native-execution Sonnet as of 2026-09-28 (Nick),
+  superseding `claude-sonnet-5` below — agentic coding, code review, multi-file refactoring,
+  planning, exploration, deep-reasoning.
+- **Invocation lanes:** `claude/claude-sonnet-5-5` (primary, billed, $2/$10 per MTok, cache read
+  $0.20/MTok, cache write $2.50/MTok). ⚠️ **ICA does NOT serve this model yet (measured
+  2026-09-28)** — there is no `[1m]` ICA offload lane for it. ICA Sonnet offload stays
+  `claude-sonnet-5[1m]` (see the `claude-sonnet-5` entry below) until ICA adds 5.5; probe with a
+  bare-id HTTP 200 check against the gateway per `ica-ccx-bare-ids-only`, and update this route
+  when it lands (tracker `tree_01KVTH95ETM8YRYCV2ENHVR124`).
+- **Effort/context:** 1M context, 128K output (300K via Batches API with the
+  `output-300k-2026-03-24` beta header). Adaptive thinking; API default effort `high`, but Claude
+  Code itself defaults the model to Medium effort. Extended-thinking params
+  (`thinking.type:enabled` + `budget_tokens`) are **not accepted** — adaptive-only.
+- **Benchmarks (self-reported, vs Sonnet 5 / Opus 5.5):** Terminal-Bench 4.0 70.6%/10.3%/66.4%;
+  FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%;
+  OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools)
+  61.6%/15.6%/64.4%. Beats Sonnet 5 on every listed benchmark; close to Opus 5.5 at half its price.
+  Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5.
+- **Gotchas:** local Claude Code probe (2026-09-28) — `claude -p --model claude-sonnet-5-5 'reply
+  ok'` returns stderr `[claude-code:unrecognized_model]` (benign) + stdout `ok`, exit 0; the
+  harness accepts the id despite the stderr line.
+- **Anti-patterns:** don't route to `claude-sonnet-5-5[1m]` on ICA — it doesn't exist yet.
+
 ## claude-sonnet-5
 
-- **When to pick:** the DEFAULT subscription implementation/workhorse tier — agentic coding,
+- **When to pick:** LEGACY BUT SELECTABLE as of 2026-09-28 — `claude-sonnet-5-5` (above) is now the
+  default. Sonnet 5 remains the live ICA offload lane (`claude-sonnet-5[1m]`) since ICA doesn't
+  serve 5.5 yet. Historically the DEFAULT subscription implementation/workhorse tier — agentic coding,
   code review, multi-file refactoring, planning, exploration, extended-thinking/deep-reasoning.
 - **Invocation lanes:** `claude/claude-sonnet-5` (primary, billed, $3/$15 per M, intro $2/$10
   through 2026-08-31). ICA offload: `ica/claude-sonnet-5` — ⚠️ **id form corrected 2026-09-10: use
