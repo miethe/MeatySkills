@@ -44,6 +44,41 @@ sonnet5_pricing = registry["models"]["claude-sonnet-5"]["pricing"]
 assert sonnet5_pricing["input_per_mtok_usd"] == 2, sonnet5_pricing
 assert sonnet5_pricing["output_per_mtok_usd"] == 10, sonnet5_pricing
 
+# Policy update 2026-09-28 (evening), Nick: Sonnet 5.5's broadened role is by TASK CLASS, not one
+# global default. `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-
+# synthesis) must start on Opus 5.5, and `raw_strength` (hard-algorithmic/debugging/reasoning-
+# heavy) must start on gpt-6-sol — neither may resolve through `implementation`/`code_review`
+# defaulting to Sonnet 5.5. This is the negative control that would have caught a blanket
+# "Sonnet 5.5 everywhere" widening.
+assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude/claude-opus-5-5"
+assert registry["routing_policy"]["raw_strength"]["chain"][0] == "codex/gpt-6-sol"
+for task_class in ("implementation", "code_review"):
+    chain = registry["routing_policy"][task_class]["chain"]
+    assert "claude/claude-opus-5-5" not in chain, \
+        f"{task_class} must not pin the design_judgment model directly, got {chain}"
+    assert "codex/gpt-6-sol" not in chain, \
+        f"{task_class} must not pin the raw_strength model directly, got {chain}"
+
+# Sonnet 5.5's scorecard Intelligence was raised 8->9 (2026-09-28 evening) on vendor-benchmark +
+# community-report evidence, explicitly NOT independently measured by us — this is the negative
+# control that would have caught the score drifting back down, or up past what the sourced
+# evidence supports (Opus 5.5 is also 9; Sonnet 5.5 must not exceed its own declared spine).
+opus55_scores = registry["models"]["claude-opus-5-5"]["scores"]
+sonnet55_scores = registry["models"]["claude-sonnet-5-5"]["scores"]
+assert sonnet55_scores["intelligence"] == 9, sonnet55_scores
+assert sonnet55_scores["intelligence"] <= opus55_scores["intelligence"], \
+    (sonnet55_scores, opus55_scores)
+
+# ICA lane preference (2026-09-28 evening), Nick: since Opus 5.5 is already servable on ICA, there
+# is no reason to keep defaulting to Sonnet 5 there. The claude-opus-5-5 ICA provider row must
+# stay enabled and remain a shared_token_pool row (never described as literally free — it draws
+# more credits per call than Sonnet 5).
+opus55_ica = next(
+    p for p in registry["models"]["claude-opus-5-5"]["providers"] if p["provider"] == "ica"
+)
+assert opus55_ica["enabled"] is True, opus55_ica
+assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
+
 # Planted positive: an external row with an undeclared retention fact must fail.
 broken = copy.deepcopy(registry)
 del broken["models"]["deepseek-v4-flash"]["providers"][0]["eligibility"]["retention"]
