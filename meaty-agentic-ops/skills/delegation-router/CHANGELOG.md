@@ -3,6 +3,15 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-09-30 — GPT-6.1 Sol supersedes GPT-6 Sol (personal Codex lane)
+
+- Nick decision (verbatim, /chat): "I did use 6.1-sol in Codex directly to create the hand-off, so
+  accept now as approved ... officially supersedes gpt-6-sol in our registry". Registry: new active
+  `gpt-6.1-sol` row (enabled; scores/efforts inherited, not re-measured); `gpt-6-sol` becomes
+  legacy-selectable fallback; `raw_strength` chain is now `codex/gpt-6.1-sol, codex/gpt-6-sol,
+  claude/claude-opus-5-5`; `registry/providers/openai.yaml` declares `gpt-6.1-sol` (current) and marks
+  `gpt-6-sol` superseded. Unchanged: Luna workhorse, Astra escalation rules, ICA GPT-5.6 line.
+
 ## 2026-09-24 — ICA beta keys and `-dzus` aliases retired; ccx only
 
 - The ICA beta keys (`CC1`–`CC8`, `BB1`) were deactivated 2026-09-22 and the beta-only

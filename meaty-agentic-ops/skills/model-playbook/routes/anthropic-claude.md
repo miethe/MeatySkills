@@ -98,7 +98,7 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   task-class default, not a blanket one.** Sonnet 5.5 is very strong but not a powerhouse — route
   `design_judgment` work (architecture, UX/visual design, hard judgment, ambiguous synthesis) to
   `claude-opus-5-5` instead, and route `raw_strength` work (hard algorithmic problems, debugging,
-  reasoning-heavy legs) to `gpt-6-sol` instead; a Sonnet-5.5-first leg that misses twice still
+  reasoning-heavy legs) to `gpt-6.1-sol` (superseding `gpt-6-sol`, 2026-09-30) instead; a Sonnet-5.5-first leg that misses twice still
   escalates to Opus 5.5.
 - **Invocation lanes:** `claude/claude-sonnet-5-5` (primary, billed, $2/$10 per MTok, cache read
   $0.20/MTok, cache write $2.50/MTok). ⚠️ **ICA does NOT serve this model yet (measured
