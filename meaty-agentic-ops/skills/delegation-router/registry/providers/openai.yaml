@@ -47,6 +47,19 @@ models:
   - extended_context
   lifecycle: current
   as_of: '2026-09-26'
+- id: gpt-6.1-sol
+  label: GPT 6.1 SOL
+  family: openai
+  generation: '6.1'
+  context_windows:
+  - 1050000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-09-30'
 - id: gpt-6-sol
   label: GPT 6 SOL
   family: openai
@@ -58,8 +71,8 @@ models:
   - text_generation
   - tool_use
   - extended_context
-  lifecycle: current
-  as_of: '2026-09-26'
+  lifecycle: superseded
+  as_of: '2026-09-30'
 - id: gpt-6-luna
   label: GPT 6 LUNA
   family: openai
