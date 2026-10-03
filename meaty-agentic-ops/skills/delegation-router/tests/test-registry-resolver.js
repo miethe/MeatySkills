@@ -162,7 +162,7 @@ describe('Codex invocation contract', () => {
     const template = record.invocation_template;
 
     for (const fragment of [
-      'timeout 600 codex exec',
+      'timeout 600 aos-codex-exec --identity codex_secondary exec',
       '--ignore-user-config',
       '--sandbox read-only',
       '--skip-git-repo-check',
@@ -182,7 +182,7 @@ describe('Codex invocation contract', () => {
     });
 
     assert.ok(
-      record.invocation_template.startsWith('{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 codex exec'),
+      record.invocation_template.startsWith('{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 aos-codex-exec --identity codex_secondary exec'),
       `write lane must use codex-run.sh: ${record.invocation_template}`
     );
     assert.ok(record.invocation_template.includes('--sandbox workspace-write'));

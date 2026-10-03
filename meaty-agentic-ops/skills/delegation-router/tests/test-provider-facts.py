@@ -64,7 +64,7 @@ class ProviderFactsTests(unittest.TestCase):
         self.assertEqual(len(self.provider_models), 42)  # 2026-09-30: gpt-6.1-sol added to registry/providers/openai.yaml (41 on 2026-09-28)
 
     def test_label_renders_a_dotted_generation_with_a_literal_dot(self):
-        # `op registry render-values` copies model.label verbatim into @@MODEL.*.LABEL@@,
+        # `op registry render-values` copies model.label verbatim into the model role LABEL token,
         # which lands directly in rendered playbook prose. A dashed/spaced generation
         # (e.g. "Claude Opus 5 5" for id claude-opus-5-5, generation '5.5') is unfit for
         # that render — the vendor generation must appear in the label with a literal

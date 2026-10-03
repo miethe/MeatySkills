@@ -301,3 +301,26 @@ which copies the YAML to `~/.claude/config/` and regenerates `model-registry.gen
    `(model key, provider, model_id)` rows and enabled `unavailable` / `quota_limit: 0` rows.
 
 > New models always land scaffolded + disabled first (design §8). Registering ≠ routing.
+
+
+## Explicit personal Codex subscription accounts
+
+`codex_secondary` is the agentic default. `codex_primary` is an equally eligible explicit
+alternative. `resolve({... identity_ref: 'codex_primary'})` binds the selected account in the
+RoutingRecord and invocation; an omitted identity uses Secondary (or the explicit per-dispatch
+`AOS_CODEX_IDENTITY`). Invoke through `aos-codex-exec`, not an unbound stock `codex exec`.
+Both account lanes belong to `personal_subscription`, with the same allowed-work, privacy,
+permissions and approval policy as personal Claude Code Primary and claude1x. Model capabilities,
+role separation and encoded task gates still apply independently of account choice. ICA is a
+separate employer/gateway boundary and does not inherit this eligibility.
+
+Account unavailability is recorded before a new ordinary routing decision. The next decision
+may explicitly select the other eligible account; never silently replay a rate-limited task,
+rotate accounts, or discard its receipts. Resume requires a session from the selected account's
+own home. Native in-process Codex subagents inherit their parent account; they cannot choose a
+different account through a model parameter. Use a named headless dispatch for that choice.
+
+Local state mapping: `~/.config/aos/codex-identities.toml`. Shared policy source:
+`~/.config/aos/codex-settings/config.template.toml`, rendered by `aos-codex-parity` into separate
+homes. Authentication, session databases, Electron storage and native hook approval hashes remain
+independent. Desktop/interactive settings do not override a headless task's explicit sandbox.
