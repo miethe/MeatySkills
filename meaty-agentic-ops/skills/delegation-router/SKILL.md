@@ -52,7 +52,7 @@ Repo-verified surfaces only:
 | Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
 | RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
-| Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.2.0) |
+| Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.3.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
 | agentType map | `claude`→native, `ica`→`ica-executor`, `bob`→`bob-delegate-executor`, `gemini`→`gemini-executor`, `codex`→`codex-executor` |
 | write authority | Pass **`requires_write: true`** for any leg whose deliverable is a FILE. It excludes write-incapable agent types (`gemini-executor`) from candidates **and** the fallback chain. Default `false`. ⚠️ `task_class` cannot express this — `implementation`/`documentation`/`mechanical` are all routable, and three authoring legs once produced zero files for ~610k tokens because nothing declared it (SPEC §4c). It is **not** an offload ban: `ica-executor` is write-capable as of 2026-08-17 and still gets write legs. |
@@ -280,3 +280,26 @@ shelled-out `invocation_template` decides the provider itself.
 | Routing rules / cost policy (human) | `/Users/miethe/dev/homelab/development/skillmeat/.claude/specs/provider-routing-spec.md` |
 | Design spec | `/Users/miethe/dev/homelab/development/skillmeat/docs/project_plans/design-specs/model-registry-router-globalization-v1.md` |
 | Audit CLI | `skillmeat routing audit --help` |
+
+
+## Explicit personal Codex subscription accounts
+
+`codex_secondary` is the agentic default. `codex_primary` is an equally eligible explicit
+alternative. `resolve({... identity_ref: 'codex_primary'})` binds the selected account in the
+RoutingRecord and invocation; an omitted identity uses Secondary (or the explicit per-dispatch
+`AOS_CODEX_IDENTITY`). Invoke through `aos-codex-exec`, not an unbound stock `codex exec`.
+Both account lanes belong to `personal_subscription`, with the same allowed-work, privacy,
+permissions and approval policy as personal Claude Code Primary and claude1x. Model capabilities,
+role separation and encoded task gates still apply independently of account choice. ICA is a
+separate employer/gateway boundary and does not inherit this eligibility.
+
+Account unavailability is recorded before a new ordinary routing decision. The next decision
+may explicitly select the other eligible account; never silently replay a rate-limited task,
+rotate accounts, or discard its receipts. Resume requires a session from the selected account's
+own home. Native in-process Codex subagents inherit their parent account; they cannot choose a
+different account through a model parameter. Use a named headless dispatch for that choice.
+
+Local state mapping: `~/.config/aos/codex-identities.toml`. Shared policy source:
+`~/.config/aos/codex-settings/config.template.toml`, rendered by `aos-codex-parity` into separate
+homes. Authentication, session databases, Electron storage and native hook approval hashes remain
+independent. Desktop/interactive settings do not override a headless task's explicit sandbox.

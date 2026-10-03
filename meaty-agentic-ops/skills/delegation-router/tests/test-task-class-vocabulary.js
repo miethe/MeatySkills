@@ -64,7 +64,16 @@ test('vocabulary has unique canonical ids and aliases', () => {
 });
 
 test('contract pins the exact vocabulary digest', () => {
+  assert.equal(contract.taxonomy.taxonomy_version, vocabulary.taxonomy_version);
   assert.equal(contract.taxonomy.taxonomy_digest, vocabulary.taxonomy_digest);
+});
+
+test('design judgment and raw strength are canonical routable classes', () => {
+  const { canonical } = vocabularyIndexes(vocabulary);
+  for (const id of ['design_judgment', 'raw_strength']) {
+    assert.equal(canonical.get(id).status, 'routable');
+    assert.deepEqual(canonical.get(id).legacy_aliases, []);
+  }
 });
 
 test('every live routing_policy key is in the canonical vocabulary', () => {

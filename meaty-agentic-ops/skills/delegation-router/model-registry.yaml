@@ -268,15 +268,33 @@ lanes:
   codex_subscription:
     sovereignty: subscription
     endpoint: openai_default
-    auth: codex_account
-    invocation: "codex exec"
-    verified: false
-    probe: >-
-      UNCONFIRMED, and this is the load-bearing open question of the ladder. Classified
-      `subscription` because the brief names "Codex sub" as satisfying that rung — but every
-      codex row in this file carries `allowance: billed`, which reads as a metered API account
-      rather than a seat. It decides whether `verdict` widens to codex at all. Ask Nick; this is
-      a definitional call, not a measurement.
+    auth: chatgpt_subscription
+    invocation: "aos-codex-exec --identity codex_secondary exec"
+    verified: true
+    account_relationship: personal
+    default_identity: codex_secondary
+    identity_choices: [codex_secondary, codex_primary]
+    note: >-
+      Personal ChatGPT subscription execution. Account identity is explicit and orthogonal
+      to provider, model, effort and task role. Secondary is the agentic default; Primary is
+      an equally eligible explicit alternative. Unavailable accounts return a routing fact;
+      a new routing decision names the next account, without silent replay or rotation.
+  codex_subscription_secondary:
+    sovereignty: subscription
+    endpoint: openai_default
+    auth: chatgpt_subscription
+    account_relationship: personal
+    identity_ref: codex_secondary
+    invocation: "aos-codex-exec --identity codex_secondary exec"
+    eligibility_group: personal_subscription
+  codex_subscription_primary:
+    sovereignty: subscription
+    endpoint: openai_default
+    auth: chatgpt_subscription
+    account_relationship: personal
+    identity_ref: codex_primary
+    invocation: "aos-codex-exec --identity codex_primary exec"
+    eligibility_group: personal_subscription
 
   gemini_direct:
     sovereignty: subscription
