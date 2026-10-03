@@ -877,7 +877,20 @@ function resolve(input) {
   const record = (input && input._configPath)
     ? resolveFromToml(input)
     : resolveFromRegistry(input);
-  return stampContextClass(record, input);
+  if (record && record.chosen_plugin_id === 'codex') {
+    const identity = (input && input.identity_ref !== undefined)
+      ? input.identity_ref : (process.env.AOS_CODEX_IDENTITY || 'codex_secondary');
+    if (!['codex_secondary', 'codex_primary'].includes(identity)) {
+      throw new Error('Unknown Codex subscription identity');
+    }
+    record.identity_ref = identity;
+    record.credential_lane = identity === 'codex_secondary'
+      ? 'codex_subscription_secondary' : 'codex_subscription_primary';
+    record.invocation_template = record.invocation_template.replace(
+      /\bcodex exec\b/g, `aos-codex-exec --identity ${identity} exec`);
+  }
+  const withContext = stampContextClass(record, input);
+  return stampNodeContract(withContext, input);
 }
 
 /**
@@ -899,6 +912,34 @@ function stampContextClass(record, input) {
   if (!record) return record;
   const declared = input && input.context_class;
   record.context_class = (declared === undefined || declared === '') ? null : declared;
+  return validateRoutingRecord(record);
+}
+
+/**
+ * Stamp the caller's declared node contract after selection for audit only.
+ * Prefer execution_contract.lane, then legacy lane_requirements, then a direct
+ * lane-contract object. All resolution paths carry the same normalized fields.
+ * This passthrough does not filter candidates, change account binding, or enforce
+ * allowed_lanes/mode_d; those declarations remain available to dispatch readers.
+ */
+function stampNodeContract(record, input) {
+  if (!record) return record;
+  const node = input && input.node_contract;
+  const declared = node && typeof node === 'object'
+    ? ((node.execution_contract && node.execution_contract.lane) || node.lane_requirements || node)
+    : node;
+  if (declared && typeof declared === 'object') {
+    record.node_contract = {
+      allowed_lanes: Array.isArray(declared.allowed_lanes) ? declared.allowed_lanes : null,
+      disclosure_min: (typeof declared.disclosure_min === 'string') ? declared.disclosure_min : null,
+      model_floor: (typeof declared.model_floor === 'string') ? declared.model_floor : null,
+      cross_family_review: (typeof declared.cross_family_review === 'string') ? declared.cross_family_review : null,
+      must_stay_primary: declared.must_stay_primary === true,
+      mode_d: declared.mode_d === true,
+    };
+  } else {
+    record.node_contract = null;
+  }
   return validateRoutingRecord(record);
 }
 

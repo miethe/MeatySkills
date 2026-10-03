@@ -68,6 +68,7 @@ function printHelp(stream) {
       '  --model <id>          Model class/id to route (e.g. sonnet, gpt-5.5-gus). Required.',
       '  --provider <id>       Requested provider (claude|ica|bob|gemini|codex). Default: claude.',
       '  --task-class <class>  Task class driving MUST-stay + chain lookup (e.g. second_opinion).',
+      '  --identity <name>     Explicit codex_primary or codex_secondary account.',
       '  --effort <level>      Effort level (low|standard|high|xhigh|…). Default: standard.',
       '  --profile <name>      Profile name (e.g. free-tier).',
       '  --resume-active       Set resume_active=true (excludes nondeterministic providers on',
@@ -100,6 +101,10 @@ function parseArgs(argv) {
         break;
       case '--provider':
         args.provider = argv[++i];
+        break;
+      case '--identity':
+        args.identity_ref = argv[++i];
+        if (!['codex_primary', 'codex_secondary'].includes(args.identity_ref)) throw new Error('Unknown Codex subscription identity');
         break;
       case '--effort':
         args.effort = argv[++i];

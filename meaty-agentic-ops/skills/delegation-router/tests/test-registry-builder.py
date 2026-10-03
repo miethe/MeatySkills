@@ -47,16 +47,16 @@ assert sonnet5_pricing["output_per_mtok_usd"] == 10, sonnet5_pricing
 # Policy update 2026-09-28 (evening), Nick: Sonnet 5.5's broadened role is by TASK CLASS, not one
 # global default. `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-
 # synthesis) must start on Opus 5.5, and `raw_strength` (hard-algorithmic/debugging/reasoning-
-# heavy) must start on gpt-6-sol — neither may resolve through `implementation`/`code_review`
+# heavy) must start on gpt-6.1-sol (gpt-6-sol fallback, superseded 2026-09-30) — neither may resolve through `implementation`/`code_review`
 # defaulting to Sonnet 5.5. This is the negative control that would have caught a blanket
 # "Sonnet 5.5 everywhere" widening.
 assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude/claude-opus-5-5"
-assert registry["routing_policy"]["raw_strength"]["chain"][0] == "codex/gpt-6-sol"
+assert registry["routing_policy"]["raw_strength"]["chain"][:2] == ["codex/gpt-6.1-sol", "codex/gpt-6-sol"]
 for task_class in ("implementation", "code_review"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude/claude-opus-5-5" not in chain, \
         f"{task_class} must not pin the design_judgment model directly, got {chain}"
-    assert "codex/gpt-6-sol" not in chain, \
+    assert "codex/gpt-6.1-sol" not in chain and "codex/gpt-6-sol" not in chain, \
         f"{task_class} must not pin the raw_strength model directly, got {chain}"
 
 # Sonnet 5.5's scorecard Intelligence was raised 8->9 (2026-09-28 evening) on vendor-benchmark +
@@ -98,3 +98,10 @@ errors = validate_registry(broken, "planted-positive")
 assert any("may not reference an external lane" in error for error in errors), errors
 
 print("test-registry-builder.py: all assertions passed")
+
+# GPT-6.1 Sol supersedes GPT-6 Sol (Nick, 2026-09-30): active + enabled, sol demoted to legacy fallback.
+sol61 = registry["models"]["gpt-6.1-sol"]
+assert sol61["status"] == "active", sol61["status"]
+assert sol61["providers"][0]["enabled"] is True and sol61["providers"][0]["model_id"] == "gpt-6.1-sol"
+assert sol61["providers"][0]["account_relationship"] == "personal"
+assert "LEGACY" in registry["models"]["gpt-6-sol"]["descriptor"]

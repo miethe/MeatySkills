@@ -59,6 +59,9 @@
  *                                                    routing-feedback-router-merge-handoff.md §2.4.7);
  *                                                    `score_delta` must never reappear — there is no
  *                                                    score in the resolver for a delta to apply to.
+ * @property {Object|null}     node_contract      - Normalized IntentTree execution_contract.lane,
+ *                                                    with legacy lane_requirements fallback.
+ *                                                    Optional audit passthrough; default null.
  * @property {string|null}     lane               - The LANE id (endpoint + auth unit) this decision
  *                                                    landed on, e.g. 'claude_subscription' /
  *                                                    'ica_gateway_messages'. 15th field (additive,
@@ -282,6 +285,15 @@ const CONTEXT_REF_NULL_PROVIDERS = ['bob'];
  * @throws {Error} If any required field is missing or mistyped
  */
 function validateRoutingRecord(record) {
+  if (record.identity_ref !== undefined && record.identity_ref !== null) {
+    if (record.chosen_plugin_id !== 'codex' || !['codex_primary', 'codex_secondary'].includes(record.identity_ref)) {
+      throw new Error('RoutingRecord has an invalid Codex account binding');
+    }
+    const expectedLane = record.identity_ref === 'codex_secondary'
+      ? 'codex_subscription_secondary' : 'codex_subscription_primary';
+    if (record.credential_lane !== expectedLane) throw new Error('Codex identity and credential lane disagree');
+  }
+
   const required = [
     'chosen_plugin_id',
     'model',
@@ -459,6 +471,23 @@ function validateRoutingRecord(record) {
     }
   }
 
+  // Optional audit passthrough: tolerate legacy absence and partial declarations,
+  // but reject incorrect record types. This validates shape, never routing eligibility.
+  if (record.node_contract !== undefined && record.node_contract !== null) {
+    const nc = record.node_contract;
+    if (typeof nc !== 'object' || Array.isArray(nc)) {
+      throw new Error(
+        `RoutingRecord.node_contract must be an object or null; got ${typeof nc}`
+      );
+    }
+    if (nc.allowed_lanes !== undefined && nc.allowed_lanes !== null &&
+        !Array.isArray(nc.allowed_lanes)) {
+      throw new Error(
+        `RoutingRecord.node_contract.allowed_lanes must be an array or null; got ${typeof nc.allowed_lanes}`
+      );
+    }
+  }
+
   return record;
 }
 
@@ -487,6 +516,9 @@ function finalizeRoutingRecord(record, taskClass) {
   if (record.routing_feedback === undefined) {
     record.routing_feedback = null;
   }
+  // The resolver stamps this after selection; direct emitters retain the same
+  // backward-compatible default without clearing a declared contract.
+  if (record.node_contract === undefined) record.node_contract = null;
   // Sovereignty fields default like the audit passthroughs above; they are never FORCED here.
   // A floor is a property of the decision the resolver made, not something the emitter can
   // invent after the fact — clearing or synthesizing one here would make the ladder assertion
@@ -530,6 +562,7 @@ function createEmptyRecord() {
     context_ref: null,
     context_class: null,
     routing_feedback: null,
+    node_contract: null,
     lane: null,
     sovereignty: null,
     sovereignty_floor: null,
