@@ -187,6 +187,12 @@ function main() {
     return;
   }
 
+  if (args.identity_ref && record.chosen_plugin_id !== 'codex') {
+    process.stderr.write('resolve-cli: --identity requires a Codex route; the selected route is not Codex\n');
+    process.exit(2);
+    return;
+  }
+
   record = applyNodeSafetyFallback(record);
 
   const json = args.pretty ? JSON.stringify(record, null, 2) : JSON.stringify(record);
