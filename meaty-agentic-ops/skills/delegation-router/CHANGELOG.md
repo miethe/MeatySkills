@@ -1,5 +1,9 @@
 # Changelog — delegation-router skill
 
+## 2026-10-03 — Correct Mode-D authority reference
+
+- Point the skill's Mode-D policy reference at `agentic_meta_dev/docs/rules/mode-d-enforcement.md`, the existing AOS authority. The obsolete `.claude/rules/` pointer did not resolve and blocked the consumer's commit gate. No routing, account, model, effort, permission, or node-contract behavior changes.
+
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 

@@ -163,7 +163,7 @@ of the intent, so the two could never disagree. Measured across the two live log
 executor's own self-report is not a substitute either — `appendRealization` requires
 `realization_evidence` precisely because a leg reporting on itself is not a measurement
 (`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; the never-trust-a-leg's-self-report rule is
-`agentic_meta_dev/.claude/rules/mode-d-enforcement.md`, whose local sibling here is
+`agentic_meta_dev/docs/rules/mode-d-enforcement.md`, whose local sibling here is
 `meaty-agentic-ops/rules/delegation-modes.md`).
 
 ### Routing to a provider is a no-op when the session is already that provider
