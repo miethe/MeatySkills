@@ -88,6 +88,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 /** Current entry schema version. Absent on v1 entries. */
 const SCHEMA_VERSION = 2;
@@ -271,6 +272,89 @@ function appendEntry(params) {
 }
 
 /**
+ * Append a privacy-minimal native dispatch intent. `envelope` is the projection
+ * emitted by the reviewed native hook helper; only its decision and the small
+ * routing_record allowlist are copied. This is intent, never execution evidence.
+ */
+function appendNativeIntent(envelope, options = {}) {
+  const log_path = options.log_path;
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
+    throw new Error('audit-log.appendNativeIntent: envelope must be an object');
+  }
+  const rows = envelope.routing_log;
+  if (!Array.isArray(rows) || rows.length !== 1 || !rows[0] || typeof rows[0] !== 'object') {
+    throw new Error('audit-log.appendNativeIntent: exactly one routing_log decision is required');
+  }
+  const input = rows[0];
+  const record = input.routing_record;
+  const task_id = input.task_id;
+  const chosen_plugin_id = input.chosen_plugin_id;
+  const intended_model = input.intended_model;
+  const effort = record && record.effort;
+  const parseNativeTaskId = value => {
+    if (typeof value !== 'string' || !value.startsWith('native:')) return null;
+    let rest = value.slice('native:'.length);
+    const takeLength = () => {
+      const match = rest.match(/^(\d+):/);
+      if (!match) return null;
+      rest = rest.slice(match[0].length);
+      const size = Number(match[1]);
+      return Number.isSafeInteger(size) && size > 0 && size <= 256 ? size : null;
+    };
+    const sessionLength = takeLength();
+    if (sessionLength === null) return null;
+    const sessionChars = Array.from(rest);
+    if (sessionChars.length < sessionLength) return null;
+    const sessionId = sessionChars.slice(0, sessionLength).join('');
+    rest = sessionChars.slice(sessionLength).join('');
+    if (!rest.startsWith(':')) return null;
+    rest = rest.slice(1);
+    const toolLength = takeLength();
+    if (toolLength === null) return null;
+    const toolChars = Array.from(rest);
+    if (toolChars.length !== toolLength) return null;
+    const toolUseId = toolChars.join('');
+    const validIdentity = part => part.trim().length > 0 && !/[\x00-\x1f\x7f]/.test(part);
+    const canonical = `native:${Array.from(sessionId).length}:${sessionId}:${Array.from(toolUseId).length}:${toolUseId}`;
+    return value === canonical && validIdentity(sessionId) && sessionId !== 'unknown-session' && validIdentity(toolUseId)
+      ? { sessionId, toolUseId } : null;
+  };
+  if (input.kind !== 'decision' || !parseNativeTaskId(task_id) ||
+      chosen_plugin_id !== 'codex' ||
+      typeof intended_model !== 'string' || !intended_model.trim() || Array.from(intended_model).length > 128 || /[\x00-\x1f\x7f]/.test(intended_model) ||
+      !record || typeof record !== 'object' || Array.isArray(record) ||
+      record.chosen_plugin_id !== chosen_plugin_id || record.model !== intended_model ||
+      typeof effort !== 'string' || !effort.trim() || Array.from(effort).length > 128 || /[\x00-\x1f\x7f]/.test(effort) ||
+      typeof input.reason !== 'string' || !input.reason.trim()) {
+    throw new Error('audit-log.appendNativeIntent: decision projection is invalid');
+  }
+  const fixedReason = 'native spawn routing intent; execution not measured';
+  const entry = {
+    task_id,
+    timestamp: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+    kind: 'decision',
+    chosen_plugin_id,
+    intended_model,
+    actual_provider_used: null,
+    realized_model: null,
+    realization_confirmed: false,
+    realization_evidence: null,
+    model_substituted: null,
+    fallback_applied: false,
+    reason: fixedReason,
+    routing_record: {
+      chosen_plugin_id,
+      model: intended_model,
+      effort,
+      reason: fixedReason,
+    },
+    native_event_key: task_id,
+  };
+  return appendLocked(entry, log_path, { nativeEventKey: task_id });
+}
+
+/**
  * Append a REALIZATION entry recording what actually ran, after execution.
  *
  * This is the only path that can produce `realization_confirmed: true`, and it
@@ -443,18 +527,28 @@ function appendBlocked(params) {
  * @returns {AuditEntry}
  */
 function writeEntry(entry, log_path) {
+  return appendLocked(entry, log_path);
+}
+
+function appendLocked(entry, log_path, { nativeEventKey = null } = {}) {
   const logPath = log_path || DEFAULT_LOG_PATH;
-
-  // Ensure parent directory exists
-  const logDir = path.dirname(logPath);
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
+  const helper = path.join(__dirname, 'scripts', 'locked-audit-append.py');
+  const result = spawnSync('python3', [helper, logPath, nativeEventKey || ''], {
+    input: JSON.stringify(entry), encoding: 'utf8', maxBuffer: 64 * 1024, timeout: 2000,
+  });
+  if (result.error || result.status !== 0) {
+    const code = result.error ? 'helper_unavailable' : (result.stderr.trim() || 'append_refused');
+    throw new Error(`audit-log.append: ${code}`);
   }
-
-  // Append-only: append a single newline-terminated JSON line
-  const line = JSON.stringify(entry) + '\n';
-  fs.appendFileSync(logPath, line, { encoding: 'utf8' });
-
+  if (nativeEventKey) {
+    let response;
+    try { response = JSON.parse(result.stdout); } catch (_) {
+      throw new Error('audit-log.appendNativeIntent: helper_response_invalid');
+    }
+    if (response.status === 'duplicate') return { status: 'duplicate', task_id: entry.task_id };
+    if (response.status !== 'written') throw new Error('audit-log.appendNativeIntent: helper_response_invalid');
+    return { status: 'written', task_id: entry.task_id };
+  }
   return entry;
 }
 
@@ -871,6 +965,7 @@ function ingestRoutingLog(params) {
 module.exports = {
   BLOCKED_REASONS,
   appendEntry,
+  appendNativeIntent,
   appendRealization,
   appendBlocked,
   findBlockedEntries,

@@ -48,8 +48,10 @@ Repo-verified surfaces only:
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
 | Audit writer (decision) | `appendEntry({task_id, routing_record[, intended_model, fallback_applied]})` in `audit-log.js` — realized fields default to **null/unconfirmed**, never to the intent |
+| Native intent writer | `appendNativeIntent(envelope[, {log_path}])` accepts one strict native-hook decision projection, deduplicates by its stable event `task_id` in the canonical ledger, and stores only chosen provider/model/effort intent; see `references/native-intent-writer.md` |
 | Audit writer (realization) | `appendRealization({task_id, actual_provider_used, realized_model, realization_evidence})` in `audit-log.js` — evidence required; the only path to `realization_confirmed: true` |
 | Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
+| Canonical audit append | All writer paths use a Python 3 POSIX `fcntl.flock` helper and refuse malformed or partial ledgers. Deploy `scripts/locked-audit-append.py` beside `audit-log.js`; unsupported runtimes must refuse writes rather than fall back to unlocked appends. |
 | RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.3.0) |

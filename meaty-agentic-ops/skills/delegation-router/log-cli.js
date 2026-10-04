@@ -50,6 +50,7 @@ const {
   appendEntry,
   appendRealization,
   appendBlocked,
+  appendNativeIntent,
   ingestRoutingLog,
   BLOCKED_REASONS,
   DEFAULT_LOG_PATH,
@@ -67,6 +68,7 @@ function printHelp(stream) {
       '                        [--actual <plugin_id>] [--realized-model <id>] [...]',
       '       node log-cli.js --blocked --task-id <id> --blocked-reason <reason>',
       '                        --denial-evidence <text> [--chosen <plugin_id>] [...]',
+      '       node log-cli.js --native-intent - [--log-path <path>] < envelope.json',
       '',
       'Appends a routing entry to the routing audit log and prints the written entry as',
       'JSON to stdout, exiting 0. Exits non-zero with a readable message on stderr when',
@@ -117,12 +119,14 @@ function printHelp(stream) {
       '                        wire between a Dynamic Workflow and this log: workflow',
       '                        scripts cannot require() or touch the FS, so they accumulate',
       '                        entries and RETURN them, and the post-run caller ingests',
-      '                        them here — on claude-primary, where the write belongs.',
+      '                        them here under the active user/provider policy (including authorized personal native Codex).',
       '                        Each entry carries its own kind/provider/evidence; --task-id',
       '                        supplies the task for any entry lacking one (a workflow does',
       '                        not know its node id, the caller does). Other single-entry',
       '                        flags are ignored in this mode.',
       '  --dry-run             With --ingest: validate every entry, write nothing.',
+      '  --native-intent       Read one bounded native intent projection from stdin;',
+      '                        prints only written/duplicate status. Requires Python 3 POSIX fcntl.',
       '',
       'Examples:',
       '  node log-cli.js --task-id P2-006 --chosen ica --intended-model "claude-sonnet-5[1m]" \\',
@@ -156,6 +160,7 @@ function parseArgs(argv) {
     log_path: undefined,
     ingest: undefined,
     dry_run: false,
+    native_intent: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -208,6 +213,12 @@ function parseArgs(argv) {
         break;
       case '--dry-run':
         args.dry_run = true;
+        break;
+      case '--native-intent':
+        args.native_intent = true;
+        break;
+      case '-':
+        args.native_input_marker = true;
         break;
       default:
         throw new Error(`unrecognized argument '${flag}' (see --help)`);
@@ -368,7 +379,57 @@ function main() {
   try {
     args = parseArgs(argv);
   } catch (err) {
-    process.stderr.write(`log-cli: ${err.message}\n`);
+    process.stderr.write(argv.includes('--native-intent')
+      ? 'log-cli: native_intent_arguments_invalid\n'
+      : `log-cli: ${err.message}\n`);
+    process.exit(2);
+    return;
+  }
+
+  if (args.native_intent) {
+    const validNativeArgs =
+      (argv.length === 2 && argv[0] === '--native-intent' && argv[1] === '-') ||
+      (argv.length === 4 && argv[0] === '--native-intent' && argv[1] === '-' &&
+       argv[2] === '--log-path' && Boolean(args.log_path));
+    if (!validNativeArgs) {
+      process.stderr.write('log-cli: native_intent_arguments_invalid\n');
+      process.exit(2);
+      return;
+    }
+    let envelope;
+    try {
+      const limit = 8192;
+      const buffer = Buffer.alloc(limit + 1);
+      let used = 0;
+      while (used < buffer.length) {
+        const count = fs.readSync(0, buffer, used, buffer.length - used, null);
+        if (count === 0) break;
+        used += count;
+      }
+      if (used > limit) {
+        process.stderr.write('log-cli: native_intent_input_too_large\n');
+        process.exit(2);
+        return;
+      }
+      envelope = JSON.parse(buffer.subarray(0, used).toString('utf8'));
+    } catch (_) {
+      process.stderr.write('log-cli: native_intent_input_invalid\n');
+      process.exit(2);
+      return;
+    }
+    try {
+      const outcome = appendNativeIntent(envelope, { log_path: args.log_path });
+      process.stdout.write(`${JSON.stringify({ status: outcome.status || 'written' })}\n`);
+      process.exit(0);
+    } catch (_) {
+      process.stderr.write('log-cli: native_intent_write_refused\n');
+      process.exit(1);
+    }
+    return;
+  }
+
+  if (args.native_input_marker) {
+    process.stderr.write('log-cli: native_intent_arguments_invalid\n');
     process.exit(2);
     return;
   }
