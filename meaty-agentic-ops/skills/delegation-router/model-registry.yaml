@@ -91,7 +91,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-09-30   # GPT-6.1 Sol supersedes GPT-6 Sol on the personal Codex lane (Nick, 2026-09-30); ICA remains on GPT-5.6 ids. Prior history: CHANGELOG.md.
+updated: 2026-10-07   # nvidia/llama-3.3-nemotron-super (49B, ICA ccx) added: confirmed free/bare-id/131k-ctx/always-on-thinking; registered not routed (node_01M4C0PWMG1922F4HQ0TPWZVTG). Prior: GPT-6.1 Sol supersedes GPT-6 Sol on the personal Codex lane (Nick, 2026-09-30). Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -139,6 +139,8 @@ ica_catalog:
   - { model_id: "meta-llama/llama-3-3-70b-instruct", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
   - { model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
   - { model_id: "mistral-medium-2505", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
+  - { model_id: "nvidia/llama-3.3-nemotron-super", lanes: [ccx], economics: unlimited, health: { status: available, checked_at: 2026-10-07, evidence: "200 on both /chat/completions and /v1/messages bare-id; x-litellm-response-cost-original=0.0; actual model nvidia/llama-3.3-nemotron-super-49b-v1.5; [1m] suffix 403s" } }
+  - { model_id: "nvidia/nemotron-3.5-lightning", lanes: [ccx], economics: unknown, health: { status: unknown } }
 
 # Task-class → ordered preference chain. The chain IS the priority / free-first
 # mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
@@ -1171,6 +1173,20 @@ models:
     status: scaffolded
     providers:
       - { provider: ica, lane: ica_gateway_messages, model_id: "mistral-medium-2505", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 1 }
+
+  nvidia/llama-3.3-nemotron-super:
+    family: nvidia
+    class: nemotron
+    descriptor: "NVIDIA Llama 3.3 Nemotron Super 49B (v1.5 served) on the ICA ccx gateway — discovered and bench-evaluated 2026-10-07 (node_01M4C0PWMG1922F4HQ0TPWZVTG; probe+bench receipt docs/project_plans/reports/model-eval/nemotron-super-2026-10-07/ in agentic_meta_dev). Wire id: bare `nvidia/llama-3.3-nemotron-super` ([1m] suffix 403s). Context window: 131,072 tokens. Economics: FREE (x-litellm-response-cost-original: 0.0). Always-on thinking: the model cannot suppress its chain-of-thought — it always emits reasoning before answering, and on complex tasks the thinking trace leaks into text output (bench T2: leaked ~500-token reasoning trace instead of a clean single-word answer). Tool-use: the model responds to tool declarations but uses a custom <TOOLCALL> XML format, NOT standard Anthropic tool_use blocks or OpenAI function_call/tool_calls — incompatible with AOS infrastructure. Latency: avg ~6s (vs Haiku ~1.8s, GPT-luna ~2.7s) due to always-on thinking. Transport: both /chat/completions (OpenAI-compatible) and /v1/messages (Anthropic-compatible) return 200 on bare id. Bench verdict: correct on extraction/code-fix/summarization/JSON-schema tasks; format failure on classification (T2); registered not routed."
+    scores: { cost: 10, intelligence: 5, taste: 3, speed: 4 }   # cost=10 (free, same as Haiku/Luna/Gemma); intelligence=5 (Haiku-tier accuracy, format failures on judgment tasks); taste=3 (thinking traces leak into output, verbose, inconsistent format); speed=4 (avg ~6s, slower than all baselines due to always-on thinking)
+    when_to_use: []   # not routed to any task class; explicitly selectable only; see MODEL-ROUTING.md
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 131072
+    sampling: stochastic
+    status: scaffolded   # registered per header convention; enabled:false until a specific use-case is identified; no auto routing chain
+    providers:
+      - { provider: ica, lane: ica_gateway_messages, model_id: "nvidia/llama-3.3-nemotron-super", cost_tier: free, allowance: unlimited, enabled: false, priority: 1, capability_gap: "tool-use emits custom <TOOLCALL> XML (not standard Anthropic tool_use or OpenAI tool_calls); thinking traces leak into text output on multi-step judgment tasks" }
 
   # ── External-lane scaffolds — no executor, no routing chain (M5b owns executor) ──
   deepseek-v4-flash:
