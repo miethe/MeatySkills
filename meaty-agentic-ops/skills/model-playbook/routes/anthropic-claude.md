@@ -190,6 +190,10 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
 
 ## claude-haiku-4-5
 
+- **⚠️ PAID ON ICA (Nick, 2026-10-07, "Treat it as paid now").** The ICA row is `standard` /
+  `shared_token_pool`, Cost score 7; the gateway meter still reads `0.0` for it (open discrepancy, needs a
+  portal credit delta). Free ICA picks for mechanical work are now gpt-5.6-luna, Gemma 4, Llama 4 Maverick,
+  Granite 4 Small. The "FREE" wording in the bullets below predates this decision.
 - **LEGACY BUT SELECTABLE on the subscription lane (2026-10-07)** — `claude-haiku-5-5` (above) is the
   default there. Still the live ICA Haiku, since ICA does not serve 5.5. Nick reports it is now paid on
   ICA; the gateway `x-litellm-response-cost-original` header still reads `0.0` (2026-10-07, up to 41.6k

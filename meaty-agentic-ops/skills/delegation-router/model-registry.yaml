@@ -32,12 +32,14 @@
 #   ⚠️ 2026-10-07 RE-PROBE (node_01M4C1MXHVCZTA6Y71RNEVXT4R): Nick reports claude-haiku-4-5 is no
 #   longer free on ICA. Measured on key CCx3 / ccx lane: `x-litellm-response-cost-original` is still
 #   0.0 for it (n>=12 calls, up to 41.6k input tokens; paid control claude-sonnet-5 reads
-#   $0.0093-$0.1496 on the same key), so the row below stays `unlimited`. The cumulative
-#   `x-litellm-key-spend` header is replica-lagged and did not even reflect the paid control within
-#   a minute, so it cannot settle the question either; a portal credit read before/after a large
-#   Haiku 4.5 call would. If Nick confirms "paid", flip the ICA claude-haiku-4-5 provider row to
-#   `cost_tier: standard, allowance: shared_token_pool` and drop the ica/ leg from the
-#   exploration/documentation/mechanical chains. claude-haiku-5-5 is NOT served on ICA (403).
+#   $0.0093-$0.1496 on the same key). The cumulative `x-litellm-key-spend` header is replica-lagged
+#   and cannot settle it; a portal credit read before/after a large Haiku 4.5 call would.
+#   ➜ DECISION (Nick, 2026-10-07, "Treat it as paid now"): claude-haiku-4-5 on ICA is PAID. Its ICA
+#   provider row is `cost_tier: standard, allowance: shared_token_pool`, cost_score 7, and the
+#   free set is now FOUR (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna). The $0.00 meter
+#   reading stays recorded as an OPEN DISCREPANCY (tracker: ICA Haiku 4.5 metering shows $0 though Nick
+#   reports paid: verify with a portal credit delta, child of node_01M4C1MXHVCZTA6Y71RNEVXT4R).
+#   claude-haiku-5-5 is NOT served on ICA (403).
 #   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
@@ -132,7 +134,7 @@ ica_catalog:
   - { model_id: "claude-sonnet-4-5", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-4-6", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
-  - { model_id: "claude-haiku-4-5", lanes: [ccx, beta], economics: unlimited, health: { status: available, checked_at: 2026-10-07, evidence: "ccx CCx3: response-cost-original 0.0 at 41.6k input tokens; Nick reports paid, NOT reproduced" } }
+  - { model_id: "claude-haiku-4-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-07, evidence: "PAID per Nick 2026-10-07; gateway meter still reads response-cost-original 0.0 at 41.6k input tokens (open discrepancy, unreconciled)" } }
   - { model_id: "claude-haiku-5-5", lanes: [ccx], economics: unknown, health: { status: unavailable, checked_at: 2026-10-07, evidence: "403 team_model_access_denied on CCx3 for bare id, [1m], and dated forms; absent from GET /v1/models (26 ids)" } }
   - { model_id: "gemini-3.1-pro-preview", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "gemini-3.5-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
@@ -158,13 +160,14 @@ ica_catalog:
 # ──────────────────────────────────────────────────────────────────────────────
 routing_policy:
   # 2026-10-07 (Nick): the native/subscription Haiku leg is now claude-haiku-5-5 (10x cheaper than 4.5, native 1M ctx;
-  # blind bench mean 4.33 vs 3.83/5). The ICA leg stays claude-haiku-4-5: ICA does not serve 5.5 and the gateway still
-  # meters 4.5 at $0.00 (see header note). Haiku 4.5 remains selectable explicitly.
-  exploration:      { chain: ["ica/claude-haiku-4-5", "claude/claude-haiku-5-5"], enabled: true }
-  documentation:    { chain: ["ica/claude-haiku-4-5", "claude/claude-haiku-5-5"], enabled: true }
-  mechanical:       { chain: ["ica/claude-haiku-4-5", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }
+  # blind bench mean 4.33 vs 3.83/5). ICA Haiku 4.5 now counts as PAID (Nick, "Treat it as paid now"), so the free ICA leg
+  # is gpt-5.6-luna (rule a: still-free ICA model; bench: luna(low) 5.00/5 via Codex, ICA /v1/messages 200 at cost 0.0),
+  # with Haiku 5.5 on the subscription as the fallback (rule b). Haiku 4.5 remains selectable explicitly.
+  exploration:      { chain: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
+  documentation:    { chain: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
+  mechanical:       { chain: ["ica/gpt-5.6-luna", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }
   # Grounded 2026-07-28; Nick decision 2026-09-25 moves the Codex subscription workhorse to GPT-6 Luna.
-  second_opinion:   { chain: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "ica/claude-haiku-4-5"], enabled: true }
+  second_opinion:   { chain: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }   # 2026-10-07: last-resort leg ica/claude-haiku-4-5 (now paid) -> subscription Haiku 5.5 (rule b)
   # Grounded 2026-08-09 (execution pilot, n=3; see use-case-rankings.yaml `agentic-coding`, conf 0.5). CHAIN DELIBERATELY UNCHANGED — codex/gpt-5.6-terra shipped 3/3 real legs with zero logic defects but is EXPLICITLY-SELECTABLE ONLY, not an auto leg, on n=3 with no head-to-head arm. Explicit selection already resolves (codex-executor, fallback claude/claude-sonnet-5) and needs no chain edit. ⚠️ Dispatch an implementer leg at effort `high` — sandboxModeFor() maps standard→read-only, so a default-effort codex implementer CANNOT WRITE and fails by producing nothing.
   implementation:   { chain: ["claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # 2026-09-28: workhorse default moves to Sonnet 5.5 (native/subscription only — ICA doesn't serve it yet); fallback claude-sonnet-5. ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload) — update to claude-sonnet-5-5[1m] once ICA serves 5.5. ⚠️ Updated 2026-09-28 (evening) per Nick: this is the CONTRACT-CLEAR execution default, not a blanket one — `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes below and never resolve through this chain.
   # Added 2026-09-28 (evening), Nick: Opus 5.5's real role beyond the orchestration/mode_d spine —
@@ -611,8 +614,8 @@ models:
   claude-haiku-4-5:
     family: claude
     class: haiku
-    descriptor: "LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation."
-    scores: { cost: 10, intelligence: 5, taste: 5, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend. Re-checked 2026-10-07: unchanged. If ICA confirms it is paid, cost drops to 7 (the subscription cost_score).
+    descriptor: "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation."
+    scores: { cost: 7, intelligence: 5, taste: 5, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend. 2026-10-07: Cost 10 -> 7 because ICA Haiku 4.5 counts as PAID (Nick), matching its subscription cost_score; the $0.00 meter reading is an open discrepancy, not evidence of free. Intelligence/Taste/Speed re-checked, unchanged.
     when_to_use: [mechanical-tasks, doc-gen, adversarial-review, exploration]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-haiku-4-5
     tools: []
@@ -625,7 +628,8 @@ models:
     # rows carried the dated `claude-haiku-4-5-20251001`.
     observed_ids: ["claude-haiku-4-5-20251001"]
     providers:
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-4-5", cost_tier: free,   allowance: unlimited, enabled: true, priority: 1 }
+      # PAID per Nick 2026-10-07 (was free/unlimited); cheapest ICA Claude. Meter still reads 0.0: open discrepancy.
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 7 }
       - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }
 
   # ── Frontier (Claude Fable 5 — Mythos-class; 2× Opus cost; EXPLICIT OPT-IN ONLY) ─────

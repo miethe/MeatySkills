@@ -90,9 +90,12 @@ for task_class in ("exploration", "documentation", "mechanical"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude/claude-haiku-5-5" in chain, (task_class, chain)
     assert "claude/claude-haiku-4-5" not in chain, (task_class, chain)
-    assert chain[0] == "ica/claude-haiku-4-5", (task_class, chain)
+    assert chain[0] == "ica/gpt-5.6-luna", (task_class, chain)
+    assert "ica/claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
+assert "ica/claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
 h45_ica = next(p for p in registry["models"]["claude-haiku-4-5"]["providers"] if p["provider"] == "ica")
-assert h45_ica["enabled"] is True and h45_ica["allowance"] == "unlimited", h45_ica
+assert h45_ica["enabled"] is True and h45_ica["allowance"] == "shared_token_pool" and h45_ica["cost_tier"] == "standard", h45_ica  # paid per Nick 2026-10-07
+assert registry["models"]["claude-haiku-4-5"]["scores"]["cost"] == 7, registry["models"]["claude-haiku-4-5"]["scores"]
 assert h55["scores"]["intelligence"] <= registry["models"]["claude-sonnet-5-5"]["scores"]["intelligence"] - 2, h55["scores"]
 
 # Planted positive: an external row with an undeclared retention fact must fail.

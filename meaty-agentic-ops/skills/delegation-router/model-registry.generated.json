@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "e6d8f778ec55cffed12ca9f7cf81162fc48fe2f0176abd2ee2e6ad6c9fa31593",
+  "_yaml_sha256": "36dcb762fbb8a0f94079b98b0739f14ab2d6e357141a7059f0ea44ee3dd47b0d",
   "version": 1,
   "updated": "2026-10-07",
   "routing_attributes": {
@@ -137,11 +137,11 @@
         "ccx",
         "beta"
       ],
-      "economics": "unlimited",
+      "economics": "shared_token_pool",
       "health": {
         "status": "available",
         "checked_at": "2026-10-07",
-        "evidence": "ccx CCx3: response-cost-original 0.0 at 41.6k input tokens; Nick reports paid, NOT reproduced"
+        "evidence": "PAID per Nick 2026-10-07; gateway meter still reads response-cost-original 0.0 at 41.6k input tokens (open discrepancy, unreconciled)"
       }
     },
     {
@@ -337,21 +337,21 @@
   "routing_policy": {
     "exploration": {
       "chain": [
-        "ica/claude-haiku-4-5",
+        "ica/gpt-5.6-luna",
         "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
     "documentation": {
       "chain": [
-        "ica/claude-haiku-4-5",
+        "ica/gpt-5.6-luna",
         "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
     "mechanical": {
       "chain": [
-        "ica/claude-haiku-4-5",
+        "ica/gpt-5.6-luna",
         "ica/gemma-4-26b-a4b-it",
         "claude/claude-haiku-5-5"
       ],
@@ -362,7 +362,7 @@
         "codex/gpt-6-luna",
         "ica/gemini-3.6-flash",
         "ica/gemma-4-26b-a4b-it",
-        "ica/claude-haiku-4-5"
+        "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
@@ -1159,9 +1159,9 @@
     "claude-haiku-4-5": {
       "family": "claude",
       "class": "haiku",
-      "descriptor": "LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation.",
+      "descriptor": "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation.",
       "scores": {
-        "cost": 10,
+        "cost": 7,
         "intelligence": 5,
         "taste": 5,
         "speed": 9
@@ -1188,10 +1188,11 @@
           "provider": "ica",
           "lane": "ica_gateway_messages",
           "model_id": "claude-haiku-4-5",
-          "cost_tier": "free",
-          "allowance": "unlimited",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "cost_score": 7
         },
         {
           "provider": "claude",
