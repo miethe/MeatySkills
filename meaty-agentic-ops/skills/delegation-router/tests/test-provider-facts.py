@@ -61,7 +61,7 @@ class ProviderFactsTests(unittest.TestCase):
         if installed.exists(): self.assertEqual(model_ids(installed)-covered, set())
         for item in self.private:
             self.assertTrue(item['reason'].strip(), item['id'])
-        self.assertEqual(len(self.provider_models), 43)  # 2026-10-07: nvidia/llama-3.3-nemotron-super added (registry/providers/nvidia.yaml, 42 on 2026-09-30); 2026-09-30: gpt-6.1-sol added to registry/providers/openai.yaml (41 on 2026-09-28)
+        self.assertEqual(len(self.provider_models), 44)  # 2026-10-07: claude-haiku-5-5 added to registry/providers/anthropic.yaml (43 after nvidia/llama-3.3-nemotron-super; 42 on 2026-09-30: gpt-6.1-sol; 41 on 2026-09-28)
 
     def test_label_renders_a_dotted_generation_with_a_literal_dot(self):
         # `op registry render-values` copies model.label verbatim into the model role LABEL token,

@@ -1111,8 +1111,11 @@ describe('I. DI-1 §1/§3/§4 — chain-join canonicalization (case-fold + dated
     const rawEntry = chainEntryKey(row);
     assert.equal(rawEntry, 'Claude/claude-haiku-4-5-20251001');
 
-    // The REAL registry's mechanical chain: ['ica/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5'].
-    const chain = realRegistry.routing_policy.mechanical.chain;
+    // The mechanical chain AS IT STOOD when this live row was observed (2026-08):
+    // ['ica/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5']. Pinned literally because
+    // the REAL chain's native leg became 'claude/claude-haiku-5-5' on 2026-10-07 (Haiku 5.5 replaced 4.5 as
+    // the subscription cheap tier), which correctly no longer joins a dated Haiku 4.5 observation.
+    const chain = ['ica/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5'];
     const out = applyChainFeedback({
       taskClass: 'mechanical',
       chain,

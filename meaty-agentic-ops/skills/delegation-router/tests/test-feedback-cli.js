@@ -815,6 +815,17 @@ asyncTest('(k) --json emits an envelope with state_written on the success path',
 // machine running it.
 const realRegistry = JSON.parse(fs.readFileSync(path.join(skillDir, 'model-registry.generated.json'), 'utf8'));
 
+// 2026-10-07: the real mechanical chain's native leg moved to 'claude/claude-haiku-5-5' (Haiku 5.5 replaced
+// 4.5 as the subscription cheap tier). These (m) tests exercise the DATED Haiku 4.5 observed-id join with
+// historical-shaped rows, so they pin the pre-2026-10-07 native leg instead of silently losing the join.
+const mechanicalLegacyNativeRegistry = {
+  ...realRegistry,
+  routing_policy: {
+    ...realRegistry.routing_policy,
+    mechanical: { ...realRegistry.routing_policy.mechanical, chain: ['ica/claude-haiku-4-5', 'ica/gemma-4-26b-a4b-it', 'claude/claude-haiku-4-5'] },
+  },
+};
+
 asyncTest('(m) a case-mismatched, dated-slug row now joins as in_chain (was the silent entry_not_in_chain bug)', async () => {
   const row = keyRow({
     task_class: 'mechanical', source_skill_name: 'symbols',
@@ -823,7 +834,7 @@ asyncTest('(m) a case-mismatched, dated-slug row now joins as in_chain (was the 
   const d = deps({
     fetchImpl: mockFetch(rollupData({ keys: [row] })),
     mergeOpts: { contract: enabledContract },
-    registry: realRegistry,
+    registry: mechanicalLegacyNativeRegistry,
   });
   const res = await run(['--project', 'p1', '--json'], d);
 
@@ -843,7 +854,7 @@ asyncTest('(m) an out-of-vocabulary provider surfaces chain_join=unknown_provide
   const d = deps({
     fetchImpl: mockFetch(rollupData({ keys: [row] })),
     mergeOpts: { contract: enabledContract },
-    registry: realRegistry,
+    registry: mechanicalLegacyNativeRegistry,
   });
   const res = await run(['--project', 'p1', '--json'], d);
 
@@ -861,7 +872,7 @@ asyncTest('(m) a non-in_chain MAJORITY prints a visible text-mode warning banner
   const d = deps({
     fetchImpl: mockFetch(rollupData({ keys: rows })),
     mergeOpts: { contract: enabledContract },
-    registry: realRegistry,
+    registry: mechanicalLegacyNativeRegistry,
   });
   const res = await run(['--project', 'p1'], d); // text mode, no --json
 
@@ -880,7 +891,7 @@ asyncTest('(m) the same majority-mismatch case carries chain_join_summary.majori
   const d = deps({
     fetchImpl: mockFetch(rollupData({ keys: rows })),
     mergeOpts: { contract: enabledContract },
-    registry: realRegistry,
+    registry: mechanicalLegacyNativeRegistry,
   });
   const res = await run(['--project', 'p1', '--json'], d);
 
