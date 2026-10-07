@@ -90,8 +90,17 @@ for task_class in ("exploration", "documentation", "mechanical"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude/claude-haiku-5-5" in chain, (task_class, chain)
     assert "claude/claude-haiku-4-5" not in chain, (task_class, chain)
-    assert chain[0] == "ica/gpt-5.6-luna", (task_class, chain)
     assert "ica/claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
+    # Positioning by role (node_01M4C58QYW0KP7987JWADP8YKV, Nick 2026-10-07: do not relegate Haiku 5.5 to a price
+    # fallback; compare it with GPT-6 Luna as paid peers). Both paid peers are named in every cheap chain, and the free
+    # ICA leg keeps a slot so public bulk work still has a $0 lane.
+    assert "codex/gpt-6-luna" in chain, (task_class, chain)
+    assert "ica/gpt-5.6-luna" in chain, (task_class, chain)
+# exploration is OWNED by Haiku 5.5 (Claude-Code-native Explore path; unknown disclosure fails closed for ICA);
+# documentation / mechanical are OWNED by free ICA GPT-5.6 Luna for public bulk work.
+assert registry["routing_policy"]["exploration"]["chain"][0] == "claude/claude-haiku-5-5", registry["routing_policy"]["exploration"]
+for task_class in ("documentation", "mechanical"):
+    assert registry["routing_policy"][task_class]["chain"][0] == "ica/gpt-5.6-luna", (task_class, registry["routing_policy"][task_class])
 assert "ica/claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
 h45_ica = next(p for p in registry["models"]["claude-haiku-4-5"]["providers"] if p["provider"] == "ica")
 assert h45_ica["enabled"] is True and h45_ica["allowance"] == "shared_token_pool" and h45_ica["cost_tier"] == "standard", h45_ica  # paid per Nick 2026-10-07

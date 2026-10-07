@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "36dcb762fbb8a0f94079b98b0739f14ab2d6e357141a7059f0ea44ee3dd47b0d",
+  "_yaml_sha256": "e65a21bb62276aa30c75095deafe45727c0bc3a911816059d2dd12dcbc6fb3c7",
   "version": 1,
   "updated": "2026-10-07",
   "routing_attributes": {
@@ -337,15 +337,17 @@
   "routing_policy": {
     "exploration": {
       "chain": [
+        "claude/claude-haiku-5-5",
         "ica/gpt-5.6-luna",
-        "claude/claude-haiku-5-5"
+        "codex/gpt-6-luna"
       ],
       "enabled": true
     },
     "documentation": {
       "chain": [
         "ica/gpt-5.6-luna",
-        "claude/claude-haiku-5-5"
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
       ],
       "enabled": true
     },
@@ -353,7 +355,8 @@
       "chain": [
         "ica/gpt-5.6-luna",
         "ica/gemma-4-26b-a4b-it",
-        "claude/claude-haiku-5-5"
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
       ],
       "enabled": true
     },
@@ -1112,22 +1115,26 @@
     "claude-haiku-5-5": {
       "family": "claude",
       "class": "haiku",
-      "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). NOT served on ICA: 403 team_model_access_denied on CCx3 for the bare id, [1m] and dated forms, and absent from the gateway /v1/models catalog, so every ICA lane keeps claude-haiku-4-5. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens.",
+      "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). NOT served on ICA: 403 team_model_access_denied on CCx3 for the bare id, [1m] and dated forms, and absent from the gateway /v1/models catalog, so every ICA lane keeps claude-haiku-4-5. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens. POSITIONING 2026-10-07 (node_01M4C58QYW0KP7987JWADP8YKV; agentic_meta_dev docs/project_plans/reports/model-eval/positioning-2026-10-07/report.md): a PAID PEER of GPT-6 Luna, not a price fallback behind free ICA. OWNS Claude-Code-native subagent work (Explore/exploration, classifiers, hook-side judgment, compaction), triage/routing judgment (blind reasons graded best of five arms, 19/19 on a 12-item policy triage both reps), fast single-call loops, and cheap context scans up to ~160K tokens (8/8 at 161K in 8.6 s). Ties Sonnet 5.5, GPT-6 Luna and ICA 5.6 Luna at the ceiling on three escalating agentic fix tasks and four strict-schema tasks (correctness does not separate them there; Haiku used 5-23K output tokens per agentic task vs Sonnet's 0.6-3.7K). Community, dated 2026-10-07: Terminal-Bench 4.0 33% (Artificial Analysis) / 39.2% (Anthropic) vs GPT-6 Luna 13% / 16.4%; AA Intelligence Index 38 high / 43 max vs Luna 38; AA-Omniscience hallucination 40% vs Luna 77%; AutomationBench-AA 35% vs Luna 53% (AA flags Haiku's as understated by over-refusal). LIMITS: >=300K-token aggregation is unreliable (5/8 on a 464K-token planted-fact read, both reps; Sonnet 5.5 8/8), and prompts over 100K tokens re-price the whole request at 5x ($0.50/$2.50; measured $0.46 list-basis for one 464K-token call). Not a design_judgment/raw_strength/implementation default (Anthropic itself points complex agentic coding at Sonnet/Opus).",
       "scores": {
         "cost": 10,
-        "intelligence": 6,
-        "taste": 6,
+        "intelligence": 7,
+        "taste": 7,
         "speed": 9
       },
       "when_to_use": [
-        "mechanical-tasks",
-        "extraction",
+        "exploration",
+        "claude-code-subagents",
+        "hook-judgment",
         "classification",
         "routing-triage",
+        "context-scan-under-160k",
+        "fast-single-call",
+        "extraction",
         "structured-json-output",
+        "mechanical-tasks",
         "doc-gen",
-        "exploration",
-        "adversarial-review"
+        "private-content-cheap-tier"
       ],
       "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-haiku-5-5",
       "tools": [],
@@ -2013,19 +2020,22 @@
     "gpt-6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
+      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6. POSITIONING 2026-10-07 (node_01M4C58QYW0KP7987JWADP8YKV; agentic_meta_dev docs/project_plans/reports/model-eval/positioning-2026-10-07/report.md): the cross-family PAID PEER of Haiku 5.5. OWNS cross-family review / AC validation / second opinion (different family from every Claude lane), Codex-harness bounded work in a write sandbox on the personal account (private design is allowed on personal Codex, never on ICA), and work that should draw on the Codex quota instead of the Claude subscription. Bench at MEDIUM effort: ceiling on all three agentic fix tasks and all four strict-schema tasks, 8/8 at a 125K-token retrieval; one of two triage reps over-escalated three Mode-D items to ask-the-owner (14.5/19). Harness facts: Codex CLI rejects a single input over 1,048,576 characters (so a >=300K-token one-shot read is not possible in the native harness), and the harness floor is ~7 s for a one-word reply. Community, dated: Terminal-Bench 4.0 13% (AA) / 16.4% (Anthropic, Tbench); Bakeoff real-bug repair 16/22 vs Haiku 22/22 but ~4x cheaper per solved run (HN, 2026-10-07); AA Intelligence Index 38 (max); AA-LCR 83.3%; AutomationBench-AA 53%; price 2x input above 272K tokens (vs Haiku's 5x above 100K).",
       "scores": {
         "cost": 7,
-        "intelligence": 8,
+        "intelligence": 7,
         "taste": 7,
-        "speed": 9
+        "speed": 7
       },
       "when_to_use": [
         "code-review",
         "ac-validation",
-        "mechanical-tasks",
         "second-opinion",
-        "exploration"
+        "cross-family-review",
+        "codex-sandbox-implementation",
+        "mechanical-tasks",
+        "exploration",
+        "private-design-codex"
       ],
       "tools": [
         "functions",
@@ -2245,12 +2255,12 @@
     "gpt-5.6-luna-ica": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable.",
+      "descriptor": "OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable. POSITIONING 2026-10-07 (node_01M4C58QYW0KP7987JWADP8YKV; agentic_meta_dev docs/project_plans/reports/model-eval/positioning-2026-10-07/report.md): OWNS free bulk work on PUBLIC content (mechanical, documentation, public-repo fixes): it hit the ceiling on all three agentic fix tasks (via ~/ica-codex.sh, ccx shim) and on the strict-schema tasks (one route miss), 7/8 at a 126K-token retrieval, but it was the slowest arm (51-101 s per agentic task, 13-23 turns, ~9 s floor). It can never take private, journal, CHCW or credential material (employer lane). Long context is NOT free: one 464K-token read over raw /v1/messages returned x-litellm-response-cost-original 0.149 (and scored 6/8). What the paid peers do that it cannot: private content, Claude-Code-native subagents/hooks (Haiku), personal-account cross-family review (GPT-6 Luna), and 2-4x lower latency (Haiku).",
       "scores": {
         "cost": 8,
         "intelligence": 7,
         "taste": 6,
-        "speed": 6
+        "speed": 5
       },
       "when_to_use": [
         "code-review",
@@ -2486,7 +2496,7 @@
     "nvidia/llama-3.3-nemotron-super": {
       "family": "nvidia",
       "class": "nemotron",
-      "descriptor": "NVIDIA Llama 3.3 Nemotron Super 49B (v1.5 served) on the ICA ccx gateway — discovered and bench-evaluated 2026-10-07 (node_01M4C0PWMG1922F4HQ0TPWZVTG; probe+bench receipt docs/project_plans/reports/model-eval/nemotron-super-2026-10-07/ in agentic_meta_dev). Wire id: bare `nvidia/llama-3.3-nemotron-super` ([1m] suffix 403s). Context window: 131,072 tokens. Economics: FREE (x-litellm-response-cost-original: 0.0). Always-on thinking: the model cannot suppress its chain-of-thought — it always emits reasoning before answering, and on complex tasks the thinking trace leaks into text output (bench T2: leaked ~500-token reasoning trace instead of a clean single-word answer). Tool-use: the model responds to tool declarations but uses a custom <TOOLCALL> XML format, NOT standard Anthropic tool_use blocks or OpenAI function_call/tool_calls — incompatible with AOS infrastructure. Latency: avg ~6s (vs Haiku ~1.8s, GPT-luna ~2.7s) due to always-on thinking. Transport: both /chat/completions (OpenAI-compatible) and /v1/messages (Anthropic-compatible) return 200 on bare id. Bench verdict: correct on extraction/code-fix/summarization/JSON-schema tasks; format failure on classification (T2); registered not routed.",
+      "descriptor": "NVIDIA Llama 3.3 Nemotron Super 49B (v1.5 served) on the ICA ccx gateway — discovered and bench-evaluated 2026-10-07 (node_01M4C0PWMG1922F4HQ0TPWZVTG; probe+bench receipt docs/project_plans/reports/model-eval/nemotron-super-2026-10-07/ in agentic_meta_dev). Wire id: bare `nvidia/llama-3.3-nemotron-super` ([1m] suffix 403s). Context window: 131,072 tokens. Economics: FREE (x-litellm-response-cost-original: 0.0). Always-on thinking: the model cannot suppress its chain-of-thought — it always emits reasoning before answering, and on complex tasks the thinking trace leaks into text output (bench T2: leaked ~500-token reasoning trace instead of a clean single-word answer). Tool-use: the model responds to tool declarations but uses a custom <TOOLCALL> XML format, NOT standard Anthropic tool_use blocks or OpenAI function_call/tool_calls — incompatible with AOS infrastructure. Latency: avg ~6s (vs Haiku ~1.8s, GPT-luna ~2.7s) due to always-on thinking. Transport: both /chat/completions (OpenAI-compatible) and /v1/messages (Anthropic-compatible) return 200 on bare id. Bench verdict: correct on extraction/code-fix/summarization/JSON-schema tasks; format failure on classification (T2); registered not routed. Positioning bench 2026-10-07 (node_01M4C58QYW0KP7987JWADP8YKV): earns NO role. The Codex harness rejected it (400, so no agentic arm), it returned empty text on a 102K-token retrieval, and two of five short tasks failed format (an empty triage reply, an unparseable schema reply). It was also the slowest arm (24-44 s). AA Intelligence Index ~9 (estimated; AA marks it deprecated).",
       "scores": {
         "cost": 10,
         "intelligence": 5,

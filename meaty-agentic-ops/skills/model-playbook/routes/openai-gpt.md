@@ -98,6 +98,10 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 
 - **When to pick:** the free-to-us cheaper/faster ICA tier — lighter review, mechanical edits,
   cheap second opinions, exploration, when the free lane is worth the shim overhead.
+- **Role (positioning 2026-10-07, `node_01M4C58QYW0KP7987JWADP8YKV`):** owns free bulk work on PUBLIC
+  content (mechanical, documentation, public-repo fixes); it matched the paid peers on correctness but was
+  the slowest arm (51-101 s per agentic fix, ~9 s floor). Never for private, journal, CHCW or credential
+  material (employer lane), and long context is not free (one 464K-token read was billed $0.149).
 - **Invocation lane:** `ica/gpt-5.6-luna` — same mechanism as `gpt-5.6-terra-ica`
   (`~/ica-codex.sh` + local Responses shim). Same effort caveat (dropped on tool turns).
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh` — no `ultra`.

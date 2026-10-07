@@ -187,6 +187,13 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   also did) and on summary coverage at an exact word count (n=1; re-test before relying on it).
 - **Anti-patterns:** don't route `design_judgment`, `raw_strength`, or taste-critical work here; do not
   replace Sonnet 5.5 for multi-file implementation on a bench this small.
+- **Role, not rank (positioning 2026-10-07, `node_01M4C58QYW0KP7987JWADP8YKV`;
+  `docs/project_plans/reports/model-eval/positioning-2026-10-07/report.md` in agentic_meta_dev):** a paid peer of
+  `gpt-6-luna`, never a price fallback behind free ICA. It OWNS Claude-Code-native subagent work (Explore /
+  `exploration` chain leg 1, classifiers, hook-side judgment), triage and routing judgment, fast single calls,
+  and context scans up to ~160K tokens. Hand >=300K-token exhaustive reads to Sonnet 5.5 (5/8 vs 8/8 at 464K)
+  and remember prompts over 100K tokens re-price the whole call at 5x. GPT-6 Luna keeps cross-family review and
+  Codex-sandbox work; ICA 5.6 Luna keeps free bulk work on public content.
 
 ## claude-haiku-4-5
 
