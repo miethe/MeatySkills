@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "e65a21bb62276aa30c75095deafe45727c0bc3a911816059d2dd12dcbc6fb3c7",
-  "version": 1,
-  "updated": "2026-10-07",
+  "_yaml_sha256": "f1a8b59276644b606e2f7832f31c3141cfe9290cf3c844db5b4e2ab771128391",
+  "version": 2,
+  "updated": "2026-10-08",
   "routing_attributes": {
     "health": {
       "statuses": [
@@ -469,6 +469,702 @@
       ]
     }
   },
+  "margin_policy": {
+    "lambda_default": 0.5,
+    "unit": "quality points given up per cost point gained (both on the 1-10 registry scale)",
+    "status": "recorded for M2 (lane layer); resolver.js does not apply the margin rule yet",
+    "set_by": {
+      "evidence": "evidence/defaults-baseline-2026-10-08.md",
+      "node": "node_01M4C5P20MBBV11YNB5FM9359A",
+      "date": "2026-10-07",
+      "approved_by": "nick",
+      "approved_via": "MeatySkills PR merge of registry v2 (routing M1)"
+    }
+  },
+  "task_class_defaults": {
+    "exploration": {
+      "holders": [
+        "claude/claude-haiku-5-5",
+        "ica/gpt-5.6-luna",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 5.5,
+      "quality": {
+        "w_intelligence": 0.4,
+        "w_taste": 0.1,
+        "w_speed": 0.5
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/positioning-2026-10-07.md",
+        "node": "node_01M4C58QYW0KP7987JWADP8YKV",
+        "date": "2026-10-07",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "32bc7fad7ef6b053"
+      }
+    },
+    "documentation": {
+      "holders": [
+        "ica/gpt-5.6-luna",
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 6.0,
+      "quality": {
+        "w_intelligence": 0.4,
+        "w_taste": 0.4,
+        "w_speed": 0.2
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/positioning-2026-10-07.md",
+        "node": "node_01M4C58QYW0KP7987JWADP8YKV",
+        "date": "2026-10-07",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "14341f7c2761c6dd"
+      }
+    },
+    "mechanical": {
+      "holders": [
+        "ica/gpt-5.6-luna",
+        "ica/gemma-4-26b-a4b-it",
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.1,
+        "w_speed": 0.4
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/positioning-2026-10-07.md",
+        "node": "node_01M4C58QYW0KP7987JWADP8YKV",
+        "date": "2026-10-07",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "1849aa47fda475f5"
+      }
+    },
+    "second_opinion": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "ica/gemini-3.6-flash",
+        "ica/gemma-4-26b-a4b-it",
+        "claude/claude-haiku-5-5"
+      ],
+      "effort": "medium",
+      "bar": 3.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.3,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "codex/gpt-6.1-sol"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/positioning-2026-10-07.md",
+        "node": "node_01M4C58QYW0KP7987JWADP8YKV",
+        "date": "2026-10-07",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "c119b80c6d95a55a"
+      }
+    },
+    "implementation": {
+      "holders": [
+        "claude/claude-sonnet-5-5",
+        "claude/claude-sonnet-5"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.3,
+        "w_speed": 0.2
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [
+        "execution.file_edit"
+      ],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-09-28",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "8a052e0d487e42fe"
+      }
+    },
+    "design_judgment": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.5,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-09-28",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "ee6097f3ab9d8488"
+      }
+    },
+    "raw_strength": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.1,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-09-30",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "7078ad6eb7f31dca"
+      }
+    },
+    "web_research": {
+      "holders": [
+        "gemini/gemini-3.6-flash",
+        "gemini/gemini-3.5-flash",
+        "ica/gemini-3.1-pro-preview"
+      ],
+      "effort": "medium",
+      "bar": 6.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.2,
+        "w_speed": 0.3
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "ica/gemini-3.1-pro-preview"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-07-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "1e512957ad734f5d"
+      }
+    },
+    "code_review": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "claude/claude-sonnet-5-5",
+        "claude/claude-sonnet-5"
+      ],
+      "effort": "medium",
+      "bar": 6.5,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.3,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "codex/gpt-6.1-sol"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/positioning-2026-10-07.md",
+        "node": "node_01M4C58QYW0KP7987JWADP8YKV",
+        "date": "2026-10-07",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "8640e0a44af1ac96"
+      }
+    },
+    "image_generation": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "ica/gpt-5.6-terra",
+        "nano-banana/nano-banana-2",
+        "nano-banana/nano-banana-pro"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": "nano-banana/nano-banana-pro"
+      },
+      "requires_capabilities": [
+        "tools.image_generation"
+      ],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-09-25",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "cde56f3dadbd0152"
+      }
+    },
+    "svg_generation": {
+      "holders": [
+        "claude/claude-fable-5-1",
+        "ica/gemini-3.1-pro-preview",
+        "gemini/gemini-3.5-flash",
+        "gemini/gemini-3.6-flash"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-07-28",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "8e136c1ca7f82923"
+      }
+    },
+    "video_generation": {
+      "holders": [
+        "sora/sora-2"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": null
+      },
+      "requires_capabilities": [
+        "video_output"
+      ],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "bb93ab939bbda023"
+      }
+    },
+    "review": {
+      "holders": [
+        "ica/gpt-5.6-sol"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M122PQQ86YWJWDA9GT83PBWQ",
+        "date": "2026-08-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "d1582347b215b211"
+      }
+    },
+    "adjudication": {
+      "holders": [
+        "ica/gpt-5.6-sol"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M122PQQ86YWJWDA9GT83PBWQ",
+        "date": "2026-08-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "d1582347b215b211"
+      }
+    },
+    "critique": {
+      "holders": [
+        "ica/gpt-5.6-sol"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M122PQQ86YWJWDA9GT83PBWQ",
+        "date": "2026-08-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "d1582347b215b211"
+      }
+    },
+    "advanced_sol": {
+      "holders": [
+        "codex/gpt-6-astra",
+        "claude/claude-fable-5-1"
+      ],
+      "effort": "medium",
+      "bar": 9.0,
+      "quality": {
+        "w_intelligence": 0.9,
+        "w_taste": 0.1,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": null,
+        "date": "2026-09-09",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5d9c85e3ca527f53"
+      }
+    },
+    "orchestration": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "mode_d": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "verdict": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "council_review": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "synthesis": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "schema_recovery": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    },
+    "cross_wave_merge": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "set_by": {
+        "evidence": "evidence/defaults-baseline-2026-10-08.md",
+        "node": "node_01M3F4F5G93P21P1WAH565MAYQ",
+        "date": "2026-09-27",
+        "approved_by": "nick",
+        "approved_via": "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file",
+        "fingerprint": "5bd4008474d132e3"
+      }
+    }
+  },
   "must_stay_primary": [
     "orchestration",
     "verdict",
@@ -665,7 +1361,19 @@
       "pricing": {
         "input_per_mtok_usd": 4,
         "output_per_mtok_usd": 20,
-        "cache_read_per_mtok_usd": 0.2
+        "cache_read_per_mtok_usd": 0.2,
+        "cache_write_5m_per_mtok_usd": 5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -744,6 +1452,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 5,
+        "output_per_mtok_usd": 25,
+        "cache_read_per_mtok_usd": 0.5,
+        "cache_write_5m_per_mtok_usd": 6.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -797,6 +1522,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 5,
+        "output_per_mtok_usd": 25,
+        "cache_read_per_mtok_usd": 0.5,
+        "cache_write_5m_per_mtok_usd": 6.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -933,7 +1675,18 @@
         "input_per_mtok_usd": 2,
         "output_per_mtok_usd": 10,
         "cache_read_per_mtok_usd": 0.2,
-        "cache_write_per_mtok_usd": 2.5
+        "cache_write_5m_per_mtok_usd": 2.5,
+        "as_of": "2026-09-28",
+        "source": "https://platform.claude.com/docs/en/models/overview"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "deterministic",
       "status": "active",
@@ -987,7 +1740,20 @@
       "pricing": {
         "input_per_mtok_usd": 2,
         "output_per_mtok_usd": 10,
-        "cache_read_per_mtok_usd": 0.2
+        "cache_read_per_mtok_usd": 0.2,
+        "cache_write_5m_per_mtok_usd": 2.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "basis": "$2/$10 is the standard price: the page's footnote (2026-09-27) says the scheduled 2026-09-01 rise to $3/$15 did not occur"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "deterministic",
       "status": "active",
@@ -1041,6 +1807,23 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": 3,
+        "output_per_mtok_usd": 15,
+        "cache_read_per_mtok_usd": 0.3,
+        "cache_write_5m_per_mtok_usd": 3.75,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -1091,6 +1874,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "observed_ids": [
@@ -1146,7 +1947,20 @@
       "pricing": {
         "input_per_mtok_usd": 0.1,
         "output_per_mtok_usd": 0.5,
-        "cache_read_per_mtok_usd": 0.01
+        "cache_read_per_mtok_usd": 0.01,
+        "cache_write_5m_per_mtok_usd": 0.125,
+        "as_of": "2026-10-07",
+        "source": "https://platform.claude.com/docs/en/models/overview",
+        "basis": "cache_write_5m uses the standard 1.25x-of-input multiplier, not a published quote; prompts above 100K tokens re-price the whole request at 5x (positioning report 2026-10-07)"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "stochastic",
       "status": "active",
@@ -1185,6 +1999,23 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": 1,
+        "output_per_mtok_usd": 5,
+        "cache_read_per_mtok_usd": 0.1,
+        "cache_write_5m_per_mtok_usd": 1.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "observed_ids": [
@@ -1244,7 +2075,20 @@
       "pricing": {
         "input_per_mtok_usd": 10,
         "output_per_mtok_usd": 50,
-        "cache_read_per_mtok_usd": 0.25
+        "cache_read_per_mtok_usd": 0.25,
+        "cache_write_5m_per_mtok_usd": 12.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "basis": "cache hit is 0.025x base input for Fable 5.1 (page footnote)"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "broken",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -1307,6 +2151,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 10,
+        "output_per_mtok_usd": 50,
+        "cache_read_per_mtok_usd": 1,
+        "cache_write_5m_per_mtok_usd": 12.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "allowed_dispatch_lanes": [
@@ -1346,6 +2207,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1382,6 +2261,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1417,6 +2314,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1454,6 +2369,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1564,6 +2497,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1602,6 +2553,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1648,6 +2617,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1710,6 +2697,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1861,7 +2866,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 10,
-        "output_per_mtok_usd": 50
+        "output_per_mtok_usd": 50,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -1925,7 +2944,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
-        "output_per_mtok_usd": 10
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -1985,7 +3018,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
-        "output_per_mtok_usd": 10
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -2050,7 +3097,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 0.1,
-        "output_per_mtok_usd": 0.5
+        "output_per_mtok_usd": 0.5,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -2100,6 +3161,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2158,6 +3237,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2238,6 +3335,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2275,6 +3390,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2312,6 +3445,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2349,6 +3500,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2671,6 +3840,24 @@
         "bob-shell-delegate"
       ],
       "max_context": 40000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "local Bob shell on our hardware: no per-token price"
+      },
+      "capabilities": {
+        "context_window": 40000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2701,6 +3888,30 @@
       "related_skills": [
         "nano-banana"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": true,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -2731,6 +3942,30 @@
       "related_skills": [
         "nano-banana-pro"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": true,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -2760,6 +3995,30 @@
       "related_skills": [
         "sora"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": false,
+        "video_output": true
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [

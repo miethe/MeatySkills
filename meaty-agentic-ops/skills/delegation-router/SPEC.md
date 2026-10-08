@@ -87,8 +87,19 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
 
 1. **MUST-stay override (first, unconditional)** — if `task_class` ∈ MUST-stay set, return
    `chosen_plugin_id='claude'`, `agent_type_id='claude'`, regardless of input `provider`.
-2. **Registry chain resolution** — resolve `task_class` to its `routing_policy.chain` in
-   `model-registry.yaml`; skip `enabled:false` instances and `enabled:false` classes.
+2. **Registry chain resolution** — resolve `task_class` to its **`task_class_defaults.holders`**
+   (registry v2, 2026-10-08, routing M1 `node_01M4C696HR9WVV6BVZ2FXQZH0Y`) or, for a registry or
+   class without a defaults entry, its `routing_policy.chain` (now a derived copy the builder
+   proves equal to the holders). Skip `enabled:false` instances and `enabled:false` classes. A
+   `routing.local.toml` `routing_policy_overrides` entry for a non-floored class suspends that
+   class's defaults entry, so the human override channel still wins.
+2b. **Bar gate (scores are read)** — for a `task_class_defaults` class, each holder's class quality
+   `q = w_intelligence*I + w_taste*T + w_speed*S` is computed from its registry `scores`; a holder
+   with a measured `q < bar` is skipped and recorded in `class_default.below_bar`. A weighted score
+   that is `UNMEASURED` yields `q = null` and is never gated (`bar_check: unmeasured`). The pick's
+   trail is emitted as the optional `class_default` record field (holder, q, bar, effort,
+   `set_by` evidence + fingerprint). `margin.lambda`, `frontier` and `requires_capabilities` are
+   recorded for M2/M3 and not applied yet. Pure arithmetic over registry data: still zero model calls.
 3. **Chain walk** — walk the chain top-down, honoring `priority`, availability, and capability
    match (`when_to_use`). First available instance wins. The chain order IS the free-first ordering.
 4. **Determinism filter** — when `resume_active=true` AND the stage is structural, exclude any

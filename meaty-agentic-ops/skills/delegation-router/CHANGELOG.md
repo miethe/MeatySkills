@@ -3,6 +3,35 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-10-08 — Registry v2: complete model facts + evaluated task-class defaults (routing M1)
+
+- Node `node_01M4C696HR9WVV6BVZ2FXQZH0Y` (plan agentic_meta_dev
+  `docs/project_plans/implementation_plans/routing-mechanization-v1.md` M1, layers 1+2). `version: 2`.
+- **Layer 1 (facts):** every routable model row carries `pricing` with all four per-MTok fields
+  (`input`, `output`, `cache_read`, the new `cache_write_5m`) plus `as_of`/`source`; an unknown list
+  price is an explicit `null` with a mandatory `basis`, never approximated. Every routable row carries
+  `scores` (the three media rows explicitly `UNMEASURED`) and a model-level `capabilities` block
+  (`context_window` == `max_context`, `max_output`, `tool_use`, `forced_tool_choice` — `broken` on
+  Fable 5.1 — `reasoning_effort_control`, `image_output`, `video_output`). Sonnet 5.5's
+  `cache_write_per_mtok_usd` is renamed `cache_write_5m_per_mtok_usd`. agentic_meta_dev's
+  `hop_pricing.MODEL_PRICES` is now generated from these rows.
+- **Layer 2 (defaults):** new `task_class_defaults` covers all 23 vocabulary classes (holders,
+  effort, bar, quality weights, `margin.lambda`, `frontier`, `requires_capabilities`, `set_by`);
+  `margin_policy.lambda_default: 0.5`. `routing_policy` becomes its derived copy. Holders are the
+  post-positioning chains verbatim (Haiku 5.5 a role holder, `node_01M4C58QYW0KP7987JWADP8YKV`);
+  the five MUST-stay classes with no chain (`verdict`, `council_review`, `synthesis`,
+  `schema_recovery`, `cross_wave_merge`) gain the Opus 5.5 spine holders per MODEL-ROUTING §5 —
+  the ONLY resolution change (golden diff: those five, previously "the requested model").
+- **Builder:** `build-model-registry.py` validates v2 (version-gated) and REFUSES a defaults entry
+  whose fingerprint is not recorded on a row of an existing `evidence/*.md` file, a `routing_policy`
+  chain that drifts from its holders, and a holder whose measured q is below its class bar.
+  `--stamp` prints fingerprints; `--evidence-root` overrides the evidence directory.
+- **Resolver:** walks `task_class_defaults.holders` first, reads `scores` for the bar gate, and
+  emits an optional `class_default` trail on the RoutingRecord. New test
+  `tests/test-task-class-defaults.js` (golden per class).
+- Flagged, not changed: `svg_generation` leg 1 auto-routes `claude-fable-5-1`, against
+  MODEL-ROUTING §1.5 (Fable explicit opt-in only) — recorded in `evidence/defaults-baseline-2026-10-08.md`.
+
 ## 2026-09-30 — GPT-6.1 Sol supersedes GPT-6 Sol (personal Codex lane)
 
 - Nick decision (verbatim, /chat): "I did use 6.1-sol in Codex directly to create the hand-off, so

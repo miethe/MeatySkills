@@ -492,6 +492,14 @@ function applyLocalOverrides(registry, overrides, registryMustStay, floorFor = n
         continue;
       }
       nextPolicy[taskClass] = { ...(basePolicy[taskClass] || {}), ...override };
+      // v2: task_class_defaults is what the resolver walks first, so an applied override must
+      // suspend that class's defaults entry or the override would silently stop working.
+      if (next.task_class_defaults && next.task_class_defaults[taskClass]) {
+        if (next.task_class_defaults === registry.task_class_defaults) {
+          next.task_class_defaults = { ...registry.task_class_defaults };
+        }
+        delete next.task_class_defaults[taskClass];
+      }
     }
     next.routing_policy = nextPolicy;
   }
@@ -843,6 +851,54 @@ function resolveChainEntry(registry, entry) {
 }
 
 /**
+ * Registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y): the class policy the resolver walks.
+ *
+ * `task_class_defaults[cls].holders` is the AUTHORITY (role holders set by evaluation, each entry
+ * carrying set_by evidence the builder verified). `routing_policy[cls].chain` is its derived copy,
+ * still honoured for a registry without a defaults entry for the class (v1/foreign registries,
+ * test fixtures) and for a class whose defaults entry a routing.local.toml override suspended.
+ *
+ * @returns {{policy: Object, policyKey: string, source: string, defaults: Object|null}|null}
+ */
+function classPolicyFor(registry, task_class) {
+  const keys = routingPolicyKeyFor(task_class) || [];
+  const defaults = registry.task_class_defaults || {};
+  for (const k of keys) {
+    const d = defaults[k];
+    if (d && Array.isArray(d.holders) && d.holders.length > 0) {
+      return { policy: { chain: d.holders, enabled: true }, policyKey: k, source: 'task_class_defaults', defaults: d };
+    }
+  }
+  const routingPolicy = registry.routing_policy || {};
+  for (const k of keys) {
+    if (routingPolicy[k]) return { policy: routingPolicy[k], policyKey: k, source: 'routing_policy', defaults: null };
+  }
+  return null;
+}
+
+const QUALITY_KEYS = ['w_intelligence', 'w_taste', 'w_speed'];
+
+/**
+ * q on the 1-10 class quality scale from the model's registry `scores` and the class weights.
+ * Returns null when any score carrying a non-zero weight is unmeasured. Mirrors
+ * build-model-registry.py class_quality() exactly (the builder proves every holder clears its bar
+ * at build time; this re-reads the scores at resolve time so a later re-score is honoured).
+ * Pure arithmetic over registry data — no I/O, no model call.
+ */
+function classQuality(modelEntry, weights) {
+  const scores = (modelEntry && modelEntry.scores) || {};
+  let total = 0;
+  for (const wk of QUALITY_KEYS) {
+    const w = (weights && typeof weights[wk] === 'number') ? weights[wk] : 0;
+    if (w === 0) continue;
+    const s = scores[wk.slice(2)];
+    if (typeof s !== 'number') return null;
+    total += w * s;
+  }
+  return Math.round(total * 1e6) / 1e6;
+}
+
+/**
  * Map a task_class (which may use hyphen or underscore variants) to a routing_policy key.
  */
 function routingPolicyKeyFor(task_class) {
@@ -976,7 +1032,6 @@ function resolveFromRegistry(input) {
     loadedRegistry, localOverrides, registryMustStay,
     tc => minRungFor(loadedRegistry, tc, registryMustStay)
   );
-  const routingPolicy = registry.routing_policy || {};
 
   // ----- Sovereignty floor (registry task_class_sovereignty ∪ legacy must_stay desugar) -----
   //
@@ -1069,6 +1124,8 @@ function resolveFromRegistry(input) {
   // machine state file (§2.4.5.1 structural precedence).
   const humanTargets = humanOverriddenTargets(localOverrides);
   let feedbackProvenance = null;
+  // v2: the task_class_defaults trail (which holder, its q vs the bar, the evidence behind it).
+  let classDefault = null;
 
   // FEEDBACK IMMUNITY IS NOW KEYED ON "DECLARES A MINIMUM", NOT ON "IS MUST-STAY".
   //
@@ -1125,12 +1182,13 @@ function resolveFromRegistry(input) {
 
   // 2. routing_policy chain (free-first): walk the chain for this task_class top-down.
   if (!chosen) {
-    const keys = routingPolicyKeyFor(task_class) || [];
-    let policy = null;
-    let policyKey = null;
-    for (const k of keys) {
-      if (routingPolicy[k]) { policy = routingPolicy[k]; policyKey = k; break; }
-    }
+    const cp = classPolicyFor(registry, task_class);
+    const policy = cp ? cp.policy : null;
+    const policyKey = cp ? cp.policyKey : null;
+    const policyLabel = cp && cp.source === 'task_class_defaults'
+      ? `task_class_defaults['${policyKey}'] holders`
+      : `routing_policy['${policyKey}'] chain`;
+    const belowBar = [];
     if (policy && policy.enabled !== false && Array.isArray(policy.chain)) {
       // 2a. Empirical-feedback re-rank (DI-1 / §2.4.5.2). A pure (chain, feedback) → chain'
       //     reorder applied BEFORE the position-based walk, so the walk itself is untouched:
@@ -1155,10 +1213,37 @@ function resolveFromRegistry(input) {
         // a list and never removes, so a floor enforced downstream of it cannot be re-ranked
         // across. Never express the floor as a ranking preference.
         if (!clearsFloor(cand, floor)) continue;
+        // v2 bar gate: the class quality bar is READ here. A holder whose measured q falls below
+        // the bar is skipped and recorded; an unmeasured q is never gated (fails toward the
+        // class default, per the plan's principle 4).
+        let q = null;
+        if (cp && cp.defaults) {
+          q = classQuality(cand.modelEntry, cp.defaults.quality);
+          if (q !== null && typeof cp.defaults.bar === 'number' && q < cp.defaults.bar) {
+            belowBar.push({ holder: entry, q });
+            continue;
+          }
+        }
         chosen = cand;
         selectionReason = fb.applied
-          ? `routing_policy['${policyKey}'] chain free-first (empirical-feedback re-ranked): selected '${entry}'`
-          : `routing_policy['${policyKey}'] chain free-first: selected '${entry}'`;
+          ? `${policyLabel} (empirical-feedback re-ranked): selected '${entry}'`
+          : `${policyLabel}: selected '${entry}'`;
+        if (cp && cp.defaults) {
+          const d = cp.defaults;
+          classDefault = {
+            task_class: policyKey,
+            source: 'task_class_defaults',
+            holder: entry,
+            holder_index: policy.chain.indexOf(entry),
+            q,
+            bar: typeof d.bar === 'number' ? d.bar : null,
+            bar_check: q === null ? 'unmeasured' : 'pass',
+            below_bar: belowBar.slice(),
+            effort: d.effort || null,
+            set_by_evidence: (d.set_by && d.set_by.evidence) || null,
+            set_by_fingerprint: (d.set_by && d.set_by.fingerprint) || null,
+          };
+        }
         if (fb.applied) {
           feedbackProvenance = buildFeedbackProvenance({
             taskClass: policyKey,
@@ -1171,6 +1256,10 @@ function resolveFromRegistry(input) {
       }
     } else if (policy && policy.enabled === false) {
       selectionReason = `routing_policy['${policyKey}'] disabled`;
+    }
+    if (!chosen && belowBar.length > 0) {
+      selectionReason = `${policyLabel}: every reachable holder measured below the class bar ` +
+        `(${belowBar.map(b => `${b.holder} q=${b.q}`).join(', ')}); falling through to model ranking`;
     }
   }
 
@@ -1275,6 +1364,9 @@ function resolveFromRegistry(input) {
     lane: ladderLive ? chosen.lane : null,
     sovereignty: ladderLive ? chosen.sovereignty : null,
     sovereignty_floor: floor ? { min_rung: floor.min_rung, reason: floor.reason } : null,
+    // 18th field (additive, optional, v2): non-null only when selection came from
+    // task_class_defaults, so its presence is itself the signal that evaluated defaults decided.
+    class_default: classDefault,
   };
 
   // validateRoutingRecord asserts sovereignty >= sovereignty_floor when both are present. That
@@ -1323,11 +1415,10 @@ function buildRegistryFallbackChain(registry, chosen, task_class, excludeNondete
   const chain = [];
   const seen = new Set();
 
-  // Prefer the task_class routing_policy chain tail (entries after the chosen one).
-  const routingPolicy = registry.routing_policy || {};
-  const keys = routingPolicyKeyFor(task_class) || [];
-  let policy = null;
-  for (const k of keys) { if (routingPolicy[k]) { policy = routingPolicy[k]; break; } }
+  // Prefer the task_class policy tail (entries after the chosen one): task_class_defaults holders
+  // when the class has them (v2), else the routing_policy chain.
+  const cp = classPolicyFor(registry, task_class);
+  const policy = cp ? cp.policy : null;
 
   if (policy && Array.isArray(policy.chain)) {
     for (const entry of policy.chain) {
@@ -1926,6 +2017,8 @@ function resolveSandwich(baseInput, legOverrides) {
 // ---------------------------------------------------------------------------
 
 module.exports = {
+  classPolicyFor,
+  classQuality,
   resolve,
   resolveSandwich,
   parseToml,           // exported for tests

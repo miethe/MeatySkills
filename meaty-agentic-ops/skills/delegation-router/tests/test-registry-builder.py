@@ -133,3 +133,85 @@ assert sol61["status"] == "active", sol61["status"]
 assert sol61["providers"][0]["enabled"] is True and sol61["providers"][0]["model_id"] == "gpt-6.1-sol"
 assert sol61["providers"][0]["account_relationship"] == "personal"
 assert "LEGACY" in registry["models"]["gpt-6-sol"]["descriptor"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y): model facts + task_class_defaults.
+# Negative control first (the committed registry is valid, asserted above), then one planted
+# positive per rule, each proving the builder REFUSES rather than renders.
+# ──────────────────────────────────────────────────────────────────────────────
+import tempfile  # noqa: E402
+
+assert registry["version"] == 2
+vocabulary = builder.load_vocabulary()
+tcd = registry["task_class_defaults"]
+assert sorted(tcd) == sorted(vocabulary), sorted(set(tcd) ^ set(vocabulary))
+
+# Every routable row: four price keys (incl. cache_write_5m), scores, capabilities.
+for key, model in registry["models"].items():
+    if not builder.is_routable(model):
+        continue
+    assert set(builder.PRICE_KEYS) <= set(model["pricing"]), key
+    assert set(builder.SCORE_KEYS) <= set(model["scores"]), key
+    assert set(builder.CAPABILITY_KEYS) <= set(model["capabilities"]), key
+assert registry["models"]["claude-fable-5-1"]["capabilities"]["forced_tool_choice"] == "broken"
+assert registry["models"]["claude-opus-5-5"]["pricing"]["cache_write_5m_per_mtok_usd"] == 5
+
+# Positioning-study role map is applied THROUGH task_class_defaults (Haiku 5.5 as a role holder).
+assert tcd["exploration"]["holders"][0] == "claude/claude-haiku-5-5"
+assert tcd["exploration"]["set_by"]["evidence"] == "evidence/positioning-2026-10-07.md"
+# routing_policy is the derived copy and agrees with the holders it was derived from.
+for cls, policy in registry["routing_policy"].items():
+    assert policy["chain"] == tcd[cls]["holders"], cls
+
+
+def refused(mutate, needle):
+    broken = copy.deepcopy(registry)
+    mutate(broken)
+    errors = validate_registry(broken, "planted-positive")
+    assert any(needle in e for e in errors), (needle, errors)
+
+
+# A defaults change without re-stamping is refused.
+refused(lambda r: r["task_class_defaults"]["exploration"].__setitem__("bar", 5.0), "changed without re-stamping")
+# Re-stamping without recorded evidence is refused too: the new fingerprint is on no evidence row.
+def restamp_without_evidence(r):
+    entry = r["task_class_defaults"]["exploration"]
+    entry["bar"] = 5.0
+    entry["set_by"]["fingerprint"] = builder.defaults_fingerprint(entry)
+refused(restamp_without_evidence, "a defaults change without recorded evidence is refused")
+# A missing evidence path is refused.
+refused(lambda r: r["task_class_defaults"]["mechanical"]["set_by"].__setitem__("evidence", "evidence/nope.md"), "does not exist")
+# An evidence path that escapes the evidence root is refused.
+refused(lambda r: r["task_class_defaults"]["mechanical"]["set_by"].__setitem__("evidence", "../../../../etc/hosts"), "does not exist")
+# Vocabulary coverage.
+refused(lambda r: r["task_class_defaults"].pop("verdict"), "missing vocabulary class 'verdict'")
+# The derived routing_policy copy may not drift from the holders.
+refused(lambda r: r["routing_policy"]["exploration"].__setitem__("chain", ["ica/gpt-5.6-luna"]), "DERIVED copy")
+# A holder below its class bar (scores are facts the builder reads) is refused.
+refused(lambda r: r["models"]["claude-haiku-5-5"].__setitem__("scores", {"cost": 10, "intelligence": 1, "taste": 1, "speed": 1}), "below the class bar")
+# frontier.required forces lambda 0.
+refused(lambda r: r["task_class_defaults"]["design_judgment"]["margin"].__setitem__("lambda", 0.5), "forces margin.lambda to 0")
+# Layer 1: cache_write_5m absent, a null price without basis, a context_window that disagrees.
+refused(lambda r: r["models"]["claude-opus-5-5"]["pricing"].pop("cache_write_5m_per_mtok_usd"), "pricing missing")
+def null_without_basis(r):
+    r["models"]["gpt-6-luna"]["pricing"].pop("basis")
+refused(null_without_basis, "must state its basis")
+refused(lambda r: r["models"]["claude-sonnet-5-5"]["capabilities"].__setitem__("context_window", 200000), "one fact, one value")
+refused(lambda r: r["models"]["claude-sonnet-5-5"].pop("capabilities"), "must declare capabilities")
+
+# A v1 registry (no task_class_defaults) is still valid: the v2 rules are version-gated.
+v1 = copy.deepcopy(registry)
+v1["version"] = 1
+del v1["task_class_defaults"]
+assert validate_registry(v1, "v1-compat") == [], validate_registry(v1, "v1-compat")
+
+# --stamp prints the fingerprints the evidence files record (authoring aid round-trip).
+for cls, entry in tcd.items():
+    assert entry["set_by"]["fingerprint"] == builder.defaults_fingerprint(entry), cls
+
+# Evidence resolution is rooted at --evidence-root: an empty root refuses every class.
+with tempfile.TemporaryDirectory() as empty_root:
+    errors = validate_registry(copy.deepcopy(registry), "evidence-root", evidence_root=empty_root)
+    assert sum("does not exist under" in e for e in errors) == len(tcd), errors
+
+print("test-registry-builder.py: v2 assertions passed")

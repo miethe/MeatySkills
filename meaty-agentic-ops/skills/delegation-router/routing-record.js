@@ -78,6 +78,11 @@
  *                                                    'unknown' sentinel, or null when the registry
  *                                                    declares no ladder at all. 16th field (additive,
  *                                                    optional; default null).
+ * @property {Object|null}     class_default      - Registry v2 (routing M1): the task_class_defaults trail
+ *                                                  when evaluated defaults decided the pick — {task_class,
+ *                                                  source, holder, holder_index, q, bar, bar_check,
+ *                                                  below_bar, effort, set_by_evidence, set_by_fingerprint}.
+ *                                                  null otherwise. Additive and optional.
  * @property {Object|null}     sovereignty_floor  - The minimum this task class REQUIRED and why:
  *                                                    {min_rung, reason} where reason ∈
  *                                                    SOVEREIGNTY_MINIMUM_REASONS. 17th field
@@ -428,6 +433,22 @@ function validateRoutingRecord(record) {
     );
   }
 
+  // class_default (v2): additive + optional. When present it must say which holder won and whether
+  // the bar was checked against a measured q or recorded as unmeasured.
+  if (record.class_default !== undefined && record.class_default !== null) {
+    const cd = record.class_default;
+    if (typeof cd !== 'object' || typeof cd.holder !== 'string' || typeof cd.task_class !== 'string' ||
+        !['pass', 'unmeasured'].includes(cd.bar_check) || !Array.isArray(cd.below_bar)) {
+      throw new Error(
+        'RoutingRecord.class_default must be {task_class, holder, bar_check: pass|unmeasured, below_bar[]} or null; ' +
+        `got ${JSON.stringify(cd)}`
+      );
+    }
+    if (cd.bar_check === 'pass' && !(typeof cd.q === 'number' && typeof cd.bar === 'number' && cd.q >= cd.bar)) {
+      throw new Error(`RoutingRecord.class_default claims bar_check=pass but q=${cd.q} < bar=${cd.bar}`);
+    }
+  }
+
   if (record.sovereignty_floor !== undefined && record.sovereignty_floor !== null) {
     const floor = record.sovereignty_floor;
     if (typeof floor !== 'object' || Array.isArray(floor)) {
@@ -526,6 +547,7 @@ function finalizeRoutingRecord(record, taskClass) {
   if (record.lane === undefined) record.lane = null;
   if (record.sovereignty === undefined) record.sovereignty = null;
   if (record.sovereignty_floor === undefined) record.sovereignty_floor = null;
+  if (record.class_default === undefined) record.class_default = null;
   const mustStay = taskClass !== undefined && MUST_STAY_PRIMARY_CLASSES.includes(taskClass);
   const nullProvider = CONTEXT_REF_NULL_PROVIDERS.includes(record.chosen_plugin_id);
   if (mustStay || nullProvider) {
@@ -566,6 +588,7 @@ function createEmptyRecord() {
     lane: null,
     sovereignty: null,
     sovereignty_floor: null,
+    class_default: null,
   };
 }
 
