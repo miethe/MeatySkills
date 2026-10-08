@@ -3,6 +3,47 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-10-08 (later) — Cross-provider task-class defaults (routing M1, Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE)
+
+- **Nick, two decisions.** `svg_generation` moves to Opus 5.5 and Fable 5.1 stays explicit opt-in.
+  Defaults are also cross-provider per class: many domains may be Opus 5.5 / Sol 6.1 equivalent, and a
+  select few have a priority.
+- **Every `task_class_defaults` row now carries `cross_family`**, which holds:
+  - `candidates`, which always evaluate Opus 5.5 and GPT-6.1 Sol;
+  - `equivalence: equivalent | priority | unmeasured`, plus `equivalent` / `priority`;
+  - a `basis` pointer;
+  - `excluded`, each entry with an axis (`capability | authority | doctrine | bar`) and its evidence.
+- **The builder refuses** a row that:
+  - evaluates neither frontier model;
+  - has an `unmeasured` holders[0] that is not the cheapest candidate;
+  - has an `equivalent` holders[0] that is not the Cost pick;
+  - has a same-family first fallback when another family is a candidate;
+  - has a `priority` that is not holders[0];
+  - has a bar exclusion that does not actually measure below the bar;
+  - uses Fable as a holder outside `advanced_sol`.
+- **Tally, from `evidence/cross-provider-2026-10-08.md`:**
+
+  | Equivalence | Count | Classes |
+  |---|---|---|
+  | equivalent | 1 | `exploration`: Haiku 5.5 / ICA Luna / GPT-6 Luna, measured tie |
+  | Opus priority | 4 | `design_judgment`; `svg_generation`; `orchestration` (capability); `mode_d` (authority) |
+  | Sol priority | 1 | `raw_strength` |
+  | other-model priority | 8 | per study, doctrine or capability |
+  | unmeasured | 9 | see below |
+
+  The positioning study ran no Opus or Sol arm. The unmeasured classes and their defaults:
+  - `verdict`, `council_review`, `synthesis`, `schema_recovery` and `cross_wave_merge` default to
+    GPT-6.1 Sol, the cheaper eligible model, with Opus 5.5 as the first fallback;
+  - `review`, `adjudication` and `critique` keep ICA 5.6 Sol;
+  - `implementation` keeps Sonnet 5.5, because Codex is read-only at effort medium
+    (`node_01M4EJC19SDMP1Z6F14G9QDDFH`).
+- **Resolution changes against the M1 golden:**
+  - the five judgment must-stay classes now resolve to `codex/gpt-6.1-sol`;
+  - `svg_generation` now resolves to Opus 5.5;
+  - a tool-needing `review` lands on Sonnet 5.5, and a tool-needing `adjudication` / `critique`
+    lands on Opus 5.5 (before, all three resolved to the caller's model);
+  - `design_judgment` and `raw_strength` take the other family as their first fallback.
+
 ## 2026-10-08 — Registry v2: complete model facts + evaluated task-class defaults (routing M1)
 
 - Node `node_01M4C696HR9WVV6BVZ2FXQZH0Y` (plan agentic_meta_dev

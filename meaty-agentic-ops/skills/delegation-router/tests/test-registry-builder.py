@@ -51,7 +51,10 @@ assert sonnet5_pricing["output_per_mtok_usd"] == 10, sonnet5_pricing
 # defaulting to Sonnet 5.5. This is the negative control that would have caught a blanket
 # "Sonnet 5.5 everywhere" widening.
 assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude/claude-opus-5-5"
-assert registry["routing_policy"]["raw_strength"]["chain"][:2] == ["codex/gpt-6.1-sol", "codex/gpt-6-sol"]
+# 2026-10-08, Nick (cross-provider defaults): the first fallback is the OTHER family's frontier model,
+# ahead of the same-family legacy entry, in both priority classes.
+assert registry["routing_policy"]["raw_strength"]["chain"][:3] == ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol"]
+assert registry["routing_policy"]["design_judgment"]["chain"][:2] == ["claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
 for task_class in ("implementation", "code_review"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude/claude-opus-5-5" not in chain, \
@@ -158,7 +161,31 @@ assert registry["models"]["claude-opus-5-5"]["pricing"]["cache_write_5m_per_mtok
 
 # Positioning-study role map is applied THROUGH task_class_defaults (Haiku 5.5 as a role holder).
 assert tcd["exploration"]["holders"][0] == "claude/claude-haiku-5-5"
-assert tcd["exploration"]["set_by"]["evidence"] == "evidence/positioning-2026-10-07.md"
+assert tcd["exploration"]["set_by"]["evidence"] == "evidence/cross-provider-2026-10-08.md"
+assert tcd["exploration"]["cross_family"]["equivalence"] == "equivalent"
+
+# Cross-provider defaults (Nick 2026-10-08, req_01M4EFJ6ZBKFXWPHSWEPT9MDVE). Every class evaluates
+# Opus 5.5 AND GPT-6.1 Sol; svg_generation is Opus 5.5 and Fable holds nothing it was not
+# contracted for; unmeasured judgment classes default to the cheaper Sol with Opus first fallback.
+for cls, entry in tcd.items():
+    xf = entry["cross_family"]
+    evaluated = set(xf["candidates"]) | {x["holder"] for x in xf.get("excluded", [])}
+    assert {"claude/claude-opus-5-5", "codex/gpt-6.1-sol"} <= evaluated, cls
+    if "claude/claude-fable-5-1" in entry["holders"]:
+        assert cls == "advanced_sol", cls
+assert tcd["svg_generation"]["holders"][0] == "claude/claude-opus-5-5"
+assert tcd["svg_generation"]["cross_family"]["priority"] == "claude/claude-opus-5-5"
+for cls in ("verdict", "council_review", "synthesis", "schema_recovery", "cross_wave_merge"):
+    assert tcd[cls]["cross_family"]["equivalence"] == "unmeasured", cls
+    assert tcd[cls]["holders"][:2] == ["codex/gpt-6.1-sol", "claude/claude-opus-5-5"], cls
+# Single-family only on a capability or authority exclusion of the other family's frontier model.
+for cls in ("orchestration", "mode_d"):
+    axes = {x["holder"]: x["axis"] for x in tcd[cls]["cross_family"]["excluded"]}
+    assert axes["codex/gpt-6.1-sol"] in ("capability", "authority"), (cls, axes)
+kinds = {}
+for cls, entry in tcd.items():
+    kinds.setdefault(entry["cross_family"]["equivalence"], []).append(cls)
+assert len(kinds["unmeasured"]) == 9 and len(kinds["equivalent"]) == 1, kinds
 # routing_policy is the derived copy and agrees with the holders it was derived from.
 for cls, policy in registry["routing_policy"].items():
     assert policy["chain"] == tcd[cls]["holders"], cls
@@ -198,6 +225,30 @@ def null_without_basis(r):
 refused(null_without_basis, "must state its basis")
 refused(lambda r: r["models"]["claude-sonnet-5-5"]["capabilities"].__setitem__("context_window", 200000), "one fact, one value")
 refused(lambda r: r["models"]["claude-sonnet-5-5"].pop("capabilities"), "must declare capabilities")
+
+# Cross-family rules (2026-10-08).
+def drop_sol_from_review(r):
+    r["task_class_defaults"]["review"]["cross_family"]["candidates"].remove("codex/gpt-6.1-sol")
+refused(drop_sol_from_review, "'codex/gpt-6.1-sol' must be evaluated")
+def fable_svg(r):
+    e = r["task_class_defaults"]["svg_generation"]
+    e["holders"][0] = "claude/claude-fable-5-1"
+    e["cross_family"]["candidates"].append("claude/claude-fable-5-1")
+refused(fable_svg, "explicit opt-in only")
+def opus_first_unmeasured(r):
+    e = r["task_class_defaults"]["verdict"]
+    e["holders"][:2] = ["claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+refused(opus_first_unmeasured, "defaults to the cheapest candidate")
+def same_family_fallback(r):
+    e = r["task_class_defaults"]["verdict"]
+    e["holders"][:3] = ["codex/gpt-6.1-sol", "codex/gpt-6-sol", "claude/claude-opus-5-5"]
+refused(same_family_fallback, "first fallback must come from another family")
+refused(lambda r: r["task_class_defaults"]["raw_strength"]["cross_family"].__setitem__("priority", "claude/claude-opus-5-5"), "must name holders[0]")
+def fake_bar_exclusion(r):
+    r["task_class_defaults"]["verdict"]["cross_family"]["excluded"].append(
+        {"holder": "claude/claude-opus-5-5", "axis": "bar", "evidence": "planted"})
+refused(fake_bar_exclusion, "excluded on the bar axis")
+refused(lambda r: r["task_class_defaults"]["mode_d"].pop("cross_family"), "cross_family is required")
 
 # A v1 registry (no task_class_defaults) is still valid: the v2 rules are version-gated.
 v1 = copy.deepcopy(registry)

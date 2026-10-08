@@ -52,7 +52,7 @@ const GOLDEN = {
   web_research:     ['ica', 'gemini-3.1-pro-preview', 2],
   code_review:      ['codex', 'gpt-6-luna', 0],
   image_generation: ['codex', 'gpt-6-luna', 0],
-  svg_generation:   ['claude', 'claude-fable-5-1', 0],   // flagged in evidence: Fable 5.1 auto-route
+  svg_generation:   ['claude', 'claude-opus-5-5', 0],    // Nick req_01M4EFJ6ZBKFXWPHSWEPT9MDVE: Opus 5.5; Fable opt-in only
   video_generation: ['sora', 'sora-2', 0],
   // Tool-less Sol holder needs needs_tools:false (node_01M122PQQ86YWJWDA9GT83PBWQ).
   review:           ['ica', 'gpt-5.6-sol', 0, { needs_tools: false }],
@@ -61,11 +61,13 @@ const GOLDEN = {
   advanced_sol:     ['codex', 'gpt-6-astra', 0],
   orchestration:    ['claude', 'claude-opus-5-5', 0],
   mode_d:           ['claude', 'claude-opus-5-5', 0],
-  verdict:          ['claude', 'claude-opus-5-5', 0],
-  council_review:   ['claude', 'claude-opus-5-5', 0],
-  synthesis:        ['claude', 'claude-opus-5-5', 0],
-  schema_recovery:  ['claude', 'claude-opus-5-5', 0],
-  cross_wave_merge: ['claude', 'claude-opus-5-5', 0],
+  // Cross-provider defaults (Nick 2026-10-08): no Opus-vs-Sol evidence, so the cheaper Sol holds the
+  // default and Opus 5.5 is the first fallback. The Codex subscription clears the personal-account floor.
+  verdict:          ['codex', 'gpt-6.1-sol', 0],
+  council_review:   ['codex', 'gpt-6.1-sol', 0],
+  synthesis:        ['codex', 'gpt-6.1-sol', 0],
+  schema_recovery:  ['codex', 'gpt-6.1-sol', 0],
+  cross_wave_merge: ['codex', 'gpt-6.1-sol', 0],
 };
 
 console.log('\n1. golden resolution per vocabulary class');
@@ -87,10 +89,29 @@ for (const [cls, [provider, model, holderIndex, extra]] of Object.entries(GOLDEN
     assert.ok(r.reason.includes(`task_class_defaults['${cls}'] holders`), r.reason);
   });
 }
-test('a tool-needing review leg does not reach the tool-less Sol holder (class_default absent)', () => {
+test('a tool-needing review leg skips the tool-less ICA Sol holder and lands on the cross-family fallback', () => {
   const r = run({ task_class: 'review' });
-  assert.notStrictEqual(r.chosen_plugin_id, 'ica');
-  assert.strictEqual(r.class_default, null);
+  assert.strictEqual(r.chosen_plugin_id, 'claude');
+  // contract-clear review is Sonnet 5.5's role; the label echoes the caller's bare 'sonnet' (as implementation does)
+  assert.ok(['sonnet', 'claude-sonnet-5-5'].includes(r.model), r.model);
+  assert.strictEqual(r.class_default.holder_index, 1);
+  for (const cls of ['adjudication', 'critique']) {          // judgment: Sonnet excluded by doctrine
+    const j = run({ task_class: cls });
+    assert.strictEqual(j.model, 'claude-opus-5-5', cls);
+    assert.strictEqual(j.class_default.holder_index, 1, cls);
+  }
+});
+test('a must-stay judgment class can resolve to the Codex subscription (floor cleared, not pinned to claude)', () => {
+  const r = run({ task_class: 'verdict' });
+  assert.strictEqual(r.chosen_plugin_id, 'codex');
+  assert.ok(r.sovereignty_floor, 'verdict declares a floor');
+  assert.strictEqual(r.routing_feedback, null);
+});
+test('orchestration and mode_d stay Claude on a recorded capability/authority exclusion', () => {
+  for (const cls of ['orchestration', 'mode_d']) {
+    const r = run({ task_class: cls });
+    assert.strictEqual(r.chosen_plugin_id, 'claude', cls);
+  }
 });
 test('positioning role map: Haiku 5.5 is a ROLE HOLDER, first in exploration, never only a price fallback', () => {
   const reg = JSON.parse(fs.readFileSync(REGISTRY_JSON, 'utf8'));
@@ -100,7 +121,8 @@ test('positioning role map: Haiku 5.5 is a ROLE HOLDER, first in exploration, ne
     assert.ok(tcd[cls].holders.includes('claude/claude-haiku-5-5'));
     assert.ok(tcd[cls].holders.includes('codex/gpt-6-luna'));
   }
-  assert.ok(tcd.exploration.set_by.evidence.endsWith('positioning-2026-10-07.md'));
+  assert.ok(tcd.exploration.set_by.evidence.endsWith('cross-provider-2026-10-08.md'));
+  assert.strictEqual(tcd.exploration.cross_family.equivalence, 'equivalent');
 });
 
 // ---------------------------------------------------------------------------

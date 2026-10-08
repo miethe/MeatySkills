@@ -216,6 +216,117 @@ def class_quality(model: dict, weights: dict):
     return round(total, 6)
 
 
+
+# Cross-provider defaults (Nick 2026-10-08, req_01M4EFJ6ZBKFXWPHSWEPT9MDVE): every class compares the two
+# frontier families explicitly, and Fable stays explicit opt-in.
+CROSS_FAMILY_REQUIRED = ("claude/claude-opus-5-5", "codex/gpt-6.1-sol")
+EQUIVALENCE_KINDS = {"equivalent", "priority", "unmeasured"}
+EXCLUSION_AXES = {"capability", "authority", "doctrine", "bar"}
+FABLE_EXPLICIT_ONLY = {"claude/claude-fable-5-1": {"advanced_sol"}}
+
+
+def model_family(model_key: str) -> str:
+    """Vendor family of a model row key; the cross-family fallback rule compares these."""
+    k = str(model_key or "")
+    if k.startswith("claude"):
+        return "anthropic"
+    if k.startswith(("gpt", "sora", "o1", "o3", "o4")):
+        return "openai"
+    if k.startswith(("gemini", "gemma", "nano-banana")):
+        return "google"
+    return k.split("-")[0] or "other"
+
+
+def holder_cost(data: dict, holder: str):
+    """The Cost score a holder is chosen on: the provider instance's cost_score when it declares one
+    (an ICA instance is priced differently from the same model on a subscription), else the model's
+    scores.cost. Higher = cheaper to us. None when unmeasured."""
+    provider, _, model_id = str(holder).partition("/")
+    for model in (data.get("models") or {}).values():
+        for inst in (model or {}).get("providers") or []:
+            if isinstance(inst, dict) and inst.get("provider") == provider and inst.get("model_id") == model_id:
+                if _number(inst.get("cost_score")):
+                    return inst["cost_score"]
+                cost = ((model or {}).get("scores") or {}).get("cost")
+                return cost if _number(cost) else None
+    return None
+
+
+def validate_cross_family(data: dict, cls: str, entry: dict, holders: list) -> list[str]:
+    where = f"task_class_defaults.{cls}.cross_family"
+    xf = entry.get("cross_family")
+    if not isinstance(xf, dict):
+        return [f"{where} is required (v2): the cross-provider comparison behind holders[0]"]
+    errors: list[str] = []
+    candidates = xf.get("candidates")
+    if not isinstance(candidates, list) or not candidates or not all(isinstance(c, str) and "/" in c for c in candidates):
+        return [f"{where}.candidates must be a non-empty list of provider/model_id entries"]
+    for c in candidates:
+        if holder_model(data, c)[1] is None:
+            errors.append(f"{where}: candidate '{c}' is not a declared provider instance")
+    excluded = xf.get("excluded") or []
+    if not isinstance(excluded, list):
+        errors.append(f"{where}.excluded must be a list")
+        excluded = []
+    excluded_holders = []
+    for i, ex in enumerate(excluded):
+        if not isinstance(ex, dict) or not ex.get("holder") or not ex.get("evidence") or ex.get("axis") not in EXCLUSION_AXES:
+            errors.append(f"{where}.excluded[{i}] must be {{holder, axis: {sorted(EXCLUSION_AXES)}, evidence}}")
+            continue
+        excluded_holders.append(ex["holder"])
+        if ex["axis"] == "bar":
+            _, model = holder_model(data, ex["holder"])
+            q = class_quality(model, entry.get("quality") or {}) if model else None
+            if q is None or not _number(entry.get("bar")) or q >= entry["bar"]:
+                errors.append(f"{where}.excluded[{i}]: '{ex['holder']}' is excluded on the bar axis but measures q={q} "
+                              f"against bar {entry.get('bar')}")
+        if ex["holder"] in holders:
+            errors.append(f"{where}: '{ex['holder']}' is excluded but still a holder")
+    for required in CROSS_FAMILY_REQUIRED:
+        if required not in candidates and required not in excluded_holders:
+            errors.append(f"{where}: '{required}' must be evaluated (in candidates or excluded with an axis and evidence)")
+    if holders and holders[0] not in candidates:
+        errors.append(f"{where}: holders[0] '{holders[0]}' must be one of the candidates")
+    if not xf.get("basis"):
+        errors.append(f"{where}.basis is required (the evidence pointer for the equivalence call)")
+    kind = xf.get("equivalence")
+    if kind not in EQUIVALENCE_KINDS:
+        return errors + [f"{where}.equivalence must be one of {sorted(EQUIVALENCE_KINDS)}"]
+    if kind == "equivalent":
+        eq = xf.get("equivalent")
+        if not isinstance(eq, list) or len(eq) < 2 or any(e not in candidates for e in eq):
+            errors.append(f"{where}.equivalent must list >= 2 candidates")
+        else:
+            fams = {model_family(holder_model(data, e)[0]) for e in eq}
+            if len(fams) < 2:
+                errors.append(f"{where}.equivalent must span >= 2 families, got {sorted(fams)}")
+            costs = {e: holder_cost(data, e) for e in eq}
+            best = max((c for c in costs.values() if c is not None), default=None)
+            if holders and holders[0] in eq and best is not None and costs.get(holders[0]) != best:
+                errors.append(f"{where}: equivalent models are picked on Cost; holders[0] '{holders[0]}' is not the cheapest ({costs})")
+            if holders and holders[0] not in eq:
+                errors.append(f"{where}: holders[0] must be one of the equivalent models")
+    elif kind == "priority":
+        if xf.get("priority") != (holders[0] if holders else None):
+            errors.append(f"{where}.priority must name holders[0] ('{holders[0] if holders else None}')")
+    else:  # unmeasured: no evidence, so the cheapest candidate holds the default
+        costs = {c: holder_cost(data, c) for c in candidates}
+        best = max((c for c in costs.values() if c is not None), default=None)
+        if holders and best is not None and costs.get(holders[0]) != best:
+            errors.append(f"{where}: an unmeasured class defaults to the cheapest candidate; holders[0] '{holders[0]}' "
+                          f"is not ({costs})")
+    if kind in ("equivalent", "unmeasured") and len(holders) >= 2:
+        fam0 = model_family(holder_model(data, holders[0])[0])
+        other = [c for c in candidates if model_family(holder_model(data, c)[0]) != fam0]
+        if other and model_family(holder_model(data, holders[1])[0]) == fam0:
+            errors.append(f"{where}: the first fallback must come from another family when one is a candidate "
+                          f"(holders[1] '{holders[1]}' shares {fam0} with holders[0])")
+    for holder, allowed in FABLE_EXPLICIT_ONLY.items():
+        if holder in holders and cls not in allowed:
+            errors.append(f"task_class_defaults.{cls}: '{holder}' is explicit opt-in only and may hold only {sorted(allowed)}")
+    return errors
+
+
 def validate_v2(data: dict, evidence_root: str, vocabulary: list[str]) -> list[str]:
     errors: list[str] = []
     models = data.get("models") or {}
@@ -312,6 +423,7 @@ def validate_v2(data: dict, evidence_root: str, vocabulary: list[str]) -> list[s
                 q = class_quality(model, quality)
                 if q is not None and q < bar:
                     errors.append(f"{where}: holder '{holder}' measures q={q} below the class bar {bar}")
+        errors.extend(validate_cross_family(data, cls, entry, holders))
         chain = (policy.get(cls) or {}).get("chain") if isinstance(policy.get(cls), dict) else None
         if chain is not None and list(chain) != list(holders):
             errors.append(

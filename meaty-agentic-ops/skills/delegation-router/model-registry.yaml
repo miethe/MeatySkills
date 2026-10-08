@@ -192,12 +192,14 @@ routing_policy:
   # design/architecture/UX-visual-design/hard-judgment/ambiguous-synthesis work starts here, not
   # merely as a two-Sonnet-5.5-miss escalation target. Distinct from `orchestration` (MUST-stay,
   # personal-account, verdict/schema-recovery/cross-wave-merge) — this class is not must_stay_primary.
-  design_judgment:  { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"], enabled: true }
+  # 2026-10-08, Nick (cross-provider defaults): gpt-6.1-sol is the cross-family first fallback.
+  design_judgment:  { chain: ["claude/claude-opus-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5"], enabled: true }
   # Added 2026-09-28 (evening), Nick: gpt-6-sol's real role beyond the second_opinion cross-family
   # lens — hard-algorithmic problems, debugging, and reasoning-heavy legs start here, in addition to
   # (not a replacement for) its existing cross-family use in second_opinion above.
   # 2026-09-30, Nick: gpt-6.1-sol supersedes gpt-6-sol as the raw_strength default; gpt-6-sol is the legacy-selectable fallback.
-  raw_strength:     { chain: ["codex/gpt-6.1-sol", "codex/gpt-6-sol", "claude/claude-opus-5-5"], enabled: true }
+  # 2026-10-08, Nick (cross-provider defaults): Opus 5.5 is the cross-family first fallback, ahead of the same-family gpt-6-sol.
+  raw_strength:     { chain: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol"], enabled: true }
   web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
   code_review:      { chain: ["codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # Codex subscription default = GPT-6 Luna; Claude fallback moves to Sonnet 5.5 (2026-09-28), then legacy Sonnet 5. ⚠️ 2026-09-28 (evening): for a raw-strength review pass (hard algorithmic/debugging/reasoning-heavy), route explicitly to `raw_strength` (codex/gpt-6.1-sol; gpt-6-sol fallback) instead of this chain — this chain is for contract-clear review only.
   # Raster images, mood boards, mock-up renders, illustrations, and PNG assets: native Codex
@@ -205,7 +207,8 @@ routing_policy:
   # remains an availability fallback. Native invocation verified from the installed imagegen skill.
   image_generation: { chain: ["codex/gpt-6-luna", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
   # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
-  svg_generation:   { chain: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
+  # 2026-10-08, Nick (req_01M4EFJ6ZBKFXWPHSWEPT9MDVE): leg-1 moves from claude-fable-5-1 to claude-opus-5-5. Fable 5.1 stays explicit opt-in, never auto-routed.
+  svg_generation:   { chain: ["claude/claude-opus-5-5", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
   video_generation: { chain: ["sora/sora-2"], enabled: true }
   # Added 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ, citing node_01M0Z7JP9YT7W15X94Z843AM9Y).
   # gpt-5.6-sol reasons genuinely on the ICA ccx lane ONLY when NO tool declarations are present
@@ -215,9 +218,9 @@ routing_policy:
   # are safe auto-routes to the tool_mode:"none"-restricted ica/gpt-5.6-sol instance. Deliberately
   # NEW ids, not a repoint of the existing must_stay_primary `verdict`/`council_review`/`synthesis`
   # classes — see resolver.js's TOOL_RESTRICTED gate and SPEC.md § "Tool-less Sol lane".
-  review:           { chain: ["ica/gpt-5.6-sol"], enabled: true }
-  adjudication:     { chain: ["ica/gpt-5.6-sol"], enabled: true }
-  critique:         { chain: ["ica/gpt-5.6-sol"], enabled: true }
+  review:           { chain: ["ica/gpt-5.6-sol", "claude/claude-sonnet-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5-5"], enabled: true }
+  adjudication:     { chain: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"], enabled: true }
+  critique:         { chain: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"], enabled: true }
   # Contract-only whole-node class. Never inferred from another task class and never a default
   # build/review lane. The itt execution contract chooses Astra or Fable 5.1 up front.
   advanced_sol:     { chain: ["codex/gpt-6-astra", "claude/claude-fable-5-1"], enabled: true }
@@ -247,6 +250,15 @@ routing_policy:
 #                          to 0); holder = the explicit-override frontier pick. Fable and Astra stay
 #                          explicit opt-in (MODEL-ROUTING §1.5): never auto-selected via `frontier`.
 #   requires_capabilities  HCR capability ids (dotted) or model `capabilities` keys (M3 filters on it).
+#   cross_family           (Nick 2026-10-08) the cross-provider evaluation behind holders[0]. candidates =
+#                          the eligible models compared, ALWAYS including Opus 5.5 and GPT-6.1 Sol (in
+#                          candidates or in excluded); equivalence = equivalent (evidence shows a tie:
+#                          Cost picks holders[0], the other family is the first fallback) | priority
+#                          (one model owns the class on evidence: `priority` == holders[0]) | unmeasured
+#                          (no evidence: holders[0] is the cheapest candidate). excluded = candidates
+#                          removed on a named axis (capability | authority | doctrine | bar) with
+#                          evidence; the builder re-measures a bar exclusion. A class is single-family
+#                          only on a capability or authority exclusion (orchestration, mode_d), never by habit.
 #   set_by                 evidence (path under the skill dir), node, date, approver, fingerprint.
 #
 # CHANGING A DEFAULT: edit the entry, run `python3 scripts/build-model-registry.py --in model-registry.yaml
@@ -272,7 +284,12 @@ task_class_defaults:
     margin: { lambda: 0.5 }
     frontier: { required: false, holder: "claude/claude-sonnet-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/positioning-2026-10-07.md", node: "node_01M4C58QYW0KP7987JWADP8YKV", date: "2026-10-07", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "32bc7fad7ef6b053" }
+    cross_family:
+      candidates: ["claude/claude-haiku-5-5", "ica/gpt-5.6-luna", "codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+      equivalence: equivalent
+      equivalent: ["claude/claude-haiku-5-5", "ica/gpt-5.6-luna", "codex/gpt-6-luna"]
+      basis: "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): Haiku 5.5, ICA 5.6 Luna and GPT-6 Luna tied on every task the bench could measure for correctness; Cost decides (Haiku 10, ICA Luna 8, GPT-6 Luna 7). Opus 5.5 / Sol 6.1 clear the bar but lose on Cost"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "c1dccb2252f56532" }
   documentation:
     holders: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5", "codex/gpt-6-luna"]
     effort: low
@@ -281,7 +298,12 @@ task_class_defaults:
     margin: { lambda: 0.5 }
     frontier: { required: false, holder: "claude/claude-sonnet-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/positioning-2026-10-07.md", node: "node_01M4C58QYW0KP7987JWADP8YKV", date: "2026-10-07", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "14341f7c2761c6dd" }
+    cross_family:
+      candidates: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5", "codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+      equivalence: priority
+      priority: "ica/gpt-5.6-luna"
+      basis: "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "fbb8e8a3ac34a733" }
   mechanical:
     holders: ["ica/gpt-5.6-luna", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5", "codex/gpt-6-luna"]
     effort: low
@@ -290,7 +312,12 @@ task_class_defaults:
     margin: { lambda: 0.5 }
     frontier: { required: false, holder: "claude/claude-sonnet-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/positioning-2026-10-07.md", node: "node_01M4C58QYW0KP7987JWADP8YKV", date: "2026-10-07", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "1849aa47fda475f5" }
+    cross_family:
+      candidates: ["ica/gpt-5.6-luna", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5", "codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+      equivalence: priority
+      priority: "ica/gpt-5.6-luna"
+      basis: "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "ec0631e18577c88b" }
   second_opinion:
     holders: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"]
     effort: medium
@@ -299,7 +326,12 @@ task_class_defaults:
     margin: { lambda: 0.5 }
     frontier: { required: false, holder: "codex/gpt-6.1-sol" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/positioning-2026-10-07.md", node: "node_01M4C58QYW0KP7987JWADP8YKV", date: "2026-10-07", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "c119b80c6d95a55a" }
+    cross_family:
+      candidates: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5", "claude/claude-sonnet-5-5", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+      equivalence: priority
+      priority: "codex/gpt-6-luna"
+      basis: "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns cross-family review and second opinion (family diversity against every Claude lane)"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "b60ef67087dc65e1" }
   implementation:
     holders: ["claude/claude-sonnet-5-5", "claude/claude-sonnet-5"]
     effort: medium
@@ -308,25 +340,44 @@ task_class_defaults:
     margin: { lambda: 0.3 }
     frontier: { required: false, holder: "claude/claude-opus-5-5" }
     requires_capabilities: ["execution.file_edit"]
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-09-28", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "8a052e0d487e42fe" }
+    cross_family:
+      candidates: ["claude/claude-sonnet-5-5", "claude/claude-sonnet-5", "claude/claude-opus-5-5"]
+      equivalence: unmeasured
+      basis: "agentic correctness saturated in the study (a failed instrument, not a tie) and it ran no Opus/Sol arm; default = cheapest eligible candidate (Sonnet 5.5, Cost 5, over Opus 5.5, Cost 3)"
+      excluded:
+        - { holder: "codex/gpt-6-luna", axis: "capability", evidence: "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)" }
+        - { holder: "codex/gpt-6.1-sol", axis: "capability", evidence: "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "ab088ef9d87f28c3" }
   design_judgment:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["claude/claude-opus-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.5, w_taste: 0.5, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-09-28", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "ee6097f3ab9d8488" }
+    cross_family:
+      candidates: ["claude/claude-opus-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5"]
+      equivalence: priority
+      priority: "claude/claude-opus-5-5"
+      basis: "MODEL-ROUTING section 5 design_judgment row (Nick 2026-09-28 evening): architecture/UX/hard judgment starts on Opus 5.5; Sol 6.1 is the cross-family first fallback"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "f8ccee02ee0ffdf6" }
   raw_strength:
-    holders: ["codex/gpt-6.1-sol", "codex/gpt-6-sol", "claude/claude-opus-5-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.8, w_taste: 0.1, w_speed: 0.1 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-09-30", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "7078ad6eb7f31dca" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-sonnet-5-5"]
+      equivalence: priority
+      priority: "codex/gpt-6.1-sol"
+      basis: "MODEL-ROUTING section 5 raw_strength row (Nick 2026-09-30): hard algorithmic/debugging/reasoning-heavy legs start on GPT-6.1 Sol; Opus 5.5 is the cross-family first fallback"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "0c15fe5028d77018" }
   web_research:
     holders: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview"]
     effort: medium
@@ -335,7 +386,12 @@ task_class_defaults:
     margin: { lambda: 0.5 }
     frontier: { required: false, holder: "ica/gemini-3.1-pro-preview" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-07-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "1e512957ad734f5d" }
+    cross_family:
+      candidates: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview", "claude/claude-opus-5-5", "codex/gpt-6.1-sol", "claude/claude-sonnet-5-5"]
+      equivalence: priority
+      priority: "gemini/gemini-3.6-flash"
+      basis: "MODEL-ROUTING section 5 web-grounded research row: native Gemini fuses Google-Search grounding with reasoning; Opus/Sol have no grounded-search lane in the router"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "386c3ec012970087" }
   code_review:
     holders: ["codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-sonnet-5"]
     effort: medium
@@ -344,7 +400,12 @@ task_class_defaults:
     margin: { lambda: 0.3 }
     frontier: { required: false, holder: "codex/gpt-6.1-sol" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/positioning-2026-10-07.md", node: "node_01M4C58QYW0KP7987JWADP8YKV", date: "2026-10-07", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "8640e0a44af1ac96" }
+    cross_family:
+      candidates: ["codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-sonnet-5", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
+      equivalence: priority
+      priority: "codex/gpt-6-luna"
+      basis: "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns AC validation and cross-family review; MODEL-ROUTING section 5 AC-validation row"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "19603113502155d1" }
   image_generation:
     holders: ["codex/gpt-6-luna", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"]
     effort: medium
@@ -353,16 +414,29 @@ task_class_defaults:
     margin: { lambda: 0.2 }
     frontier: { required: false, holder: "nano-banana/nano-banana-pro" }
     requires_capabilities: ["tools.image_generation"]
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-09-25", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "cde56f3dadbd0152" }
+    cross_family:
+      candidates: ["codex/gpt-6-luna", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro", "codex/gpt-6.1-sol"]
+      equivalence: priority
+      priority: "codex/gpt-6-luna"
+      basis: "MODEL-ROUTING section 5 + codex-executor contract: native Codex image_gen.imagegen first, ICA GPT shim, then Nano Banana; Claude models have no image output"
+      excluded:
+        - { holder: "claude/claude-opus-5-5", axis: "capability", evidence: "capabilities.image_output false (requires tools.image_generation)" }
+        - { holder: "claude/claude-sonnet-5-5", axis: "capability", evidence: "capabilities.image_output false (requires tools.image_generation)" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "6597bb1b137f79e3" }
   svg_generation:
-    holders: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"]
+    holders: ["claude/claude-opus-5-5", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"]
     effort: medium
     bar: 5.0
     quality: { w_intelligence: 0.2, w_taste: 0.7, w_speed: 0.1 }
     margin: { lambda: 0.2 }
     frontier: { required: false, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-07-28", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "8e136c1ca7f82923" }
+    cross_family:
+      candidates: ["claude/claude-opus-5-5", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash", "codex/gpt-6.1-sol", "claude/claude-sonnet-5-5"]
+      equivalence: priority
+      priority: "claude/claude-opus-5-5"
+      basis: "Nick decision req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08): svg_generation moves to Opus 5.5 and Fable 5.1 stays explicit opt-in, never auto-routed; Gemini chain from use-case-rankings.yaml svg-generation stays as the cross-family fallback"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "890cd7af994e399c" }
   video_generation:
     holders: ["sora/sora-2"]
     effort: medium
@@ -371,34 +445,58 @@ task_class_defaults:
     margin: { lambda: 0.2 }
     frontier: { required: false, holder: null }
     requires_capabilities: ["video_output"]
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-10-08", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "bb93ab939bbda023" }
+    cross_family:
+      candidates: ["sora/sora-2"]
+      equivalence: priority
+      priority: "sora/sora-2"
+      basis: "capability-bound: only sora-2 declares video_output"
+      excluded:
+        - { holder: "claude/claude-opus-5-5", axis: "capability", evidence: "capabilities.video_output false (requires video_output)" }
+        - { holder: "codex/gpt-6.1-sol", axis: "capability", evidence: "capabilities.video_output false (requires video_output)" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "f8f9faa68fdef949" }
   review:
-    holders: ["ica/gpt-5.6-sol"]
+    holders: ["ica/gpt-5.6-sol", "claude/claude-sonnet-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5-5"]
     effort: medium
     bar: 7.0
     quality: { w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0 }
     margin: { lambda: 0.3 }
     frontier: { required: false, holder: "claude/claude-opus-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M122PQQ86YWJWDA9GT83PBWQ", date: "2026-08-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "d1582347b215b211" }
+    cross_family:
+      candidates: ["ica/gpt-5.6-sol", "claude/claude-sonnet-5-5", "codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-luna"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Sonnet 5.5 (contract-clear review is its named role) is the cross-family first fallback a tool-needing leg lands on"
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "adea0d9046fb3e62" }
   adjudication:
-    holders: ["ica/gpt-5.6-sol"]
+    holders: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
     effort: medium
     bar: 7.0
     quality: { w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0 }
     margin: { lambda: 0.3 }
     frontier: { required: false, holder: "claude/claude-opus-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M122PQQ86YWJWDA9GT83PBWQ", date: "2026-08-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "d1582347b215b211" }
+    cross_family:
+      candidates: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol", "codex/gpt-6-luna"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "365fc20b91552a92" }
   critique:
-    holders: ["ica/gpt-5.6-sol"]
+    holders: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol"]
     effort: medium
     bar: 7.0
     quality: { w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0 }
     margin: { lambda: 0.3 }
     frontier: { required: false, holder: "claude/claude-opus-5-5" }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M122PQQ86YWJWDA9GT83PBWQ", date: "2026-08-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "d1582347b215b211" }
+    cross_family:
+      candidates: ["ica/gpt-5.6-sol", "claude/claude-opus-5-5", "codex/gpt-6.1-sol", "codex/gpt-6-luna"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "365fc20b91552a92" }
   advanced_sol:
     holders: ["codex/gpt-6-astra", "claude/claude-fable-5-1"]
     effort: medium
@@ -407,7 +505,15 @@ task_class_defaults:
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: null, date: "2026-09-09", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5d9c85e3ca527f53" }
+    cross_family:
+      candidates: ["codex/gpt-6-astra", "claude/claude-fable-5-1"]
+      equivalence: priority
+      priority: "codex/gpt-6-astra"
+      basis: "MODEL-ROUTING section 1.5 advanced-Sol class: planned from the start for Astra or Fable 5.1 by an explicit execution contract"
+      excluded:
+        - { holder: "claude/claude-opus-5-5", axis: "bar", evidence: "q=8.9 below the class bar 9.0" }
+        - { holder: "codex/gpt-6.1-sol", axis: "bar", evidence: "q=8.9 below the class bar 9.0" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "1ad1502a5860beea" }
   orchestration:
     holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
     effort: medium
@@ -416,7 +522,15 @@ task_class_defaults:
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+      equivalence: priority
+      priority: "claude/claude-opus-5-5"
+      basis: "capability-bound: orchestration drives Claude-Code-native mechanisms, the one legitimate reason a class is Claude-only"
+      excluded:
+        - { holder: "codex/gpt-6.1-sol", axis: "capability", evidence: "MODEL-ROUTING section 4 point 2a: Claude-Code-native orchestration (Task()/subagent nesting, EnterWorktree, Workflow engine); router-offloaded executors run flat legs only" }
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "295c6734118a0d14" }
   mode_d:
     holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
     effort: medium
@@ -425,52 +539,90 @@ task_class_defaults:
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+      equivalence: priority
+      priority: "claude/claude-opus-5-5"
+      basis: "authority-bound: the enforced Mode-D scan rejects a codex producer; the registry's personal-account floor alone would admit Codex (contradiction recorded in the evidence file)"
+      excluded:
+        - { holder: "codex/gpt-6.1-sol", axis: "authority", evidence: "agentic_meta_dev docs/rules/mode-d-enforcement.md: mode-d-scan.sh hard-exits 2 when the producing lane is an offload lane (codex included); MODEL-ROUTING section 4 point 2 names mode-d authority_absolute" }
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "1f7011131e7bef17" }
   verdict:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "4d826c72a0860607" }
   council_review:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "4d826c72a0860607" }
   synthesis:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "4d826c72a0860607" }
   schema_recovery:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "4d826c72a0860607" }
   cross_wave_merge:
-    holders: ["claude/claude-opus-5-5", "claude/claude-opus-5"]
+    holders: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
     effort: medium
     bar: 8.0
     quality: { w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0 }
     margin: { lambda: 0.0 }
     frontier: { required: true, holder: null }
     requires_capabilities: []
-    set_by: { evidence: "evidence/defaults-baseline-2026-10-08.md", node: "node_01M3F4F5G93P21P1WAH565MAYQ", date: "2026-09-27", approved_by: "nick", approved_via: "MeatySkills PR merge of registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y); holder decisions cite their own dated Nick decisions in the evidence file", fingerprint: "5bd4008474d132e3" }
+    cross_family:
+      candidates: ["codex/gpt-6.1-sol", "claude/claude-opus-5-5", "codex/gpt-6-sol", "claude/claude-opus-5"]
+      equivalence: unmeasured
+      basis: "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor"
+      excluded:
+        - { holder: "claude/claude-sonnet-5-5", axis: "doctrine", evidence: "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis" }
+    set_by: { evidence: "evidence/cross-provider-2026-10-08.md", node: "node_01M4C696HR9WVV6BVZ2FXQZH0Y", date: "2026-10-08", approved_by: "nick", approved_via: "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)", fingerprint: "4d826c72a0860607" }
 
 # LEGACY COMPATIBILITY KEY — superseded by `task_class_sovereignty` below.
 # Retained because foreign/older registries (per-project overrides, test fixtures, the copies

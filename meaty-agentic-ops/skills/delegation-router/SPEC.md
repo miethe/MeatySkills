@@ -93,6 +93,15 @@ The canonical output. Source of truth: `routing-record.js`. Every field is requi
    proves equal to the holders). Skip `enabled:false` instances and `enabled:false` classes. A
    `routing.local.toml` `routing_policy_overrides` entry for a non-floored class suspends that
    class's defaults entry, so the human override channel still wins.
+2a. **Cross-provider evaluation (`cross_family`, 2026-10-08)**. Every `task_class_defaults` row records
+   which candidates it compared, and must always include Opus 5.5 and GPT-6.1 Sol. It also records:
+   - its `equivalence` call:
+     - `equivalent`: Cost picks holders[0], and the other family is the first fallback;
+     - `priority`: the owner, with evidence;
+     - `unmeasured`: the cheapest candidate holds the default;
+   - any exclusions, each with an axis and evidence.
+
+   The resolver does not read `cross_family`; the builder enforces it.
 2b. **Bar gate (scores are read)** — for a `task_class_defaults` class, each holder's class quality
    `q = w_intelligence*I + w_taste*T + w_speed*S` is computed from its registry `scores`; a holder
    with a measured `q < bar` is skipped and recorded in `class_default.below_bar`. A weighted score
