@@ -111,9 +111,12 @@ resolve the question.
 
 **2. SkillMeat — does a reusable artifact already cover this?**
 ```bash
-skillmeat search "<feature-keywords>" --type skill --json | jq '.results[] | {name, type, description}'
-skillmeat list --project <this-repo-slug> --json | jq '.results[] | select(.name | test("<keyword>"; "i"))'
+skillmeat search "<feature-keywords>" --type skill --format json | jq '(.matches? // .)[] | {name: (.name // .artifact_name), type: (.type // .artifact_type)}'
+skillmeat search "<keyword>" --projects . --format json | jq '.matches[] | {name: .artifact_name, type: .artifact_type, project_path}'
 ```
+The first line searches the catalog (federated in enterprise mode → a JSON array; local → an
+object with `.matches[]`; the jq filter handles both). The second is the project-scoped pass —
+run it from the repo root; the `list` subcommand has no project option, so use `search --projects`.
 If an existing skill/agent/workflow/context artifact already covers the capability being planned,
 scope the PRD as an **extension** of that artifact (name it explicitly) rather than a net-new build.
 This same look-first check gets formalized later as the plan's `required_artifacts` set — see
@@ -945,7 +948,7 @@ Sections:
      the plan needs, build the `required_artifacts` list — plan-level frontmatter and/or per-
      milestone. Schema: `./references/plan-frontmatter-schema.md` §5.7.
    - **Resolve against SkillMeat enterprise** (look-first, per `.claude/rules/aos-operating-rules.md`):
-     `skillmeat search "<name>" --json` / `skillmeat show <name> --type <t>`. Set `status`:
+     `skillmeat search "<name>" --format json` / `skillmeat show <name> --type <t>`. Set `status`:
      `available` (in catalog or already on-disk — fill `skillmeat_ref`), `needs_creation` (not found
      anywhere), or `needs_enhancement` (found but insufficient for the task).
    - **Route every non-`available` entry.** Mirror the External Model Pre-Work Batching `batch_0`
