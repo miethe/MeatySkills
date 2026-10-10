@@ -48,8 +48,10 @@ Repo-verified surfaces only:
 |---|---|
 | Resolver entry | `resolve({model, provider, effort, profile, task_class[, resume_active]})` in `resolver.js` |
 | Audit writer (decision) | `appendEntry({task_id, routing_record[, intended_model, fallback_applied]})` in `audit-log.js` — realized fields default to **null/unconfirmed**, never to the intent |
+| Native intent writer | `appendNativeIntent(envelope[, {log_path}])` accepts one strict native-hook decision projection, deduplicates by its stable event `task_id` in the canonical ledger, and stores only chosen provider/model/effort intent; see `references/native-intent-writer.md` |
 | Audit writer (realization) | `appendRealization({task_id, actual_provider_used, realized_model, realization_evidence})` in `audit-log.js` — evidence required; the only path to `realization_confirmed: true` |
 | Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
+| Canonical audit append | All writer paths use a Python 3 POSIX `fcntl.flock` helper and refuse malformed or partial ledgers. Deploy `scripts/locked-audit-append.py` beside `audit-log.js`; unsupported runtimes must refuse writes rather than fall back to unlocked appends. |
 | RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.3.0) |
@@ -163,7 +165,7 @@ of the intent, so the two could never disagree. Measured across the two live log
 executor's own self-report is not a substitute either — `appendRealization` requires
 `realization_evidence` precisely because a leg reporting on itself is not a measurement
 (`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; the never-trust-a-leg's-self-report rule is
-`agentic_meta_dev/.claude/rules/mode-d-enforcement.md`, whose local sibling here is
+`agentic_meta_dev/docs/rules/mode-d-enforcement.md`, whose local sibling here is
 `meaty-agentic-ops/rules/delegation-modes.md`).
 
 ### Routing to a provider is a no-op when the session is already that provider
