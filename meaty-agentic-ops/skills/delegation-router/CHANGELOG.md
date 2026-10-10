@@ -3,6 +3,76 @@
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
+## 2026-10-08 (later) — Cross-provider task-class defaults (routing M1, Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE)
+
+- **Nick, two decisions.** `svg_generation` moves to Opus 5.5 and Fable 5.1 stays explicit opt-in.
+  Defaults are also cross-provider per class: many domains may be Opus 5.5 / Sol 6.1 equivalent, and a
+  select few have a priority.
+- **Every `task_class_defaults` row now carries `cross_family`**, which holds:
+  - `candidates`, which always evaluate Opus 5.5 and GPT-6.1 Sol;
+  - `equivalence: equivalent | priority | unmeasured`, plus `equivalent` / `priority`;
+  - a `basis` pointer;
+  - `excluded`, each entry with an axis (`capability | authority | doctrine | bar`) and its evidence.
+- **The builder refuses** a row that:
+  - evaluates neither frontier model;
+  - has an `unmeasured` holders[0] that is not the cheapest candidate;
+  - has an `equivalent` holders[0] that is not the Cost pick;
+  - has a same-family first fallback when another family is a candidate;
+  - has a `priority` that is not holders[0];
+  - has a bar exclusion that does not actually measure below the bar;
+  - uses Fable as a holder outside `advanced_sol`.
+- **Tally, from `evidence/cross-provider-2026-10-08.md`:**
+
+  | Equivalence | Count | Classes |
+  |---|---|---|
+  | equivalent | 1 | `exploration`: Haiku 5.5 / ICA Luna / GPT-6 Luna, measured tie |
+  | Opus priority | 4 | `design_judgment`; `svg_generation`; `orchestration` (capability); `mode_d` (authority) |
+  | Sol priority | 1 | `raw_strength` |
+  | other-model priority | 8 | per study, doctrine or capability |
+  | unmeasured | 9 | see below |
+
+  The positioning study ran no Opus or Sol arm. The unmeasured classes and their defaults:
+  - `verdict`, `council_review`, `synthesis`, `schema_recovery` and `cross_wave_merge` default to
+    GPT-6.1 Sol, the cheaper eligible model, with Opus 5.5 as the first fallback;
+  - `review`, `adjudication` and `critique` keep ICA 5.6 Sol;
+  - `implementation` keeps Sonnet 5.5, because Codex is read-only at effort medium
+    (`node_01M4EJC19SDMP1Z6F14G9QDDFH`).
+- **Resolution changes against the M1 golden:**
+  - the five judgment must-stay classes now resolve to `codex/gpt-6.1-sol`;
+  - `svg_generation` now resolves to Opus 5.5;
+  - a tool-needing `review` lands on Sonnet 5.5, and a tool-needing `adjudication` / `critique`
+    lands on Opus 5.5 (before, all three resolved to the caller's model);
+  - `design_judgment` and `raw_strength` take the other family as their first fallback.
+
+## 2026-10-08 — Registry v2: complete model facts + evaluated task-class defaults (routing M1)
+
+- Node `node_01M4C696HR9WVV6BVZ2FXQZH0Y` (plan agentic_meta_dev
+  `docs/project_plans/implementation_plans/routing-mechanization-v1.md` M1, layers 1+2). `version: 2`.
+- **Layer 1 (facts):** every routable model row carries `pricing` with all four per-MTok fields
+  (`input`, `output`, `cache_read`, the new `cache_write_5m`) plus `as_of`/`source`; an unknown list
+  price is an explicit `null` with a mandatory `basis`, never approximated. Every routable row carries
+  `scores` (the three media rows explicitly `UNMEASURED`) and a model-level `capabilities` block
+  (`context_window` == `max_context`, `max_output`, `tool_use`, `forced_tool_choice` — `broken` on
+  Fable 5.1 — `reasoning_effort_control`, `image_output`, `video_output`). Sonnet 5.5's
+  `cache_write_per_mtok_usd` is renamed `cache_write_5m_per_mtok_usd`. agentic_meta_dev's
+  `hop_pricing.MODEL_PRICES` is now generated from these rows.
+- **Layer 2 (defaults):** new `task_class_defaults` covers all 23 vocabulary classes (holders,
+  effort, bar, quality weights, `margin.lambda`, `frontier`, `requires_capabilities`, `set_by`);
+  `margin_policy.lambda_default: 0.5`. `routing_policy` becomes its derived copy. Holders are the
+  post-positioning chains verbatim (Haiku 5.5 a role holder, `node_01M4C58QYW0KP7987JWADP8YKV`);
+  the five MUST-stay classes with no chain (`verdict`, `council_review`, `synthesis`,
+  `schema_recovery`, `cross_wave_merge`) gain the Opus 5.5 spine holders per MODEL-ROUTING §5 —
+  the ONLY resolution change (golden diff: those five, previously "the requested model").
+- **Builder:** `build-model-registry.py` validates v2 (version-gated) and REFUSES a defaults entry
+  whose fingerprint is not recorded on a row of an existing `evidence/*.md` file, a `routing_policy`
+  chain that drifts from its holders, and a holder whose measured q is below its class bar.
+  `--stamp` prints fingerprints; `--evidence-root` overrides the evidence directory.
+- **Resolver:** walks `task_class_defaults.holders` first, reads `scores` for the bar gate, and
+  emits an optional `class_default` trail on the RoutingRecord. New test
+  `tests/test-task-class-defaults.js` (golden per class).
+- Flagged, not changed: `svg_generation` leg 1 auto-routes `claude-fable-5-1`, against
+  MODEL-ROUTING §1.5 (Fable explicit opt-in only) — recorded in `evidence/defaults-baseline-2026-10-08.md`.
+
 ## 2026-09-30 — GPT-6.1 Sol supersedes GPT-6 Sol (personal Codex lane)
 
 - Nick decision (verbatim, /chat): "I did use 6.1-sol in Codex directly to create the hand-off, so

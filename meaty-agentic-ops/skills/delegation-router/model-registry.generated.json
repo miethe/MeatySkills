@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "e65a21bb62276aa30c75095deafe45727c0bc3a911816059d2dd12dcbc6fb3c7",
-  "version": 1,
-  "updated": "2026-10-07",
+  "_yaml_sha256": "dcc37b64c8f0cc67ee56d0b172d2ef5d8024224ba1cb5163959dd22be1da9803",
+  "version": 2,
+  "updated": "2026-10-08",
   "routing_attributes": {
     "health": {
       "statuses": [
@@ -379,6 +379,7 @@
     "design_judgment": {
       "chain": [
         "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol",
         "claude/claude-opus-5"
       ],
       "enabled": true
@@ -386,8 +387,8 @@
     "raw_strength": {
       "chain": [
         "codex/gpt-6.1-sol",
-        "codex/gpt-6-sol",
-        "claude/claude-opus-5-5"
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol"
       ],
       "enabled": true
     },
@@ -418,7 +419,7 @@
     },
     "svg_generation": {
       "chain": [
-        "claude/claude-fable-5-1",
+        "claude/claude-opus-5-5",
         "ica/gemini-3.1-pro-preview",
         "gemini/gemini-3.5-flash",
         "gemini/gemini-3.6-flash"
@@ -433,19 +434,26 @@
     },
     "review": {
       "chain": [
-        "ica/gpt-5.6-sol"
+        "ica/gpt-5.6-sol",
+        "claude/claude-sonnet-5-5",
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5"
       ],
       "enabled": true
     },
     "adjudication": {
       "chain": [
-        "ica/gpt-5.6-sol"
+        "ica/gpt-5.6-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol"
       ],
       "enabled": true
     },
     "critique": {
       "chain": [
-        "ica/gpt-5.6-sol"
+        "ica/gpt-5.6-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol"
       ],
       "enabled": true
     },
@@ -467,6 +475,1102 @@
         "claude/claude-opus-5-5",
         "claude/claude-opus-5"
       ]
+    }
+  },
+  "margin_policy": {
+    "lambda_default": 0.5,
+    "unit": "quality points given up per cost point gained (both on the 1-10 registry scale)",
+    "status": "recorded for M2 (lane layer); resolver.js does not apply the margin rule yet",
+    "set_by": {
+      "evidence": "evidence/defaults-baseline-2026-10-08.md",
+      "node": "node_01M4C5P20MBBV11YNB5FM9359A",
+      "date": "2026-10-07",
+      "approved_by": "nick",
+      "approved_via": "MeatySkills PR merge of registry v2 (routing M1)"
+    }
+  },
+  "task_class_defaults": {
+    "exploration": {
+      "holders": [
+        "claude/claude-haiku-5-5",
+        "ica/gpt-5.6-luna",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 5.5,
+      "quality": {
+        "w_intelligence": 0.4,
+        "w_taste": 0.1,
+        "w_speed": 0.5
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-haiku-5-5",
+          "ica/gpt-5.6-luna",
+          "codex/gpt-6-luna",
+          "claude/claude-sonnet-5-5",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "equivalent",
+        "equivalent": [
+          "claude/claude-haiku-5-5",
+          "ica/gpt-5.6-luna",
+          "codex/gpt-6-luna"
+        ],
+        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): Haiku 5.5, ICA 5.6 Luna and GPT-6 Luna tied on every task the bench could measure for correctness; Cost decides (Haiku 10, ICA Luna 8, GPT-6 Luna 7). Opus 5.5 / Sol 6.1 clear the bar but lose on Cost"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "c1dccb2252f56532"
+      }
+    },
+    "documentation": {
+      "holders": [
+        "ica/gpt-5.6-luna",
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 6.0,
+      "quality": {
+        "w_intelligence": 0.4,
+        "w_taste": 0.4,
+        "w_speed": 0.2
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "ica/gpt-5.6-luna",
+          "claude/claude-haiku-5-5",
+          "codex/gpt-6-luna",
+          "claude/claude-sonnet-5-5",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "priority",
+        "priority": "ica/gpt-5.6-luna",
+        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "fbb8e8a3ac34a733"
+      }
+    },
+    "mechanical": {
+      "holders": [
+        "ica/gpt-5.6-luna",
+        "ica/gemma-4-26b-a4b-it",
+        "claude/claude-haiku-5-5",
+        "codex/gpt-6-luna"
+      ],
+      "effort": "low",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.1,
+        "w_speed": 0.4
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-sonnet-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "ica/gpt-5.6-luna",
+          "ica/gemma-4-26b-a4b-it",
+          "claude/claude-haiku-5-5",
+          "codex/gpt-6-luna",
+          "claude/claude-sonnet-5-5",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "priority",
+        "priority": "ica/gpt-5.6-luna",
+        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "ec0631e18577c88b"
+      }
+    },
+    "second_opinion": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "ica/gemini-3.6-flash",
+        "ica/gemma-4-26b-a4b-it",
+        "claude/claude-haiku-5-5"
+      ],
+      "effort": "medium",
+      "bar": 3.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.3,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "codex/gpt-6.1-sol"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6-luna",
+          "ica/gemini-3.6-flash",
+          "ica/gemma-4-26b-a4b-it",
+          "claude/claude-haiku-5-5",
+          "claude/claude-sonnet-5-5",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "priority",
+        "priority": "codex/gpt-6-luna",
+        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns cross-family review and second opinion (family diversity against every Claude lane)"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "b60ef67087dc65e1"
+      }
+    },
+    "implementation": {
+      "holders": [
+        "claude/claude-sonnet-5-5",
+        "claude/claude-sonnet-5"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.3,
+        "w_speed": 0.2
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [
+        "execution.file_edit"
+      ],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-sonnet-5-5",
+          "claude/claude-sonnet-5",
+          "claude/claude-opus-5-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "agentic correctness saturated in the study (a failed instrument, not a tie) and it ran no Opus/Sol arm; default = cheapest eligible candidate (Sonnet 5.5, Cost 5, over Opus 5.5, Cost 3)",
+        "excluded": [
+          {
+            "holder": "codex/gpt-6-luna",
+            "axis": "capability",
+            "evidence": "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)"
+          },
+          {
+            "holder": "codex/gpt-6.1-sol",
+            "axis": "capability",
+            "evidence": "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "ab088ef9d87f28c3"
+      }
+    },
+    "design_judgment": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.5,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "priority",
+        "priority": "claude/claude-opus-5-5",
+        "basis": "MODEL-ROUTING section 5 design_judgment row (Nick 2026-09-28 evening): architecture/UX/hard judgment starts on Opus 5.5; Sol 6.1 is the cross-family first fallback",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "f8ccee02ee0ffdf6"
+      }
+    },
+    "raw_strength": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.1,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-sonnet-5-5"
+        ],
+        "equivalence": "priority",
+        "priority": "codex/gpt-6.1-sol",
+        "basis": "MODEL-ROUTING section 5 raw_strength row (Nick 2026-09-30): hard algorithmic/debugging/reasoning-heavy legs start on GPT-6.1 Sol; Opus 5.5 is the cross-family first fallback"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "0c15fe5028d77018"
+      }
+    },
+    "web_research": {
+      "holders": [
+        "gemini/gemini-3.6-flash",
+        "gemini/gemini-3.5-flash",
+        "ica/gemini-3.1-pro-preview"
+      ],
+      "effort": "medium",
+      "bar": 6.0,
+      "quality": {
+        "w_intelligence": 0.5,
+        "w_taste": 0.2,
+        "w_speed": 0.3
+      },
+      "margin": {
+        "lambda": 0.5
+      },
+      "frontier": {
+        "required": false,
+        "holder": "ica/gemini-3.1-pro-preview"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "gemini/gemini-3.6-flash",
+          "gemini/gemini-3.5-flash",
+          "ica/gemini-3.1-pro-preview",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol",
+          "claude/claude-sonnet-5-5"
+        ],
+        "equivalence": "priority",
+        "priority": "gemini/gemini-3.6-flash",
+        "basis": "MODEL-ROUTING section 5 web-grounded research row: native Gemini fuses Google-Search grounding with reasoning; Opus/Sol have no grounded-search lane in the router"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "386c3ec012970087"
+      }
+    },
+    "code_review": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "claude/claude-sonnet-5-5",
+        "claude/claude-sonnet-5"
+      ],
+      "effort": "medium",
+      "bar": 6.5,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.3,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "codex/gpt-6.1-sol"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6-luna",
+          "claude/claude-sonnet-5-5",
+          "claude/claude-sonnet-5",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "priority",
+        "priority": "codex/gpt-6-luna",
+        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns AC validation and cross-family review; MODEL-ROUTING section 5 AC-validation row"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "19603113502155d1"
+      }
+    },
+    "image_generation": {
+      "holders": [
+        "codex/gpt-6-luna",
+        "ica/gpt-5.6-terra",
+        "nano-banana/nano-banana-2",
+        "nano-banana/nano-banana-pro"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": "nano-banana/nano-banana-pro"
+      },
+      "requires_capabilities": [
+        "tools.image_generation"
+      ],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6-luna",
+          "ica/gpt-5.6-terra",
+          "nano-banana/nano-banana-2",
+          "nano-banana/nano-banana-pro",
+          "codex/gpt-6.1-sol"
+        ],
+        "equivalence": "priority",
+        "priority": "codex/gpt-6-luna",
+        "basis": "MODEL-ROUTING section 5 + codex-executor contract: native Codex image_gen.imagegen first, ICA GPT shim, then Nano Banana; Claude models have no image output",
+        "excluded": [
+          {
+            "holder": "claude/claude-opus-5-5",
+            "axis": "capability",
+            "evidence": "capabilities.image_output false (requires tools.image_generation)"
+          },
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "capability",
+            "evidence": "capabilities.image_output false (requires tools.image_generation)"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "6597bb1b137f79e3"
+      }
+    },
+    "svg_generation": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "ica/gemini-3.1-pro-preview",
+        "gemini/gemini-3.5-flash",
+        "gemini/gemini-3.6-flash"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-opus-5-5",
+          "ica/gemini-3.1-pro-preview",
+          "gemini/gemini-3.5-flash",
+          "gemini/gemini-3.6-flash",
+          "codex/gpt-6.1-sol",
+          "claude/claude-sonnet-5-5"
+        ],
+        "equivalence": "priority",
+        "priority": "claude/claude-opus-5-5",
+        "basis": "Nick decision req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08): svg_generation moves to Opus 5.5 and Fable 5.1 stays explicit opt-in, never auto-routed; Gemini chain from use-case-rankings.yaml svg-generation stays as the cross-family fallback"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "890cd7af994e399c"
+      }
+    },
+    "video_generation": {
+      "holders": [
+        "sora/sora-2"
+      ],
+      "effort": "medium",
+      "bar": 5.0,
+      "quality": {
+        "w_intelligence": 0.2,
+        "w_taste": 0.7,
+        "w_speed": 0.1
+      },
+      "margin": {
+        "lambda": 0.2
+      },
+      "frontier": {
+        "required": false,
+        "holder": null
+      },
+      "requires_capabilities": [
+        "video_output"
+      ],
+      "cross_family": {
+        "candidates": [
+          "sora/sora-2"
+        ],
+        "equivalence": "priority",
+        "priority": "sora/sora-2",
+        "basis": "capability-bound: only sora-2 declares video_output",
+        "excluded": [
+          {
+            "holder": "claude/claude-opus-5-5",
+            "axis": "capability",
+            "evidence": "capabilities.video_output false (requires video_output)"
+          },
+          {
+            "holder": "codex/gpt-6.1-sol",
+            "axis": "capability",
+            "evidence": "capabilities.video_output false (requires video_output)"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "f8f9faa68fdef949"
+      }
+    },
+    "review": {
+      "holders": [
+        "ica/gpt-5.6-sol",
+        "claude/claude-sonnet-5-5",
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "ica/gpt-5.6-sol",
+          "claude/claude-sonnet-5-5",
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-luna"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Sonnet 5.5 (contract-clear review is its named role) is the cross-family first fallback a tool-needing leg lands on"
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "adea0d9046fb3e62"
+      }
+    },
+    "adjudication": {
+      "holders": [
+        "ica/gpt-5.6-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "ica/gpt-5.6-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol",
+          "codex/gpt-6-luna"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "365fc20b91552a92"
+      }
+    },
+    "critique": {
+      "holders": [
+        "ica/gpt-5.6-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6.1-sol"
+      ],
+      "effort": "medium",
+      "bar": 7.0,
+      "quality": {
+        "w_intelligence": 0.8,
+        "w_taste": 0.2,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.3
+      },
+      "frontier": {
+        "required": false,
+        "holder": "claude/claude-opus-5-5"
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "ica/gpt-5.6-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6.1-sol",
+          "codex/gpt-6-luna"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "365fc20b91552a92"
+      }
+    },
+    "advanced_sol": {
+      "holders": [
+        "codex/gpt-6-astra",
+        "claude/claude-fable-5-1"
+      ],
+      "effort": "medium",
+      "bar": 9.0,
+      "quality": {
+        "w_intelligence": 0.9,
+        "w_taste": 0.1,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6-astra",
+          "claude/claude-fable-5-1"
+        ],
+        "equivalence": "priority",
+        "priority": "codex/gpt-6-astra",
+        "basis": "MODEL-ROUTING section 1.5 advanced-Sol class: planned from the start for Astra or Fable 5.1 by an explicit execution contract",
+        "excluded": [
+          {
+            "holder": "claude/claude-opus-5-5",
+            "axis": "bar",
+            "evidence": "q=8.9 below the class bar 9.0"
+          },
+          {
+            "holder": "codex/gpt-6.1-sol",
+            "axis": "bar",
+            "evidence": "q=8.9 below the class bar 9.0"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "1ad1502a5860beea"
+      }
+    },
+    "orchestration": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-opus-5-5",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "priority",
+        "priority": "claude/claude-opus-5-5",
+        "basis": "capability-bound: orchestration drives Claude-Code-native mechanisms, the one legitimate reason a class is Claude-only",
+        "excluded": [
+          {
+            "holder": "codex/gpt-6.1-sol",
+            "axis": "capability",
+            "evidence": "MODEL-ROUTING section 4 point 2a: Claude-Code-native orchestration (Task()/subagent nesting, EnterWorktree, Workflow engine); router-offloaded executors run flat legs only"
+          },
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "295c6734118a0d14"
+      }
+    },
+    "mode_d": {
+      "holders": [
+        "claude/claude-opus-5-5",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "claude/claude-opus-5-5",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "priority",
+        "priority": "claude/claude-opus-5-5",
+        "basis": "authority-bound: the enforced Mode-D scan rejects a codex producer; the registry's personal-account floor alone would admit Codex (contradiction recorded in the evidence file)",
+        "excluded": [
+          {
+            "holder": "codex/gpt-6.1-sol",
+            "axis": "authority",
+            "evidence": "agentic_meta_dev docs/rules/mode-d-enforcement.md: mode-d-scan.sh hard-exits 2 when the producing lane is an offload lane (codex included); MODEL-ROUTING section 4 point 2 names mode-d authority_absolute"
+          },
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "1f7011131e7bef17"
+      }
+    },
+    "verdict": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "4d826c72a0860607"
+      }
+    },
+    "council_review": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "4d826c72a0860607"
+      }
+    },
+    "synthesis": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "4d826c72a0860607"
+      }
+    },
+    "schema_recovery": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "4d826c72a0860607"
+      }
+    },
+    "cross_wave_merge": {
+      "holders": [
+        "codex/gpt-6.1-sol",
+        "claude/claude-opus-5-5",
+        "codex/gpt-6-sol",
+        "claude/claude-opus-5"
+      ],
+      "effort": "medium",
+      "bar": 8.0,
+      "quality": {
+        "w_intelligence": 0.6,
+        "w_taste": 0.4,
+        "w_speed": 0.0
+      },
+      "margin": {
+        "lambda": 0.0
+      },
+      "frontier": {
+        "required": true,
+        "holder": null
+      },
+      "requires_capabilities": [],
+      "cross_family": {
+        "candidates": [
+          "codex/gpt-6.1-sol",
+          "claude/claude-opus-5-5",
+          "codex/gpt-6-sol",
+          "claude/claude-opus-5"
+        ],
+        "equivalence": "unmeasured",
+        "basis": "positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor",
+        "excluded": [
+          {
+            "holder": "claude/claude-sonnet-5-5",
+            "axis": "doctrine",
+            "evidence": "MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution/review/research, never design, architecture, hard judgment or ambiguous synthesis"
+          }
+        ]
+      },
+      "set_by": {
+        "evidence": "evidence/cross-provider-2026-10-08.md",
+        "node": "node_01M4C696HR9WVV6BVZ2FXQZH0Y",
+        "date": "2026-10-08",
+        "approved_by": "nick",
+        "approved_via": "Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)",
+        "fingerprint": "4d826c72a0860607"
+      }
     }
   },
   "must_stay_primary": [
@@ -665,7 +1769,19 @@
       "pricing": {
         "input_per_mtok_usd": 4,
         "output_per_mtok_usd": 20,
-        "cache_read_per_mtok_usd": 0.2
+        "cache_read_per_mtok_usd": 0.2,
+        "cache_write_5m_per_mtok_usd": 5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -744,6 +1860,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 5,
+        "output_per_mtok_usd": 25,
+        "cache_read_per_mtok_usd": 0.5,
+        "cache_write_5m_per_mtok_usd": 6.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -797,6 +1930,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 5,
+        "output_per_mtok_usd": 25,
+        "cache_read_per_mtok_usd": 0.5,
+        "cache_write_5m_per_mtok_usd": 6.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -933,7 +2083,18 @@
         "input_per_mtok_usd": 2,
         "output_per_mtok_usd": 10,
         "cache_read_per_mtok_usd": 0.2,
-        "cache_write_per_mtok_usd": 2.5
+        "cache_write_5m_per_mtok_usd": 2.5,
+        "as_of": "2026-09-28",
+        "source": "https://platform.claude.com/docs/en/models/overview"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "deterministic",
       "status": "active",
@@ -987,7 +2148,20 @@
       "pricing": {
         "input_per_mtok_usd": 2,
         "output_per_mtok_usd": 10,
-        "cache_read_per_mtok_usd": 0.2
+        "cache_read_per_mtok_usd": 0.2,
+        "cache_write_5m_per_mtok_usd": 2.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "basis": "$2/$10 is the standard price: the page's footnote (2026-09-27) says the scheduled 2026-09-01 rise to $3/$15 did not occur"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "deterministic",
       "status": "active",
@@ -1041,6 +2215,23 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": 3,
+        "output_per_mtok_usd": 15,
+        "cache_read_per_mtok_usd": 0.3,
+        "cache_write_5m_per_mtok_usd": 3.75,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -1091,6 +2282,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "observed_ids": [
@@ -1146,7 +2355,20 @@
       "pricing": {
         "input_per_mtok_usd": 0.1,
         "output_per_mtok_usd": 0.5,
-        "cache_read_per_mtok_usd": 0.01
+        "cache_read_per_mtok_usd": 0.01,
+        "cache_write_5m_per_mtok_usd": 0.125,
+        "as_of": "2026-10-07",
+        "source": "https://platform.claude.com/docs/en/models/overview",
+        "basis": "cache_write_5m uses the standard 1.25x-of-input multiplier, not a published quote; prompts above 100K tokens re-price the whole request at 5x (positioning report 2026-10-07)"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
       },
       "sampling": "stochastic",
       "status": "active",
@@ -1185,6 +2407,23 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": 1,
+        "output_per_mtok_usd": 5,
+        "cache_read_per_mtok_usd": 0.1,
+        "cache_write_5m_per_mtok_usd": 1.25,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "observed_ids": [
@@ -1244,7 +2483,20 @@
       "pricing": {
         "input_per_mtok_usd": 10,
         "output_per_mtok_usd": 50,
-        "cache_read_per_mtok_usd": 0.25
+        "cache_read_per_mtok_usd": 0.25,
+        "cache_write_5m_per_mtok_usd": 12.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "basis": "cache hit is 0.025x base input for Fable 5.1 (page footnote)"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "broken",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -1307,6 +2559,23 @@
       ],
       "related_skills": [],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": 10,
+        "output_per_mtok_usd": 50,
+        "cache_read_per_mtok_usd": 1,
+        "cache_write_5m_per_mtok_usd": 12.5,
+        "as_of": "2026-09-27",
+        "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "allowed_dispatch_lanes": [
@@ -1346,6 +2615,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1382,6 +2669,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1417,6 +2722,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1454,6 +2777,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1564,6 +2905,24 @@
         "ica-delegate"
       ],
       "max_context": 200000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 200000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1602,6 +2961,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1648,6 +3025,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1710,6 +3105,24 @@
         "ica-delegate"
       ],
       "max_context": 1000000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 1000000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -1861,7 +3274,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 10,
-        "output_per_mtok_usd": 50
+        "output_per_mtok_usd": 50,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "low",
@@ -1925,7 +3352,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
-        "output_per_mtok_usd": 10
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -1985,7 +3426,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
-        "output_per_mtok_usd": 10
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -2050,7 +3505,21 @@
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 0.1,
-        "output_per_mtok_usd": 0.5
+        "output_per_mtok_usd": 0.5,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-09-24",
+        "source": "this registry's pre-v2 row (CHANGELOG)",
+        "basis": "OpenAI input/output carried from the pre-v2 row; cached-input and cache-write rates were not retrieved, so they are unpriced (never approximated)"
+      },
+      "capabilities": {
+        "context_window": 1050000,
+        "max_output": 128000,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "supported",
+        "image_output": false,
+        "video_output": false
       },
       "reasoning_efforts": [
         "none",
@@ -2100,6 +3569,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2158,6 +3645,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2238,6 +3743,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2275,6 +3798,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "ICA-only row (employer shared pool / free tier): no per-token list price applies to us and none was retrieved; real cost is scores.cost. Unpriced, never approximated from a sibling row"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2312,6 +3853,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2349,6 +3908,24 @@
         "codex"
       ],
       "max_context": 400000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "Codex subscription row; no list price retrieved for this id. Unpriced, never approximated"
+      },
+      "capabilities": {
+        "context_window": 400000,
+        "max_output": null,
+        "tool_use": "supported",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2671,6 +4248,24 @@
         "bob-shell-delegate"
       ],
       "max_context": 40000,
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "local Bob shell on our hardware: no per-token price"
+      },
+      "capabilities": {
+        "context_window": 40000,
+        "max_output": null,
+        "tool_use": "unknown",
+        "forced_tool_choice": "unknown",
+        "reasoning_effort_control": "unknown",
+        "image_output": false,
+        "video_output": false
+      },
       "sampling": "deterministic",
       "status": "active",
       "providers": [
@@ -2701,6 +4296,30 @@
       "related_skills": [
         "nano-banana"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": true,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -2731,6 +4350,30 @@
       "related_skills": [
         "nano-banana-pro"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": true,
+        "video_output": false
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [
@@ -2760,6 +4403,30 @@
       "related_skills": [
         "sora"
       ],
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "pricing": {
+        "input_per_mtok_usd": null,
+        "output_per_mtok_usd": null,
+        "cache_read_per_mtok_usd": null,
+        "cache_write_5m_per_mtok_usd": null,
+        "as_of": "2026-10-08",
+        "source": "none",
+        "basis": "billed per image/video, not per token: the per-MTok fields do not apply"
+      },
+      "capabilities": {
+        "context_window": null,
+        "max_output": null,
+        "tool_use": "none",
+        "forced_tool_choice": "none",
+        "reasoning_effort_control": "none",
+        "image_output": false,
+        "video_output": true
+      },
       "sampling": "stochastic",
       "status": "active",
       "providers": [

@@ -46,8 +46,14 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
-def validate_registry(data: dict, source: str) -> list[str]:
-    """Return deterministic, human-readable registry integrity errors."""
+def validate_registry(data: dict, source: str, evidence_root: str | None = None,
+                      vocabulary: list[str] | None = None) -> list[str]:
+    """Return deterministic, human-readable registry integrity errors.
+
+    `evidence_root` / `vocabulary` default to this script's own skill directory, so the source
+    build (and sync-to-global.sh, which runs the SOURCE script over the deployed copy) resolves
+    `set_by.evidence` against the tracked evidence/ directory.
+    """
     errors: list[str] = []
     models = data.get("models") or {}
     seen_instances: dict[tuple[str, str, str], int] = {}
@@ -129,7 +135,330 @@ def validate_registry(data: dict, source: str) -> list[str]:
                 if instance.get("enabled") is not False or model.get("status") != "candidate":
                     errors.append(f"models.{model_key}.providers[{index}] external lane must be status:candidate and enabled:false")
 
+    if _registry_version(data) >= 2:
+        errors.extend(validate_v2(data, evidence_root or SKILL_DIR,
+                                  vocabulary if vocabulary is not None else load_vocabulary()))
+
     return [f"{source}: {error}" for error in errors]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Registry v2 (routing M1, node_01M4C696HR9WVV6BVZ2FXQZH0Y): model facts + task-class defaults.
+# Applied only when `version >= 2`, so older/foreign registries and test fixtures keep validating.
+# ──────────────────────────────────────────────────────────────────────────────
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PRICE_KEYS = ("input_per_mtok_usd", "output_per_mtok_usd", "cache_read_per_mtok_usd", "cache_write_5m_per_mtok_usd")
+SCORE_KEYS = ("cost", "intelligence", "taste", "speed")
+CAPABILITY_KEYS = ("context_window", "max_output", "tool_use", "forced_tool_choice",
+                   "reasoning_effort_control", "image_output", "video_output")
+EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+QUALITY_KEYS = ("w_intelligence", "w_taste", "w_speed")
+NON_ROUTABLE_STATUSES = {"scaffolded", "candidate", "deprecated"}
+
+
+def _registry_version(data: dict) -> int:
+    try:
+        return int(data.get("version") or 1)
+    except (TypeError, ValueError):
+        return 1
+
+
+def load_vocabulary(path: str | None = None) -> list[str]:
+    path = path or os.path.join(SKILL_DIR, "task-class-vocabulary.v1.json")
+    with open(path, encoding="utf-8") as fh:
+        return [c["id"] for c in json.load(fh)["classes"]]
+
+
+def is_routable(model: dict) -> bool:
+    """A model row the resolver can actually pick: not scaffolded/candidate/deprecated and at
+    least one provider instance not explicitly disabled."""
+    if (model or {}).get("status") in NON_ROUTABLE_STATUSES:
+        return False
+    return any(isinstance(p, dict) and p.get("enabled") is not False for p in (model.get("providers") or []))
+
+
+def defaults_fingerprint(entry: dict) -> str:
+    """sha256 (first 16 hex) of a task_class_defaults entry WITHOUT its set_by block. resolver.js
+    never reads it; it exists so a changed default cannot keep an old evidence stamp."""
+    body = {k: v for k, v in (entry or {}).items() if k != "set_by"}
+    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str).encode()
+    return hashlib.sha256(raw).hexdigest()[:16]
+
+
+def _number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def holder_model(data: dict, holder: str):
+    """Resolve a holder "provider/model_id" to (model_key, model_row) over every declared provider
+    instance, enabled or not (a disabled instance is a legal holder; the resolver skips it)."""
+    provider, _, model_id = str(holder).partition("/")
+    for key, model in (data.get("models") or {}).items():
+        for inst in (model or {}).get("providers") or []:
+            if isinstance(inst, dict) and inst.get("provider") == provider and inst.get("model_id") == model_id:
+                return key, model
+    return None, None
+
+
+def class_quality(model: dict, weights: dict):
+    """q on the 1-10 class quality scale, or None when a weighted score is unmeasured. Mirrors
+    resolver.js classQuality() exactly."""
+    scores = (model or {}).get("scores") or {}
+    total = 0.0
+    for wkey in QUALITY_KEYS:
+        weight = weights.get(wkey) or 0
+        if weight == 0:
+            continue
+        score = scores.get(wkey[2:])
+        if not _number(score):
+            return None
+        total += weight * score
+    return round(total, 6)
+
+
+
+# Cross-provider defaults (Nick 2026-10-08, req_01M4EFJ6ZBKFXWPHSWEPT9MDVE): every class compares the two
+# frontier families explicitly, and Fable stays explicit opt-in.
+CROSS_FAMILY_REQUIRED = ("claude/claude-opus-5-5", "codex/gpt-6.1-sol")
+EQUIVALENCE_KINDS = {"equivalent", "priority", "unmeasured"}
+EXCLUSION_AXES = {"capability", "authority", "doctrine", "bar"}
+FABLE_EXPLICIT_ONLY = {"claude/claude-fable-5-1": {"advanced_sol"}}
+
+
+def model_family(model_key: str) -> str:
+    """Vendor family of a model row key; the cross-family fallback rule compares these."""
+    k = str(model_key or "")
+    if k.startswith("claude"):
+        return "anthropic"
+    if k.startswith(("gpt", "sora", "o1", "o3", "o4")):
+        return "openai"
+    if k.startswith(("gemini", "gemma", "nano-banana")):
+        return "google"
+    return k.split("-")[0] or "other"
+
+
+def holder_cost(data: dict, holder: str):
+    """The Cost score a holder is chosen on: the provider instance's cost_score when it declares one
+    (an ICA instance is priced differently from the same model on a subscription), else the model's
+    scores.cost. Higher = cheaper to us. None when unmeasured."""
+    provider, _, model_id = str(holder).partition("/")
+    for model in (data.get("models") or {}).values():
+        for inst in (model or {}).get("providers") or []:
+            if isinstance(inst, dict) and inst.get("provider") == provider and inst.get("model_id") == model_id:
+                if _number(inst.get("cost_score")):
+                    return inst["cost_score"]
+                cost = ((model or {}).get("scores") or {}).get("cost")
+                return cost if _number(cost) else None
+    return None
+
+
+def validate_cross_family(data: dict, cls: str, entry: dict, holders: list) -> list[str]:
+    where = f"task_class_defaults.{cls}.cross_family"
+    xf = entry.get("cross_family")
+    if not isinstance(xf, dict):
+        return [f"{where} is required (v2): the cross-provider comparison behind holders[0]"]
+    errors: list[str] = []
+    candidates = xf.get("candidates")
+    if not isinstance(candidates, list) or not candidates or not all(isinstance(c, str) and "/" in c for c in candidates):
+        return [f"{where}.candidates must be a non-empty list of provider/model_id entries"]
+    for c in candidates:
+        if holder_model(data, c)[1] is None:
+            errors.append(f"{where}: candidate '{c}' is not a declared provider instance")
+    excluded = xf.get("excluded") or []
+    if not isinstance(excluded, list):
+        errors.append(f"{where}.excluded must be a list")
+        excluded = []
+    excluded_holders = []
+    for i, ex in enumerate(excluded):
+        if not isinstance(ex, dict) or not ex.get("holder") or not ex.get("evidence") or ex.get("axis") not in EXCLUSION_AXES:
+            errors.append(f"{where}.excluded[{i}] must be {{holder, axis: {sorted(EXCLUSION_AXES)}, evidence}}")
+            continue
+        excluded_holders.append(ex["holder"])
+        if ex["axis"] == "bar":
+            _, model = holder_model(data, ex["holder"])
+            q = class_quality(model, entry.get("quality") or {}) if model else None
+            if q is None or not _number(entry.get("bar")) or q >= entry["bar"]:
+                errors.append(f"{where}.excluded[{i}]: '{ex['holder']}' is excluded on the bar axis but measures q={q} "
+                              f"against bar {entry.get('bar')}")
+        if ex["holder"] in holders:
+            errors.append(f"{where}: '{ex['holder']}' is excluded but still a holder")
+    for required in CROSS_FAMILY_REQUIRED:
+        if required not in candidates and required not in excluded_holders:
+            errors.append(f"{where}: '{required}' must be evaluated (in candidates or excluded with an axis and evidence)")
+    if holders and holders[0] not in candidates:
+        errors.append(f"{where}: holders[0] '{holders[0]}' must be one of the candidates")
+    if not xf.get("basis"):
+        errors.append(f"{where}.basis is required (the evidence pointer for the equivalence call)")
+    kind = xf.get("equivalence")
+    if kind not in EQUIVALENCE_KINDS:
+        return errors + [f"{where}.equivalence must be one of {sorted(EQUIVALENCE_KINDS)}"]
+    if kind == "equivalent":
+        eq = xf.get("equivalent")
+        if not isinstance(eq, list) or len(eq) < 2 or any(e not in candidates for e in eq):
+            errors.append(f"{where}.equivalent must list >= 2 candidates")
+        else:
+            fams = {model_family(holder_model(data, e)[0]) for e in eq}
+            if len(fams) < 2:
+                errors.append(f"{where}.equivalent must span >= 2 families, got {sorted(fams)}")
+            costs = {e: holder_cost(data, e) for e in eq}
+            best = max((c for c in costs.values() if c is not None), default=None)
+            if holders and holders[0] in eq and best is not None and costs.get(holders[0]) != best:
+                errors.append(f"{where}: equivalent models are picked on Cost; holders[0] '{holders[0]}' is not the cheapest ({costs})")
+            if holders and holders[0] not in eq:
+                errors.append(f"{where}: holders[0] must be one of the equivalent models")
+    elif kind == "priority":
+        if xf.get("priority") != (holders[0] if holders else None):
+            errors.append(f"{where}.priority must name holders[0] ('{holders[0] if holders else None}')")
+    else:  # unmeasured: no evidence, so the cheapest candidate holds the default
+        costs = {c: holder_cost(data, c) for c in candidates}
+        best = max((c for c in costs.values() if c is not None), default=None)
+        if holders and best is not None and costs.get(holders[0]) != best:
+            errors.append(f"{where}: an unmeasured class defaults to the cheapest candidate; holders[0] '{holders[0]}' "
+                          f"is not ({costs})")
+    if kind in ("equivalent", "unmeasured") and len(holders) >= 2:
+        fam0 = model_family(holder_model(data, holders[0])[0])
+        other = [c for c in candidates if model_family(holder_model(data, c)[0]) != fam0]
+        if other and model_family(holder_model(data, holders[1])[0]) == fam0:
+            errors.append(f"{where}: the first fallback must come from another family when one is a candidate "
+                          f"(holders[1] '{holders[1]}' shares {fam0} with holders[0])")
+    for holder, allowed in FABLE_EXPLICIT_ONLY.items():
+        if holder in holders and cls not in allowed:
+            errors.append(f"task_class_defaults.{cls}: '{holder}' is explicit opt-in only and may hold only {sorted(allowed)}")
+    return errors
+
+
+def validate_v2(data: dict, evidence_root: str, vocabulary: list[str]) -> list[str]:
+    errors: list[str] = []
+    models = data.get("models") or {}
+
+    # Layer 1 — every routable row carries complete pricing, scores and capabilities.
+    for key, model in models.items():
+        if not isinstance(model, dict) or not is_routable(model):
+            continue
+        pricing = model.get("pricing")
+        if not isinstance(pricing, dict):
+            errors.append(f"models.{key}: routable row must declare pricing (v2)")
+        else:
+            missing = [k for k in PRICE_KEYS if k not in pricing]
+            if missing:
+                errors.append(f"models.{key}.pricing missing {missing} (null is legal, absence is not)")
+            bad = [k for k in PRICE_KEYS if k in pricing and pricing[k] is not None
+                   and not (_number(pricing[k]) and pricing[k] >= 0)]
+            if bad:
+                errors.append(f"models.{key}.pricing {bad} must be a non-negative number or null")
+            if any(pricing.get(k) is None for k in PRICE_KEYS) and not pricing.get("basis"):
+                errors.append(f"models.{key}.pricing has an unpriced (null) field and must state its basis")
+            for k in ("as_of", "source"):
+                if not pricing.get(k):
+                    errors.append(f"models.{key}.pricing.{k} is required (v2)")
+        scores = model.get("scores")
+        if not isinstance(scores, dict) or any(k not in scores for k in SCORE_KEYS):
+            errors.append(f"models.{key}: routable row must declare scores {list(SCORE_KEYS)}")
+        else:
+            for k in SCORE_KEYS:
+                v = scores[k]
+                if not ((_number(v) and 1 <= v <= 10) or v == "UNMEASURED"):
+                    errors.append(f"models.{key}.scores.{k} must be 1-10 or UNMEASURED, got {v!r}")
+        caps = model.get("capabilities")
+        if not isinstance(caps, dict) or any(k not in caps for k in CAPABILITY_KEYS):
+            errors.append(f"models.{key}: routable row must declare capabilities {list(CAPABILITY_KEYS)}")
+        elif caps.get("context_window") != model.get("max_context"):
+            errors.append(
+                f"models.{key}.capabilities.context_window ({caps.get('context_window')}) disagrees with "
+                f"max_context ({model.get('max_context')}); one fact, one value"
+            )
+
+    # Layer 2 — task_class_defaults: full vocabulary coverage, evidence, derived-copy agreement.
+    margin_policy = data.get("margin_policy")
+    if not isinstance(margin_policy, dict) or not _number(margin_policy.get("lambda_default")):
+        errors.append("margin_policy.lambda_default is required (v2)")
+    tcd = data.get("task_class_defaults")
+    if not isinstance(tcd, dict):
+        return errors + ["task_class_defaults is required (v2)"]
+    vocab = set(vocabulary)
+    for missing in sorted(vocab - set(tcd)):
+        errors.append(f"task_class_defaults is missing vocabulary class '{missing}'")
+    for extra in sorted(set(tcd) - vocab):
+        errors.append(f"task_class_defaults.{extra} is not a canonical vocabulary class")
+    policy = data.get("routing_policy") or {}
+    for cls, entry in tcd.items():
+        where = f"task_class_defaults.{cls}"
+        if not isinstance(entry, dict):
+            errors.append(f"{where} must be a mapping")
+            continue
+        holders = entry.get("holders")
+        if not isinstance(holders, list) or not holders or not all(isinstance(h, str) and "/" in h for h in holders):
+            errors.append(f"{where}.holders must be a non-empty list of provider/model_id entries")
+            holders = []
+        if entry.get("effort") not in EFFORTS:
+            errors.append(f"{where}.effort must be one of {sorted(EFFORTS)}")
+        bar = entry.get("bar")
+        if not (_number(bar) and 1 <= bar <= 10):
+            errors.append(f"{where}.bar must be a number on the 1-10 scale")
+            bar = None
+        quality = entry.get("quality")
+        if not isinstance(quality, dict) or any(not _number(quality.get(k)) or quality.get(k) < 0 for k in QUALITY_KEYS):
+            errors.append(f"{where}.quality must declare non-negative {list(QUALITY_KEYS)}")
+            quality = None
+        elif abs(sum(quality[k] for k in QUALITY_KEYS) - 1.0) > 1e-6:
+            errors.append(f"{where}.quality weights must sum to 1")
+        margin = entry.get("margin")
+        if not isinstance(margin, dict) or not _number(margin.get("lambda")) or margin.get("lambda") < 0:
+            errors.append(f"{where}.margin.lambda must be a non-negative number")
+        frontier = entry.get("frontier")
+        if not isinstance(frontier, dict) or not isinstance(frontier.get("required"), bool) \
+                or not (frontier.get("holder") is None or isinstance(frontier.get("holder"), str)):
+            errors.append(f"{where}.frontier must be {{required: bool, holder: provider/model_id|null}}")
+        elif frontier.get("required") and margin and _number(margin.get("lambda")) and margin["lambda"] != 0:
+            errors.append(f"{where}: frontier.required forces margin.lambda to 0")
+        if not isinstance(entry.get("requires_capabilities"), list) or \
+                not all(isinstance(c, str) and c for c in entry["requires_capabilities"]):
+            errors.append(f"{where}.requires_capabilities must be a list of capability ids")
+        for holder in holders + ([frontier["holder"]] if isinstance(frontier, dict) and frontier.get("holder") else []):
+            key, model = holder_model(data, holder)
+            if model is None:
+                errors.append(f"{where}: holder '{holder}' is not a declared provider instance")
+                continue
+            if bar is not None and quality and holder in holders:
+                q = class_quality(model, quality)
+                if q is not None and q < bar:
+                    errors.append(f"{where}: holder '{holder}' measures q={q} below the class bar {bar}")
+        errors.extend(validate_cross_family(data, cls, entry, holders))
+        chain = (policy.get(cls) or {}).get("chain") if isinstance(policy.get(cls), dict) else None
+        if chain is not None and list(chain) != list(holders):
+            errors.append(
+                f"routing_policy.{cls}.chain is a DERIVED copy of {where}.holders and disagrees "
+                f"({chain} != {holders}); edit task_class_defaults and copy the holders"
+            )
+        # set_by: an existing evidence file must record THIS entry's fingerprint on the class's row.
+        set_by = entry.get("set_by")
+        if not isinstance(set_by, dict):
+            errors.append(f"{where}.set_by is required (evidence, node, date, approved_by, fingerprint)")
+            continue
+        for k in ("evidence", "date", "approved_by", "fingerprint"):
+            if not set_by.get(k):
+                errors.append(f"{where}.set_by.{k} is required")
+        actual = defaults_fingerprint(entry)
+        if set_by.get("fingerprint") and set_by["fingerprint"] != actual:
+            errors.append(
+                f"{where} changed without re-stamping: set_by.fingerprint {set_by['fingerprint']} != {actual}. "
+                "A defaults change needs evidence: record the new fingerprint and the class in an evidence file, "
+                "then update set_by (see the task_class_defaults header)."
+            )
+        evidence = set_by.get("evidence")
+        if evidence:
+            path = os.path.normpath(os.path.join(evidence_root, evidence))
+            if not path.startswith(os.path.normpath(evidence_root) + os.sep) or not os.path.isfile(path):
+                errors.append(f"{where}.set_by.evidence '{evidence}' does not exist under {evidence_root}")
+            else:
+                with open(path, encoding="utf-8") as fh:
+                    rows = fh.read().splitlines()
+                if not any(f"`{cls}`" in r and actual in r for r in rows):
+                    errors.append(
+                        f"{where}: evidence '{evidence}' has no row naming `{cls}` with fingerprint {actual}; "
+                        "a defaults change without recorded evidence is refused"
+                    )
+    return errors
 
 
 def main() -> int:
@@ -144,6 +473,10 @@ def main() -> int:
     ap.add_argument("--out", dest="dst", default=None,
                     help="Path to output model-registry.generated.json "
                          "(default: same directory as --in, named model-registry.generated.json)")
+    ap.add_argument("--evidence-root", default=None,
+                    help="Directory set_by.evidence paths resolve against (default: this skill directory)")
+    ap.add_argument("--stamp", action="store_true",
+                    help="Print each task_class_defaults entry's current fingerprint and exit (authoring aid)")
     args = ap.parse_args()
 
     # If --out not given, place the generated JSON next to the source YAML.
@@ -160,7 +493,12 @@ def main() -> int:
         sys.stderr.write(f"ERROR: {args.src} did not parse to a mapping.\n")
         return 1
 
-    validation_errors = validate_registry(data, args.src)
+    if args.stamp:
+        for cls, entry in (data.get("task_class_defaults") or {}).items():
+            print(f"{cls}\t{defaults_fingerprint(entry)}")
+        return 0
+
+    validation_errors = validate_registry(data, args.src, evidence_root=args.evidence_root)
     if validation_errors:
         sys.stderr.write("ERROR: model registry validation failed:\n")
         for error in validation_errors:
@@ -201,8 +539,10 @@ def main() -> int:
 
     model_count = len(data.get("models", {}) or {})
     policy_count = len(data.get("routing_policy", {}) or {})
+    defaults_count = len(data.get("task_class_defaults", {}) or {})
     sys.stderr.write(
-        f"Wrote {args.dst}\n  models: {model_count}  routing_policy classes: {policy_count}\n"
+        f"Wrote {args.dst}\n  models: {model_count}  routing_policy classes: {policy_count}"
+        f"  task_class_defaults classes: {defaults_count}\n"
     )
     return 0
 

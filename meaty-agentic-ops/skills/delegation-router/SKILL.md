@@ -63,7 +63,7 @@ Repo-verified surfaces only:
 ## Routing Posture
 
 1. **MUST-stay override first** — any MUST-stay task_class resolves to `claude` regardless of input `provider`.
-2. **Registry chain** — resolve task_class to its `routing_policy.chain`; walk top-down by priority/availability/capability.
+2. **Registry chain** — resolve task_class to its `task_class_defaults.holders` (registry v2: role holders set by evaluation, `set_by` evidence enforced by the builder; `routing_policy.chain` is the derived fallback); walk top-down by priority/availability/capability, skipping a holder whose measured class quality is below the class `bar`.
 3. **Free-first** — free-eligible classes start at an ICA free-tier instance; primary only via the chain tail.
 4. **Determinism filter** — when `resume_active=true` on a structural stage, exclude nondeterministic providers.
 5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout. ⚠️ **Availability failures only. A permission denial is NOT one** — a classifier/hook/user refusal of the shelled invocation is a decision about whether this content may take this path, not a fact about the path, so the executor returns `{status: 'blocked', reason: 'permission_denied', fallback_applied: false}` with evidence and stops. It never re-attempts the same content on another lane (next entry, in-process, or reworded), and never probes to isolate the block. Rerouting after a denial belongs to the orchestrator. Closed trigger list + provenance: SPEC §5a.
