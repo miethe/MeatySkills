@@ -1,0 +1,13 @@
+provider: nvidia
+models:
+- id: nvidia/llama-3.3-nemotron-super
+  label: Llama 3.3 Nemotron Super 49B
+  family: nvidia
+  generation: '3.3'
+  context_windows:
+  - 131072
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-10-07'

@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "7000181e8d6ad3b41f23db28743a3108e0f55ed55315d602735a1b096e270028",
+  "_yaml_sha256": "36dcb762fbb8a0f94079b98b0739f14ab2d6e357141a7059f0ea44ee3dd47b0d",
   "version": 1,
-  "updated": "2026-09-30",
+  "updated": "2026-10-07",
   "routing_attributes": {
     "health": {
       "statuses": [
@@ -137,9 +137,23 @@
         "ccx",
         "beta"
       ],
-      "economics": "unlimited",
+      "economics": "shared_token_pool",
       "health": {
-        "status": "available"
+        "status": "available",
+        "checked_at": "2026-10-07",
+        "evidence": "PAID per Nick 2026-10-07; gateway meter still reads response-cost-original 0.0 at 41.6k input tokens (open discrepancy, unreconciled)"
+      }
+    },
+    {
+      "model_id": "claude-haiku-5-5",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "unknown",
+      "health": {
+        "status": "unavailable",
+        "checked_at": "2026-10-07",
+        "evidence": "403 team_model_access_denied on CCx3 for bare id, [1m], and dated forms; absent from GET /v1/models (26 ids)"
       }
     },
     {
@@ -296,28 +310,50 @@
       "health": {
         "status": "unknown"
       }
+    },
+    {
+      "model_id": "nvidia/llama-3.3-nemotron-super",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "unlimited",
+      "health": {
+        "status": "available",
+        "checked_at": "2026-10-07",
+        "evidence": "200 on both /chat/completions and /v1/messages bare-id; x-litellm-response-cost-original=0.0; actual model nvidia/llama-3.3-nemotron-super-49b-v1.5; [1m] suffix 403s"
+      }
+    },
+    {
+      "model_id": "nvidia/nemotron-3.5-lightning",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "unknown",
+      "health": {
+        "status": "unknown"
+      }
     }
   ],
   "routing_policy": {
     "exploration": {
       "chain": [
-        "ica/claude-haiku-4-5",
-        "claude/claude-haiku-4-5"
+        "ica/gpt-5.6-luna",
+        "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
     "documentation": {
       "chain": [
-        "ica/claude-haiku-4-5",
-        "claude/claude-haiku-4-5"
+        "ica/gpt-5.6-luna",
+        "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
     "mechanical": {
       "chain": [
-        "ica/claude-haiku-4-5",
+        "ica/gpt-5.6-luna",
         "ica/gemma-4-26b-a4b-it",
-        "claude/claude-haiku-4-5"
+        "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
@@ -326,7 +362,7 @@
         "codex/gpt-6-luna",
         "ica/gemini-3.6-flash",
         "ica/gemma-4-26b-a4b-it",
-        "ica/claude-haiku-4-5"
+        "claude/claude-haiku-5-5"
       ],
       "enabled": true
     },
@@ -1073,12 +1109,59 @@
         }
       ]
     },
+    "claude-haiku-5-5": {
+      "family": "claude",
+      "class": "haiku",
+      "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). NOT served on ICA: 403 team_model_access_denied on CCx3 for the bare id, [1m] and dated forms, and absent from the gateway /v1/models catalog, so every ICA lane keeps claude-haiku-4-5. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 6,
+        "taste": 6,
+        "speed": 9
+      },
+      "when_to_use": [
+        "mechanical-tasks",
+        "extraction",
+        "classification",
+        "routing-triage",
+        "structured-json-output",
+        "doc-gen",
+        "exploration",
+        "adversarial-review"
+      ],
+      "playbook_ref": "model-playbook/routes/anthropic-claude.md#claude-haiku-5-5",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 1000000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 0.1,
+        "output_per_mtok_usd": 0.5,
+        "cache_read_per_mtok_usd": 0.01
+      },
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "lane": "claude_subscription",
+          "model_id": "claude-haiku-5-5",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "cost_score": 10
+        }
+      ]
+    },
     "claude-haiku-4-5": {
       "family": "claude",
       "class": "haiku",
-      "descriptor": "Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option.",
+      "descriptor": "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation.",
       "scores": {
-        "cost": 10,
+        "cost": 7,
         "intelligence": 5,
         "taste": 5,
         "speed": 9
@@ -1105,10 +1188,11 @@
           "provider": "ica",
           "lane": "ica_gateway_messages",
           "model_id": "claude-haiku-4-5",
-          "cost_tier": "free",
-          "allowance": "unlimited",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
           "enabled": true,
-          "priority": 1
+          "priority": 1,
+          "cost_score": 7
         },
         {
           "provider": "claude",
@@ -2396,6 +2480,37 @@
           "allowance": "shared_token_pool",
           "enabled": false,
           "priority": 1
+        }
+      ]
+    },
+    "nvidia/llama-3.3-nemotron-super": {
+      "family": "nvidia",
+      "class": "nemotron",
+      "descriptor": "NVIDIA Llama 3.3 Nemotron Super 49B (v1.5 served) on the ICA ccx gateway — discovered and bench-evaluated 2026-10-07 (node_01M4C0PWMG1922F4HQ0TPWZVTG; probe+bench receipt docs/project_plans/reports/model-eval/nemotron-super-2026-10-07/ in agentic_meta_dev). Wire id: bare `nvidia/llama-3.3-nemotron-super` ([1m] suffix 403s). Context window: 131,072 tokens. Economics: FREE (x-litellm-response-cost-original: 0.0). Always-on thinking: the model cannot suppress its chain-of-thought — it always emits reasoning before answering, and on complex tasks the thinking trace leaks into text output (bench T2: leaked ~500-token reasoning trace instead of a clean single-word answer). Tool-use: the model responds to tool declarations but uses a custom <TOOLCALL> XML format, NOT standard Anthropic tool_use blocks or OpenAI function_call/tool_calls — incompatible with AOS infrastructure. Latency: avg ~6s (vs Haiku ~1.8s, GPT-luna ~2.7s) due to always-on thinking. Transport: both /chat/completions (OpenAI-compatible) and /v1/messages (Anthropic-compatible) return 200 on bare id. Bench verdict: correct on extraction/code-fix/summarization/JSON-schema tasks; format failure on classification (T2); registered not routed.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 5,
+        "taste": 3,
+        "speed": 4
+      },
+      "when_to_use": [],
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 131072,
+      "sampling": "stochastic",
+      "status": "scaffolded",
+      "providers": [
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_messages",
+          "model_id": "nvidia/llama-3.3-nemotron-super",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": false,
+          "priority": 1,
+          "capability_gap": "tool-use emits custom <TOOLCALL> XML (not standard Anthropic tool_use or OpenAI tool_calls); thinking traces leak into text output on multi-step judgment tasks"
         }
       ]
     },

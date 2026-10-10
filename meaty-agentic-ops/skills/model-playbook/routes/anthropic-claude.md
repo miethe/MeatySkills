@@ -170,8 +170,34 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   only as the older/cheaper-token fallback lane, not the default.
 - **Anti-patterns:** don't use as the default subscription workhorse — `sonnet-5` is now default.
 
+## claude-haiku-5-5
+
+- **When to pick:** the default cheap/mechanical Claude on the subscription lane as of 2026-10-07
+  (Nick): extraction from reports, ITT node classification, routing/triage calls, strict-JSON output,
+  short bug fixes, doc-gen, exploration. Supersedes `claude-haiku-4-5` there. Blind bench
+  (`docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md`): 4.33/5 vs Haiku 4.5 3.83,
+  Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on four of six tasks.
+- **Invocation lanes:** `claude/claude-haiku-5-5` only (billed; list from $0.10/$0.50 per MTok, 10x below
+  Haiku 4.5). The `haiku` alias resolves to it in Claude Code 2.1.293. 1M native context, 128K output;
+  the `[1m]` suffix is accepted but a no-op, so use the bare id. ⚠️ **NOT served on ICA (403
+  `team_model_access_denied` on CCx3, 2026-10-07)**: ICA delegation keeps `claude-haiku-4-5`.
+- **Gotchas:** an ICA-profile session whose `haiku` alias resolves natively to 5.5 will 403, so the
+  `ANTHROPIC_DEFAULT_HAIKU_MODEL` remap in `ica-settings*.json` must stay on `claude-haiku-4-5[1m]`.
+  Weakest where a field needs inference (it put a council+writeback request at tier T3, as Sonnet 5.5
+  also did) and on summary coverage at an exact word count (n=1; re-test before relying on it).
+- **Anti-patterns:** don't route `design_judgment`, `raw_strength`, or taste-critical work here; do not
+  replace Sonnet 5.5 for multi-file implementation on a bench this small.
+
 ## claude-haiku-4-5
 
+- **⚠️ PAID ON ICA (Nick, 2026-10-07, "Treat it as paid now").** The ICA row is `standard` /
+  `shared_token_pool`, Cost score 7; the gateway meter still reads `0.0` for it (open discrepancy, needs a
+  portal credit delta). Free ICA picks for mechanical work are now gpt-5.6-luna, Gemma 4, Llama 4 Maverick,
+  Granite 4 Small. The "FREE" wording in the bullets below predates this decision.
+- **LEGACY BUT SELECTABLE on the subscription lane (2026-10-07)** — `claude-haiku-5-5` (above) is the
+  default there. Still the live ICA Haiku, since ICA does not serve 5.5. Nick reports it is now paid on
+  ICA; the gateway `x-litellm-response-cost-original` header still reads `0.0` (2026-10-07, up to 41.6k
+  tokens), so the ICA row is unchanged pending confirmation.
 - **When to pick:** mechanical-tasks, doc-gen, exploration, cheap adversarial-review leg — fast,
   cheap, the best genuinely-free ICA Claude-quality option.
 - **Invocation lanes:** `ica/claude-haiku-4-5` (FREE, `allowance: unlimited`, priority 1),

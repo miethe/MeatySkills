@@ -85,6 +85,10 @@ agentic_meta_dev MODEL-ROUTING for the current row.)
 
 ## Free-5 vs shared_token_pool — the only genuinely free lane
 
+> ⚠️ **2026-10-07 (Nick, "Treat it as paid now"):** `claude-haiku-4-5` is PAID on ICA from this date, so the free set
+> below is **four** (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna). The gateway meter still reads `0.0`
+> for Haiku 4.5 (open discrepancy). Read the list below with Haiku 4.5 removed.
+
 `allowance: unlimited` (genuinely $0, cost-shifted off the primary budget) applies to **exactly
 5 models**: `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-...`,
 `ibm/granite-4-h-small`, `gpt-5.6-luna` (added 2026-08-26 as the beta alias `gpt-5.6-luna-dzus`; bare ccx id since the 2026-09-22 beta retirement). Every other ICA instance —
@@ -95,7 +99,8 @@ against ICA's shared pool, an opt-in **cost-shift**, not free. Don't conflate "r
 ## Alias remap gotcha (Agent-tool subagents on the ICA profile)
 
 Default `model: "haiku"` (or omitted) resolves to a dated id (`claude-haiku-4-5-20251001`) **not**
-in the gateway's `global-models` group → 401. `model: "sonnet"`/`"opus"` work as-is. Durable fix:
+in the gateway's `global-models` group → 401. ⚠️ Since 2026-10-07 the native `haiku` alias resolves to
+`claude-haiku-5-5`, which the gateway also 403s, so the remap below must keep pointing at `claude-haiku-4-5[1m]`. `model: "sonnet"`/`"opus"` work as-is. Durable fix:
 remap the aliases once in `~/.claude/ica-settings.json` (`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`
 env vars) — fixes every delegate/subagent on the profile without a proxy.
 
