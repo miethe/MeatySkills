@@ -79,6 +79,25 @@ opus55_ica = next(
 assert opus55_ica["enabled"] is True, opus55_ica
 assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
 
+# Haiku 5.5 (2026-10-07, Nick): default native cheap tier. Negative controls that would have caught
+# (a) a native leg still pinned to the superseded Haiku 4.5, (b) an ICA row invented for a model the
+# gateway 403s, (c) the 4.5 ICA free row being dropped on an unconfirmed "now paid" report, and
+# (d) the cheap tier's Intelligence score drifting up past what the bench supports.
+h55 = registry["models"]["claude-haiku-5-5"]
+assert h55["max_context"] == 1000000 and h55["status"] == "active", h55
+assert [p["provider"] for p in h55["providers"]] == ["claude"], h55["providers"]
+for task_class in ("exploration", "documentation", "mechanical"):
+    chain = registry["routing_policy"][task_class]["chain"]
+    assert "claude/claude-haiku-5-5" in chain, (task_class, chain)
+    assert "claude/claude-haiku-4-5" not in chain, (task_class, chain)
+    assert chain[0] == "ica/gpt-5.6-luna", (task_class, chain)
+    assert "ica/claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
+assert "ica/claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
+h45_ica = next(p for p in registry["models"]["claude-haiku-4-5"]["providers"] if p["provider"] == "ica")
+assert h45_ica["enabled"] is True and h45_ica["allowance"] == "shared_token_pool" and h45_ica["cost_tier"] == "standard", h45_ica  # paid per Nick 2026-10-07
+assert registry["models"]["claude-haiku-4-5"]["scores"]["cost"] == 7, registry["models"]["claude-haiku-4-5"]["scores"]
+assert h55["scores"]["intelligence"] <= registry["models"]["claude-sonnet-5-5"]["scores"]["intelligence"] - 2, h55["scores"]
+
 # Planted positive: an external row with an undeclared retention fact must fail.
 broken = copy.deepcopy(registry)
 del broken["models"]["deepseek-v4-flash"]["providers"][0]["eligibility"]["retention"]
