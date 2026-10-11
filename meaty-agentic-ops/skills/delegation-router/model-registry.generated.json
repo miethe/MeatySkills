@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "36dcb762fbb8a0f94079b98b0739f14ab2d6e357141a7059f0ea44ee3dd47b0d",
+  "_yaml_sha256": "a727c3239a8c21cb35b0a5aac598e0cd2db1b5927319411bf1e9ba3fbebaf154",
   "version": 1,
   "updated": "2026-10-07",
   "routing_attributes": {
@@ -1772,13 +1772,12 @@
           "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "billed",
-          "enabled": false,
+          "enabled": true,
           "priority": 1,
           "health": {
-            "status": "unavailable",
-            "checked_at": "2026-09-09",
-            "quota_limit": 0,
-            "evidence": "native lane returned hard 429 with limit:0 in the SOTA retune"
+            "status": "available",
+            "checked_at": "2026-10-07",
+            "evidence": "2026-10-07: one minimal native generateContent probe with the PAID key (GEMINI_API_KEY_PAID, a.k.a. GEMINI_PERSONAL_API_KEY in the salon) returned HTTP 200, modelVersion gemini-3.1-pro-preview (1 prompt + 5 thought tokens). This row binds the PAID key: callers must send GEMINI_API_KEY_PAID, not the free GEMINI_API_KEY (the row cannot express the key; lane gemini_direct only names auth gemini_api_key). History: 2026-09-09 quota_limit:0 / hard 429 RESOURCE_EXHAUSTED on the then-key in the SOTA retune; that finding was key-scoped and is superseded by the paid-key probe, kept here as the reason this row was disabled for four weeks."
           }
         }
       ]
