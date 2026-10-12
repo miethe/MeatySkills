@@ -63,7 +63,7 @@ if (fs.existsSync(TMP_LOG_PATH)) {
 const WAVE_PLAN_TASKS = [
   // P3-002: explore.js — exploration legs follow the free-first ICA chain.
   { id: 'EXPLORE-LEG-1', provider: 'gemini', model: 'gemini-3.5-flash',   task_class: 'exploration',        expected_agent_type_id: 'ica-executor', resume_active: false },
-  { id: 'EXPLORE-LEG-2', provider: 'gemini', model: 'gemini-3.1-pro-preview',   task_class: 'exploration',        expected_agent_type_id: 'ica-executor', resume_active: false },
+  { id: 'EXPLORE-LEG-2', provider: 'gemini', model: 'gemini-3.1-pro-preview',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
   // P3-003: spike.js — adversarial skeptic votes → ica-executor
   { id: 'SKEPTIC-1',     provider: 'ica',    model: 'sonnet',            task_class: 'skeptic-vote',       expected_agent_type_id: 'ica-executor',    resume_active: false },
   { id: 'SKEPTIC-2',     provider: 'ica',    model: 'haiku',             task_class: 'adversarial-review', expected_agent_type_id: 'ica-executor',    resume_active: false },
@@ -189,7 +189,7 @@ console.log('\n[P3-007] Test 4: Verifying agent_type_id per offload stage...');
 // Note: EXPECTED_OFFLOADS uses chosen_plugin_id not agent_type_id for direct entry comparison.
 const EXPECTED_OFFLOADS = {
   'EXPLORE-LEG-1':  'ica',
-  'EXPLORE-LEG-2':  'ica',
+  'EXPLORE-LEG-2':  'gemini',
   'SKEPTIC-1':      'ica',
   'SKEPTIC-2':      'ica',
   'EVID-SCRIBE-1':  'codex',
