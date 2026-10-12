@@ -57,7 +57,7 @@ Resolution**:
 1. **Enumerate.** From the phase agent-routing + skills + any MCP/workflow/context the plan needs,
    build `required_artifacts` (plan-level and/or per-phase).
 2. **Resolve against SkillMeat enterprise** (look-first; `.claude/rules/aos-operating-rules.md`):
-   `skillmeat search "<name>" --json` / `skillmeat show <name> --type <t>`. Set `status`:
+   `skillmeat search "<name>" --format json` / `skillmeat show <name> --type <t>`. Set `status`:
    - found in catalog or already on-disk → `available`, fill `skillmeat_ref`;
    - not found → `needs_creation`;
    - found but insufficient for the task → `needs_enhancement`.
