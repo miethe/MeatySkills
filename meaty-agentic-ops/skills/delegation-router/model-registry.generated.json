@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "a727c3239a8c21cb35b0a5aac598e0cd2db1b5927319411bf1e9ba3fbebaf154",
+  "_yaml_sha256": "f6e71d72d360168dc6b41810a383bdcf6135f9cecf7f05054024b608f509f2dd",
   "version": 1,
   "updated": "2026-10-07",
   "routing_attributes": {
@@ -1973,7 +1973,7 @@
       "related_skills": [
         "codex"
       ],
-      "max_context": 1050000,
+      "max_context": 500000,
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
@@ -2763,5 +2763,19 @@
         }
       ]
     }
+  },
+  "leg_time_budgets": {
+    "status": "RATIFIED",
+    "ratified_by": "Nick",
+    "ratified_at": "2026-10-13",
+    "effort_seconds": {
+      "xs": 2700,
+      "s": 2700,
+      "m": 7200,
+      "l": 14400
+    },
+    "raw_strength_or_sol_multiplier": 1.5,
+    "read_and_shape_500k_multiplier": 2,
+    "legacy_seconds": 14400
   }
 }
