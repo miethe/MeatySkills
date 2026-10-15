@@ -25,8 +25,8 @@
 #
 # CRITICAL ACCURACY INVARIANT (do not assume — encode it)
 #   ICA "free" (`allowance: unlimited`, $0, cost-shifted off the primary budget)
-#   applies to: claude-haiku-4-5, gemma-4-26b, llama-4-maverick, granite-4-small, AND
-#   (as of 2026-08-26, Nick authoritative) gpt-5.6-luna — FIVE models, not four. (ICA ccx id
+#   applies to: gemma-4-26b, llama-4-maverick, granite-4-small, gpt-5.6-luna, AND
+#   (as of 2026-10-15, Nick authoritative) glm-5-3 — FIVE models, not four. (ICA ccx id
 #   `gpt-5.6-luna`; the beta alias `gpt-5.6-luna-dzus` was retired 2026-09-22 with the beta keys.)
 #   Any doc/note still saying "exactly 4" is stale.
 #   ⚠️ 2026-10-07 RE-PROBE (node_01M4C1MXHVCZTA6Y71RNEVXT4R): Nick reports claude-haiku-4-5 is no
@@ -36,7 +36,7 @@
 #   and cannot settle it; a portal credit read before/after a large Haiku 4.5 call would.
 #   ➜ DECISION (Nick, 2026-10-07, "Treat it as paid now"): claude-haiku-4-5 on ICA is PAID. Its ICA
 #   provider row is `cost_tier: standard, allowance: shared_token_pool`, cost_score 7, and the
-#   free set is now FOUR (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna). The $0.00 meter
+#   free set is now FIVE (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna, glm-5-3). The $0.00 meter
 #   reading stays recorded as an OPEN DISCREPANCY (tracker: ICA Haiku 4.5 metering shows $0 though Nick
 #   reports paid: verify with a portal credit delta, child of node_01M4C1MXHVCZTA6Y71RNEVXT4R).
 #   claude-haiku-5-5 is NOT served on ICA (403).
@@ -102,7 +102,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-10-07   # nvidia/llama-3.3-nemotron-super (49B, ICA ccx) added: confirmed free/bare-id/131k-ctx/always-on-thinking; registered not routed (node_01M4C0PWMG1922F4HQ0TPWZVTG). Prior: GPT-6.1 Sol supersedes GPT-6 Sol on the personal Codex lane (Nick, 2026-09-30). Prior history: CHANGELOG.md.
+updated: 2026-10-15   # GLM 5.3 added and enabled per Nick ratification; see agentic_meta_dev evaluation report. Prior: nvidia/llama-3.3-nemotron-super (49B, ICA ccx), 2026-10-07. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -739,6 +739,21 @@ models:
     status: active
     providers:
       - { provider: ica, lane: ica_gateway_messages, model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
+
+  glm-5-3:
+    family: glm
+    class: open
+    descriptor: "Z.ai GLM 5.3 via the ICA ccx gateway (`rits/zai-org/glm-5-3`, served on IBM RITS infrastructure; cost $0.00 per x-litellm-response-cost-original, measured 2026-10-15). Nick-ratified 2026-10-15. Role: cross-family second opinion / diversity vote and long-context reads (100K–300K+ tokens) on PUBLIC content only; set max_tokens >= 16K. Not for latency-sensitive loops or spec-exhaustive agentic implementation (GPT-5.6 Luna first). Codex lane via ica-codex.sh ccx shim only without a model_reasoning_effort override. Never private/CHCW/credentials."
+    scores: { cost: 10, intelligence: 7, taste: 6, speed: 3 }
+    when_to_use: [second-opinion, diversity-vote, long-context-read]
+    playbook_ref: model-playbook/routes/open-models.md#glm-5-3
+    tools: []
+    related_skills: [ica-delegate]
+    max_context: 400000
+    sampling: stochastic
+    status: active
+    providers:
+      - { provider: ica, lane: ica_gateway_messages, model_id: "rits/zai-org/glm-5-3", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }
 
   granite-4-small:
     family: open
