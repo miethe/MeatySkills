@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "36dcb762fbb8a0f94079b98b0739f14ab2d6e357141a7059f0ea44ee3dd47b0d",
+  "_yaml_sha256": "f6e71d72d360168dc6b41810a383bdcf6135f9cecf7f05054024b608f509f2dd",
   "version": 1,
   "updated": "2026-10-07",
   "routing_attributes": {
@@ -1772,13 +1772,12 @@
           "model_id": "gemini-3.1-pro-preview",
           "cost_tier": "standard",
           "allowance": "billed",
-          "enabled": false,
+          "enabled": true,
           "priority": 1,
           "health": {
-            "status": "unavailable",
-            "checked_at": "2026-09-09",
-            "quota_limit": 0,
-            "evidence": "native lane returned hard 429 with limit:0 in the SOTA retune"
+            "status": "available",
+            "checked_at": "2026-10-07",
+            "evidence": "2026-10-07: one minimal native generateContent probe with the PAID key (GEMINI_API_KEY_PAID, a.k.a. GEMINI_PERSONAL_API_KEY in the salon) returned HTTP 200, modelVersion gemini-3.1-pro-preview (1 prompt + 5 thought tokens). This row binds the PAID key: callers must send GEMINI_API_KEY_PAID, not the free GEMINI_API_KEY (the row cannot express the key; lane gemini_direct only names auth gemini_api_key). History: 2026-09-09 quota_limit:0 / hard 429 RESOURCE_EXHAUSTED on the then-key in the SOTA retune; that finding was key-scoped and is superseded by the paid-key probe, kept here as the reason this row was disabled for four weeks."
           }
         }
       ]
@@ -1974,7 +1973,7 @@
       "related_skills": [
         "codex"
       ],
-      "max_context": 1050000,
+      "max_context": 500000,
       "max_output": 128000,
       "pricing": {
         "input_per_mtok_usd": 2,
@@ -2764,5 +2763,19 @@
         }
       ]
     }
+  },
+  "leg_time_budgets": {
+    "status": "RATIFIED",
+    "ratified_by": "Nick",
+    "ratified_at": "2026-10-13",
+    "effort_seconds": {
+      "xs": 2700,
+      "s": 2700,
+      "m": 7200,
+      "l": 14400
+    },
+    "raw_strength_or_sol_multiplier": 1.5,
+    "read_and_shape_500k_multiplier": 2,
+    "legacy_seconds": 14400
   }
 }
