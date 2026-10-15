@@ -745,6 +745,8 @@ models:
     class: open
     descriptor: "Z.ai GLM 5.3 via the ICA ccx gateway (`rits/zai-org/glm-5-3`, served on IBM RITS infrastructure; cost $0.00 per x-litellm-response-cost-original, measured 2026-10-15). Nick-ratified 2026-10-15. Role: cross-family second opinion / diversity vote and long-context reads (100K–300K+ tokens) on PUBLIC content only; set max_tokens >= 16K. Not for latency-sensitive loops or spec-exhaustive agentic implementation (GPT-5.6 Luna first). Codex lane via ica-codex.sh ccx shim only without a model_reasoning_effort override. Never private/CHCW/credentials."
     scores: { cost: 10, intelligence: 7, taste: 6, speed: 3 }
+    reasoning_efforts: [low, medium, high, xhigh, max]
+    default_effort: low  # Single-call public HTTP tasks; tool/agentic low effort is unmeasured (Luna first).
     when_to_use: [second-opinion, diversity-vote, long-context-read]
     playbook_ref: model-playbook/routes/open-models.md#glm-5-3
     tools: []
