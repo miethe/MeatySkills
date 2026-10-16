@@ -1,5 +1,13 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — Merge development: gemini-4-argon (MeatySkills#96) folded into v3
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Merged `origin/development` (gemini-4-argon model row with
+  measured scores, `registry/providers/google.yaml` fact row, playbook route section). The row is
+  explicit-selectable only and in no `task_class_defaults` holder list; its `gemini_direct` lane row
+  already fits the v3 lane table. Conflicts in the v2-shape routing chains were resolved by keeping
+  the v3 structure; regenerated both JSON artifacts.
+
 ## 2026-10-16 — M1 remainder: registry v3 evaluated data, routable holders, quality verdicts
 
 - Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`.
