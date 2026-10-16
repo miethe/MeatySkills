@@ -81,6 +81,30 @@ same use cases and SVG-taste evidence as the native entry above, via the ICA gat
 - **Gotchas:** `shared_token_pool`, not free. Not Search-grounded — the ICA proxy cannot ground;
   use the native lane above if grounding is required.
 
+## gemini-4-argon
+
+Google's flagship reasoning model (launched 2026-10-13; the model page says Stable). Added to the
+registry 2026-10-16 (`node_01M52TKCJ4SRT9JAWNXPNGD1D2`); explicit-selectable, in no routing chain.
+
+- **When to pick:** heavy reasoning, large-context reads, planning critique, and a cross-family
+  second opinion where the Pro tier is wanted. Benchmark standing: see the registry entry's
+  `scores` comment and the evidence on the tracker node.
+- **Invocation lanes:** `gemini/gemini-4-argon`, native only, and **only on the paid key**
+  (`GEMINI_API_KEY_PAID`, the key the salon reads as `GEMINI_PERSONAL_API_KEY`). The free key
+  `GEMINI_API_KEY` returns 429 with a free-tier limit of 0 for this model. For `gemini-cli`, export
+  the paid key as `GEMINI_API_KEY` for that call. **ICA does not serve it** (absent from the gateway
+  model list; bare and `[1m]` both 403, probed 2026-10-16), so there is no `[1m]` id anywhere.
+- **Limits:** 1,048,576 input. The API reports a 32,768 output cap while Google's docs say 65,536;
+  treat 32,768 as the ceiling until a call proves more. Thinking levels low / medium / high, and
+  thinking tokens bill as output.
+- **Price:** $2 in / $10 out per MTok (implicit-cache read $0.10) through 2026-11-30, then $4 / $20
+  ($0.20) from 2026-12-01. Batch is half price.
+- **Gotchas:** **explicit caching is not supported** (`createCachedContent` returns 400). Workloads
+  that resend the same context (salon packets, gemini-cli's ~16.5k-token preamble) pay full input
+  on every call unless Google's implicit cache happens to hit. The resolver's `gemini` invocation
+  template uses whatever `GEMINI_API_KEY` is in the environment, so a resolver-dispatched Argon leg
+  fails on the free key until the caller binds the paid one.
+
 ## gemini-3.1-flash-lite
 
 - **When to pick:** cheapest/fastest native tier for trivial work (formatting, one-liners),

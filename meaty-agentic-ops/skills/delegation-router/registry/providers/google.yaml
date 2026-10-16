@@ -50,6 +50,19 @@ models:
   - extended_context
   lifecycle: current
   as_of: '2026-09-26'
+- id: gemini-4-argon
+  label: Gemini 4 Argon
+  family: google
+  generation: '4'
+  context_windows:
+  - 1048576
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-10-16'
 - id: gemini-3.1-flash-lite
   label: Gemini 3.1 Flash Lite
   family: google

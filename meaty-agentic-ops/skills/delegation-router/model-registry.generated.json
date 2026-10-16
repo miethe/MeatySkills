@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "c2450df70c8c940245df4015c19f9ad4b35599aa0d7923f568ed0188f54608e4",
+  "_yaml_sha256": "aa5bcf26fc83d2cc21fe1bb4377b3b3d799c4998ea197a8c63c5eef4386c91f7",
   "version": 1,
   "updated": "2026-10-16",
   "routing_attributes": {
@@ -1918,6 +1918,83 @@
             "status": "available",
             "checked_at": "2026-10-07",
             "evidence": "2026-10-07: one minimal native generateContent probe with the PAID key (GEMINI_API_KEY_PAID, a.k.a. GEMINI_PERSONAL_API_KEY in the salon) returned HTTP 200, modelVersion gemini-3.1-pro-preview (1 prompt + 5 thought tokens). This row binds the PAID key: callers must send GEMINI_API_KEY_PAID, not the free GEMINI_API_KEY (the row cannot express the key; lane gemini_direct only names auth gemini_api_key). History: 2026-09-09 quota_limit:0 / hard 429 RESOURCE_EXHAUSTED on the then-key in the SOTA retune; that finding was key-scoped and is superseded by the paid-key probe, kept here as the reason this row was disabled for four weeks."
+          }
+        }
+      ]
+    },
+    "gemini-4-argon": {
+      "family": "google",
+      "class": "gemini-pro",
+      "descriptor": "Gemini 4 Argon (Google flagship reasoning model, launched 2026-10-13; model page lists it Stable, the launch post does not say GA vs preview). Exact id gemini-4-argon (models.get 2026-10-16: displayName 'Gemini 4 Argon', version '3.0', inputTokenLimit 1,048,576, outputTokenLimit 32,768, thinking true, methods generateContent/countTokens/batchGenerateContent, NO createCachedContent). OUTPUT CAP: the API reports 32,768 while the docs page says 65,536; maxOutputTokens 65536 is accepted without a validation error (2026-10-16) but no call has proven >32,768 emitted, so treat 32,768 as the safe ceiling. Thinking levels low/medium/high; thinking tokens bill as output. CACHING: implicit only; explicit caching is NOT supported (createCachedContent 400 'Explicit caching is not supported for models/gemini-4-argon', 2026-10-16), so repeated-context workloads (salon packets, the ~16.5k-token gemini-cli preamble) pay full input on every call unless the implicit cache hits. LANES (probed 2026-10-16): native AI Studio PAID key (GEMINI_API_KEY_PAID, the same key the salon reads as GEMINI_PERSONAL_API_KEY) generateContent 200 echoing modelVersion gemini-4-argon; gemini-cli 0.46.0 `-m gemini-4-argon` with the paid key exported as GEMINI_API_KEY returned ok (16,549 input tokens of CLI preamble, cached 0); the FREE key GEMINI_API_KEY is 429 RESOURCE_EXHAUSTED with free_tier limit 0 for this model (Google lists no free tier); ICA ccx does NOT serve it (absent from GET /v1/models; bare and [1m] both 403), so there is no ICA row and no [1m] id. Lane eligibility = gemini-paid (MODEL-ROUTING 1.4: vendor_hosted / retained / us / personal; economics per_call / self). Explicit-selectable only: in NO routing_policy chain. Tracker node_01M52TKCJ4SRT9JAWNXPNGD1D2.",
+      "scores": {
+        "cost": 5,
+        "intelligence": 8,
+        "taste": 7,
+        "speed": 5
+      },
+      "when_to_use": [
+        "large-context",
+        "planning",
+        "adversarial-review",
+        "deep-reasoning",
+        "second-opinion"
+      ],
+      "playbook_ref": "model-playbook/routes/google-gemini.md#gemini-4-argon",
+      "tools": [
+        "web_search",
+        "large_context"
+      ],
+      "related_skills": [
+        "gemini-cli"
+      ],
+      "max_context": 1048576,
+      "max_output": 32768,
+      "pricing": {
+        "input_per_mtok_usd": 2,
+        "output_per_mtok_usd": 10,
+        "cache_read_per_mtok_usd": 0.1
+      },
+      "pricing_schedule": [
+        {
+          "from": "2026-10-13",
+          "to": "2026-11-30",
+          "input_per_mtok_usd": 2,
+          "output_per_mtok_usd": 10,
+          "cache_read_per_mtok_usd": 0.1
+        },
+        {
+          "from": "2026-12-01",
+          "input_per_mtok_usd": 4,
+          "output_per_mtok_usd": 20,
+          "cache_read_per_mtok_usd": 0.2
+        }
+      ],
+      "caching": {
+        "explicit": false,
+        "implicit": true,
+        "evidence": "createCachedContent 400 on the paid key 2026-10-16"
+      },
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "gemini",
+          "lane": "gemini_direct",
+          "model_id": "gemini-4-argon",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "account_relationship": "personal",
+          "health": {
+            "status": "available",
+            "checked_at": "2026-10-16",
+            "evidence": "PAID key (GEMINI_API_KEY_PAID == GEMINI_PERSONAL_API_KEY): generateContent 200, modelVersion gemini-4-argon, 2.2s for a 45-token prompt; gemini-cli 0.46.0 -m gemini-4-argon 'ok' with the paid key exported. FREE key GEMINI_API_KEY 429 free_tier limit 0: callers must send the paid key (the row cannot express the key; same caveat as gemini-3.1-pro-preview)."
           }
         }
       ]
