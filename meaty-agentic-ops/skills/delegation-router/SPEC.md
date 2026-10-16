@@ -45,7 +45,7 @@ platform skill executes it.
 **In scope**:
 - Provider/model resolution for delegated legs (`claude`, `ica`, `bob`, `gemini`, `codex`).
 - Free-first cost-shifting of free-eligible task classes to ICA free-tier.
-- MUST-stay-primary enforcement (orchestration, verdict, Mode-D, council review, synthesis).
+- MUST-stay-primary enforcement (orchestration, verdict, Mode-D, council review, synthesis, schema recovery, cross-wave merge).
 - Determinism filtering on resumed structural stages.
 - Failure-fallback chain emission for executor re-dispatch (**availability failures only** — see §5a:
   a permission denial is never a traversal trigger).
@@ -66,12 +66,20 @@ order; enabled provider rows map models to lanes. Each lane declares six routing
 `harness_capabilities`. The resolver first finds the earliest holder with an eligible lane, then
 chooses the first eligible lane in `lane_order` that is not refused or unavailable.
 
-`minimum.predicate` matches lane attributes. An explicit `minimum.lanes` list takes precedence.
-Unknown values fail closed for `disclosure_absolute` and `authority_absolute` and are open for
-negotiable reasons. `requires_capabilities` must be a subset of the lane capabilities. Missing
-capacity data is recorded as `unmeasured` and does not exclude a lane; `refused` and `unavailable`
-do. Codex identity availability is read from the capacity file and the chosen lane binds
-`identity_ref`.
+`minimum.predicate` matches lane attributes. An explicit `minimum.lanes` list takes precedence;
+the seven `must_stay_primary` classes explicitly allow only `claude_subscription`. Unknown values
+fail closed for `disclosure_absolute` and `authority_absolute` and are open for negotiable reasons.
+`requires_capabilities` must be a subset of the lane capabilities, and the builder rejects any holder
+without an enabled provider row on a declared lane that covers those capabilities. Missing capacity
+data is recorded as `unmeasured` and does not exclude a lane; `refused` and `unavailable` do. Codex
+identity availability is read from the capacity file and the chosen lane binds `identity_ref`.
+
+Each class carries the evaluated v2 `effort`, `bar`, `quality` weights, `margin.lambda`, `frontier`,
+`cross_family`, and `set_by` metadata. When a class declares a `bar`, each holder's quality score is
+`q = w_intelligence × intelligence + w_taste × taste + w_speed × speed`. A measured score below the
+bar is `below_bar` and is skipped; missing scores or any `UNMEASURED` value is `unmeasured_bar` and
+is skipped. Later measured holders after a selected model are `not_reached`. The decision and static
+table both record `q` and `bar` per holder.
 
 The CLI contract is:
 

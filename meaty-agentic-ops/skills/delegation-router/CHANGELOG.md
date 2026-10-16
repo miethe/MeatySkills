@@ -1,14 +1,35 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — M1 remainder: registry v3 evaluated data, routable holders, quality verdicts
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`.
+- Carried all 23 v2 task-class evaluations and holder rankings into v3 (`effort`, `bar`, quality
+  weights, margin, frontier, capability requirements, cross-family evidence and approval
+  provenance); provider prefixes are removed from model references. The ICA refresh replaces the
+  earlier Sol and Luna holders where applicable; implementation keeps its front-approved interim
+  Codex-first order pending Nick's ruling. SVG generation now starts with the approved
+  `claude-opus-5-5` holder and has no Claude-only capability requirement.
+- Builder rejects holders with no enabled capability-compatible lane and provider-prefixed model
+  references. Removed the `claude-haiku-5-5[1m]` placeholder and `gpt-5.6-luna` from exploration,
+  documentation and mechanical; removed `gemma-4-26b-a4b-it` from mechanical and second opinion
+  because history contains no model provider row to restore.
+- `gemini-3.5-flash` and `gemini-3.6-flash` native rows remain disabled: the 2026-09-09 evidence
+  says the then-key hit hard 429/limit:0, while PR #88 only probed `gemini-3.1-pro-preview` on the
+  paid key. `web_research` no longer requires `web_grounding`, allowing its enabled ICA holders.
+- Seven `must_stay_primary` classes explicitly pin `minimum.lanes: [claude_subscription]`;
+  `journal_reflect` is unchanged. Holder verdicts now distinguish `below_bar`, `unmeasured_bar`,
+  `not_reached`, and `chosen`; q/bar appear in decisions and the static routing table.
+- Updated `SPEC.md` and this reference; regenerated both JSON artifacts.
+
 ## 2026-10-16 — WP M1: registry v3, model-only holders, two-step resolver, RoutingRecord v3
 
 - M1 plan: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q` (registry v3 and two-step resolver).
 - Added model-only `task_class_defaults` and generated `routing_policy`, lane attributes and
   capabilities, ordered lane selection, capacity-file decisions, explicit Codex identity binding,
   static routing-table output, and v3 RoutingRecord decision/floor/revision fields.
-- Added the v3 resolver and routing-table fixtures. `journal_reflect` retains its existing
-  `egress_absolute` minimum pending Nick's resolution of the conflict with the v3 allowed-reason
-  vocabulary; the builder deliberately rejects that legacy minimum rather than relabeling it.
+- Added the v3 resolver and routing-table fixtures. On 2026-10-16, `journal_reflect`'s local
+  custody boundary was migrated to `predicate.compute_custody: [local]` with
+  `reason: disclosure_absolute`; the boundary and Nick's 2026-08-25 provenance are preserved.
 - Details and CLI contract: `SPEC.md` §1a and `references/model-registry.md` § Registry v3.
 
 ## 2026-10-16 — ICA refresh: Haiku 5.5, Sonnet 5.5, GPT-6 Luna, GPT-6.1 Sol replace their predecessors
