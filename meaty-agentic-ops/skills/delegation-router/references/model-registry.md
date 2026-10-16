@@ -200,7 +200,7 @@ never assumed**:
 
 Free-first routing applies **only** to `allowance: unlimited` instances. ICA Sonnet/Opus
 (`shared_token_pool`) stay opt-in — never an always-on free route. A model can be free on one
-provider and billed on another (e.g. `claude-haiku-4-5` is `unlimited` on ICA, `billed` on Claude).
+provider and billed on another (e.g. `claude-haiku-5-5` is `unlimited` on ICA since 2026-10-16, `billed` on Claude).
 
 ## Scores block — advisory scorecard metadata
 

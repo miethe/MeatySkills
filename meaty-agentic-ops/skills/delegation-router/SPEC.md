@@ -372,7 +372,9 @@ resolver machine-enforces it — this is capability data the router acts on, not
   vs `--allowedTools` distinction earlier in this file (§ "`disallowedTools` is the membership
   test, not an enforcement mechanism").
 - **Three new routable task classes** — `review`, `adjudication`, `critique` — chain to
-  `ica/gpt-5.6-sol` alone (no fallback: no other tool-less-capable Sol lane exists yet). These are
+  `ica/gpt-6.1-sol` then `ica/gpt-5.6-sol` (2026-10-16: ICA serves gpt-6.1-sol, which inherits
+  `tool_mode: "none"` from the 5.6 row; the tools+reasoning exclusivity is not re-measured for 6.1, and
+  5.6-sol stays as the still-served fallback; originally `ica/gpt-5.6-sol` alone). These are
   deliberately NEW ids, **not** a repoint of the existing `must_stay_primary` `verdict` /
   `council_review` / `synthesis` classes, which stay exactly as protected as before. A caller
   reaching these classes must still pass `needs_tools: false` — declaring the class alone does not

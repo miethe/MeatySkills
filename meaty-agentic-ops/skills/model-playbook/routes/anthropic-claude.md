@@ -101,13 +101,16 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   reasoning-heavy legs) to `gpt-6.1-sol` (superseding `gpt-6-sol`, 2026-09-30) instead; a Sonnet-5.5-first leg that misses twice still
   escalates to Opus 5.5.
 - **Invocation lanes:** `claude/claude-sonnet-5-5` (primary, billed, $2/$10 per MTok, cache read
-  $0.20/MTok, cache write $2.50/MTok). ⚠️ **ICA does NOT serve this model yet (measured
-  2026-09-28)** — there is no `[1m]` ICA offload lane for it. Until it lands, ICA's **preferred
-  Claude model is `claude-opus-5-5[1m]`**, not `claude-sonnet-5[1m]` — a capability call, not a
-  cost saving (Opus 5.5 draws more of the shared weekly ccx credit allowance per call). See the
-  `claude-opus-5-5` entry above and `claude-sonnet-5` below for the interim fallback; probe with a
-  bare-id HTTP 200 check against the gateway per `ica-ccx-bare-ids-only`, and update this route
-  when it lands (tracker `node_01M3MWZ6564YV32VCMMGAV5DN2`, tree `tree_01KVTH95ETM8YRYCV2ENHVR124`).
+  $0.20/MTok, cache write $2.50/MTok) and **`ica/claude-sonnet-5-5[1m]`** (shared ccx credit pool,
+  NOT free; the **default ICA Sonnet offload as of 2026-10-16**, Nick). ⚠️ This supersedes the
+  2026-09-28 note that ICA did not serve 5.5: ICA added it 2026-10-16 (probed same day: listed in
+  `GET /v1/models`; raw `/v1/messages` bare id `claude-sonnet-5-5` 200 echoing the id, and the
+  `[1m]` form also 200; `~/ica-claude.sh --model claude-sonnet-5-5` and `claude-sonnet-5-5[1m]`
+  both `is_error: false`). Use the `[1m]` id for `ica-claude.sh` / Claude Code callers and the
+  bare id for raw-HTTP adapters. `claude-sonnet-5[1m]` is now the legacy ICA fallback and the
+  "Opus 5.5 preferred over Sonnet 5 on ICA" ranking no longer applies (`claude-opus-5-5[1m]`
+  stays on ICA for `design_judgment` / spine-offload). Tracker `node_01M3MWZ6564YV32VCMMGAV5DN2`
+  (tree `tree_01KVTH95ETM8YRYCV2ENHVR124`) is satisfied by this.
 - **Effort/context:** 1M context, 128K output (300K via Batches API with the
   `output-300k-2026-03-24` beta header). Adaptive thinking; API default effort `high`, but Claude
   Code itself defaults the model to Medium effort. Extended-thinking params
@@ -122,7 +125,8 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
 - **Gotchas:** local Claude Code probe (2026-09-28) — `claude -p --model claude-sonnet-5-5 'reply
   ok'` returns stderr `[claude-code:unrecognized_model]` (benign) + stdout `ok`, exit 0; the
   harness accepts the id despite the stderr line.
-- **Anti-patterns:** don't route to `claude-sonnet-5-5[1m]` on ICA — it doesn't exist yet. Don't
+- **Anti-patterns:** don't send the `[1m]` string over raw HTTP by habit (bare id is the safe
+  raw-transport form even though today's probe also accepted `[1m]`). Don't
   route `design_judgment` or `raw_strength` work here just because it's the new cheaper default.
 
 ## claude-sonnet-5
@@ -179,10 +183,18 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
   Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on four of six tasks.
 - **Invocation lanes:** `claude/claude-haiku-5-5` only (billed; list from $0.10/$0.50 per MTok, 10x below
   Haiku 4.5). The `haiku` alias resolves to it in Claude Code 2.1.293. 1M native context, 128K output;
-  the `[1m]` suffix is accepted but a no-op, so use the bare id. ⚠️ **NOT served on ICA (403
-  `team_model_access_denied` on CCx3, 2026-10-07)**: ICA delegation keeps `claude-haiku-4-5`.
-- **Gotchas:** an ICA-profile session whose `haiku` alias resolves natively to 5.5 will 403, so the
-  `ANTHROPIC_DEFAULT_HAIKU_MODEL` remap in `ica-settings*.json` must stay on `claude-haiku-4-5[1m]`.
+  the `[1m]` suffix is accepted but a no-op natively. **Also `ica/claude-haiku-5-5[1m]` (FREE,
+  `allowance: unlimited`, as of 2026-10-16, Nick).** ⚠️ Supersedes the 2026-10-07 reading that ICA
+  403s this model: probed 2026-10-16, it is listed in `GET /v1/models`, raw `/v1/messages` bare id
+  200 echoing the id, `[1m]` form 200, and `~/ica-claude.sh` with the bare and `[1m]` ids both
+  `is_error: false`. It replaces `claude-haiku-4-5` as the ICA Haiku (4.5 stays served as the
+  legacy fallback and stays PAID per Nick 2026-10-07). The unqualified default remains the
+  subscription row; the ICA row is reached with `--provider ica` or the free
+  exploration/documentation/mechanical chains.
+- **Gotchas:** the `ANTHROPIC_DEFAULT_HAIKU_MODEL` remap in `ica-settings*.json` no longer needs to
+  stay on `claude-haiku-4-5[1m]`: ICA now serves 5.5, so the `haiku` alias resolving natively to
+  `claude-haiku-5-5` works on an ICA-profile session (the remap may be pointed at
+  `claude-haiku-5-5[1m]`; re-verify the Agent-tool subagent path before relying on it).
   Weakest where a field needs inference (it put a council+writeback request at tier T3, as Sonnet 5.5
   also did) and on summary coverage at an exact word count (n=1; re-test before relying on it).
 - **Anti-patterns:** don't route `design_judgment`, `raw_strength`, or taste-critical work here; do not
@@ -192,10 +204,13 @@ behind `claude-opus-5-5` for `orchestration` and `mode_d`.
 
 - **⚠️ PAID ON ICA (Nick, 2026-10-07, "Treat it as paid now").** The ICA row is `standard` /
   `shared_token_pool`, Cost score 7; the gateway meter still reads `0.0` for it (open discrepancy, needs a
-  portal credit delta). Free ICA picks for mechanical work are now gpt-5.6-luna, Gemma 4, Llama 4 Maverick,
-  Granite 4 Small. The "FREE" wording in the bullets below predates this decision.
+  portal credit delta). Free ICA picks for mechanical work are now gpt-6-luna and claude-haiku-5-5 (both
+  from 2026-10-16), Gemma 4, Llama 4 Maverick, Granite 4 Small (gpt-5.6-luna is the still-served legacy
+  Luna). The "FREE" wording in the bullets below predates this decision. ⚠️ 2026-10-16: Nick's note
+  that the new Haiku and Luna are "free/unlimited just like the prior instances" is read as describing
+  the NEW ids; Haiku 4.5 is left PAID here, to be reconciled if he meant it is free again.
 - **LEGACY BUT SELECTABLE on the subscription lane (2026-10-07)** — `claude-haiku-5-5` (above) is the
-  default there. Still the live ICA Haiku, since ICA does not serve 5.5. Nick reports it is now paid on
+  default there. LEGACY fallback on ICA behind the free `claude-haiku-5-5[1m]` row since 2026-10-16 (ICA now serves 5.5). Nick reports it is now paid on
   ICA; the gateway `x-litellm-response-cost-original` header still reads `0.0` (2026-10-07, up to 41.6k
   tokens), so the ICA row is unchanged pending confirmation.
 - **When to pick:** mechanical-tasks, doc-gen, exploration, cheap adversarial-review leg — fast,

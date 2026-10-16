@@ -1,5 +1,30 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — ICA refresh: Haiku 5.5, Sonnet 5.5, GPT-6 Luna, GPT-6.1 Sol replace their predecessors
+
+- Nick (2026-10-16): "ICA has finally added more models! claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna,
+  gpt-6.1-sol. These should replace all the older models of the same names in the ICA registry.
+  Additionally, note that these new Haiku and Luna models are also free/unlimited just like the prior
+  instances." Probed the same day against the ccx gateway (key CCx3): all four listed in `GET /v1/models`;
+  raw `/v1/messages` bare ids 200 echoing the id (also `claude-opus-5-5`); `[1m]` forms of haiku-5-5 and
+  sonnet-5-5 also 200 raw; `ica-claude.sh` ok for haiku-5-5 / sonnet-5-5 bare and `[1m]` and opus-5-5 `[1m]`;
+  gpt-6-luna and gpt-6.1-sol 200 on `/v1/messages`, `/v1/chat/completions` and `/v1/responses` (bare only,
+  `-dzus` 403). Claude Code through the `ica-gpt` shim returns 400 `messages: empty array` for gpt-6 ids AND
+  the control `gpt-5.6-luna` (pre-existing shim defect; not claimed to work).
+- Registry: new ICA provider rows on `claude-haiku-5-5` (`claude-haiku-5-5[1m]`, free/unlimited, priority 2),
+  `claude-sonnet-5-5` (`claude-sonnet-5-5[1m]`, shared pool, the default ICA Sonnet), `gpt-6-luna`
+  (`ica_gateway_responses_shim`, free/unlimited) and `gpt-6.1-sol` (`ica_gateway_messages_shim`,
+  shared pool, `tool_mode: "none"` inherited and NOT re-measured for 6.1). Scores inherited from the nearest
+  sibling pending evaluation. Predecessors (`claude-haiku-4-5`, `claude-sonnet-5`, `gpt-5.6-luna`,
+  `gpt-5.6-sol`) stay enabled as still-served legacy fallbacks; `gpt-5.6-terra` has no replacement and stays.
+- Chains: `exploration` / `documentation` / `mechanical` now lead `ica/gpt-6-luna`, `ica/claude-haiku-5-5[1m]`,
+  then legacy `ica/gpt-5.6-luna`; `review` / `adjudication` / `critique` are `ica/gpt-6.1-sol` then
+  `ica/gpt-5.6-sol`. `design_judgment` and `raw_strength` are deliberately unchanged.
+- ICA Opus rows `claude-opus-5`, `-4-8`, `-4-6` (403 / absent from the catalog) stay `enabled: false` and now carry
+  `unavailable` health dated 2026-10-16; `claude-opus-5-5` stays enabled. `ica_catalog` updated for all of the above.
+- Open item: Haiku 4.5 on ICA stays PAID (Nick 2026-10-07); Nick's "free ... just like the prior instances" is
+  read as describing the new ids. Reconcile if he meant Haiku 4.5 is free again.
+
 ## 2026-10-03 — Correct Mode-D authority reference
 
 - Point the skill's Mode-D policy reference at `agentic_meta_dev/docs/rules/mode-d-enforcement.md`, the existing AOS authority. The obsolete `.claude/rules/` pointer did not resolve and blocked the consumer's commit gate. No routing, account, model, effort, permission, or node-contract behavior changes.

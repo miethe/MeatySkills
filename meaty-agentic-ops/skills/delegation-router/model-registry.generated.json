@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "f6e71d72d360168dc6b41810a383bdcf6135f9cecf7f05054024b608f509f2dd",
+  "_yaml_sha256": "c2450df70c8c940245df4015c19f9ad4b35599aa0d7923f568ed0188f54608e4",
   "version": 1,
-  "updated": "2026-10-07",
+  "updated": "2026-10-16",
   "routing_attributes": {
     "health": {
       "statuses": [
@@ -62,7 +62,8 @@
       "economics": "shared_token_pool",
       "health": {
         "status": "unavailable",
-        "evidence": "403 E002 tenancy entitlement gap"
+        "checked_at": "2026-10-16",
+        "evidence": "403 E002 tenancy entitlement gap; absent from GET /v1/models 2026-10-16"
       }
     },
     {
@@ -73,7 +74,8 @@
       "economics": "shared_token_pool",
       "health": {
         "status": "unavailable",
-        "evidence": "403 E002 tenancy entitlement gap"
+        "checked_at": "2026-10-16",
+        "evidence": "403 E002 tenancy entitlement gap; absent from GET /v1/models 2026-10-16"
       }
     },
     {
@@ -84,7 +86,8 @@
       "economics": "shared_token_pool",
       "health": {
         "status": "unavailable",
-        "evidence": "403 E002 tenancy entitlement gap"
+        "checked_at": "2026-10-16",
+        "evidence": "403 E002 tenancy entitlement gap; bare and [1m] both 403, absent from GET /v1/models 2026-10-16"
       }
     },
     {
@@ -95,8 +98,8 @@
       "economics": "shared_token_pool",
       "health": {
         "status": "available",
-        "checked_at": "2026-09-24",
-        "evidence": "Claude-Code wrapper: claude-opus-5-5[1m] rc 0, canonicalModel claude-opus-5-5, contextWindow 1000000; raw HTTP bare-id unmeasured"
+        "checked_at": "2026-10-16",
+        "evidence": "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-opus-5-5; ica-claude.sh claude-opus-5-5[1m] is_error false (2026-10-16); earlier 2026-09-24 Claude-Code wrapper rc 0, contextWindow 1000000"
       }
     },
     {
@@ -128,7 +131,21 @@
       ],
       "economics": "shared_token_pool",
       "health": {
-        "status": "available"
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "still listed in GET /v1/models; LEGACY fallback behind claude-sonnet-5-5 on ICA"
+      }
+    },
+    {
+      "model_id": "claude-sonnet-5-5",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "shared_token_pool",
+      "health": {
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-sonnet-5-5 and [1m] form 200; ica-claude.sh claude-sonnet-5-5 and claude-sonnet-5-5[1m] is_error false"
       }
     },
     {
@@ -149,11 +166,11 @@
       "lanes": [
         "ccx"
       ],
-      "economics": "unknown",
+      "economics": "unlimited",
       "health": {
-        "status": "unavailable",
-        "checked_at": "2026-10-07",
-        "evidence": "403 team_model_access_denied on CCx3 for bare id, [1m], and dated forms; absent from GET /v1/models (26 ids)"
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-haiku-5-5 and [1m] form 200; ica-claude.sh claude-haiku-5-5 and claude-haiku-5-5[1m] is_error false (2026-10-16). Free/unlimited per Nick 2026-10-16. SUPERSEDES the 2026-10-07 403 reading (was unavailable)"
       }
     },
     {
@@ -240,13 +257,39 @@
       }
     },
     {
+      "model_id": "gpt-6-luna",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "unlimited",
+      "health": {
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id only; -dzus form 403. Free/unlimited per Nick 2026-10-16"
+      }
+    },
+    {
+      "model_id": "gpt-6.1-sol",
+      "lanes": [
+        "ccx"
+      ],
+      "economics": "shared_token_pool",
+      "health": {
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id only; -dzus form 403. Economics inherited from gpt-5.6-sol (Nick 2026-10-16). tools+reasoning interaction NOT re-measured for 6.1"
+      }
+    },
+    {
       "model_id": "gpt-5.6-luna",
       "lanes": [
         "ccx"
       ],
-      "economics": "unknown",
+      "economics": "unlimited",
       "health": {
-        "status": "unknown"
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "still served (200) 2026-10-16; LEGACY fallback behind gpt-6-luna. economics corrected unknown -> unlimited to match its enabled free provider row (FREE as of 2026-08-26, Nick)"
       }
     },
     {
@@ -256,7 +299,9 @@
       ],
       "economics": "shared_token_pool",
       "health": {
-        "status": "available"
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "still served (200) 2026-10-16; LEGACY fallback behind gpt-6.1-sol"
       }
     },
     {
@@ -266,7 +311,9 @@
       ],
       "economics": "unknown",
       "health": {
-        "status": "unknown"
+        "status": "available",
+        "checked_at": "2026-10-16",
+        "evidence": "still served (200) 2026-10-16; NO GPT-6 replacement named, remains the 5.6-line ICA Terra id"
       }
     },
     {
@@ -337,6 +384,8 @@
   "routing_policy": {
     "exploration": {
       "chain": [
+        "ica/gpt-6-luna",
+        "ica/claude-haiku-5-5[1m]",
         "ica/gpt-5.6-luna",
         "claude/claude-haiku-5-5"
       ],
@@ -344,6 +393,8 @@
     },
     "documentation": {
       "chain": [
+        "ica/gpt-6-luna",
+        "ica/claude-haiku-5-5[1m]",
         "ica/gpt-5.6-luna",
         "claude/claude-haiku-5-5"
       ],
@@ -351,8 +402,10 @@
     },
     "mechanical": {
       "chain": [
-        "ica/gpt-5.6-luna",
+        "ica/gpt-6-luna",
+        "ica/claude-haiku-5-5[1m]",
         "ica/gemma-4-26b-a4b-it",
+        "ica/gpt-5.6-luna",
         "claude/claude-haiku-5-5"
       ],
       "enabled": true
@@ -430,18 +483,21 @@
     },
     "review": {
       "chain": [
+        "ica/gpt-6.1-sol",
         "ica/gpt-5.6-sol"
       ],
       "enabled": true
     },
     "adjudication": {
       "chain": [
+        "ica/gpt-6.1-sol",
         "ica/gpt-5.6-sol"
       ],
       "enabled": true
     },
     "critique": {
       "chain": [
+        "ica/gpt-6.1-sol",
         "ica/gpt-5.6-sol"
       ],
       "enabled": true
@@ -766,7 +822,12 @@
             "one_million_context"
           ],
           "max_context": 1000000,
-          "max_output": 64000
+          "max_output": 64000,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-10-16",
+            "evidence": "bare and [1m] both 403, absent from GET /v1/models (2026-10-16)"
+          }
         }
       ]
     },
@@ -818,7 +879,12 @@
           "tools": [
             "one_million_context"
           ],
-          "max_context": 1000000
+          "max_context": 1000000,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-10-16",
+            "evidence": "403 / absent from GET /v1/models (2026-10-16)"
+          }
         }
       ]
     },
@@ -896,7 +962,12 @@
           "tools": [
             "one_million_context"
           ],
-          "max_context": 1000000
+          "max_context": 1000000,
+          "health": {
+            "status": "unavailable",
+            "checked_at": "2026-10-16",
+            "evidence": "403 / absent from GET /v1/models (2026-10-16)"
+          }
         }
       ]
     },
@@ -943,13 +1014,32 @@
           "allowance": "billed",
           "enabled": true,
           "priority": 1
+        },
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_messages",
+          "model_id": "claude-sonnet-5-5[1m]",
+          "cost_tier": "standard",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tools": [
+            "one_million_context"
+          ],
+          "max_context": 1000000,
+          "health": {
+            "status": "available",
+            "checked_at": "2026-10-16",
+            "evidence": "ica-claude.sh claude-sonnet-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200"
+          }
         }
       ]
     },
     "claude-sonnet-5": {
       "family": "claude",
       "class": "sonnet",
-      "descriptor": "Claude Sonnet 5 (released 2026-06-30). LEGACY BUT SELECTABLE as of 2026-09-28 — claude-sonnet-5-5 is now the default subscription/native-execution Sonnet (see that entry above); Sonnet 5 stays the live ICA offload lane (`claude-sonnet-5[1m]`, shared pool) since ICA does not yet serve 5.5. Near-Opus coding/agentic quality at Sonnet cost. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
+      "descriptor": "Claude Sonnet 5 (released 2026-06-30). LEGACY BUT SELECTABLE as of 2026-09-28 — claude-sonnet-5-5 is now the default subscription/native-execution Sonnet (see that entry above); Sonnet 5 on ICA (`claude-sonnet-5[1m]`, shared pool) is the LEGACY FALLBACK behind `claude-sonnet-5-5[1m]` as of 2026-10-16 (ICA now serves 5.5; still served itself). Near-Opus coding/agentic quality at Sonnet cost. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane.",
       "scores": {
         "cost": 5,
         "intelligence": 8,
@@ -1153,13 +1243,28 @@
           "enabled": true,
           "priority": 1,
           "cost_score": 10
+        },
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_messages",
+          "model_id": "claude-haiku-5-5[1m]",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 10,
+          "health": {
+            "status": "available",
+            "checked_at": "2026-10-16",
+            "evidence": "ica-claude.sh claude-haiku-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200; free/unlimited per Nick 2026-10-16 (gateway meter not separately probed)"
+          }
         }
       ]
     },
     "claude-haiku-4-5": {
       "family": "claude",
       "class": "haiku",
-      "descriptor": "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation.",
+      "descriptor": "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL SERVED on ICA (`claude-haiku-4-5`, bare id) as the LEGACY fallback behind the free `claude-haiku-5-5[1m]` ICA row (ICA began serving 5.5 on 2026-10-16). Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation.",
       "scores": {
         "cost": 7,
         "intelligence": 5,
@@ -1382,6 +1487,41 @@
           "provider": "ica",
           "lane": "ica_gateway_messages",
           "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
+    "glm-5-3": {
+      "family": "glm",
+      "class": "open",
+      "descriptor": "Z.ai GLM 5.3 via the ICA ccx gateway (`rits/zai-org/glm-5-3`, served on IBM RITS infrastructure; cost $0.00 per x-litellm-response-cost-original, measured 2026-10-15). Nick-ratified 2026-10-15. Role: cross-family second opinion / diversity vote and long-context reads (100K–300K+ tokens) on PUBLIC content only; set max_tokens >= 16K. Not for latency-sensitive loops or spec-exhaustive agentic implementation (GPT-5.6 Luna first). Codex lane via ica-codex.sh ccx shim only without a model_reasoning_effort override. Never private/CHCW/credentials.",
+      "scores": {
+        "cost": 10,
+        "intelligence": 7,
+        "taste": 6,
+        "speed": 3
+      },
+      "when_to_use": [
+        "second-opinion",
+        "diversity-vote",
+        "long-context-read"
+      ],
+      "playbook_ref": "model-playbook/routes/open-models.md#glm-5-3",
+      "tools": [],
+      "related_skills": [
+        "ica-delegate"
+      ],
+      "max_context": 400000,
+      "sampling": "stochastic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_messages",
+          "model_id": "rits/zai-org/glm-5-3",
           "cost_tier": "free",
           "allowance": "unlimited",
           "enabled": true,
@@ -1889,7 +2029,7 @@
     "gpt-6-sol": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'.",
+      "descriptor": "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA serves GPT-6.1 Sol (not GPT-6 Sol) from 2026-10-16: see the gpt-6.1-sol entry. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'.",
       "scores": {
         "cost": 4,
         "intelligence": 9,
@@ -1947,7 +2087,7 @@
     "gpt-6.1-sol": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA does not serve GPT-6/6.1.",
+      "descriptor": "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA ccx ALSO serves gpt-6.1-sol as of 2026-10-16 (bare id; Nick: replaces ICA gpt-5.6-sol), see the ICA provider row: tool-less review/adjudication/critique lane, same economics as the old ICA Sol.",
       "scores": {
         "cost": 4,
         "intelligence": 9,
@@ -1964,6 +2104,7 @@
         "hard-code-review",
         "cross-family-lens"
       ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-6.1-sol",
       "tools": [
         "functions",
         "web-search",
@@ -2006,13 +2147,30 @@
             "checked_at": "2026-09-30",
             "evidence": "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day"
           }
+        },
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_messages_shim",
+          "model_id": "gpt-6.1-sol",
+          "cost_tier": "premium",
+          "allowance": "shared_token_pool",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "tool_mode": "none",
+          "capability_gap": "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)",
+          "health": {
+            "status": "available",
+            "checked_at": "2026-10-16",
+            "evidence": "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403"
+          }
         }
       ]
     },
     "gpt-6-luna": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6.",
+      "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA ccx ALSO serves gpt-6-luna as of 2026-10-16 (bare id; free/unlimited per Nick; replaces ICA gpt-5.6-luna): see the ICA provider row.",
       "scores": {
         "cost": 7,
         "intelligence": 8,
@@ -2026,6 +2184,7 @@
         "second-opinion",
         "exploration"
       ],
+      "playbook_ref": "model-playbook/routes/openai-gpt.md#gpt-6-luna",
       "tools": [
         "functions",
         "web-search",
@@ -2063,6 +2222,21 @@
           "priority": 1,
           "account_relationship": "personal",
           "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "ica",
+          "lane": "ica_gateway_responses_shim",
+          "model_id": "gpt-6-luna",
+          "cost_tier": "free",
+          "allowance": "unlimited",
+          "enabled": true,
+          "priority": 2,
+          "cost_score": 8,
+          "health": {
+            "status": "available",
+            "checked_at": "2026-10-16",
+            "evidence": "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403; free/unlimited per Nick 2026-10-16"
+          }
         }
       ]
     },
@@ -2203,7 +2377,7 @@
     "gpt-5.6-terra-ica": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Terra via the ICA ccx gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable.",
+      "descriptor": "NO GPT-6 REPLACEMENT (2026-10-16): this is the remaining 5.6-line ICA id and was still served (200) on 2026-10-16. OpenAI GPT-5.6 Terra via the ICA ccx gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable.",
       "scores": {
         "cost": 8,
         "intelligence": 8,
@@ -2244,7 +2418,7 @@
     "gpt-5.6-luna-ica": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable.",
+      "descriptor": "LEGACY FALLBACK as of 2026-10-16 (still served, 200): ICA gpt-6-luna now replaces this as the ICA free Luna (see the gpt-6-luna entry's ICA row). OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable.",
       "scores": {
         "cost": 8,
         "intelligence": 7,
