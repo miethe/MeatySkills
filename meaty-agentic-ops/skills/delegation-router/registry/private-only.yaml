@@ -2,6 +2,9 @@ private_only:
 - id: bob-local
   reason: Local delegate identifier; implementation and runtime details are private
     infrastructure.
+- id: glm-5-3
+  reason: Registry-specific Zai deployment alias; the public upstream model mapping is
+    not established in the on-disk provider facts.
 - id: gemini-3.1-pro-preview-ica
   reason: Registry alias encodes a private gateway association; canonical public model
     is listed separately.

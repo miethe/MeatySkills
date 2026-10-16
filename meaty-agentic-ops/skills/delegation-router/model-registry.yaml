@@ -129,7 +129,7 @@
 # Reference: docs/project_plans/design-specs/model-registry-router-globalization-v1.md §3
 # ──────────────────────────────────────────────────────────────────────────────
 
-version: 1
+version: 3
 updated: 2026-10-16   # ICA refresh: claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna, gpt-6.1-sol now served on ICA ccx and replace their predecessors as the ICA defaults (Nick 2026-10-16). Prior: GLM 5.3 added and enabled per Nick ratification 2026-10-15. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -189,67 +189,143 @@ ica_catalog:
 # mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
 # start at a free ICA instance; orchestration / mode_d pin to primary Claude.
 # ──────────────────────────────────────────────────────────────────────────────
+# GENERATED from task_class_defaults — do not edit.
 routing_policy:
-  # 2026-10-07 (Nick): the native/subscription Haiku leg is now claude-haiku-5-5 (10x cheaper than 4.5, native 1M ctx;
-  # blind bench mean 4.33 vs 3.83/5). ICA Haiku 4.5 now counts as PAID (Nick, "Treat it as paid now"), so the free ICA leg
-  # is gpt-5.6-luna (rule a: still-free ICA model; bench: luna(low) 5.00/5 via Codex, ICA /v1/messages 200 at cost 0.0),
-  # with Haiku 5.5 on the subscription as the fallback (rule b). Haiku 4.5 remains selectable explicitly.
-  # 2026-10-16 (Nick): ICA now serves gpt-6-luna and claude-haiku-5-5, both free/unlimited, replacing gpt-5.6-luna and
-  # claude-haiku-4-5 as the ICA free legs. The legacy gpt-5.6-luna stays as a later fallback (still served); the paid ICA
-  # Haiku 4.5 is not re-added. Native subscription claude-haiku-5-5 stays the last-resort leg.
-  exploration:      { chain: ["ica/gpt-6-luna", "ica/claude-haiku-5-5[1m]", "ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
-  documentation:    { chain: ["ica/gpt-6-luna", "ica/claude-haiku-5-5[1m]", "ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
-  mechanical:       { chain: ["ica/gpt-6-luna", "ica/claude-haiku-5-5[1m]", "ica/gemma-4-26b-a4b-it", "ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
-  # Grounded 2026-07-28; Nick decision 2026-09-25 moves the Codex subscription workhorse to GPT-6 Luna.
-  second_opinion:   { chain: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }   # 2026-10-07: last-resort leg ica/claude-haiku-4-5 (now paid) -> subscription Haiku 5.5 (rule b)
-  # Grounded 2026-08-09 (execution pilot, n=3; see use-case-rankings.yaml `agentic-coding`, conf 0.5). CHAIN DELIBERATELY UNCHANGED — codex/gpt-5.6-terra shipped 3/3 real legs with zero logic defects but is EXPLICITLY-SELECTABLE ONLY, not an auto leg, on n=3 with no head-to-head arm. Explicit selection already resolves (codex-executor, fallback claude/claude-sonnet-5) and needs no chain edit. ⚠️ Dispatch an implementer leg at effort `high` — sandboxModeFor() maps standard→read-only, so a default-effort codex implementer CANNOT WRITE and fails by producing nothing.
-  implementation:   { chain: ["claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # 2026-09-28: workhorse default moves to Sonnet 5.5 (native/subscription chain; ICA served it from 2026-10-16 as an explicit opt-in offload, not a chain leg); fallback claude-sonnet-5. ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload) — RESOLVED 2026-10-16: ICA now serves 5.5, so the ICA opt-in offload is claude-sonnet-5-5[1m] (claude-sonnet-5[1m] is the legacy fallback). ⚠️ Updated 2026-09-28 (evening) per Nick: this is the CONTRACT-CLEAR execution default, not a blanket one — `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes below and never resolve through this chain.
-  # Added 2026-09-28 (evening), Nick: Opus 5.5's real role beyond the orchestration/mode_d spine —
-  # design/architecture/UX-visual-design/hard-judgment/ambiguous-synthesis work starts here, not
-  # merely as a two-Sonnet-5.5-miss escalation target. Distinct from `orchestration` (MUST-stay,
-  # personal-account, verdict/schema-recovery/cross-wave-merge) — this class is not must_stay_primary.
-  design_judgment:  { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"], enabled: true }
-  # Added 2026-09-28 (evening), Nick: gpt-6-sol's real role beyond the second_opinion cross-family
-  # lens — hard-algorithmic problems, debugging, and reasoning-heavy legs start here, in addition to
-  # (not a replacement for) its existing cross-family use in second_opinion above.
-  # 2026-09-30, Nick: gpt-6.1-sol supersedes gpt-6-sol as the raw_strength default; gpt-6-sol is the legacy-selectable fallback.
-  raw_strength:     { chain: ["codex/gpt-6.1-sol", "codex/gpt-6-sol", "claude/claude-opus-5-5"], enabled: true }
-  web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
-  code_review:      { chain: ["codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # Codex subscription default = GPT-6 Luna; Claude fallback moves to Sonnet 5.5 (2026-09-28), then legacy Sonnet 5. ⚠️ 2026-09-28 (evening): for a raw-strength review pass (hard algorithmic/debugging/reasoning-heavy), route explicitly to `raw_strength` (codex/gpt-6.1-sol; gpt-6-sol fallback) instead of this chain — this chain is for contract-clear review only.
-  # Raster images, mood boards, mock-up renders, illustrations, and PNG assets: native Codex
-  # image_gen.imagegen first; use the ICA GPT shim only when already on ICA; Gemini/Nano Banana
-  # remains an availability fallback. Native invocation verified from the installed imagegen skill.
-  image_generation: { chain: ["codex/gpt-6-luna", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
-  # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
-  svg_generation:   { chain: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
-  video_generation: { chain: ["sora/sora-2"], enabled: true }
-  # Added 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ, citing node_01M0Z7JP9YT7W15X94Z843AM9Y).
-  # gpt-5.6-sol reasons genuinely on the ICA ccx lane ONLY when NO tool declarations are present
-  # (reasoning_tokens=0 the instant a tool is offered, on BOTH /v1/chat/completions and
-  # /v1/responses — measured 2026-08-26/27, mutual exclusivity confirmed structural). These three
-  # classes are pure-text judgment tasks by definition (nothing here ever calls a tool), so they
-  # are safe auto-routes to the tool_mode:"none"-restricted ica/gpt-5.6-sol instance. Deliberately
-  # NEW ids, not a repoint of the existing must_stay_primary `verdict`/`council_review`/`synthesis`
-  # classes — see resolver.js's TOOL_RESTRICTED gate and SPEC.md § "Tool-less Sol lane".
-  # 2026-10-16 (Nick): ICA now serves gpt-6.1-sol, which replaces gpt-5.6-sol as the ICA Sol. The 6.1 instance inherits
-  # tool_mode:"none" until a tools+reasoning probe says otherwise (NOT yet measured for 6.1); gpt-5.6-sol is the fallback.
-  review:           { chain: ["ica/gpt-6.1-sol", "ica/gpt-5.6-sol"], enabled: true }
-  adjudication:     { chain: ["ica/gpt-6.1-sol", "ica/gpt-5.6-sol"], enabled: true }
-  critique:         { chain: ["ica/gpt-6.1-sol", "ica/gpt-5.6-sol"], enabled: true }
-  # Contract-only whole-node class. Never inferred from another task class and never a default
-  # build/review lane. The itt execution contract chooses Astra or Fable 5.1 up front.
-  advanced_sol:     { chain: ["codex/gpt-6-astra", "claude/claude-fable-5-1"], enabled: true }
-  orchestration:    { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5.5 supersedes Opus 5 as of 2026-09-22 — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27; Opus 5 stays selectable as the legacy/fallback chain entry)
-  mode_d:           { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5.5 supersedes Opus 5 as of 2026-09-22 — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27; Opus 5 stays selectable as the legacy/fallback chain entry)
-
-# LEGACY COMPATIBILITY KEY — superseded by `task_class_sovereignty` below.
-# Retained because foreign/older registries (per-project overrides, test fixtures, the copies
-# frozen into workflow-sets/) still carry only this key; for those the resolver desugars each
-# entry to {min_rung: subscription, reason: quality_bar}, and a registry with NO `lanes:` table
-# at all keeps the pre-ladder behavior verbatim (claude, which is strictly narrower than
-# `>= subscription`). THIS registry declares its floors explicitly below and does not rely on
-# the desugar — the widening from "claude specifically" to "any subscription lane" must be
-# visible in a diff, not arrive as a side effect.
+  exploration:
+    chain:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    enabled: true
+  documentation:
+    chain:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    enabled: true
+  mechanical:
+    chain:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gemma-4-26b-a4b-it
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    enabled: true
+  second_opinion:
+    chain:
+    - gpt-6-luna
+    - gemini-3.6-flash
+    - gemma-4-26b-a4b-it
+    - claude-haiku-5-5
+    enabled: true
+  implementation:
+    chain:
+    - gpt-6-luna
+    - claude-sonnet-5-5
+    - claude-sonnet-5
+    enabled: true
+  design_judgment:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  raw_strength:
+    chain:
+    - gpt-6.1-sol
+    - gpt-6-sol
+    - claude-opus-5-5
+    enabled: true
+  web_research:
+    chain:
+    - gemini-3.6-flash
+    - gemini-3.5-flash
+    - gemini-3.1-pro-preview
+    enabled: true
+  code_review:
+    chain:
+    - gpt-6-luna
+    - claude-sonnet-5-5
+    enabled: true
+  image_generation:
+    chain:
+    - gpt-6-luna
+    - gpt-5.6-terra
+    - nano-banana-2
+    - nano-banana-pro
+    enabled: true
+  svg_generation:
+    chain:
+    - claude-fable-5-1
+    - gemini-3.1-pro-preview
+    - gemini-3.5-flash
+    - gemini-3.6-flash
+    enabled: true
+  video_generation:
+    chain:
+    - sora-2
+    enabled: true
+  review:
+    chain:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    enabled: true
+  adjudication:
+    chain:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    enabled: true
+  critique:
+    chain:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    enabled: true
+  advanced_sol:
+    chain:
+    - gpt-6-astra
+    - claude-fable-5-1
+    enabled: true
+  orchestration:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  mode_d:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  verdict:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  council_review:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  synthesis:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  schema_recovery:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  cross_wave_merge:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
+  journal_reflect:
+    chain:
+    - claude-opus-5-5
+    - claude-opus-5
+    enabled: true
 must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -275,7 +351,6 @@ must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 # resolver REFUSES rather than dropping a rung — which is the correct fail-closed outcome for an
 # egress rule, and is why `journal_reflect` below is written the way it is.
 # ──────────────────────────────────────────────────────────────────────────────
-sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
 
 # A LANE is an ENDPOINT + AUTH unit. It is the thing sovereignty attaches to. Before this table
 # there was no lane concept in the registry at all — only a bare `provider:` string — and the
@@ -284,123 +359,235 @@ sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
 # below are exactly those three branches, so this table is grounded in the invocation code
 # rather than in the ids. (2026-09-24: the `-dzus` branch is gone with the retired beta aliases;
 # the ica-codex.sh branch now keys off `lane: ica_gateway_responses_shim`, not an id suffix.)
+lane_order:
+  - ica_gateway_messages
+  - ica_gateway_messages_shim
+  - ica_gateway_responses_shim
+  - codex_subscription_primary
+  - codex_subscription_secondary
+  - claude_subscription_1x
+  - claude_subscription
+  - gemini_direct
+  - bob_ibm_shell
+  - nano_banana_api
+  - sora_api
+  - external_candidate
 lanes:
   claude_subscription:
     sovereignty: subscription
-    endpoint: anthropic_default          # ANTHROPIC_BASE_URL unset
+    endpoint: anthropic_default
     auth: anthropic_oauth_subscription
-    invocation: "claude -p"
-    note: >-
-      The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription
-      session legitimately reports a `[1m]` model id; that suffix is a context-window marker.
-
+    invocation: claude -p
+    note: The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription session legitimately reports
+      a `[1m]` model id; that suffix is a context-window marker.
+    attributes:
+      compute_custody: vendor_hosted
+      retention: none_contractual
+      jurisdiction: us
+      account_relationship: personal
+      metering: flat_rate
+      payer: self
+    harness_capabilities:
+    - claude_code_native
+    - subagents
+    - workflow_engine
+    - hooks
+    - workspace_write
+    - web_grounding
+    provider: claude
   ica_gateway_messages:
     sovereignty: shared_gateway
-    endpoint: ica_gateway_messages       # ANTHROPIC_BASE_URL = the ICA gateway
-    auth: ica_team_key                   # ~/.dotfiles/ICA_CLAUDE
-    invocation: "~/ica-claude.sh"
-
+    endpoint: ica_gateway_messages
+    auth: ica_team_key
+    invocation: ~/ica-claude.sh
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: us
+      account_relationship: employer
+      metering: free
+      payer: employer
+    harness_capabilities:
+    - claude_code_native
+    provider: ica
   ica_gateway_messages_shim:
     sovereignty: shared_gateway
     endpoint: ica_gateway_messages_via_param_strip_proxy
     auth: ica_team_key
-    invocation: "~/ica-gpt.sh"
-    note: >-
-      Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane
-      is the local param-strip proxy in front of the same shared gateway. Same sovereignty.
-
+    invocation: ~/ica-gpt.sh
+    note: Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane is the local param-strip
+      proxy in front of the same shared gateway. Same sovereignty.
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: us
+      account_relationship: employer
+      metering: free
+      payer: employer
+    harness_capabilities:
+    - claude_code_native
+    provider: ica
   ica_gateway_responses_shim:
     sovereignty: shared_gateway
     endpoint: ica_gateway_via_local_responses_to_chat_shim
     auth: ica_team_key
-    invocation: "~/ica-codex.sh"
-    note: >-
-      Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not
-      make it local: the tokens are still served by the third-party shared pool. This row is the
-      concrete case invariant 2 exists for.
-
-  codex_subscription:
-    sovereignty: subscription
-    endpoint: openai_default
-    auth: chatgpt_subscription
-    invocation: "aos-codex-exec --identity codex_secondary exec"
-    verified: true
-    account_relationship: personal
-    default_identity: codex_secondary
-    identity_choices: [codex_secondary, codex_primary]
-    note: >-
-      Personal ChatGPT subscription execution. Account identity is explicit and orthogonal
-      to provider, model, effort and task role. Secondary is the agentic default; Primary is
-      an equally eligible explicit alternative. Unavailable accounts return a routing fact;
-      a new routing decision names the next account, without silent replay or rotation.
+    invocation: ~/ica-codex.sh
+    note: 'Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not make it local: the tokens
+      are still served by the third-party shared pool. This row is the concrete case invariant 2 exists for.'
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: us
+      account_relationship: employer
+      metering: free
+      payer: employer
+    harness_capabilities:
+    - codex_exec
+    - workspace_write
+    provider: ica
   codex_subscription_secondary:
     sovereignty: subscription
     endpoint: openai_default
     auth: chatgpt_subscription
     account_relationship: personal
     identity_ref: codex_secondary
-    invocation: "aos-codex-exec --identity codex_secondary exec"
+    invocation: aos-codex-exec --identity codex_secondary exec
     eligibility_group: personal_subscription
+    attributes:
+      compute_custody: vendor_hosted
+      retention: none_contractual
+      jurisdiction: us
+      account_relationship: personal
+      metering: flat_rate
+      payer: self
+    harness_capabilities:
+    - codex_exec
+    - workspace_write
+    provider: codex
   codex_subscription_primary:
     sovereignty: subscription
     endpoint: openai_default
     auth: chatgpt_subscription
     account_relationship: personal
     identity_ref: codex_primary
-    invocation: "aos-codex-exec --identity codex_primary exec"
+    invocation: aos-codex-exec --identity codex_primary exec
     eligibility_group: personal_subscription
-
+    attributes:
+      compute_custody: vendor_hosted
+      retention: none_contractual
+      jurisdiction: us
+      account_relationship: personal
+      metering: flat_rate
+      payer: self
+    harness_capabilities:
+    - codex_exec
+    - workspace_write
+    provider: codex
   gemini_direct:
-    sovereignty: subscription
+    sovereignty: unknown
     endpoint: google_ai_studio
-    auth: gemini_api_key                 # ~/.config/aos/secrets.env
+    auth: gemini_api_key
     verified: false
-    probe: >-
-      UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we
-      control, not a seat. No class currently declares a floor that would route here, so the
-      classification is not yet load-bearing. Ask Nick alongside codex.
-
+    probe: 'UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we control, not a seat. No
+      class currently declares a floor that would route here, so the classification is not yet load-bearing. Ask Nick alongside
+      codex.'
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: personal
+      metering: metered
+      payer: self
+    harness_capabilities:
+    - web_grounding
+    provider: gemini
   bob_ibm_shell:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
-    invocation: "bob -p"
+    invocation: bob -p
     verified: false
-    probe: >-
-      DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor,
-      which is the fail-closed answer. The registry entry says `family: local` / `allowance:
-      local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e.
-      IBM-hosted. `allowance: local` most likely means "a locally-run CLI binary", which is a
-      statement about where the PROCESS runs, not where INFERENCE runs — and inference is what
-      sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for
-      a gateway URL + credential. Do not classify it from the `allowance` field.
-
+    probe: 'DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor, which is the fail-closed
+      answer. The registry entry says `family: local` / `allowance: local`, but the `bob-shell-delegate` skill describes it
+      as the IBM Bob Shell CLI, i.e. IBM-hosted. `allowance: local` most likely means "a locally-run CLI binary", which is a
+      statement about where the PROCESS runs, not where INFERENCE runs — and inference is what sovereignty is about. PROBE:
+      run `bob` with the network down, or inspect ~/.config/bob* for a gateway URL + credential. Do not classify it from the
+      `allowance` field.'
+    attributes:
+      compute_custody: unknown
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: unknown
+      metering: unknown
+      payer: unknown
+    harness_capabilities:
+    - workspace_write
+    provider: bob
   nano_banana_api:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
-    probe: >-
-      Never classified; has no branch in buildRegistryInvocation() either. No floored class routes
-      to image generation today, so `unknown` costs nothing and asserts nothing.
-
+    probe: Never classified; has no branch in buildRegistryInvocation() either. No floored class routes to image generation
+      today, so `unknown` costs nothing and asserts nothing.
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: personal
+      metering: metered
+      payer: self
+    harness_capabilities: []
+    provider: nano-banana
   sora_api:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
     probe: Same as nano_banana_api — unclassified, and no floored class reaches it.
-
+    attributes:
+      compute_custody: vendor_hosted
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: personal
+      metering: metered
+      payer: self
+    harness_capabilities: []
+    provider: sora
   external_candidate:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
-    probe: >-
-      Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash,
-      kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`.
-      Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to
-      any of them today, so `unknown` costs nothing and asserts nothing.
+    probe: 'Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash, kimi-k2, glm, grok)
+      — all `status: candidate`, `enabled: false`, `executor_status: absent`. Same shape as bob/nano-banana/sora: unclassified
+      on purpose, and no floored class routes to any of them today, so `unknown` costs nothing and asserts nothing.'
+    attributes:
+      compute_custody: unknown
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: unknown
+      metering: unknown
+      payer: unknown
+    harness_capabilities: []
+    provider: external
+  claude_subscription_1x:
+    provider: claude
+    attributes:
+      compute_custody: vendor_hosted
+      retention: none_contractual
+      jurisdiction: us
+      account_relationship: personal
+      metering: flat_rate
+      payer: self
+    harness_capabilities:
+    - claude_code_native
+    - subagents
+    - workflow_engine
+    - hooks
+    - workspace_write
+    invocation: claude1x -p
+    sovereignty: subscription
 
 # ──────────────────────────────────────────────────────────────────────────────
 # TASK CLASS → MINIMUM RUNG. `reason` is REQUIRED and the resolver THROWS without a valid one
@@ -423,23 +610,251 @@ lanes:
 # the Opus 5.5 spine) — and the other five have no chain, so they only reach a codex lane when a
 # caller explicitly asks for a gpt model. But the boundary DID move, and it moved on purpose.
 # ──────────────────────────────────────────────────────────────────────────────
+task_class_defaults:
+  exploration:
+    holders:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-haiku-5-5
+  documentation:
+    holders:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-haiku-5-5
+  mechanical:
+    holders:
+    - gpt-6-luna
+    - claude-haiku-5-5[1m]
+    - gemma-4-26b-a4b-it
+    - gpt-5.6-luna
+    - claude-haiku-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-haiku-5-5
+  second_opinion:
+    holders:
+    - gpt-6-luna
+    - gemini-3.6-flash
+    - gemma-4-26b-a4b-it
+    - claude-haiku-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-haiku-5-5
+  implementation:
+    holders:
+    - gpt-6-luna
+    - claude-sonnet-5-5
+    - claude-sonnet-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-sonnet-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+  design_judgment:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  raw_strength:
+    holders:
+    - gpt-6.1-sol
+    - gpt-6-sol
+    - claude-opus-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5-5
+  web_research:
+    holders:
+    - gemini-3.6-flash
+    - gemini-3.5-flash
+    - gemini-3.1-pro-preview
+    requires_capabilities:
+    - web_grounding
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: gemini-3.1-pro-preview
+  code_review:
+    holders:
+    - gpt-6-luna
+    - claude-sonnet-5-5
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-sonnet-5-5
+  image_generation:
+    holders:
+    - gpt-6-luna
+    - gpt-5.6-terra
+    - nano-banana-2
+    - nano-banana-pro
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: nano-banana-pro
+  svg_generation:
+    holders:
+    - claude-fable-5-1
+    - gemini-3.1-pro-preview
+    - gemini-3.5-flash
+    - gemini-3.6-flash
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: gemini-3.6-flash
+  video_generation:
+    holders:
+    - sora-2
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: sora-2
+  review:
+    holders:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: gpt-5.6-sol
+  adjudication:
+    holders:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: gpt-5.6-sol
+  critique:
+    holders:
+    - gpt-6.1-sol
+    - gpt-5.6-sol
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: gpt-5.6-sol
+  advanced_sol:
+    holders:
+    - gpt-6-astra
+    - claude-fable-5-1
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-fable-5-1
+  orchestration:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  mode_d:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  verdict:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  council_review:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  synthesis:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    requires_capabilities:
+    - claude_code_native
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  schema_recovery:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  cross_wave_merge:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      predicate:
+        account_relationship:
+        - personal
+      reason: quality_bar
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
+  journal_reflect:
+    holders:
+    - claude-opus-5-5
+    - claude-opus-5
+    minimum:
+      min_rung: local
+      reason: egress_absolute
+      set_by: nick
+      set_on: '2026-08-25'
+    fallback:
+      policy: next_lane_then_next_holder
+      floor_model: claude-opus-5
 task_class_sovereignty:
-  orchestration:    { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  verdict:          { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  mode_d:           { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  council_review:   { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  synthesis:        { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  schema_recovery:  { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  cross_wave_merge: { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
-  # ⚠️ NO WRITER TODAY — declared so `egress_absolute` is not a paper reason class with no
-  # instance in the real registry. Metis's private-journal reflect lane is a launchd single-shot
-  # that does NOT currently resolve through delegation-router, so nothing writes this class here
-  # (`.claude/rules/built-lane-no-writers.md` — naming the absent writer rather than discovering
-  # it later). It is DELIBERATELY UNROUTABLE while the `local` rung has zero members: the
-  # resolver refuses rather than dropping a rung, which for an egress rule is the correct
-  # outcome. If the journal lane is ever routed through here, provision a local lane first —
-  # never relax this minimum. Rule: .claude/rules/metis-journal.md § Egress — absolute.
-  journal_reflect:  { min_rung: local, reason: egress_absolute, set_by: nick, set_on: 2026-08-25 }
+  journal_reflect: { min_rung: local, reason: egress_absolute, set_by: nick, set_on: 2026-08-25 }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MODELS — one entry per DISTINCT model. Provider sub-instances carry the exact
@@ -915,7 +1330,7 @@ models:
     providers:
       - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.5-flash:
     family: google
@@ -932,7 +1347,7 @@ models:
     providers:
       - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.1-pro-preview:
     family: google
@@ -992,7 +1407,17 @@ models:
     selection_posture: escalation_or_explicit_itt_advanced_sol_contract
     providers:
       - provider: codex
-        lane: codex_subscription
+        lane: codex_subscription_primary
+        model_id: "gpt-6-astra"
+        cost_tier: premium
+        allowance: billed
+        enabled: true
+        priority: 1
+        account_relationship: personal
+        health: { status: available, checked_at: 2026-09-09, evidence: "Codex CLI 0.153.0+ official availability; local 0.153.4 measured" }
+        write_capability: codex_sandbox
+      - provider: codex
+        lane: codex_subscription_secondary
         model_id: "gpt-6-astra"
         cost_tier: premium
         allowance: billed
@@ -1018,7 +1443,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
 
   # Promoted 2026-09-30 by Nick (verbatim, /chat): "I did use 6.1-sol in Codex directly to create
   # the hand-off, so accept now as approved ... officially supersedes gpt-6-sol in our registry".
@@ -1042,7 +1468,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
       # ICA ccx lane, added 2026-10-16 (Nick: gpt-6.1-sol replaces ICA gpt-5.6-sol; same economics as that row). Probed the
       # same day: listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions AND /v1/responses with the BARE id;
       # `gpt-6.1-sol-dzus` 403 (dzus retired). Lane/tool_mode/capability_gap are INHERITED from the gpt-5.6-sol ICA row:
@@ -1071,7 +1498,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
       # ICA ccx lane, added 2026-10-16 (Nick: gpt-6-luna replaces ICA gpt-5.6-luna; "free/unlimited just like the prior
       # instances"). Probed the same day: listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions AND
       # /v1/responses with the BARE id; `gpt-6-luna-dzus` 403 (dzus retired). Lane = the Codex-over-local-Responses-shim
@@ -1097,7 +1525,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
       # LEGACY FALLBACK 2026-10-16: still served (200), but ICA gpt-6.1-sol (row under the gpt-6.1-sol entry) now replaces it as the ICA Sol.
       # ICA ccx lane — measured 2026-08-26, re-probed 2026-08-27 (node_01M0Z7JP9YT7W15X94Z843AM9Y,
       # won't-wire-direct-tools decision recorded there). SERVABLE (all 3 CCx keys, bare id,
@@ -1142,7 +1571,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-luna:
     family: openai
@@ -1157,7 +1587,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
 
   # 2026-09-24 (node_01M3AA4SX9F7E8Q59QZ1KJHF8S): these two ICA-lane entries were keyed
   # `gpt-5.6-terra-dzus` / `gpt-5.6-luna-dzus` with the beta-only `-dzus` model ids. The beta keys
@@ -1211,7 +1642,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.5-pro:
     family: openai
@@ -1227,7 +1659,8 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   # ── ICA ccx-only, newly discovered 2026-08-26 — scaffolded per the header's ─────
   # "ADDING A NEW MODEL" convention: registered so agents know they exist, every
