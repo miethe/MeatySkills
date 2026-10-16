@@ -32,8 +32,10 @@ function test(name, fn) {
 
 console.log('context_class passthrough');
 
-const OFFLOADABLE = { model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation' };
-const MUST_STAY = { model: 'opus', provider: 'ica', effort: 'high', task_class: 'verdict' };
+// Registry v3 resolves registry model ids (legacy aliases such as 'sonnet'/'opus' are not
+// holders and report floor_breached rather than choosing below the floor).
+const OFFLOADABLE = { model: 'claude-sonnet-5-5', provider: 'ica', effort: 'high', task_class: 'implementation' };
+const MUST_STAY = { model: 'claude-opus-5-5', provider: 'ica', effort: 'high', task_class: 'verdict' };
 
 test('vocabulary is exactly C1–C4', () => {
   assert.deepStrictEqual(CONTEXT_CLASSES, ['C1', 'C2', 'C3', 'C4']);
@@ -75,6 +77,16 @@ test('it survives a MUST-stay override (unlike context_ref, it is not gated)', (
   const record = resolve({ ...MUST_STAY, context_class: 'C4' });
   assert.strictEqual(record.chosen_plugin_id, 'claude', 'MUST-stay must still force claude');
   assert.strictEqual(record.context_class, 'C4', 'context_class carries no context, so it is not cleared');
+});
+
+test('it is stamped on a floor-breached v3 record too (audit joins to the breach)', () => {
+  const record = resolve({ model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C3' });
+  assert.strictEqual(record.floor_breached, true);
+  assert.strictEqual(record.context_class, 'C3');
+  assert.throws(
+    () => resolve({ model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C9' }),
+    /context_class must be one of C1\|C2\|C3\|C4/
+  );
 });
 
 test('createEmptyRecord seeds it as null', () => {

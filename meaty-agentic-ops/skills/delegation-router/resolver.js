@@ -52,7 +52,9 @@ const {
   SOVEREIGNTY_MINIMUM_REASONS,
   sovereigntyRung,
   validateRoutingRecord,
+  CONTEXT_CLASSES,
 } = require('./routing-record.js');
+const { canonicalizeLegacyTaskClass } = require('./task-class-vocabulary.js');
 
 const {
   isFeedbackConsumptionEnabled,
@@ -889,7 +891,19 @@ function resolve(input) {
   const record = (input && input._configPath)
     ? resolveFromToml(input)
     : resolveFromRegistry(input);
-  if (record && record.floor_breached) return record;
+  if (record && record.floor_breached) {
+    // A breached v3 record has no chosen lane and is intentionally not validated as a dispatchable
+    // RoutingRecord, but the audit passthroughs still apply: context_class and node_contract carry
+    // no routing authority and must join to the breach event like any other decision.
+    const declared = input && input.context_class;
+    const contextClass = (declared === undefined || declared === '') ? null : declared;
+    if (contextClass !== null && !CONTEXT_CLASSES.includes(contextClass)) {
+      throw new Error(`RoutingRecord.context_class must be one of ${CONTEXT_CLASSES.join('|')} or null; got ${JSON.stringify(contextClass)}`);
+    }
+    record.context_class = contextClass;
+    record.node_contract = normalizeNodeContract(input);
+    return record;
+  }
   // V3 binds the selected Codex identity to the selected lane. Preserve that choice instead
   // of applying the legacy process-level default below.
   if (record && record.lane_decision) {
@@ -902,7 +916,7 @@ function resolve(input) {
   }
   if (record && record.chosen_plugin_id === 'codex') {
     const identity = (input && input.identity_ref !== undefined)
-      ? input.identity_ref : (process.env.AOS_CODEX_IDENTITY || 'codex_secondary');
+      ? input.identity_ref : (process.env.AOS_CODEX_IDENTITY || 'codex_primary');
     if (!['codex_secondary', 'codex_primary'].includes(identity)) {
       throw new Error('Unknown Codex subscription identity');
     }
@@ -945,14 +959,13 @@ function stampContextClass(record, input) {
  * This passthrough does not filter candidates, change account binding, or enforce
  * allowed_lanes/mode_d; those declarations remain available to dispatch readers.
  */
-function stampNodeContract(record, input) {
-  if (!record) return record;
+function normalizeNodeContract(input) {
   const node = input && input.node_contract;
   const declared = node && typeof node === 'object'
     ? ((node.execution_contract && node.execution_contract.lane) || node.lane_requirements || node)
     : node;
   if (declared && typeof declared === 'object') {
-    record.node_contract = {
+    return {
       allowed_lanes: Array.isArray(declared.allowed_lanes) ? declared.allowed_lanes : null,
       disclosure_min: (typeof declared.disclosure_min === 'string') ? declared.disclosure_min : null,
       model_floor: (typeof declared.model_floor === 'string') ? declared.model_floor : null,
@@ -960,9 +973,13 @@ function stampNodeContract(record, input) {
       must_stay_primary: declared.must_stay_primary === true,
       mode_d: declared.mode_d === true,
     };
-  } else {
-    record.node_contract = null;
   }
+  return null;
+}
+
+function stampNodeContract(record, input) {
+  if (!record) return record;
+  record.node_contract = normalizeNodeContract(input);
   return validateRoutingRecord(record);
 }
 
@@ -1032,8 +1049,26 @@ function holderQuality(classSpec, model) {
   return { q, bar, measured: q !== null };
 }
 
+/**
+ * Map a caller's task_class onto a `task_class_defaults` key. Exact match wins; otherwise the
+ * vocabulary's declared legacy aliases (e.g. `second-opinion` -> `second_opinion`) and the
+ * hyphen/underscore variants are accepted, so pre-v3 callers keep resolving. This is a name
+ * mapping only: the class's own minimum/holders then apply unchanged, and unknown names still fail.
+ */
+function canonicalTaskClassKey(defaults, taskClass) {
+  if (typeof taskClass !== 'string') return taskClass;
+  if (Object.prototype.hasOwnProperty.call(defaults, taskClass)) return taskClass;
+  const aliased = canonicalizeLegacyTaskClass(taskClass);
+  if (aliased && Object.prototype.hasOwnProperty.call(defaults, aliased)) return aliased;
+  const underscored = taskClass.replace(/-/g, '_');
+  if (Object.prototype.hasOwnProperty.call(defaults, underscored)) return underscored;
+  return taskClass;
+}
+
 function resolveModel(registry, input) {
-  const classSpec = (registry.task_class_defaults || {})[input.task_class];
+  const defaults = registry.task_class_defaults || {};
+  const taskClassKey = canonicalTaskClassKey(defaults, input.task_class);
+  const classSpec = defaults[taskClassKey];
   if (!classSpec) throw new Error(`Unknown task class '${input.task_class}'`);
   const holders = input.model ? [input.model] : (classSpec.holders || []);
   const laneOrder = registry.lane_order || [];
@@ -1072,7 +1107,7 @@ function resolveModel(registry, input) {
       }
     }
   }
-  return { classSpec, holders, decisions, chosenModel };
+  return { classSpec, taskClassKey, holders, decisions, chosenModel };
 }
 
 function resolveLane(registry, modelId, classSpec, capacity = {}) {
@@ -1146,7 +1181,7 @@ function resolveV3(registry, input) {
     lane: selectedLane ? selectedLane.lane : null,
     identity_ref: selectedLane ? selectedLane.identity_ref : null,
     credential_lane: selectedLane && selectedLane.identity_ref ? selectedLane.lane : null,
-    model_decision: { task_class: input.task_class, explicit: Boolean(input.model), holders: modelDecision.decisions, chosen: chosenModel },
+    model_decision: { task_class: input.task_class, canonical_task_class: modelDecision.taskClassKey, explicit: Boolean(input.model), holders: modelDecision.decisions, chosen: chosenModel },
     lane_decision: { candidates: laneCandidates.map(({ model_entry, ...candidate }) => candidate), chosen: selectedLane ? selectedLane.lane : null, identity_ref: selectedLane ? selectedLane.identity_ref : null },
     lane_order: registry.lane_order || [],
     floor: floorModel ? { model: floorModel, reason: classSpec.minimum && classSpec.minimum.reason || 'holder floor' } : null,

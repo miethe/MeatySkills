@@ -1,5 +1,21 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Code: v3 `resolve()` now stamps `context_class` and
+  `node_contract` on floor-breached records (it returned early and dropped them; audit passthrough
+  only, no routing effect); legacy task-class names (`second-opinion`, `mechanical-tasks`, hyphen
+  variants) resolve to their canonical `task_class_defaults` key via the vocabulary's declared
+  aliases, with the class's own minimum/holders unchanged; `resolve-cli` keeps exit 2 /
+  "--identity requires a Codex route" for a non-Codex route; the legacy non-v3 path defaults to
+  `codex_primary`. No protected class, minimum or absolute changed.
+- Docs: `codex_primary` is the agentic default (Nick, 2026-10-16: `codex_secondary` downgraded until
+  2026-11-12); Secondary is an explicit routing decision once resubscribed.
+- Tests updated to the v3 contract (registry model ids instead of `sonnet`/`opus`/`haiku` aliases,
+  canonical task classes, `identity_ref: null` off Codex, explicit non-holder models report
+  `floor_breached`); the previously failing `test-p3-dry-run.js` and `test-registry-resolver.js`
+  smoke cases are rewritten the same way.
+
 ## 2026-10-16 — Merge development: gemini-4-argon (MeatySkills#96) folded into v3
 
 - Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Merged `origin/development` (gemini-4-argon model row with

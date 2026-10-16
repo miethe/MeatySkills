@@ -290,9 +290,11 @@ shelled-out `invocation_template` decides the provider itself.
 
 ## Explicit personal Codex subscription accounts
 
-`codex_secondary` is the agentic default. `codex_primary` is an equally eligible explicit
-alternative. `resolve({... identity_ref: 'codex_primary'})` binds the selected account in the
-RoutingRecord and invocation; an omitted identity uses Secondary (or the explicit per-dispatch
+`codex_primary` is the agentic default (Nick, 2026-10-16: `codex_secondary` is downgraded until
+2026-11-12; agentic_meta_dev PR #2466 made Primary the runtime default). `codex_secondary` stays
+equally eligible as an explicit normal routing decision once resubscribed.
+`resolve({... identity_ref: 'codex_secondary'})` binds the selected account in the
+RoutingRecord and invocation; an omitted identity uses Primary (or the explicit per-dispatch
 `AOS_CODEX_IDENTITY`). Invoke through `aos-codex-exec`, not an unbound stock `codex exec`.
 Both account lanes belong to `personal_subscription`, with the same allowed-work, privacy,
 permissions and approval policy as personal Claude Code Primary and claude1x. Model capabilities,

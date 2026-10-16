@@ -211,6 +211,14 @@ function main() {
   try {
     record = resolve(args);
   } catch (err) {
+    // Registry v3 rejects an identity the selected model has no eligible lane for inside resolve();
+    // keep the CLI's documented contract (exit 2, "--identity requires a Codex route") for a
+    // non-Codex route instead of surfacing it as a generic resolution failure.
+    if (args.identity_ref && /identity\/lane override/.test(err.message) && args.provider !== 'codex') {
+      process.stderr.write('resolve-cli: --identity requires a Codex route; the selected route is not Codex\n');
+      process.exit(2);
+      return;
+    }
     process.stderr.write(`resolve-cli: could not resolve routing request — ${err.message}\n`);
     process.exit(1);
     return;
