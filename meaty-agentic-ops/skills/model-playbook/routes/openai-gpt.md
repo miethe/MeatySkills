@@ -73,6 +73,9 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 
 ## gpt-5.6-terra-ica
 
+> **2026-10-16:** no GPT-6 replacement was named for ICA Terra; `gpt-5.6-terra` is still served (200) and
+> remains the 5.6-line ICA Terra id (and the ICA leg of `image_generation`).
+
 > Renamed 2026-09-24 from `gpt-5.6-terra-dzus`: the beta-only `-dzus` aliases were retired with the
 > ICA beta keys on 2026-09-22 (agentic_meta_dev #1395). The ccx lane serves the bare id.
 
@@ -98,6 +101,8 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
 
 - **When to pick:** the free-to-us cheaper/faster ICA tier — lighter review, mechanical edits,
   cheap second opinions, exploration, when the free lane is worth the shim overhead.
+- **LEGACY FALLBACK (2026-10-16):** `gpt-6-luna` (above) replaces this as the ICA free Luna; this id is still
+  served (200) and still free.
 - **Invocation lane:** `ica/gpt-5.6-luna` — same mechanism as `gpt-5.6-terra-ica`
   (`~/ica-codex.sh` + local Responses shim). Same effort caveat (dropped on tool turns).
 - **Effort ladder:** `none|minimal|low|medium|high|xhigh` — no `ultra`.
@@ -106,6 +111,32 @@ Loaded only when the routed model is a GPT-family member. Source: `model-registr
   Maverick / Granite 4H Small (see `routes/ica-lanes.md`'s free-5 section). "Free-to-us" above
   was already describing the $0 cost; this is the same fact now encoded in the registry's
   `allowance` field rather than left as prose.
+
+## gpt-6-luna
+
+- **ICA lane (added 2026-10-16, Nick):** `ica/gpt-6-luna`, **free/unlimited**, replaces `gpt-5.6-luna` as the
+  ICA free Luna. Bare id only: probed 200 on `/v1/messages`, `/v1/chat/completions` and `/v1/responses`;
+  `gpt-6-luna-dzus` 403 (dzus retired). Registry lane `ica_gateway_responses_shim` (`~/ica-codex.sh`), same
+  mechanism as `gpt-5.6-luna-ica`. The Codex-subscription row (`codex/gpt-6-luna`, personal account) is
+  unchanged and stays the unqualified default.
+- **Not claimed:** Claude Code through the `ica-gpt` shim fails with 400 `messages: empty array` for this id
+  (control `gpt-5.6-luna` fails identically, a pre-existing shim defect). The multi-turn agentic tool loop
+  through `ica-codex.sh` was not re-verified for 6; assume the `gpt-5.6-luna-ica` caveat (effort dropped on tool
+  turns). Scores on the ICA row are inherited from the old Luna ICA row pending evaluation.
+- Legacy fallback: `gpt-5.6-luna-ica` below (still served, still free).
+
+## gpt-6.1-sol
+
+- **ICA lane (added 2026-10-16, Nick):** `ica/gpt-6.1-sol`, `shared_token_pool` (same economics as the old ICA
+  Sol), replaces `gpt-5.6-sol` on ICA. Bare id only: 200 on `/v1/messages`, `/v1/chat/completions`,
+  `/v1/responses`; `-dzus` 403. Inherits `tool_mode: "none"` from the 5.6 Sol row, so it is reachable only
+  through `review` / `adjudication` / `critique` or an explicit `needs_tools:false` call. ⚠️ The 5.6
+  finding (tools and reasoning mutually exclusive on the ICA gateway) was **not re-measured for 6.1**; the
+  restriction is kept conservatively until a probe asserts `reasoning_tokens>0` with a real tool call.
+- **Not claimed:** the Claude-Code-via-`ica-gpt`-shim path returns 400 `messages: empty array` for every gpt
+  id probed 2026-10-16. The router emits `ica-gpt.sh` for this row, so the ICA tool-less legs share the defect.
+- The Codex-subscription `codex/gpt-6.1-sol` (raw_strength default) is unchanged. Legacy ICA fallback:
+  `gpt-5.6-sol` (still served).
 
 ## gpt-5.5-gus
 

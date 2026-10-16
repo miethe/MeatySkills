@@ -1,5 +1,13 @@
 # Changelog — model-playbook
 
+## 1.3 — 2026-10-16
+
+- ICA refresh (Nick, 2026-10-16): `routes/ica-lanes.md` gains the refresh table and probe facts;
+  `routes/anthropic-claude.md` records the ICA lanes for `claude-sonnet-5-5[1m]` (default ICA Sonnet) and the free
+  `claude-haiku-5-5[1m]`; `routes/openai-gpt.md` gains `gpt-6-luna` and `gpt-6.1-sol` sections (ICA lanes) and marks
+  the 5.6 ICA ids legacy (Terra has no replacement); `SKILL.md` routing table lists the new keys. Documents routing
+  facts only; the Claude-Code-via-`ica-gpt`-shim defect is recorded, not fixed.
+
 ## 1.2 — 2026-10-03
 
 - Add the missing sibling changelog required by the skill authoring contract. Publish it as part of the complete artifact bundle so governed deployments carry it alongside all route files.

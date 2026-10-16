@@ -55,6 +55,34 @@ transport/layer a probe used before generalizing its result to another layer.
 
 </details>
 
+## ICA model refresh — 2026-10-16 (Nick)
+
+ICA added `claude-haiku-5-5`, `claude-sonnet-5-5`, `gpt-6-luna` and `gpt-6.1-sol`. Nick: they replace
+the older models of the same names in the ICA registry, and the new Haiku and Luna are free/unlimited.
+Probed 2026-10-16 on the ccx gateway (key CCx3):
+
+| Id | `GET /v1/models` | raw `/v1/messages` bare | raw `[1m]` | `ica-claude.sh` | ICA role now |
+|---|---|---|---|---|---|
+| `claude-haiku-5-5` | listed | 200 | 200 | ok bare and `[1m]` | free Haiku (replaces 4.5) |
+| `claude-sonnet-5-5` | listed | 200 | 200 | ok bare and `[1m]` | default ICA Sonnet (replaces `claude-sonnet-5`), shared pool |
+| `claude-opus-5-5` | listed | 200 | not probed | ok `[1m]` | design_judgment / spine-offload |
+| `gpt-6-luna` | listed | 200 (also `/chat/completions`, `/responses`) | n/a | n/a | free Luna (replaces `gpt-5.6-luna`) |
+| `gpt-6.1-sol` | listed | 200 (also `/chat/completions`, `/responses`) | n/a | n/a | Sol (replaces `gpt-5.6-sol`), shared pool, tool-less |
+
+- Still served and kept as legacy fallbacks: `claude-haiku-4-5`, `claude-sonnet-5`, `claude-sonnet-4-6`,
+  `gpt-5.6-luna`, `gpt-5.6-sol`. `gpt-5.6-terra` is still served and has **no GPT-6 replacement**.
+- **Dead:** `claude-opus-5` (bare and `[1m]`), `claude-opus-4-8`, `claude-opus-4-6` are absent from the
+  catalog and 403; their registry rows stay `enabled: false` with `unavailable` health dated 2026-10-16.
+- `-dzus` ids (`gpt-6-luna-dzus`, ...) 403: dzus is retired. Use the bare gpt ids.
+- ⚠️ **Raw `[1m]` correction:** the rule above says a raw-HTTP `[1m]` id 403s. For `claude-haiku-5-5[1m]`
+  and `claude-sonnet-5-5[1m]` it returned **200** on 2026-10-16. Keep the convention anyway (`[1m]` for
+  `ica-claude.sh` / Claude Code callers, bare for direct HTTP adapters): bare is the form every id accepts.
+- ⚠️ **Claude Code through the `ica-gpt` shim fails** with 400 `messages: empty array` for `gpt-6-luna`,
+  `gpt-6.1-sol` and the control `gpt-5.6-luna`: a pre-existing shim defect, not id-specific. Do not claim
+  that path works for gpt-6 ids. Codex (`ica-codex.sh`), `/v1/chat/completions` and `/v1/responses` work.
+  The router emits `ica-gpt.sh` for the ICA Sol rows, so the tool-less `review` / `adjudication` /
+  `critique` ICA legs share this defect until the shim is fixed.
+
 ## There is NO ICA Opus lane (superseded 2026-08-26)
 
 ⚠️ **This section previously named `claude-opus-5[1m]` as "the preferred ICA Opus and the ICA
@@ -88,6 +116,10 @@ agentic_meta_dev MODEL-ROUTING for the current row.)
 > ⚠️ **2026-10-07 (Nick, "Treat it as paid now"):** `claude-haiku-4-5` is PAID on ICA from this date, so the free set
 > below is **four** (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna). The gateway meter still reads `0.0`
 > for Haiku 4.5 (open discrepancy). Read the list below with Haiku 4.5 removed.
+>
+> ⚠️ **2026-10-16 (Nick):** `claude-haiku-5-5` and `gpt-6-luna` are free/unlimited on ICA and join the set;
+> `gpt-6-luna` replaces `gpt-5.6-luna` as the free Luna (legacy `gpt-5.6-luna` is still served and still free).
+> The current free set is gemma-4, llama-4-maverick, granite-4-small, glm-5-3, gpt-6-luna and claude-haiku-5-5.
 
 `allowance: unlimited` (genuinely $0, cost-shifted off the primary budget) applies to **exactly
 5 models**: `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-...`,
@@ -100,7 +132,8 @@ against ICA's shared pool, an opt-in **cost-shift**, not free. Don't conflate "r
 
 Default `model: "haiku"` (or omitted) resolves to a dated id (`claude-haiku-4-5-20251001`) **not**
 in the gateway's `global-models` group → 401. ⚠️ Since 2026-10-07 the native `haiku` alias resolves to
-`claude-haiku-5-5`, which the gateway also 403s, so the remap below must keep pointing at `claude-haiku-4-5[1m]`. `model: "sonnet"`/`"opus"` work as-is. Durable fix:
+`claude-haiku-5-5`, which the gateway 403'd until 2026-10-16 (it now serves it, free), so the remap may point at
+`claude-haiku-5-5[1m]`; `claude-haiku-4-5[1m]` still works as the legacy target. Re-verify the subagent path after any change. `model: "sonnet"`/`"opus"` work as-is. Durable fix:
 remap the aliases once in `~/.claude/ica-settings.json` (`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`
 env vars) — fixes every delegate/subagent on the profile without a proxy.
 
