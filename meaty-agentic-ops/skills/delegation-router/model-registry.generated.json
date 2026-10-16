@@ -1,8 +1,8 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "c2450df70c8c940245df4015c19f9ad4b35599aa0d7923f568ed0188f54608e4",
-  "version": 1,
+  "_yaml_sha256": "49624eaf12d394a3a4a8e1f4ab0f2a6de757a0ee287b690a88f668765458b9e0",
+  "version": 3,
   "updated": "2026-10-16",
   "routing_attributes": {
     "health": {
@@ -384,142 +384,186 @@
   "routing_policy": {
     "exploration": {
       "chain": [
-        "ica/gpt-6-luna",
-        "ica/claude-haiku-5-5[1m]",
-        "ica/gpt-5.6-luna",
-        "claude/claude-haiku-5-5"
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "documentation": {
       "chain": [
-        "ica/gpt-6-luna",
-        "ica/claude-haiku-5-5[1m]",
-        "ica/gpt-5.6-luna",
-        "claude/claude-haiku-5-5"
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "mechanical": {
       "chain": [
-        "ica/gpt-6-luna",
-        "ica/claude-haiku-5-5[1m]",
-        "ica/gemma-4-26b-a4b-it",
-        "ica/gpt-5.6-luna",
-        "claude/claude-haiku-5-5"
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gemma-4-26b-a4b-it",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "second_opinion": {
       "chain": [
-        "codex/gpt-6-luna",
-        "ica/gemini-3.6-flash",
-        "ica/gemma-4-26b-a4b-it",
-        "claude/claude-haiku-5-5"
+        "gpt-6-luna",
+        "gemini-3.6-flash",
+        "gemma-4-26b-a4b-it",
+        "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "implementation": {
       "chain": [
-        "claude/claude-sonnet-5-5",
-        "claude/claude-sonnet-5"
+        "gpt-6-luna",
+        "claude-sonnet-5-5",
+        "claude-sonnet-5"
       ],
       "enabled": true
     },
     "design_judgment": {
       "chain": [
-        "claude/claude-opus-5-5",
-        "claude/claude-opus-5"
+        "claude-opus-5-5",
+        "claude-opus-5"
       ],
       "enabled": true
     },
     "raw_strength": {
       "chain": [
-        "codex/gpt-6.1-sol",
-        "codex/gpt-6-sol",
-        "claude/claude-opus-5-5"
+        "gpt-6.1-sol",
+        "gpt-6-sol",
+        "claude-opus-5-5"
       ],
       "enabled": true
     },
     "web_research": {
       "chain": [
-        "gemini/gemini-3.6-flash",
-        "gemini/gemini-3.5-flash",
-        "ica/gemini-3.1-pro-preview"
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview"
       ],
       "enabled": true
     },
     "code_review": {
       "chain": [
-        "codex/gpt-6-luna",
-        "claude/claude-sonnet-5-5",
-        "claude/claude-sonnet-5"
+        "gpt-6-luna",
+        "claude-sonnet-5-5"
       ],
       "enabled": true
     },
     "image_generation": {
       "chain": [
-        "codex/gpt-6-luna",
-        "ica/gpt-5.6-terra",
-        "nano-banana/nano-banana-2",
-        "nano-banana/nano-banana-pro"
+        "gpt-6-luna",
+        "gpt-5.6-terra",
+        "nano-banana-2",
+        "nano-banana-pro"
       ],
       "enabled": true
     },
     "svg_generation": {
       "chain": [
-        "claude/claude-fable-5-1",
-        "ica/gemini-3.1-pro-preview",
-        "gemini/gemini-3.5-flash",
-        "gemini/gemini-3.6-flash"
+        "claude-fable-5-1",
+        "gemini-3.1-pro-preview",
+        "gemini-3.5-flash",
+        "gemini-3.6-flash"
       ],
       "enabled": true
     },
     "video_generation": {
       "chain": [
-        "sora/sora-2"
+        "sora-2"
       ],
       "enabled": true
     },
     "review": {
       "chain": [
-        "ica/gpt-6.1-sol",
-        "ica/gpt-5.6-sol"
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
       ],
       "enabled": true
     },
     "adjudication": {
       "chain": [
-        "ica/gpt-6.1-sol",
-        "ica/gpt-5.6-sol"
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
       ],
       "enabled": true
     },
     "critique": {
       "chain": [
-        "ica/gpt-6.1-sol",
-        "ica/gpt-5.6-sol"
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
       ],
       "enabled": true
     },
     "advanced_sol": {
       "chain": [
-        "codex/gpt-6-astra",
-        "claude/claude-fable-5-1"
+        "gpt-6-astra",
+        "claude-fable-5-1"
       ],
       "enabled": true
     },
     "orchestration": {
       "chain": [
-        "claude/claude-opus-5-5",
-        "claude/claude-opus-5"
-      ]
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
     },
     "mode_d": {
       "chain": [
-        "claude/claude-opus-5-5",
-        "claude/claude-opus-5"
-      ]
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "verdict": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "council_review": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "synthesis": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "schema_recovery": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "cross_wave_merge": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
+    },
+    "journal_reflect": {
+      "chain": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "enabled": true
     }
   },
   "must_stay_primary": [
@@ -529,10 +573,19 @@
     "council_review",
     "synthesis"
   ],
-  "sovereignty_ladder": [
-    "shared_gateway",
-    "subscription",
-    "local"
+  "lane_order": [
+    "ica_gateway_messages",
+    "ica_gateway_messages_shim",
+    "ica_gateway_responses_shim",
+    "codex_subscription_primary",
+    "codex_subscription_secondary",
+    "claude_subscription_1x",
+    "claude_subscription",
+    "gemini_direct",
+    "bob_ibm_shell",
+    "nano_banana_api",
+    "sora_api",
+    "external_candidate"
   ],
   "lanes": {
     "claude_subscription": {
@@ -540,41 +593,81 @@
       "endpoint": "anthropic_default",
       "auth": "anthropic_oauth_subscription",
       "invocation": "claude -p",
-      "note": "The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription session legitimately reports a `[1m]` model id; that suffix is a context-window marker."
+      "note": "The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription session legitimately reports a `[1m]` model id; that suffix is a context-window marker.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "none_contractual",
+        "jurisdiction": "us",
+        "account_relationship": "personal",
+        "metering": "flat_rate",
+        "payer": "self"
+      },
+      "harness_capabilities": [
+        "claude_code_native",
+        "subagents",
+        "workflow_engine",
+        "hooks",
+        "workspace_write",
+        "web_grounding"
+      ],
+      "provider": "claude"
     },
     "ica_gateway_messages": {
       "sovereignty": "shared_gateway",
       "endpoint": "ica_gateway_messages",
       "auth": "ica_team_key",
-      "invocation": "~/ica-claude.sh"
+      "invocation": "~/ica-claude.sh",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "us",
+        "account_relationship": "employer",
+        "metering": "free",
+        "payer": "employer"
+      },
+      "harness_capabilities": [
+        "claude_code_native"
+      ],
+      "provider": "ica"
     },
     "ica_gateway_messages_shim": {
       "sovereignty": "shared_gateway",
       "endpoint": "ica_gateway_messages_via_param_strip_proxy",
       "auth": "ica_team_key",
       "invocation": "~/ica-gpt.sh",
-      "note": "Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane is the local param-strip proxy in front of the same shared gateway. Same sovereignty."
+      "note": "Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane is the local param-strip proxy in front of the same shared gateway. Same sovereignty.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "us",
+        "account_relationship": "employer",
+        "metering": "free",
+        "payer": "employer"
+      },
+      "harness_capabilities": [
+        "claude_code_native"
+      ],
+      "provider": "ica"
     },
     "ica_gateway_responses_shim": {
       "sovereignty": "shared_gateway",
       "endpoint": "ica_gateway_via_local_responses_to_chat_shim",
       "auth": "ica_team_key",
       "invocation": "~/ica-codex.sh",
-      "note": "Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not make it local: the tokens are still served by the third-party shared pool. This row is the concrete case invariant 2 exists for."
-    },
-    "codex_subscription": {
-      "sovereignty": "subscription",
-      "endpoint": "openai_default",
-      "auth": "chatgpt_subscription",
-      "invocation": "aos-codex-exec --identity codex_secondary exec",
-      "verified": true,
-      "account_relationship": "personal",
-      "default_identity": "codex_secondary",
-      "identity_choices": [
-        "codex_secondary",
-        "codex_primary"
+      "note": "Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not make it local: the tokens are still served by the third-party shared pool. This row is the concrete case invariant 2 exists for.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "us",
+        "account_relationship": "employer",
+        "metering": "free",
+        "payer": "employer"
+      },
+      "harness_capabilities": [
+        "codex_exec",
+        "workspace_write"
       ],
-      "note": "Personal ChatGPT subscription execution. Account identity is explicit and orthogonal to provider, model, effort and task role. Secondary is the agentic default; Primary is an equally eligible explicit alternative. Unavailable accounts return a routing fact; a new routing decision names the next account, without silent replay or rotation."
+      "provider": "ica"
     },
     "codex_subscription_secondary": {
       "sovereignty": "subscription",
@@ -583,7 +676,20 @@
       "account_relationship": "personal",
       "identity_ref": "codex_secondary",
       "invocation": "aos-codex-exec --identity codex_secondary exec",
-      "eligibility_group": "personal_subscription"
+      "eligibility_group": "personal_subscription",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "none_contractual",
+        "jurisdiction": "us",
+        "account_relationship": "personal",
+        "metering": "flat_rate",
+        "payer": "self"
+      },
+      "harness_capabilities": [
+        "codex_exec",
+        "workspace_write"
+      ],
+      "provider": "codex"
     },
     "codex_subscription_primary": {
       "sovereignty": "subscription",
@@ -592,14 +698,39 @@
       "account_relationship": "personal",
       "identity_ref": "codex_primary",
       "invocation": "aos-codex-exec --identity codex_primary exec",
-      "eligibility_group": "personal_subscription"
+      "eligibility_group": "personal_subscription",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "none_contractual",
+        "jurisdiction": "us",
+        "account_relationship": "personal",
+        "metering": "flat_rate",
+        "payer": "self"
+      },
+      "harness_capabilities": [
+        "codex_exec",
+        "workspace_write"
+      ],
+      "provider": "codex"
     },
     "gemini_direct": {
-      "sovereignty": "subscription",
+      "sovereignty": "unknown",
       "endpoint": "google_ai_studio",
       "auth": "gemini_api_key",
       "verified": false,
-      "probe": "UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we control, not a seat. No class currently declares a floor that would route here, so the classification is not yet load-bearing. Ask Nick alongside codex."
+      "probe": "UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we control, not a seat. No class currently declares a floor that would route here, so the classification is not yet load-bearing. Ask Nick alongside codex.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "personal",
+        "metering": "metered",
+        "payer": "self"
+      },
+      "harness_capabilities": [
+        "web_grounding"
+      ],
+      "provider": "gemini"
     },
     "bob_ibm_shell": {
       "sovereignty": "unknown",
@@ -607,78 +738,443 @@
       "auth": "unknown",
       "invocation": "bob -p",
       "verified": false,
-      "probe": "DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor, which is the fail-closed answer. The registry entry says `family: local` / `allowance: local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e. IBM-hosted. `allowance: local` most likely means \"a locally-run CLI binary\", which is a statement about where the PROCESS runs, not where INFERENCE runs — and inference is what sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for a gateway URL + credential. Do not classify it from the `allowance` field."
+      "probe": "DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor, which is the fail-closed answer. The registry entry says `family: local` / `allowance: local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e. IBM-hosted. `allowance: local` most likely means \"a locally-run CLI binary\", which is a statement about where the PROCESS runs, not where INFERENCE runs — and inference is what sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for a gateway URL + credential. Do not classify it from the `allowance` field.",
+      "attributes": {
+        "compute_custody": "unknown",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "unknown",
+        "metering": "unknown",
+        "payer": "unknown"
+      },
+      "harness_capabilities": [
+        "workspace_write"
+      ],
+      "provider": "bob"
     },
     "nano_banana_api": {
       "sovereignty": "unknown",
       "endpoint": "unknown",
       "auth": "unknown",
       "verified": false,
-      "probe": "Never classified; has no branch in buildRegistryInvocation() either. No floored class routes to image generation today, so `unknown` costs nothing and asserts nothing."
+      "probe": "Never classified; has no branch in buildRegistryInvocation() either. No floored class routes to image generation today, so `unknown` costs nothing and asserts nothing.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "personal",
+        "metering": "metered",
+        "payer": "self"
+      },
+      "harness_capabilities": [],
+      "provider": "nano-banana"
     },
     "sora_api": {
       "sovereignty": "unknown",
       "endpoint": "unknown",
       "auth": "unknown",
       "verified": false,
-      "probe": "Same as nano_banana_api — unclassified, and no floored class reaches it."
+      "probe": "Same as nano_banana_api — unclassified, and no floored class reaches it.",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "personal",
+        "metering": "metered",
+        "payer": "self"
+      },
+      "harness_capabilities": [],
+      "provider": "sora"
     },
     "external_candidate": {
       "sovereignty": "unknown",
       "endpoint": "unknown",
       "auth": "unknown",
       "verified": false,
-      "probe": "Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash, kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`. Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to any of them today, so `unknown` costs nothing and asserts nothing."
+      "probe": "Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash, kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`. Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to any of them today, so `unknown` costs nothing and asserts nothing.",
+      "attributes": {
+        "compute_custody": "unknown",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "unknown",
+        "metering": "unknown",
+        "payer": "unknown"
+      },
+      "harness_capabilities": [],
+      "provider": "external"
+    },
+    "claude_subscription_1x": {
+      "provider": "claude",
+      "attributes": {
+        "compute_custody": "vendor_hosted",
+        "retention": "none_contractual",
+        "jurisdiction": "us",
+        "account_relationship": "personal",
+        "metering": "flat_rate",
+        "payer": "self"
+      },
+      "harness_capabilities": [
+        "claude_code_native",
+        "subagents",
+        "workflow_engine",
+        "hooks",
+        "workspace_write"
+      ],
+      "invocation": "claude1x -p",
+      "sovereignty": "subscription"
     }
   },
-  "task_class_sovereignty": {
-    "orchestration": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+  "task_class_defaults": {
+    "exploration": {
+      "holders": [
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-haiku-5-5"
+      }
     },
-    "verdict": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+    "documentation": {
+      "holders": [
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-haiku-5-5"
+      }
+    },
+    "mechanical": {
+      "holders": [
+        "gpt-6-luna",
+        "claude-haiku-5-5[1m]",
+        "gemma-4-26b-a4b-it",
+        "gpt-5.6-luna",
+        "claude-haiku-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-haiku-5-5"
+      }
+    },
+    "second_opinion": {
+      "holders": [
+        "gpt-6-luna",
+        "gemini-3.6-flash",
+        "gemma-4-26b-a4b-it",
+        "claude-haiku-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-haiku-5-5"
+      }
+    },
+    "implementation": {
+      "holders": [
+        "gpt-6-luna",
+        "claude-sonnet-5-5",
+        "claude-sonnet-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-sonnet-5"
+      },
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      }
+    },
+    "design_judgment": {
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
+    },
+    "raw_strength": {
+      "holders": [
+        "gpt-6.1-sol",
+        "gpt-6-sol",
+        "claude-opus-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5-5"
+      }
+    },
+    "web_research": {
+      "holders": [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview"
+      ],
+      "requires_capabilities": [
+        "web_grounding"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "gemini-3.1-pro-preview"
+      }
+    },
+    "code_review": {
+      "holders": [
+        "gpt-6-luna",
+        "claude-sonnet-5-5"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-sonnet-5-5"
+      }
+    },
+    "image_generation": {
+      "holders": [
+        "gpt-6-luna",
+        "gpt-5.6-terra",
+        "nano-banana-2",
+        "nano-banana-pro"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "nano-banana-pro"
+      }
+    },
+    "svg_generation": {
+      "holders": [
+        "claude-fable-5-1",
+        "gemini-3.1-pro-preview",
+        "gemini-3.5-flash",
+        "gemini-3.6-flash"
+      ],
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "gemini-3.6-flash"
+      }
+    },
+    "video_generation": {
+      "holders": [
+        "sora-2"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "sora-2"
+      }
+    },
+    "review": {
+      "holders": [
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "gpt-5.6-sol"
+      }
+    },
+    "adjudication": {
+      "holders": [
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "gpt-5.6-sol"
+      }
+    },
+    "critique": {
+      "holders": [
+        "gpt-6.1-sol",
+        "gpt-5.6-sol"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "gpt-5.6-sol"
+      }
+    },
+    "advanced_sol": {
+      "holders": [
+        "gpt-6-astra",
+        "claude-fable-5-1"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-fable-5-1"
+      }
+    },
+    "orchestration": {
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "mode_d": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
+    },
+    "verdict": {
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "council_review": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "synthesis": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "requires_capabilities": [
+        "claude_code_native"
+      ],
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "schema_recovery": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "cross_wave_merge": {
-      "min_rung": "subscription",
-      "reason": "quality_bar",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "account_relationship": [
+            "personal"
+          ]
+        },
+        "reason": "quality_bar"
+      },
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     },
     "journal_reflect": {
-      "min_rung": "local",
-      "reason": "egress_absolute",
-      "set_by": "nick",
-      "set_on": "2026-08-25"
+      "holders": [
+        "claude-opus-5-5",
+        "claude-opus-5"
+      ],
+      "minimum": {
+        "predicate": {
+          "compute_custody": [
+            "local"
+          ]
+        },
+        "reason": "disclosure_absolute",
+        "set_by": "nick",
+        "set_on": "2026-08-25",
+        "migrated_from": "egress_absolute"
+      },
+      "fallback": {
+        "policy": "next_lane_then_next_holder",
+        "floor_model": "claude-opus-5"
+      }
     }
   },
   "models": {
@@ -744,6 +1240,15 @@
             "status": "unknown",
             "evidence": "launch page reports Claude Code availability; local model list unavailable while logged out"
           }
+        },
+        {
+          "provider": "claude",
+          "lane": "claude_subscription_1x",
+          "model_id": "claude-opus-5-5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 2
         },
         {
           "provider": "ica",
@@ -1016,6 +1521,15 @@
           "priority": 1
         },
         {
+          "provider": "claude",
+          "lane": "claude_subscription_1x",
+          "model_id": "claude-sonnet-5-5",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 2
+        },
+        {
           "provider": "ica",
           "lane": "ica_gateway_messages",
           "model_id": "claude-sonnet-5-5[1m]",
@@ -1242,6 +1756,16 @@
           "allowance": "billed",
           "enabled": true,
           "priority": 1,
+          "cost_score": 10
+        },
+        {
+          "provider": "claude",
+          "lane": "claude_subscription_1x",
+          "model_id": "claude-haiku-5-5",
+          "cost_tier": "billed",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 2,
           "cost_score": 10
         },
         {
@@ -1801,7 +2325,7 @@
         },
         {
           "provider": "ica",
-          "lane": "gemini_direct",
+          "lane": "ica_gateway_messages",
           "model_id": "gemini-3.6-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -1863,7 +2387,7 @@
         },
         {
           "provider": "ica",
-          "lane": "gemini_direct",
+          "lane": "ica_gateway_messages",
           "model_id": "gemini-3.5-flash",
           "cost_tier": "standard",
           "allowance": "shared_token_pool",
@@ -2010,7 +2534,23 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-6-astra",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "account_relationship": "personal",
+          "health": {
+            "status": "available",
+            "checked_at": "2026-09-09",
+            "evidence": "Codex CLI 0.153.0+ official availability; local 0.153.4 measured"
+          },
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-6-astra",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2073,7 +2613,18 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-6-sol",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "account_relationship": "personal",
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-6-sol",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2134,7 +2685,23 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-6.1-sol",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "account_relationship": "personal",
+          "write_capability": "codex_sandbox",
+          "health": {
+            "status": "available",
+            "checked_at": "2026-09-30",
+            "evidence": "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day"
+          }
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-6.1-sol",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2214,7 +2781,18 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-6-luna",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "account_relationship": "personal",
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-6-luna",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -2268,7 +2846,17 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-5.6-sol",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": false,
+          "priority": 1,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-5.6-sol",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2326,7 +2914,17 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-5.6-terra",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-5.6-terra",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2364,7 +2962,17 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-5.6-luna",
+          "cost_tier": "standard",
+          "allowance": "billed",
+          "enabled": false,
+          "priority": 1,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-5.6-luna",
           "cost_tier": "standard",
           "allowance": "billed",
@@ -2480,7 +3088,17 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-5.5",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-5.5",
           "cost_tier": "premium",
           "allowance": "billed",
@@ -2517,7 +3135,17 @@
       "providers": [
         {
           "provider": "codex",
-          "lane": "codex_subscription",
+          "lane": "codex_subscription_primary",
+          "model_id": "gpt-5.5-pro",
+          "cost_tier": "premium",
+          "allowance": "billed",
+          "enabled": true,
+          "priority": 1,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "codex_subscription_secondary",
           "model_id": "gpt-5.5-pro",
           "cost_tier": "premium",
           "allowance": "billed",

@@ -23,15 +23,20 @@ for task_class in ("second_opinion", "code_review", "image_generation"):
     assert all("/" not in item for item in registry["routing_policy"][task_class]["chain"])
 assert "gpt-5.6-terra" in registry["routing_policy"]["image_generation"]["chain"]
 
-# Negative control: every otherwise valid row passes the v3 builder checks. One preserved
-# legacy absolute minimum is intentionally rejected pending Nick's decision on its reason name.
+# Negative control: the live registry passes every v3 builder check (journal_reflect's
+# absolute minimum is expressed as a compute_custody predicate since 2026-10-16).
 valid = copy.deepcopy(registry)
-valid["task_class_defaults"].pop("journal_reflect", None)
-valid.pop("task_class_sovereignty", None)
 errors = validate_registry(valid, "negative-control")
 assert errors == [], errors
-errors = validate_registry(registry, "legacy-minimum-control")
+assert "task_class_sovereignty" not in registry
+assert registry["task_class_defaults"]["journal_reflect"]["minimum"]["reason"] == "disclosure_absolute"
+
+# Planted positive: a legacy min_rung minimum is refused by name.
+broken = copy.deepcopy(valid)
+broken["task_class_defaults"]["journal_reflect"]["minimum"] = {"min_rung": "local", "reason": "egress_absolute"}
+errors = validate_registry(broken, "legacy-minimum-control")
 assert any("min_rung" in error for error in errors), errors
+assert any("reason must be one of" in error for error in errors), errors
 
 broken = copy.deepcopy(valid)
 broken["task_class_defaults"]["implementation"]["holders"][0] = "codex/gpt-6-luna"

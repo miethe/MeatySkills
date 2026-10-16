@@ -656,6 +656,9 @@ task_class_defaults:
     fallback:
       policy: next_lane_then_next_holder
       floor_model: claude-sonnet-5
+    # INTERIM (2026-10-16, Metis): excludes ICA so implementation resolves Codex gpt-6-luna first,
+    # per Nick's 2026-10-16 words and the WP AC; MODEL-ROUTING §4 would put ICA first. Nick's
+    # ruling pending in req_01M52R3RCVQQVN5S8PGC40WZ7A; delete this minimum to restore ICA-first.
     minimum:
       predicate:
         account_relationship:
@@ -845,16 +848,21 @@ task_class_defaults:
     holders:
     - claude-opus-5-5
     - claude-opus-5
+    # Migrated 2026-10-16 (v3) from `min_rung: local` / `reason: egress_absolute` — same
+    # meaning (only locally-custodied compute may read the journal; nobody and no process
+    # may widen it), expressed in the §1.4 attribute vocabulary. Nick's 2026-08-25 setting.
     minimum:
-      min_rung: local
-      reason: egress_absolute
+      predicate:
+        compute_custody: [local]
+      reason: disclosure_absolute
       set_by: nick
-      set_on: '2026-08-25'
+      set_on: 2026-08-25
+      migrated_from: egress_absolute
     fallback:
       policy: next_lane_then_next_holder
       floor_model: claude-opus-5
-task_class_sovereignty:
-  journal_reflect: { min_rung: local, reason: egress_absolute, set_by: nick, set_on: 2026-08-25 }
+# task_class_sovereignty was retired in v3 (2026-10-16): every former min_rung now lives as an
+# attribute predicate under task_class_defaults.<class>.minimum with the same reason and set_by.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MODELS — one entry per DISTINCT model. Provider sub-instances carry the exact
@@ -881,6 +889,7 @@ models:
     selection_posture: default_spine
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, health: { status: unknown, evidence: "launch page reports Claude Code availability; local model list unavailable while logged out" } }
+      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 2 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
       - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 9, tools: [one_million_context], max_context: 1000000, max_output: 128000, health: { status: available, checked_at: 2026-09-24, evidence: "Claude-Code wrapper rc 0; canonicalModel claude-opus-5-5; contextWindow 1000000" } }
       # ⚠️ SUPERSEDED 2026-10-16 (Nick): ICA now serves claude-sonnet-5-5, which is the default ICA Sonnet
       # offload again; this Opus 5.5 ICA row stays enabled for design_judgment / spine-offload, but the
@@ -979,6 +988,7 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
+      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: billed, enabled: true, priority: 2 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
       # ICA SERVES claude-sonnet-5-5 as of 2026-10-16 (Nick; probed same day: GET /v1/models lists it, raw bare id 200
       # echoing the id, [1m] form 200, ica-claude.sh bare and [1m] is_error false). It is now the DEFAULT ICA Sonnet
       # offload, superseding claude-sonnet-5[1m] (legacy fallback below) and the Opus-5.5-on-ICA preference.
@@ -1067,6 +1077,7 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-5-5", cost_tier: billed, allowance: billed, enabled: true, priority: 1, cost_score: 10 }
+      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-haiku-5-5", cost_tier: billed, allowance: billed, enabled: true, priority: 2, cost_score: 10 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
       # ICA SERVES claude-haiku-5-5 as of 2026-10-16 (Nick: free/unlimited like the prior free instances; probed same day:
       # listed in GET /v1/models, raw bare id 200 echoing the id, [1m] form 200, ica-claude.sh bare and [1m] is_error
       # false). Supersedes the 2026-10-07 403 reading. model_id carries [1m] (ica-claude.sh / Claude Code id); raw-HTTP
