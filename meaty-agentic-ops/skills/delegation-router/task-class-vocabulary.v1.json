@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "taxonomy_id": "aos.routing.task_class",
-  "taxonomy_version": "1.3.0",
+  "taxonomy_version": "1.4.0",
   "identifier_format": "lower_snake_case",
   "external_join_policy": "exact_canonical_only",
   "unknown_policy": "no_empirical_adjustment",
@@ -95,6 +95,11 @@
       "id": "mode_d",
       "status": "must_stay_primary",
       "legacy_aliases": ["mode-d"]
+    },
+    {
+      "id": "journal_reflect",
+      "status": "must_stay_primary",
+      "legacy_aliases": ["journal-reflect"]
     },
     {
       "id": "verdict",

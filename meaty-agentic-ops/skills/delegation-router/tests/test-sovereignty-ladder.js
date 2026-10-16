@@ -677,10 +677,8 @@ describe('(7) validateRoutingRecord rejects a record that violates its own decla
 // (8) The shipped registry
 // ---------------------------------------------------------------------------
 
-describe('(8) the shipped model-registry declares a complete, non-dangling ladder', () => {
-  const shipped = JSON.parse(
-    fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8')
-  );
+describe('(8) the v3 fixture declares complete attribute-based minimums', () => {
+  const shipped = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'v3', 'registry.json'), 'utf8'));
 
   test('every provider instance declares a lane, and every lane is defined', () => {
     const undeclared = [];
@@ -693,54 +691,54 @@ describe('(8) the shipped model-registry declares a complete, non-dangling ladde
     assert.deepStrictEqual(undeclared, []);
   });
 
-  test('every declared minimum carries a valid reason', () => {
-    for (const [cls, decl] of Object.entries(shipped.task_class_sovereignty)) {
-      assert.ok(SOVEREIGNTY_CLASSES.includes(decl.min_rung), `${cls}.min_rung`);
-      assert.ok(SOVEREIGNTY_MINIMUM_REASONS.includes(decl.reason), `${cls}.reason`);
+  test('every v3 minimum is a predicate or lane allowlist and carries a valid reason', () => {
+    const reasons = ['cost_policy', 'quality_bar', 'disclosure_absolute', 'authority_absolute'];
+    for (const [cls, spec] of Object.entries(shipped.task_class_defaults)) {
+      const minimum = spec.minimum;
+      if (!minimum) continue;
+      assert.ok(!Object.hasOwn(minimum, 'min_rung'), `${cls} retained min_rung`);
+      assert.ok(minimum.predicate || minimum.lanes, `${cls} has no attribute predicate or lane allowlist`);
+      assert.ok(reasons.includes(minimum.reason), `${cls}.minimum.reason`);
     }
   });
 
-  test('every one of the 7 formerly-MUST-stay classes still carries a floor of at least subscription', () => {
-    // The ladder replaced the vendor pin; it must not have DROPPED any class on the way.
-    for (const cls of ['orchestration', 'verdict', 'mode_d', 'council_review', 'synthesis', 'schema_recovery', 'cross_wave_merge']) {
-      const decl = shipped.task_class_sovereignty[cls];
-      assert.ok(decl, `class '${cls}' lost its protection entirely`);
-      assert.ok(sovereigntyRung(decl.min_rung) >= SOVEREIGNTY_RUNGS.subscription, `${cls} floor too low`);
+  test('must_stay_primary classes require Claude Code native capability', () => {
+    for (const cls of shipped.must_stay_primary) {
+      const spec = shipped.task_class_defaults[cls];
+      assert.ok(spec, `class '${cls}' lost its protection entirely`);
+      assert.ok(spec.requires_capabilities.includes('claude_code_native') || spec.minimum?.reason === 'authority_absolute', cls);
     }
   });
 
-  test('the `local` rung has ZERO lanes — declared, and stated rather than discovered', () => {
-    // .claude/rules/built-lane-no-writers.md: name the absent member up front. If a local
-    // inference lane is ever added this assertion flips and should simply be updated — it is
-    // recording a measured fact, not forbidding one.
-    const localLanes = Object.entries(shipped.lanes).filter(([, l]) => l.sovereignty === 'local');
-    assert.deepStrictEqual(localLanes.map(([k]) => k), [],
-      'if this now fails, a local lane exists and journal_reflect became routable — verify that is intended');
+  test('no lane currently declares local compute custody', () => {
+    const localLanes = Object.entries(shipped.lanes).filter(([, lane]) => lane.attributes.compute_custody === 'local');
+    assert.deepStrictEqual(localLanes.map(([id]) => id), []);
   });
 
-  test('every UNVERIFIED lane classification is either `unknown` or carries a probe', () => {
+  test('every lane declares the six attributes and a harness capability list', () => {
+    const required = ['compute_custody', 'retention', 'jurisdiction', 'account_relationship', 'metering', 'payer'];
     for (const [id, lane] of Object.entries(shipped.lanes)) {
-      if (lane.verified === false) {
-        assert.ok(lane.probe, `lane '${id}' is unverified and must name the probe that would settle it`);
-      }
+      for (const attribute of required) assert.ok(Object.hasOwn(lane.attributes, attribute), `${id}.${attribute}`);
+      assert.ok(Array.isArray(lane.harness_capabilities), `${id}.harness_capabilities`);
     }
   });
 
-  test('the shipped registry resolves a floored class to a subscription lane end to end', () => {
-    const regPath = path.join(__dirname, '..', 'model-registry.generated.json');
-    for (const tc of ['orchestration', 'verdict', 'mode_d', 'synthesis']) {
-      const r = resolve({ model: 'opus', provider: 'ica', task_class: tc, _registryPath: regPath });
-      assert.ok(sovereigntyRung(r.sovereignty) >= SOVEREIGNTY_RUNGS.subscription,
-        `${tc} landed on '${r.sovereignty}' via lane '${r.lane}'`);
-    }
+  test('mode_d rejects an unknown retention value under authority_absolute', () => {
+    const r = resolve({ task_class: 'mode_d', _registryPath: path.join(__dirname, 'fixtures', 'v3', 'registry.json') });
+    const ica = r.lane_decision.candidates.find(candidate => candidate.lane === 'ica_gateway_messages');
+    assert.equal(ica.verdict, 'excluded');
+    assert.equal(r.lane, 'claude_subscription');
   });
 
-  test('and REFUSES the egress_absolute class rather than downgrading it', () => {
-    const regPath = path.join(__dirname, '..', 'model-registry.generated.json');
-    assert.throws(
-      () => resolve({ model: 'sonnet', task_class: 'journal_reflect', _registryPath: regPath }),
-      /UNROUTABLE/
-    );
+  test('a negotiable minimum accepts unknown values and records the lane decision', () => {
+    const reg = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'v3', 'registry.json'), 'utf8'));
+    reg.task_class_defaults.explicit_test.minimum = { predicate: { retention: ['none_contractual'] }, reason: 'quality_bar' };
+    reg.lanes.ica_gateway_messages.attributes.retention = 'unknown';
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'v3-open-unknown-'));
+    const regPath = path.join(temp, 'registry.json');
+    fs.writeFileSync(regPath, JSON.stringify(reg));
+    const r = resolve({ task_class: 'explicit_test', _registryPath: regPath });
+    assert.equal(r.lane, 'ica_gateway_messages');
   });
 });
 

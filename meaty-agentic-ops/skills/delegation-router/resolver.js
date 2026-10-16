@@ -52,7 +52,9 @@ const {
   SOVEREIGNTY_MINIMUM_REASONS,
   sovereigntyRung,
   validateRoutingRecord,
+  CONTEXT_CLASSES,
 } = require('./routing-record.js');
+const { canonicalizeLegacyTaskClass } = require('./task-class-vocabulary.js');
 
 const {
   isFeedbackConsumptionEnabled,
@@ -263,8 +265,20 @@ function loadRegistry(overridePath) {
     if (overridePath.endsWith('.json')) {
       return JSON.parse(fs.readFileSync(overridePath, 'utf8'));
     }
-    const yaml = require('js-yaml');
-    return yaml.load(fs.readFileSync(overridePath, 'utf8'));
+    try {
+      const yaml = require('js-yaml');
+      return yaml.load(fs.readFileSync(overridePath, 'utf8'));
+    } catch (e) {
+      const companion = overridePath.replace(/\.(yaml|yml)$/, '.generated.json');
+      if (fs.existsSync(companion)) {
+        const generated = JSON.parse(fs.readFileSync(companion, 'utf8'));
+        const expected = generated && generated._yaml_sha256;
+        const actual = crypto.createHash('sha256').update(fs.readFileSync(overridePath)).digest('hex');
+        if (!expected || expected !== actual) throw new Error(`[delegation-router] companion generated registry '${companion}' is stale relative to '${overridePath}'`);
+        return generated;
+      }
+      throw new Error(`[delegation-router] failed to load YAML registry '${overridePath}' and no companion .generated.json found`);
+    }
   }
 
   // Tier 1 — env override (absolute path).
@@ -877,9 +891,32 @@ function resolve(input) {
   const record = (input && input._configPath)
     ? resolveFromToml(input)
     : resolveFromRegistry(input);
+  if (record && record.floor_breached) {
+    // A breached v3 record has no chosen lane and is intentionally not validated as a dispatchable
+    // RoutingRecord, but the audit passthroughs still apply: context_class and node_contract carry
+    // no routing authority and must join to the breach event like any other decision.
+    const declared = input && input.context_class;
+    const contextClass = (declared === undefined || declared === '') ? null : declared;
+    if (contextClass !== null && !CONTEXT_CLASSES.includes(contextClass)) {
+      throw new Error(`RoutingRecord.context_class must be one of ${CONTEXT_CLASSES.join('|')} or null; got ${JSON.stringify(contextClass)}`);
+    }
+    record.context_class = contextClass;
+    record.node_contract = normalizeNodeContract(input);
+    return record;
+  }
+  // V3 binds the selected Codex identity to the selected lane. Preserve that choice instead
+  // of applying the legacy process-level default below.
+  if (record && record.lane_decision) {
+    if (record.chosen_plugin_id === 'codex' && record.identity_ref) {
+      record.invocation_template = record.invocation_template.replace(
+        /\bcodex exec\b/g, `aos-codex-exec --identity ${record.identity_ref} exec`);
+    }
+    const withContext = stampContextClass(record, input);
+    return stampNodeContract(withContext, input);
+  }
   if (record && record.chosen_plugin_id === 'codex') {
     const identity = (input && input.identity_ref !== undefined)
-      ? input.identity_ref : (process.env.AOS_CODEX_IDENTITY || 'codex_secondary');
+      ? input.identity_ref : (process.env.AOS_CODEX_IDENTITY || 'codex_primary');
     if (!['codex_secondary', 'codex_primary'].includes(identity)) {
       throw new Error('Unknown Codex subscription identity');
     }
@@ -922,14 +959,13 @@ function stampContextClass(record, input) {
  * This passthrough does not filter candidates, change account binding, or enforce
  * allowed_lanes/mode_d; those declarations remain available to dispatch readers.
  */
-function stampNodeContract(record, input) {
-  if (!record) return record;
+function normalizeNodeContract(input) {
   const node = input && input.node_contract;
   const declared = node && typeof node === 'object'
     ? ((node.execution_contract && node.execution_contract.lane) || node.lane_requirements || node)
     : node;
   if (declared && typeof declared === 'object') {
-    record.node_contract = {
+    return {
       allowed_lanes: Array.isArray(declared.allowed_lanes) ? declared.allowed_lanes : null,
       disclosure_min: (typeof declared.disclosure_min === 'string') ? declared.disclosure_min : null,
       model_floor: (typeof declared.model_floor === 'string') ? declared.model_floor : null,
@@ -937,15 +973,245 @@ function stampNodeContract(record, input) {
       must_stay_primary: declared.must_stay_primary === true,
       mode_d: declared.mode_d === true,
     };
-  } else {
-    record.node_contract = null;
   }
+  return null;
+}
+
+function stampNodeContract(record, input) {
+  if (!record) return record;
+  record.node_contract = normalizeNodeContract(input);
   return validateRoutingRecord(record);
 }
 
 // ---------------------------------------------------------------------------
 // Registry-based resolution (new, default path)
 // ---------------------------------------------------------------------------
+
+function laneEligible(lane, classSpec) {
+  const attributes = lane.attributes || {};
+  const minimum = classSpec.minimum || {};
+  const legacyPredicate = minimum.min_rung === 'local'
+    ? { compute_custody: ['local'] }
+    : minimum.min_rung === 'subscription'
+      ? { account_relationship: ['personal'] }
+      : null;
+  const predicate = minimum.predicate || legacyPredicate;
+  let predicateOk = true;
+  let reason = 'no minimum declared';
+  if (Array.isArray(minimum.lanes)) {
+    predicateOk = minimum.lanes.includes(lane.id);
+    reason = predicateOk ? 'lane is named by minimum' : 'lane is not named by minimum';
+  } else if (predicate && typeof predicate === 'object') {
+    const absolute = ['disclosure_absolute', 'authority_absolute', 'egress_absolute'].includes(minimum.reason);
+    const failures = [];
+    for (const [attribute, allowed] of Object.entries(predicate)) {
+      const value = attributes[attribute];
+      if (!Array.isArray(allowed) || !allowed.includes(value)) {
+        if (value === 'unknown' && !absolute) continue;
+        failures.push(`${attribute}=${value === undefined ? 'unknown' : value}`);
+      }
+    }
+    predicateOk = failures.length === 0;
+    reason = predicateOk ? 'minimum predicate satisfied' : `minimum predicate failed: ${failures.join(', ')}`;
+  }
+  const capabilities = classSpec.requires_capabilities || [];
+  const actual = lane.harness_capabilities || [];
+  const missing = capabilities.filter(cap => !actual.includes(cap));
+  const capabilityOk = missing.length === 0;
+  if (!capabilityOk) reason += `; missing capabilities: ${missing.join(', ')}`;
+  return { eligible: predicateOk && capabilityOk, capabilityOk, reason };
+}
+
+function capacityFor(capacity, laneId, identityRef) {
+  const laneState = (capacity && capacity.lanes && capacity.lanes[laneId]) || { state: 'unmeasured' };
+  const identity = identityRef && capacity && capacity.identities && capacity.identities[identityRef];
+  if (identity && identity.available === false) {
+    return { state: 'unavailable', reason: identity.reason || `identity ${identityRef} unavailable` };
+  }
+  return { state: laneState.state || 'unmeasured', reason: laneState.reason || null, until: laneState.until || null };
+}
+
+function modelRows(registry, modelId) {
+  const model = (registry.models || {})[modelId];
+  if (!model) return [];
+  return (model.providers || []).filter(row => row.enabled !== false).map(row => ({ model, row }));
+}
+
+function holderQuality(classSpec, model) {
+  const bar = Number.isFinite(classSpec.bar) ? classSpec.bar : null;
+  const quality = classSpec.quality || {};
+  const scores = model && model.scores;
+  const axes = ['intelligence', 'taste', 'speed'];
+  const measured = scores && !Object.values(scores).includes('UNMEASURED') && axes.every(axis => typeof scores[axis] === 'number' && Number.isFinite(scores[axis]));
+  const q = measured && axes.every(axis => typeof quality[`w_${axis}`] === 'number')
+    ? axes.reduce((total, axis) => total + quality[`w_${axis}`] * scores[axis], 0)
+    : null;
+  return { q, bar, measured: q !== null };
+}
+
+/**
+ * Map a caller's task_class onto a `task_class_defaults` key. Exact match wins; otherwise the
+ * vocabulary's declared legacy aliases (e.g. `second-opinion` -> `second_opinion`) and the
+ * hyphen/underscore variants are accepted, so pre-v3 callers keep resolving. This is a name
+ * mapping only: the class's own minimum/holders then apply unchanged, and unknown names still fail.
+ */
+function canonicalTaskClassKey(defaults, taskClass) {
+  if (typeof taskClass !== 'string') return taskClass;
+  if (Object.prototype.hasOwnProperty.call(defaults, taskClass)) return taskClass;
+  const aliased = canonicalizeLegacyTaskClass(taskClass);
+  if (aliased && Object.prototype.hasOwnProperty.call(defaults, aliased)) return aliased;
+  const underscored = taskClass.replace(/-/g, '_');
+  if (Object.prototype.hasOwnProperty.call(defaults, underscored)) return underscored;
+  return taskClass;
+}
+
+function resolveModel(registry, input) {
+  const defaults = registry.task_class_defaults || {};
+  const taskClassKey = canonicalTaskClassKey(defaults, input.task_class);
+  const classSpec = defaults[taskClassKey];
+  if (!classSpec) throw new Error(`Unknown task class '${input.task_class}'`);
+  const holders = input.model ? [input.model] : (classSpec.holders || []);
+  const laneOrder = registry.lane_order || [];
+  const capacity = input.capacity || {};
+  const decisions = [];
+  let chosenModel = null;
+  let chosenIndex = -1;
+  for (const modelId of holders) {
+    const model = (registry.models || {})[modelId];
+    const quality = holderQuality(classSpec, model);
+    const barDeclared = quality.bar !== null;
+    if (barDeclared && !quality.measured) {
+      decisions.push({ model: modelId, verdict: 'unmeasured_bar', reason: 'holder scorecard is missing or contains UNMEASURED values', q: null, bar: quality.bar });
+      continue;
+    }
+    if (barDeclared && quality.q < quality.bar) {
+      decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
+      continue;
+    }
+    const viable = modelRows(registry, modelId).some(({ row }) => {
+      const lane = registry.lanes && registry.lanes[row.lane];
+      if (!lane || !laneOrder.includes(row.lane)) return false;
+      const eligibility = laneEligible({ ...lane, id: row.lane }, classSpec);
+      const status = capacityFor(capacity, row.lane, lane.identity_ref).state;
+      return eligibility.eligible && !['refused', 'unavailable'].includes(status);
+    });
+    if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
+    decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
+  }
+  if (chosenIndex >= 0) {
+    decisions[chosenIndex].verdict = 'chosen';
+    for (let i = chosenIndex + 1; i < decisions.length; i++) {
+      if (decisions[i].verdict === 'candidate') {
+        decisions[i].verdict = 'not_reached';
+        decisions[i].reason = `an earlier holder (${chosenModel}) has an eligible, available lane`;
+      }
+    }
+  }
+  return { classSpec, taskClassKey, holders, decisions, chosenModel };
+}
+
+function resolveLane(registry, modelId, classSpec, capacity = {}) {
+  const rows = modelRows(registry, modelId);
+  const laneOrder = registry.lane_order || [];
+  const candidates = [];
+  for (const laneId of laneOrder) {
+    const matches = rows.filter(({ row }) => row.lane === laneId);
+    for (const { model, row } of matches) {
+      const lane = registry.lanes[laneId];
+      const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
+      const availability = capacityFor(capacity, laneId, lane.identity_ref);
+      const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
+      candidates.push({
+        lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
+        eligible: eligibility.eligible, eligibility_reason: eligibility.reason,
+        capability_ok: eligibility.capabilityOk, capacity: availability.state,
+        identity_ref: lane.identity_ref || null,
+        verdict: excluded ? 'excluded' : 'eligible',
+        reason: !eligibility.eligible ? eligibility.reason : (excluded ? availability.reason || `capacity is ${availability.state}` : `lane admitted with capacity ${availability.state}`),
+        provider: row.provider, model_id: row.model_id, model_entry: model,
+      });
+    }
+  }
+  return { candidates, chosen: candidates.find(c => c.verdict === 'eligible') || null };
+}
+
+function resolveV3(registry, input) {
+  const modelDecision = resolveModel(registry, input);
+  const classSpec = modelDecision.classSpec;
+  const floorModel = classSpec.fallback && classSpec.fallback.floor_model;
+  const holderList = modelDecision.holders;
+  const configuredHolders = classSpec.holders || [];
+  const configuredFloorIndex = configuredHolders.indexOf(floorModel);
+  const explicitIndex = input.model ? configuredHolders.indexOf(input.model) : -1;
+  const explicitBelowFloor = Boolean(input.model && floorModel &&
+    (explicitIndex < 0 || (configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex)));
+  const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
+  const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
+  const allLaneDecisions = {};
+  for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {});
+  const chosenModel = selectedIndex >= 0 ? modelDecision.chosenModel : null;
+  let selectedLane = chosenModel && allLaneDecisions[chosenModel].chosen;
+  if (input.identity_ref && chosenModel) {
+    const override = allLaneDecisions[chosenModel].candidates.find(c => c.verdict === 'eligible' && (c.identity_ref === input.identity_ref || c.lane === input.identity_ref));
+    if (!override) throw new Error(`identity/lane override '${input.identity_ref}' does not serve ${chosenModel} as an eligible lane`);
+    selectedLane = override;
+  }
+  if (explicitBelowFloor) selectedLane = null;
+  const floorBreached = (!selectedLane && Boolean(floorModel)) || explicitBelowFloor;
+  const fallback = [];
+  if (selectedLane) {
+    const models = examined.slice(selectedIndex);
+    for (const candidateModel of models) {
+      const lanes = allLaneDecisions[candidateModel].candidates;
+      for (const candidate of lanes) {
+        if (candidateModel === chosenModel && candidate.lane === selectedLane.lane) continue;
+        if (candidate.verdict !== 'eligible') continue;
+        fallback.push({ model: candidateModel, lane: candidate.lane, plugin_id: candidate.provider, identity_ref: candidate.identity_ref, reason: candidate.reason });
+      }
+    }
+  }
+  const laneCandidates = chosenModel ? allLaneDecisions[chosenModel].candidates : [];
+  const record = {
+    chosen_plugin_id: selectedLane ? selectedLane.provider : null,
+    model: chosenModel || (input.model || holderList[0] || 'unresolved'), effort: input.effort || 'standard',
+    agent_type_id: selectedLane ? (AGENT_TYPE_ID_MAP[selectedLane.provider] || selectedLane.provider) : 'claude',
+    invocation_template: selectedLane ? buildRegistryInvocation({ providerId: selectedLane.provider, modelId: selectedLane.model_id, lane: selectedLane.lane, toolRestricted: false }, input.profile || null, input.effort || 'standard') : '',
+    scope_flags: [], stage: 'A', validation_contract: 'none', continuity_mode: 'resumable',
+    fallback_chain: fallback, reason: floorBreached ? `floor_breached: no eligible lane at or above ${floorModel}` : `registry v3 selected ${chosenModel} on ${selectedLane.lane}`,
+    lane: selectedLane ? selectedLane.lane : null,
+    identity_ref: selectedLane ? selectedLane.identity_ref : null,
+    credential_lane: selectedLane && selectedLane.identity_ref ? selectedLane.lane : null,
+    model_decision: { task_class: input.task_class, canonical_task_class: modelDecision.taskClassKey, explicit: Boolean(input.model), holders: modelDecision.decisions, chosen: chosenModel },
+    lane_decision: { candidates: laneCandidates.map(({ model_entry, ...candidate }) => candidate), chosen: selectedLane ? selectedLane.lane : null, identity_ref: selectedLane ? selectedLane.identity_ref : null },
+    lane_order: registry.lane_order || [],
+    floor: floorModel ? { model: floorModel, reason: classSpec.minimum && classSpec.minimum.reason || 'holder floor' } : null,
+    floor_breached: floorBreached,
+    schema_version: 3,
+    registry_revision: registry._yaml_sha256 || require('crypto').createHash('sha256').update(input._registryPath && fs.existsSync(input._registryPath) ? fs.readFileSync(input._registryPath) : JSON.stringify(registry)).digest('hex'),
+    routing_feedback: null, context_ref: null, context_class: null, node_contract: null,
+  };
+  return record;
+}
+
+function buildRoutingTable(registry) {
+  const classes = {};
+  for (const [taskClass, spec] of Object.entries(registry.task_class_defaults || {})) {
+    const holders = [];
+    for (const model of spec.holders || []) {
+      const lanes = [];
+      for (const laneId of registry.lane_order || []) {
+        const serves = modelRows(registry, model).some(({ row }) => row.lane === laneId);
+        if (!serves) continue;
+        const eligibility = laneEligible({ ...(registry.lanes[laneId] || {}), id: laneId }, spec);
+        lanes.push({ lane: laneId, order: registry.lane_order.indexOf(laneId), serves: true, eligible: eligibility.eligible, eligibility_reason: eligibility.reason, capability_ok: eligibility.capabilityOk });
+      }
+      const quality = holderQuality(spec, (registry.models || {})[model]);
+      holders.push({ model, q: quality.q, bar: quality.bar, lanes });
+    }
+    classes[taskClass] = { holders, minimum: spec.minimum || null, requires_capabilities: spec.requires_capabilities || [], floor_model: spec.fallback && spec.fallback.floor_model || null };
+  }
+  return { registry_revision: registry._yaml_sha256 || require('crypto').createHash('sha256').update(JSON.stringify(registry)).digest('hex'), lane_order: registry.lane_order || [], classes };
+}
 
 function resolveFromRegistry(input) {
   const {
@@ -963,6 +1229,9 @@ function resolveFromRegistry(input) {
     : 'claude';
 
   const loadedRegistry = loadRegistry(_registryPath);
+  if (loadedRegistry.version >= 3 && loadedRegistry.task_class_defaults) {
+    return resolveV3(loadedRegistry, input);
+  }
   const registryMustStay = (loadedRegistry.must_stay_primary || []).map(normalizeClass);
 
   // Hard-fail on a malformed lane table or a reason-less minimum. Deliberately a THROW and
@@ -1927,6 +2196,10 @@ function resolveSandwich(baseInput, legOverrides) {
 
 module.exports = {
   resolve,
+  resolveModel,
+  resolveLane,
+  buildRoutingTable,
+  loadRegistry,
   resolveSandwich,
   parseToml,           // exported for tests
   loadPluginsConfig,   // exported for tests

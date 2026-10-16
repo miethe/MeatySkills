@@ -285,6 +285,9 @@ const CONTEXT_REF_NULL_PROVIDERS = ['bob'];
  * @throws {Error} If any required field is missing or mistyped
  */
 function validateRoutingRecord(record) {
+  if (record.schema_version !== undefined && record.schema_version !== 3) {
+    throw new Error(`RoutingRecord.schema_version must be 3 when present; got ${record.schema_version}`);
+  }
   if (record.identity_ref !== undefined && record.identity_ref !== null) {
     if (record.chosen_plugin_id !== 'codex' || !['codex_primary', 'codex_secondary'].includes(record.identity_ref)) {
       throw new Error('RoutingRecord has an invalid Codex account binding');
@@ -327,6 +330,25 @@ function validateRoutingRecord(record) {
       throw new Error(
         `RoutingRecord.fallback_chain entry must have {plugin_id: string, model: string}; got ${JSON.stringify(entry)}`
       );
+    }
+  }
+
+  if (record.schema_version === 3) {
+    if (!record.model_decision || !Array.isArray(record.model_decision.holders)) {
+      throw new Error('RoutingRecord v3 requires model_decision.holders');
+    }
+    if (!record.lane_decision || !Array.isArray(record.lane_decision.candidates)) {
+      throw new Error('RoutingRecord v3 requires lane_decision.candidates');
+    }
+    if (!Array.isArray(record.lane_order)) throw new Error('RoutingRecord v3 requires lane_order');
+    if (record.lane_decision.chosen !== record.lane) throw new Error('RoutingRecord lane and lane_decision.chosen disagree');
+    if (record.lane_decision.chosen) {
+      const selected = record.lane_decision.candidates.find(candidate => candidate.lane === record.lane_decision.chosen);
+      if (!selected || selected.provider !== record.chosen_plugin_id) throw new Error('RoutingRecord chosen_plugin_id does not match the chosen lane provider');
+      if ((selected.identity_ref || null) !== (record.identity_ref || null)) throw new Error('RoutingRecord identity_ref and chosen lane identity_ref disagree');
+    }
+    for (const entry of record.fallback_chain) {
+      if (!record.lane_order.includes(entry.lane)) throw new Error(`RoutingRecord fallback lane '${entry.lane}' is absent from lane_order`);
     }
   }
 

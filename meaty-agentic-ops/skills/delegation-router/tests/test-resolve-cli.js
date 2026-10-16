@@ -48,6 +48,22 @@ function describe(suiteName, fn) {
 
 const CLI_PATH = path.join(__dirname, '..', 'resolve-cli.js');
 
+// Registry v3 no longer routes an explicit model that is not a holder of the requested class
+// (it reports floor_breached instead of choosing below the floor). The ICA GPT-shim scenarios
+// below therefore run against a scratch copy of the generated registry in which gpt-5.5-gus is
+// the sole `second_opinion` holder; the production registry is untouched.
+const SCRATCH_DIR = require('fs').mkdtempSync(path.join(require('os').tmpdir(), 'resolve-cli-'));
+const GUS_REGISTRY = path.join(SCRATCH_DIR, 'registry.json');
+{
+  const fs = require('fs');
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8'));
+  const spec = registry.task_class_defaults.second_opinion;
+  spec.holders = ['gpt-5.5-gus'];
+  delete spec.bar;
+  spec.fallback = { policy: 'next_lane_then_next_holder', floor_model: 'gpt-5.5-gus' };
+  fs.writeFileSync(GUS_REGISTRY, JSON.stringify(registry));
+}
+
 /**
  * Run the CLI as a real subprocess and return {stdout, stderr, status}.
  * Never throws on a non-zero exit — callers assert on `status` explicitly.
@@ -76,7 +92,7 @@ describe('(a) known-good request → valid RoutingRecord JSON, exit 0', () => {
     require('fs').writeFileSync(fakeShim, '#!/bin/sh\n');
     try {
       const { stdout, status } = runCli(
-        ['--model', 'gpt-5.5-gus', '--provider', 'ica', '--task-class', 'second-opinion'],
+        ['--model', 'gpt-5.5-gus', '--provider', 'ica', '--task-class', 'second-opinion', '--registry-path', GUS_REGISTRY],
         { ICA_GPT_SHIM_PATH: fakeShim }
       );
       assert.strictEqual(status, 0, `expected exit 0, got ${status}`);
@@ -112,7 +128,7 @@ describe('(a) known-good request → valid RoutingRecord JSON, exit 0', () => {
     require('fs').writeFileSync(fakeShim, '#!/bin/sh\n');
     try {
       const { stdout, status } = runCli(
-        ['--model', 'sonnet', '--provider', 'claude', '--task-class', 'implementation', '--compact'],
+        ['--model', 'claude-sonnet-5-5', '--provider', 'claude', '--task-class', 'implementation', '--compact'],
         { ICA_GPT_SHIM_PATH: fakeShim }
       );
       assert.strictEqual(status, 0);
@@ -171,7 +187,7 @@ describe('(c) zero network/model calls (static + behavioral check)', () => {
 describe('(d) node-safety fallback — ica-gpt.sh absent rewrites to ica-claude.sh', () => {
   test('missing shim path rewrites invocation_template to ~/ica-claude.sh', () => {
     const { stdout, status } = runCli(
-      ['--model', 'gpt-5.5-gus', '--provider', 'ica', '--task-class', 'second-opinion'],
+      ['--model', 'gpt-5.5-gus', '--provider', 'ica', '--task-class', 'second-opinion', '--registry-path', GUS_REGISTRY],
       { ICA_GPT_SHIM_PATH: '/definitely/does/not/exist/ica-gpt.sh' }
     );
     assert.strictEqual(status, 0);

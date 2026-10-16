@@ -55,29 +55,29 @@ if (fs.existsSync(TMP_LOG_PATH)) {
 // Mirrors the P3 offload table from phase-3-low-risk-wiring.md.
 // ---------------------------------------------------------------------------
 
-// Model names must match provider-plugins.toml entries:
-//   gemini:  gemini-3.5-flash, gemini-3.1-pro-preview (NOT 'sonnet')
-//   ica:     haiku, sonnet, opus
-//   codex:   gpt-6-luna (Nick decision, 2026-09-25)
-//   claude:  haiku, sonnet, opus
+// Registry v3 (two-step resolver): the caller names a canonical task class and the registry
+// picks the model (class holders, quality bar) and then the lane (lane_order is the cost order,
+// so ICA free lanes come first; Codex subscription serves `implementation`; MUST-stay classes
+// are pinned to claude_subscription). Callers no longer name a provider or a legacy model alias.
 const WAVE_PLAN_TASKS = [
-  // P3-002: explore.js — exploration legs follow the free-first ICA chain.
-  { id: 'EXPLORE-LEG-1', provider: 'gemini', model: 'gemini-3.5-flash',   task_class: 'exploration',        expected_agent_type_id: 'ica-executor', resume_active: false },
-  { id: 'EXPLORE-LEG-2', provider: 'gemini', model: 'gemini-3.1-pro-preview',   task_class: 'exploration',        expected_agent_type_id: 'gemini-executor', resume_active: false },
+  // P3-002: explore.js — exploration legs follow the free-first ICA lane.
+  { id: 'EXPLORE-LEG-1', task_class: 'exploration',   expected_agent_type_id: 'ica-executor',   resume_active: false },
+  { id: 'EXPLORE-LEG-2', task_class: 'second_opinion', expected_agent_type_id: 'ica-executor',  resume_active: false },
   // P3-003: spike.js — adversarial skeptic votes → ica-executor
-  { id: 'SKEPTIC-1',     provider: 'ica',    model: 'sonnet',            task_class: 'skeptic-vote',       expected_agent_type_id: 'ica-executor',    resume_active: false },
-  { id: 'SKEPTIC-2',     provider: 'ica',    model: 'haiku',             task_class: 'adversarial-review', expected_agent_type_id: 'ica-executor',    resume_active: false },
-  // P3-004: review-council.js — evidence scribe → codex-executor
-  { id: 'EVID-SCRIBE-1', provider: 'codex',  model: 'gpt-6-luna',       task_class: 'mechanical-tasks',  expected_agent_type_id: 'codex-executor',  resume_active: false },
-  // P3-005: execute-plan.js — AC validation → codex-executor
-  { id: 'AC-VALIDATE-1', provider: 'codex',  model: 'gpt-6-luna',       task_class: 'ac-validation',     expected_agent_type_id: 'codex-executor',  resume_active: false },
-  { id: 'AC-VALIDATE-2', provider: 'codex',  model: 'gpt-6-luna',       task_class: 'ac-validation',     expected_agent_type_id: 'codex-executor',  resume_active: false },
-  // P3-003/004: completeness critic follows the free-first ICA chain.
-  { id: 'CRITIC-1',      provider: 'gemini', model: 'gemini-3.5-flash',   task_class: 'completeness-critic', expected_agent_type_id: 'ica-executor', resume_active: false },
+  { id: 'SKEPTIC-1',     task_class: 'critique',      expected_agent_type_id: 'ica-executor',   resume_active: false },
+  { id: 'SKEPTIC-2',     task_class: 'adjudication',  expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // P3-004: review-council.js — evidence scribe is mechanical work on the free ICA lane
+  { id: 'EVID-SCRIBE-1', task_class: 'mechanical',    expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // P3-005: execute-plan.js — AC validation (legacy alias of code_review) follows the free lane
+  { id: 'AC-VALIDATE-1', task_class: 'ac-validation', expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // Implementation legs are the Codex subscription work class.
+  { id: 'AC-VALIDATE-2', task_class: 'implementation', expected_agent_type_id: 'codex-executor', resume_active: false },
+  // P3-003/004: completeness critic follows the free-first ICA lane.
+  { id: 'CRITIC-1',      task_class: 'review',        expected_agent_type_id: 'ica-executor',   resume_active: false },
   // MUST-stay: synthesis stage → claude (should NOT offload regardless of routing)
-  { id: 'SYNTHESIS-1',   provider: 'claude', model: 'sonnet',            task_class: 'orchestration',     expected_agent_type_id: 'claude',          resume_active: false },
+  { id: 'SYNTHESIS-1',   task_class: 'orchestration', expected_agent_type_id: 'claude',         resume_active: false },
   // MUST-stay: verdict sign-off → claude
-  { id: 'VERDICT-1',     provider: 'claude', model: 'sonnet',            task_class: 'verdict',           expected_agent_type_id: 'claude',          resume_active: false },
+  { id: 'VERDICT-1',     task_class: 'verdict',       expected_agent_type_id: 'claude',         resume_active: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -93,8 +93,6 @@ for (const task of WAVE_PLAN_TASKS) {
   let record;
   try {
     record = resolve({
-      model: task.model,
-      provider: task.provider,
       effort: 'standard',
       task_class: task.task_class,
       resume_active: task.resume_active,
@@ -160,7 +158,7 @@ if (missingCount === 0) {
 console.log('\n[P3-007] Test 3: Checking --violations count (expect 0)...');
 
 const MUST_STAY_PRIMARY_CLASSES = new Set([
-  'orchestration', 'verdict', 'mode-d', 'council-review', 'schema-recovery', 'cross-wave-merge',
+  'orchestration', 'verdict', 'mode_d', 'council_review', 'schema_recovery', 'cross_wave_merge', 'synthesis',
 ]);
 
 const violationEntries = entries.filter(e => {
@@ -189,11 +187,11 @@ console.log('\n[P3-007] Test 4: Verifying agent_type_id per offload stage...');
 // Note: EXPECTED_OFFLOADS uses chosen_plugin_id not agent_type_id for direct entry comparison.
 const EXPECTED_OFFLOADS = {
   'EXPLORE-LEG-1':  'ica',
-  'EXPLORE-LEG-2':  'gemini',
+  'EXPLORE-LEG-2':  'ica',
   'SKEPTIC-1':      'ica',
   'SKEPTIC-2':      'ica',
-  'EVID-SCRIBE-1':  'codex',
-  'AC-VALIDATE-1':  'codex',
+  'EVID-SCRIBE-1':  'ica',
+  'AC-VALIDATE-1':  'ica',
   'AC-VALIDATE-2':  'codex',
   'CRITIC-1':       'ica',
   'SYNTHESIS-1':    'claude',
