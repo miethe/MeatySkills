@@ -87,8 +87,12 @@ Google's flagship reasoning model (launched 2026-10-13; the model page says Stab
 registry 2026-10-16 (`node_01M52TKCJ4SRT9JAWNXPNGD1D2`); explicit-selectable, in no routing chain.
 
 - **When to pick:** heavy reasoning, large-context reads, planning critique, and a cross-family
-  second opinion where the Pro tier is wanted. Benchmark standing: see the registry entry's
-  `scores` comment and the evidence on the tracker node.
+  second opinion where the Pro tier is wanted. Measured 2026-10-16 (n=1 per task, blind
+  cross-family judge): second of four behind Sonnet 5.5, ahead of 3.1 Pro and 3.6 Flash; every
+  objective check passed; the cheapest arm on short tasks because it thinks sparingly; about four
+  times faster than 3.1 Pro. It answered a defensive security code review that 3.1 Pro and 3.6
+  Flash both refused, so prefer it over them for code review.
+  Report: `agentic_meta_dev` `docs/project_plans/reports/model-eval/gemini-4-argon-2026-10-16/`.
 - **Invocation lanes:** `gemini/gemini-4-argon`, native only, and **only on the paid key**
   (`GEMINI_API_KEY_PAID`, the key the salon reads as `GEMINI_PERSONAL_API_KEY`). The free key
   `GEMINI_API_KEY` returns 429 with a free-tier limit of 0 for this model. For `gemini-cli`, export
@@ -101,7 +105,8 @@ registry 2026-10-16 (`node_01M52TKCJ4SRT9JAWNXPNGD1D2`); explicit-selectable, in
   ($0.20) from 2026-12-01. Batch is half price.
 - **Gotchas:** **explicit caching is not supported** (`createCachedContent` returns 400). Workloads
   that resend the same context (salon packets, gemini-cli's ~16.5k-token preamble) pay full input
-  on every call unless Google's implicit cache happens to hit. The resolver's `gemini` invocation
+  on every call unless Google's implicit cache happens to hit. Measured: on a byte-identical
+  104k-token prefix the cache missed on call 2 and hit on call 3, so budget as if it misses. The resolver's `gemini` invocation
   template uses whatever `GEMINI_API_KEY` is in the environment, so a resolver-dispatched Argon leg
   fails on the free key until the caller binds the paid one.
 
