@@ -13,6 +13,7 @@ const registry = JSON.parse(fs.readFileSync(fixture, 'utf8'));
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'routing-v3-'));
 const registryPath = path.join(temp, 'registry.json');
 fs.writeFileSync(registryPath, JSON.stringify(registry));
+function useRegistry(value) { fs.writeFileSync(registryPath, JSON.stringify(value)); }
 
 function capacity(lanes = {}, identities = {}) { return { generated_at: 'test', lanes, identities }; }
 
@@ -24,6 +25,7 @@ assert.equal(unavailableSecondary.model, 'gpt-6-luna');
 assert.equal(unavailableSecondary.lane, 'codex_subscription_primary');
 assert.equal(unavailableSecondary.identity_ref, 'codex_primary');
 assert(unavailableSecondary.model_decision.holders.every(item => item.verdict && item.reason));
+assert.equal(unavailableSecondary.model_decision.holders[1].verdict, 'not_reached');
 assert(unavailableSecondary.lane_decision.candidates.every(item => item.verdict && item.reason));
 
 const bothCodexUnavailable = resolve({
@@ -34,7 +36,8 @@ const bothCodexUnavailable = resolve({
   }, { codex_primary: { available: false }, codex_secondary: { available: false } }),
 });
 assert.equal(bothCodexUnavailable.model, 'claude-sonnet-5-5');
-assert.equal(bothCodexUnavailable.lane, 'claude_subscription');
+assert.equal(bothCodexUnavailable.lane, 'claude_subscription_1x');
+assert.equal(bothCodexUnavailable.model, 'claude-sonnet-5-5');
 assert.match(bothCodexUnavailable.reason, /registry v3 selected/);
 
 const orchestration = resolve({ task_class: 'orchestration', _registryPath: registryPath, capacity: capacity({ codex_subscription_primary: { state: 'admitted' } }) });
@@ -45,6 +48,43 @@ assert(!orchestration.lane_decision.candidates.some(item => item.lane.startsWith
 const modeD = resolve({ task_class: 'mode_d', _registryPath: registryPath, capacity: capacity({ ica_gateway_messages: { state: 'admitted' } }) });
 assert.equal(modeD.lane, 'claude_subscription');
 assert.equal(modeD.lane_decision.candidates.find(item => item.lane === 'ica_gateway_messages').verdict, 'excluded');
+assert(!modeD.lane_decision.candidates.some(item => item.lane === 'claude_subscription_1x' && item.verdict === 'eligible'));
+
+const oneXUnavailable = resolve({
+  task_class: 'implementation', _registryPath: registryPath,
+  capacity: capacity({
+    codex_subscription_primary: { state: 'unavailable' },
+    codex_subscription_secondary: { state: 'unavailable' },
+    claude_subscription_1x: { state: 'unavailable' },
+  }, { codex_primary: { available: false }, codex_secondary: { available: false } }),
+});
+assert.equal(oneXUnavailable.model, 'claude-sonnet-5-5');
+assert.equal(oneXUnavailable.lane, 'claude_subscription');
+
+const belowBarRegistry = structuredClone(registry);
+belowBarRegistry.task_class_defaults.exploration = {
+  holders: ['gpt-6-luna', 'claude-sonnet-5-5'], bar: 5.5,
+  quality: { w_intelligence: 0.4, w_taste: 0.1, w_speed: 0.5 },
+  requires_capabilities: [], fallback: { policy: 'next_lane_then_next_holder', floor_model: 'claude-sonnet-5-5' },
+};
+belowBarRegistry.models['gpt-6-luna'].scores = { intelligence: 1, taste: 1, speed: 1 };
+belowBarRegistry.models['claude-sonnet-5-5'].scores = { intelligence: 9, taste: 8, speed: 8 };
+useRegistry(belowBarRegistry);
+const belowBarRun = resolve({ task_class: 'exploration', _registryPath: registryPath });
+assert.equal(belowBarRun.model, 'claude-sonnet-5-5');
+assert.equal(belowBarRun.model_decision.holders[0].verdict, 'below_bar');
+assert.equal(belowBarRun.model_decision.holders[0].q, 1);
+assert.equal(belowBarRun.model_decision.holders[0].bar, 5.5);
+
+const unmeasuredRegistry = structuredClone(registry);
+unmeasuredRegistry.models['gpt-6-luna'].scores = { intelligence: 8, taste: 'UNMEASURED', speed: 9 };
+useRegistry(unmeasuredRegistry);
+const unmeasuredRun = resolve({ task_class: 'implementation', _registryPath: registryPath });
+assert.equal(unmeasuredRun.model_decision.holders[0].verdict, 'unmeasured_bar');
+assert.equal(unmeasuredRun.model_decision.holders[0].q, null);
+assert.equal(unmeasuredRun.model_decision.holders[0].bar, 7);
+assert.equal(unmeasuredRun.model, 'claude-sonnet-5-5');
+useRegistry(registry);
 
 const explicit = resolve({ task_class: 'explicit_test', model: 'claude-sonnet-5-5', _registryPath: registryPath });
 assert.equal(explicit.lane, 'ica_gateway_messages');

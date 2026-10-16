@@ -1,5 +1,5 @@
 {
-  "registry_revision": "49624eaf12d394a3a4a8e1f4ab0f2a6de757a0ee287b690a88f668765458b9e0",
+  "registry_revision": "49e07445b7105eca2dc0b3261334e430f2e7a630eca658f843338854f1721e70",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",
@@ -18,44 +18,9 @@
     "exploration": {
       "holders": [
         {
-          "model": "gpt-6-luna",
-          "lanes": [
-            {
-              "lane": "ica_gateway_responses_shim",
-              "order": 2,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
-            {
-              "lane": "codex_subscription_primary",
-              "order": 3,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
-            {
-              "lane": "codex_subscription_secondary",
-              "order": 4,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            }
-          ]
-        },
-        {
-          "model": "claude-haiku-5-5[1m]",
-          "lanes": []
-        },
-        {
-          "model": "gpt-5.6-luna",
-          "lanes": []
-        },
-        {
           "model": "claude-haiku-5-5",
+          "q": 7.5,
+          "bar": 5.5,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -82,6 +47,37 @@
               "capability_ok": true
             }
           ]
+        },
+        {
+          "model": "gpt-6-luna",
+          "q": 8.4,
+          "bar": 5.5,
+          "lanes": [
+            {
+              "lane": "ica_gateway_responses_shim",
+              "order": 2,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
         }
       ],
       "minimum": null,
@@ -92,6 +88,8 @@
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 7.8,
+          "bar": 6,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -120,15 +118,9 @@
           ]
         },
         {
-          "model": "claude-haiku-5-5[1m]",
-          "lanes": []
-        },
-        {
-          "model": "gpt-5.6-luna",
-          "lanes": []
-        },
-        {
           "model": "claude-haiku-5-5",
+          "q": 6.6000000000000005,
+          "bar": 6,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -165,6 +157,8 @@
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 8.3,
+          "bar": 5,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -193,19 +187,9 @@
           ]
         },
         {
-          "model": "claude-haiku-5-5[1m]",
-          "lanes": []
-        },
-        {
-          "model": "gemma-4-26b-a4b-it",
-          "lanes": []
-        },
-        {
-          "model": "gpt-5.6-luna",
-          "lanes": []
-        },
-        {
           "model": "claude-haiku-5-5",
+          "q": 7.2,
+          "bar": 5,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -242,6 +226,8 @@
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 7.800000000000001,
+          "bar": 3,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -271,6 +257,8 @@
         },
         {
           "model": "gemini-3.6-flash",
+          "q": 6.9,
+          "bar": 3,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -283,11 +271,9 @@
           ]
         },
         {
-          "model": "gemma-4-26b-a4b-it",
-          "lanes": []
-        },
-        {
           "model": "claude-haiku-5-5",
+          "q": 6.3,
+          "bar": 3,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -324,6 +310,8 @@
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 7.8999999999999995,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -353,14 +341,16 @@
         },
         {
           "model": "claude-sonnet-5-5",
+          "q": 8.5,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
-              "capability_ok": true
+              "eligibility_reason": "minimum predicate failed: account_relationship=employer; missing capabilities: execution.file_edit",
+              "capability_ok": false
             },
             {
               "lane": "claude_subscription_1x",
@@ -382,14 +372,16 @@
         },
         {
           "model": "claude-sonnet-5",
+          "q": 7.800000000000001,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
-              "capability_ok": true
+              "eligibility_reason": "minimum predicate failed: account_relationship=employer; missing capabilities: execution.file_edit",
+              "capability_ok": false
             },
             {
               "lane": "claude_subscription",
@@ -410,13 +402,17 @@
         },
         "reason": "quality_bar"
       },
-      "requires_capabilities": [],
+      "requires_capabilities": [
+        "execution.file_edit"
+      ],
       "floor_model": "claude-sonnet-5"
     },
     "design_judgment": {
       "holders": [
         {
           "model": "claude-opus-5-5",
+          "q": 8.5,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -445,27 +441,9 @@
           ]
         },
         {
-          "model": "claude-opus-5",
-          "lanes": [
-            {
-              "lane": "claude_subscription",
-              "order": 6,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            }
-          ]
-        }
-      ],
-      "minimum": null,
-      "requires_capabilities": [],
-      "floor_model": "claude-opus-5"
-    },
-    "raw_strength": {
-      "holders": [
-        {
           "model": "gpt-6.1-sol",
+          "q": 8.5,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages_shim",
@@ -494,8 +472,40 @@
           ]
         },
         {
-          "model": "gpt-6-sol",
+          "model": "claude-opus-5",
+          "q": 8.5,
+          "bar": 8,
           "lanes": [
+            {
+              "lane": "claude_subscription",
+              "order": 6,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        }
+      ],
+      "minimum": null,
+      "requires_capabilities": [],
+      "floor_model": "claude-opus-5"
+    },
+    "raw_strength": {
+      "holders": [
+        {
+          "model": "gpt-6.1-sol",
+          "q": 8.5,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
             {
               "lane": "codex_subscription_primary",
               "order": 3,
@@ -516,6 +526,8 @@
         },
         {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -542,6 +554,29 @@
               "capability_ok": true
             }
           ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.5,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
         }
       ],
       "minimum": null,
@@ -552,32 +587,38 @@
       "holders": [
         {
           "model": "gemini-3.6-flash",
+          "q": 7.4,
+          "bar": 6,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
-              "eligible": false,
-              "eligibility_reason": "no minimum declared; missing capabilities: web_grounding",
-              "capability_ok": false
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
             }
           ]
         },
         {
           "model": "gemini-3.5-flash",
+          "q": 7.4,
+          "bar": 6,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
-              "eligible": false,
-              "eligibility_reason": "no minimum declared; missing capabilities: web_grounding",
-              "capability_ok": false
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
             }
           ]
         },
         {
           "model": "gemini-3.1-pro-preview",
+          "q": 6.9,
+          "bar": 6,
           "lanes": [
             {
               "lane": "gemini_direct",
@@ -591,15 +632,15 @@
         }
       ],
       "minimum": null,
-      "requires_capabilities": [
-        "web_grounding"
-      ],
+      "requires_capabilities": [],
       "floor_model": "gemini-3.1-pro-preview"
     },
     "code_review": {
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 7.800000000000001,
+          "bar": 6.5,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -629,6 +670,8 @@
         },
         {
           "model": "claude-sonnet-5-5",
+          "q": 8.6,
+          "bar": 6.5,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -655,6 +698,29 @@
               "capability_ok": true
             }
           ]
+        },
+        {
+          "model": "claude-sonnet-5",
+          "q": 7.8999999999999995,
+          "bar": 6.5,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription",
+              "order": 6,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
         }
       ],
       "minimum": null,
@@ -665,6 +731,8 @@
       "holders": [
         {
           "model": "gpt-6-luna",
+          "q": 7.4,
+          "bar": 5,
           "lanes": [
             {
               "lane": "ica_gateway_responses_shim",
@@ -694,6 +762,8 @@
         },
         {
           "model": "gpt-5.6-terra",
+          "q": 7.1,
+          "bar": 5,
           "lanes": [
             {
               "lane": "codex_subscription_primary",
@@ -715,6 +785,8 @@
         },
         {
           "model": "nano-banana-2",
+          "q": null,
+          "bar": 5,
           "lanes": [
             {
               "lane": "nano_banana_api",
@@ -728,6 +800,8 @@
         },
         {
           "model": "nano-banana-pro",
+          "q": null,
+          "bar": 5,
           "lanes": [
             {
               "lane": "nano_banana_api",
@@ -741,14 +815,34 @@
         }
       ],
       "minimum": null,
-      "requires_capabilities": [],
+      "requires_capabilities": [
+        "tools.image_generation"
+      ],
       "floor_model": "nano-banana-pro"
     },
     "svg_generation": {
       "holders": [
         {
-          "model": "claude-fable-5-1",
+          "model": "claude-opus-5-5",
+          "q": 8,
+          "bar": 5,
           "lanes": [
+            {
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription_1x",
+              "order": 5,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
             {
               "lane": "claude_subscription",
               "order": 6,
@@ -761,19 +855,23 @@
         },
         {
           "model": "gemini-3.1-pro-preview",
+          "q": 7,
+          "bar": 5,
           "lanes": [
             {
               "lane": "gemini_direct",
               "order": 7,
               "serves": true,
-              "eligible": false,
-              "eligibility_reason": "no minimum declared; missing capabilities: claude_code_native",
-              "capability_ok": false
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
             }
           ]
         },
         {
           "model": "gemini-3.5-flash",
+          "q": 6.5,
+          "bar": 5,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -787,6 +885,8 @@
         },
         {
           "model": "gemini-3.6-flash",
+          "q": 6.5,
+          "bar": 5,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -800,15 +900,15 @@
         }
       ],
       "minimum": null,
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "gemini-3.6-flash"
     },
     "video_generation": {
       "holders": [
         {
           "model": "sora-2",
+          "q": null,
+          "bar": 5,
           "lanes": [
             {
               "lane": "sora_api",
@@ -822,13 +922,17 @@
         }
       ],
       "minimum": null,
-      "requires_capabilities": [],
+      "requires_capabilities": [
+        "video_output"
+      ],
       "floor_model": "sora-2"
     },
     "review": {
       "holders": [
         {
           "model": "gpt-6.1-sol",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_messages_shim",
@@ -857,11 +961,60 @@
           ]
         },
         {
-          "model": "gpt-5.6-sol",
+          "model": "claude-sonnet-5-5",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
-              "lane": "ica_gateway_messages_shim",
-              "order": 1,
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription_1x",
+              "order": 5,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription",
+              "order": 6,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "claude-opus-5-5",
+          "q": 8.8,
+          "bar": 7,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription_1x",
+              "order": 5,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription",
+              "order": 6,
               "serves": true,
               "eligible": true,
               "eligibility_reason": "no minimum declared",
@@ -878,6 +1031,8 @@
       "holders": [
         {
           "model": "gpt-6.1-sol",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_messages_shim",
@@ -906,11 +1061,29 @@
           ]
         },
         {
-          "model": "gpt-5.6-sol",
+          "model": "claude-opus-5-5",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
-              "lane": "ica_gateway_messages_shim",
-              "order": 1,
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription_1x",
+              "order": 5,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription",
+              "order": 6,
               "serves": true,
               "eligible": true,
               "eligibility_reason": "no minimum declared",
@@ -927,6 +1100,8 @@
       "holders": [
         {
           "model": "gpt-6.1-sol",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
               "lane": "ica_gateway_messages_shim",
@@ -955,11 +1130,29 @@
           ]
         },
         {
-          "model": "gpt-5.6-sol",
+          "model": "claude-opus-5-5",
+          "q": 8.8,
+          "bar": 7,
           "lanes": [
             {
-              "lane": "ica_gateway_messages_shim",
-              "order": 1,
+              "lane": "ica_gateway_messages",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription_1x",
+              "order": 5,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "claude_subscription",
+              "order": 6,
               "serves": true,
               "eligible": true,
               "eligibility_reason": "no minimum declared",
@@ -976,6 +1169,8 @@
       "holders": [
         {
           "model": "gpt-6-astra",
+          "q": null,
+          "bar": 9,
           "lanes": [
             {
               "lane": "codex_subscription_primary",
@@ -997,6 +1192,8 @@
         },
         {
           "model": "claude-fable-5-1",
+          "q": null,
+          "bar": 9,
           "lanes": [
             {
               "lane": "claude_subscription",
@@ -1017,21 +1214,23 @@
       "holders": [
         {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1039,57 +1238,57 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "claude-opus-5"
     },
     "mode_d": {
       "holders": [
         {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1097,57 +1296,88 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "claude-opus-5"
     },
     "verdict": {
       "holders": [
         {
+          "model": "gpt-6.1-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1155,57 +1385,111 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "claude-opus-5"
     },
     "council_review": {
       "holders": [
         {
+          "model": "gpt-6.1-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1213,57 +1497,111 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "claude-opus-5"
     },
     "synthesis": {
       "holders": [
         {
+          "model": "gpt-6.1-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1271,57 +1609,111 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [
-        "claude_code_native"
-      ],
+      "requires_capabilities": [],
       "floor_model": "claude-opus-5"
     },
     "schema_recovery": {
       "holders": [
         {
+          "model": "gpt-6.1-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1329,31 +1721,54 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
       "requires_capabilities": [],
@@ -1362,22 +1777,55 @@
     "cross_wave_merge": {
       "holders": [
         {
+          "model": "gpt-6.1-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "ica_gateway_messages_shim",
+              "order": 1,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
           "model": "claude-opus-5-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
               "order": 0,
               "serves": true,
               "eligible": false,
-              "eligibility_reason": "minimum predicate failed: account_relationship=employer",
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
-              "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             },
             {
@@ -1385,31 +1833,54 @@
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6-sol",
+          "q": 8.6,
+          "bar": 8,
+          "lanes": [
+            {
+              "lane": "codex_subscription_primary",
+              "order": 3,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
+              "capability_ok": true
+            },
+            {
+              "lane": "codex_subscription_secondary",
+              "order": 4,
+              "serves": true,
+              "eligible": false,
+              "eligibility_reason": "lane is not named by minimum",
               "capability_ok": true
             }
           ]
         },
         {
           "model": "claude-opus-5",
+          "q": 8.6,
+          "bar": 8,
           "lanes": [
             {
               "lane": "claude_subscription",
               "order": 6,
               "serves": true,
               "eligible": true,
-              "eligibility_reason": "minimum predicate satisfied",
+              "eligibility_reason": "lane is named by minimum",
               "capability_ok": true
             }
           ]
         }
       ],
       "minimum": {
-        "predicate": {
-          "account_relationship": [
-            "personal"
-          ]
-        },
+        "lanes": [
+          "claude_subscription"
+        ],
         "reason": "quality_bar"
       },
       "requires_capabilities": [],
@@ -1419,6 +1890,8 @@
       "holders": [
         {
           "model": "claude-opus-5-5",
+          "q": null,
+          "bar": null,
           "lanes": [
             {
               "lane": "ica_gateway_messages",
@@ -1448,6 +1921,8 @@
         },
         {
           "model": "claude-opus-5",
+          "q": null,
+          "bar": null,
           "lanes": [
             {
               "lane": "claude_subscription",

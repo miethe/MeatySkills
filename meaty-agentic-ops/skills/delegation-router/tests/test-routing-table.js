@@ -16,6 +16,8 @@ assert.deepEqual(Object.keys(table.classes).sort(), Object.keys(registry.task_cl
 for (const [taskClass, spec] of Object.entries(registry.task_class_defaults)) {
   assert.deepEqual(table.classes[taskClass].holders.map(item => item.model), spec.holders);
   for (const holder of table.classes[taskClass].holders) {
+    assert(Object.prototype.hasOwnProperty.call(holder, 'q'), `${taskClass}/${holder.model} is missing q`);
+    assert(Object.prototype.hasOwnProperty.call(holder, 'bar'), `${taskClass}/${holder.model} is missing bar`);
     assert(holder.lanes.every(lane => lane.eligibility_reason && typeof lane.eligible === 'boolean'));
   }
 }

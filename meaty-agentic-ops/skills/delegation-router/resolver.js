@@ -1020,6 +1020,18 @@ function modelRows(registry, modelId) {
   return (model.providers || []).filter(row => row.enabled !== false).map(row => ({ model, row }));
 }
 
+function holderQuality(classSpec, model) {
+  const bar = Number.isFinite(classSpec.bar) ? classSpec.bar : null;
+  const quality = classSpec.quality || {};
+  const scores = model && model.scores;
+  const axes = ['intelligence', 'taste', 'speed'];
+  const measured = scores && !Object.values(scores).includes('UNMEASURED') && axes.every(axis => typeof scores[axis] === 'number' && Number.isFinite(scores[axis]));
+  const q = measured && axes.every(axis => typeof quality[`w_${axis}`] === 'number')
+    ? axes.reduce((total, axis) => total + quality[`w_${axis}`] * scores[axis], 0)
+    : null;
+  return { q, bar, measured: q !== null };
+}
+
 function resolveModel(registry, input) {
   const classSpec = (registry.task_class_defaults || {})[input.task_class];
   if (!classSpec) throw new Error(`Unknown task class '${input.task_class}'`);
@@ -1030,6 +1042,17 @@ function resolveModel(registry, input) {
   let chosenModel = null;
   let chosenIndex = -1;
   for (const modelId of holders) {
+    const model = (registry.models || {})[modelId];
+    const quality = holderQuality(classSpec, model);
+    const barDeclared = quality.bar !== null;
+    if (barDeclared && !quality.measured) {
+      decisions.push({ model: modelId, verdict: 'unmeasured_bar', reason: 'holder scorecard is missing or contains UNMEASURED values', q: null, bar: quality.bar });
+      continue;
+    }
+    if (barDeclared && quality.q < quality.bar) {
+      decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
+      continue;
+    }
     const viable = modelRows(registry, modelId).some(({ row }) => {
       const lane = registry.lanes && registry.lanes[row.lane];
       if (!lane || !laneOrder.includes(row.lane)) return false;
@@ -1038,13 +1061,13 @@ function resolveModel(registry, input) {
       return eligibility.eligible && !['refused', 'unavailable'].includes(status);
     });
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
-    decisions.push({ model: modelId, verdict: viable ? 'candidate' : (registry.models && registry.models[modelId] ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model' });
+    decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
   if (chosenIndex >= 0) {
     decisions[chosenIndex].verdict = 'chosen';
     for (let i = chosenIndex + 1; i < decisions.length; i++) {
       if (decisions[i].verdict === 'candidate') {
-        decisions[i].verdict = 'below_bar';
+        decisions[i].verdict = 'not_reached';
         decisions[i].reason = `an earlier holder (${chosenModel}) has an eligible, available lane`;
       }
     }
@@ -1147,7 +1170,8 @@ function buildRoutingTable(registry) {
         const eligibility = laneEligible({ ...(registry.lanes[laneId] || {}), id: laneId }, spec);
         lanes.push({ lane: laneId, order: registry.lane_order.indexOf(laneId), serves: true, eligible: eligibility.eligible, eligibility_reason: eligibility.reason, capability_ok: eligibility.capabilityOk });
       }
-      holders.push({ model, lanes });
+      const quality = holderQuality(spec, (registry.models || {})[model]);
+      holders.push({ model, q: quality.q, bar: quality.bar, lanes });
     }
     classes[taskClass] = { holders, minimum: spec.minimum || null, requires_capabilities: spec.requires_capabilities || [], floor_model: spec.fallback && spec.fallback.floor_model || null };
   }
