@@ -48,7 +48,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { resolve } = require('./resolver.js');
+const { resolve, loadRegistry, buildRoutingTable } = require('./resolver.js');
 
 const ICA_GPT_SHIM_MARKER = '~/ica-gpt.sh';
 const ICA_CLAUDE_FALLBACK = '~/ica-claude.sh';
@@ -156,6 +156,35 @@ function applyNodeSafetyFallback(record) {
 
 function main() {
   const argv = process.argv.slice(2);
+
+  if (argv[0] === 'table' || argv[0] === 'resolve') {
+    const command = argv.shift();
+    const flags = {};
+    for (let i = 0; i < argv.length; i++) {
+      const key = argv[i];
+      if (key === '--json') { flags.json = true; continue; }
+      if (['--task-class', '--model', '--capacity-file', '--registry', '--identity', '--effort'].includes(key)) {
+        if (i + 1 >= argv.length) { process.stderr.write(`resolve-cli: ${key} requires a value\n`); process.exit(2); return; }
+        flags[key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
+        continue;
+      }
+      process.stderr.write(`resolve-cli: unrecognized argument '${key}'\n`); process.exit(2); return;
+    }
+    try {
+      const registry = loadRegistry(flags.registry);
+      if (command === 'table') {
+        process.stdout.write(JSON.stringify(buildRoutingTable(registry), null, 2) + '\n');
+        process.exit(0); return;
+      }
+      if (!flags.taskClass) throw new Error('--task-class is required');
+      const capacity = flags.capacityFile ? JSON.parse(fs.readFileSync(flags.capacityFile, 'utf8')) : {};
+      const record = resolve({ task_class: flags.taskClass, model: flags.model, identity_ref: flags.identity, effort: flags.effort, capacity, _registryPath: flags.registry });
+      process.stdout.write(JSON.stringify(record, null, 2) + '\n');
+      process.exit(record.floor_breached ? 1 : 0); return;
+    } catch (err) {
+      process.stderr.write(`resolve-cli: ${err.message}\n`); process.exit(1); return;
+    }
+  }
 
   if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
     printHelp(argv.length === 0 ? process.stderr : process.stdout);

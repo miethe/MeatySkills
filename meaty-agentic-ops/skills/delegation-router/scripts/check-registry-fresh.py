@@ -59,6 +59,8 @@ def main() -> int:
                     help=f"Path to model-registry.yaml (default: {default_yaml})")
     ap.add_argument("--generated", dest="generated", default=default_generated,
                     help=f"Path to the committed generated JSON (default: {default_generated})")
+    ap.add_argument("--table", dest="table", default=os.path.join(_SKILL_DIR, "routing-table.generated.json"),
+                    help="Path to the committed generated routing table")
     args = ap.parse_args()
 
     if not os.path.isfile(args.src):
@@ -70,6 +72,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as tmp:
         fresh = os.path.join(tmp, "model-registry.generated.json")
+        fresh_table = os.path.join(tmp, "routing-table.generated.json")
         proc = subprocess.run(
             [sys.executable, _GENERATOR, "--in", args.src, "--out", fresh],
             capture_output=True, text=True,
@@ -85,14 +88,18 @@ def main() -> int:
             fresh_text = fh.read()
         with open(args.generated, encoding="utf-8") as fh:
             committed_text = fh.read()
+        with open(fresh_table, encoding="utf-8") as fh:
+            fresh_table_text = fh.read()
+        with open(args.table, encoding="utf-8") as fh:
+            committed_table_text = fh.read()
 
-    if fresh_text == committed_text:
-        sys.stderr.write("check-registry-fresh.py: model-registry.generated.json is up to date.\n")
+    if fresh_text == committed_text and fresh_table_text == committed_table_text:
+        sys.stderr.write("check-registry-fresh.py: generated registry JSON and routing table are up to date.\n")
         return 0
 
     sys.stderr.write(
-        "check-registry-fresh.py: STALE — model-registry.generated.json does not match a fresh\n"
-        "regeneration of model-registry.yaml. Run build-model-registry.py and commit the result.\n\n"
+        "check-registry-fresh.py: STALE — generated registry JSON and/or routing table do not match\n"
+        "a fresh regeneration of model-registry.yaml. Run build-model-registry.py and commit the result.\n\n"
     )
     diff = difflib.unified_diff(
         committed_text.splitlines(keepends=True),
@@ -100,7 +107,18 @@ def main() -> int:
         fromfile="committed/model-registry.generated.json",
         tofile="fresh-regeneration",
     )
-    sys.stderr.writelines(diff)
+    if fresh_text != committed_text:
+        diff = difflib.unified_diff(
+            committed_text.splitlines(keepends=True), fresh_text.splitlines(keepends=True),
+            fromfile="committed/model-registry.generated.json", tofile="fresh-regeneration",
+        )
+        sys.stderr.writelines(diff)
+    if fresh_table_text != committed_table_text:
+        diff = difflib.unified_diff(
+            committed_table_text.splitlines(keepends=True), fresh_table_text.splitlines(keepends=True),
+            fromfile="committed/routing-table.generated.json", tofile="fresh-regeneration",
+        )
+        sys.stderr.writelines(diff)
     return 1
 
 

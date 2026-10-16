@@ -34,6 +34,7 @@ import argparse
 import hashlib
 import json
 import os
+import subprocess
 import sys
 
 try:
@@ -55,6 +56,47 @@ def validate_registry(data: dict, source: str) -> list[str]:
         ((data.get("routing_attributes") or {}).get("write_capability") or {})
     )
 
+    allowed_minimum_reasons = {"cost_policy", "quality_bar", "disclosure_absolute", "authority_absolute"}
+    required_lane_attributes = {"compute_custody", "retention", "jurisdiction", "account_relationship", "metering", "payer"}
+    lane_order = data.get("lane_order") or []
+    if len(lane_order) != len(set(lane_order)):
+        errors.append("lane_order must not contain duplicate lane ids")
+    for lane_id, lane in (data.get("lanes") or {}).items():
+        missing = sorted(required_lane_attributes - set((lane or {}).get("attributes") or {}))
+        if missing:
+            errors.append(f"lanes.{lane_id} missing attributes: {', '.join(missing)}")
+        if not isinstance((lane or {}).get("harness_capabilities"), list):
+            errors.append(f"lanes.{lane_id}.harness_capabilities must be a list")
+
+    defaults = data.get("task_class_defaults") or {}
+    for task_class, spec in defaults.items():
+        for holder in spec.get("holders", []) or []:
+            if "/" in str(holder): errors.append(f"task_class_defaults.{task_class}.holders contains provider/model value '{holder}'")
+        for key in ("frontier",):
+            value = spec.get(key)
+            if isinstance(value, str) and "/" in value: errors.append(f"task_class_defaults.{task_class}.{key} must be a bare model id")
+        for candidate in spec.get("cross_family", []) or []:
+            value = candidate.get("model") if isinstance(candidate, dict) else candidate
+            if "/" in str(value): errors.append(f"task_class_defaults.{task_class}.cross_family contains provider/model value '{value}'")
+        floor_model = (spec.get("fallback") or {}).get("floor_model")
+        if floor_model is not None and "/" in str(floor_model):
+            errors.append(f"task_class_defaults.{task_class}.fallback.floor_model must be a bare model id")
+        minimum = spec.get("minimum") or {}
+        if "min_rung" in minimum: errors.append(f"task_class_defaults.{task_class}.minimum may not contain min_rung")
+        if minimum and minimum.get("reason") not in allowed_minimum_reasons:
+            errors.append(f"task_class_defaults.{task_class}.minimum.reason must be one of {', '.join(sorted(allowed_minimum_reasons))}")
+        if task_class in (data.get("must_stay_primary") or []):
+            caps = spec.get("requires_capabilities") or []
+            if "claude_code_native" not in caps and minimum.get("reason") != "authority_absolute":
+                errors.append(f"task_class_defaults.{task_class} must_stay_primary requires claude_code_native or authority_absolute minimum")
+
+    def contains_min_rung(value):
+        if isinstance(value, dict):
+            return "min_rung" in value or any(contains_min_rung(v) for v in value.values())
+        if isinstance(value, list): return any(contains_min_rung(v) for v in value)
+        return False
+    if contains_min_rung(data): errors.append("registry may not contain any min_rung key")
+
     for index, row in enumerate(data.get("ica_catalog") or []):
         prefix = f"ica_catalog[{index}]"
         if not isinstance(row, dict):
@@ -72,10 +114,15 @@ def validate_registry(data: dict, source: str) -> list[str]:
 
     for task_class, policy in (data.get("routing_policy") or {}).items():
         for chain_entry in (policy or {}).get("chain", []):
+            if "/" in str(chain_entry):
+                errors.append(f"routing_policy.{task_class}.chain contains provider/model value '{chain_entry}'")
             if str(chain_entry).startswith("external/"):
                 errors.append(
                     f"routing_policy.{task_class} may not reference an external lane before its executor exists"
                 )
+        expected = (defaults.get(task_class) or {}).get("holders")
+        if expected is not None and (policy or {}).get("chain") != expected:
+            errors.append(f"routing_policy.{task_class}.chain must equal task_class_defaults.{task_class}.holders")
 
     for model_key, model in models.items():
         providers = (model or {}).get("providers") or []
@@ -85,8 +132,18 @@ def validate_registry(data: dict, source: str) -> list[str]:
                 continue
 
             provider = instance.get("provider")
+            lane_id = instance.get("lane")
+            lane = (data.get("lanes") or {}).get(lane_id)
+            if not lane:
+                errors.append(f"models.{model_key}.providers[{index}] references undeclared lane '{lane_id}'")
+            if lane and lane.get("provider") != provider:
+                errors.append(f"models.{model_key}.providers[{index}] provider '{provider}' does not match lane '{lane_id}' provider '{lane.get('provider')}'")
+            if instance.get("enabled") is True and lane_id not in lane_order:
+                errors.append(f"enabled lane '{lane_id}' is missing from lane_order")
             model_id = instance.get("model_id")
-            identity = (str(model_key), str(provider), str(model_id))
+            # Codex subscriptions expose the same model through two explicitly bound identities;
+            # those are distinct eligible lanes and therefore distinct provider rows.
+            identity = (str(model_key), str(provider), str(model_id), str(instance.get("lane")))
             if identity in seen_instances:
                 first = seen_instances[identity]
                 errors.append(
@@ -199,10 +256,23 @@ def main() -> int:
         json.dump(out, fh, indent=2, ensure_ascii=False, default=_json_default)
         fh.write("\n")
 
+    skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    table_path = os.path.join(os.path.dirname(os.path.abspath(args.dst)), "routing-table.generated.json")
+    cli_path = os.path.join(skill_dir, "resolve-cli.js")
+    table_proc = subprocess.run(
+        ["node", cli_path, "table", "--registry", os.path.abspath(args.dst), "--json"],
+        capture_output=True, text=True,
+    )
+    if table_proc.returncode != 0:
+        sys.stderr.write("ERROR: resolve-cli.js table failed:\n" + (table_proc.stderr or ""))
+        return 1
+    with open(table_path, "w", encoding="utf-8") as fh:
+        fh.write(table_proc.stdout)
+
     model_count = len(data.get("models", {}) or {})
     policy_count = len(data.get("routing_policy", {}) or {})
     sys.stderr.write(
-        f"Wrote {args.dst}\n  models: {model_count}  routing_policy classes: {policy_count}\n"
+        f"Wrote {args.dst} and {table_path}\n  models: {model_count}  routing_policy classes: {policy_count}\n"
     )
     return 0
 
