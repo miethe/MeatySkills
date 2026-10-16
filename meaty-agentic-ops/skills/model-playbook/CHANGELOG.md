@@ -1,5 +1,12 @@
 # Changelog — model-playbook
 
+## 1.4 — 2026-10-16
+
+- `routes/google-gemini.md` gains a `gemini-4-argon` section: paid-key-only native lane (free key is
+  limit 0), not served on ICA, 32,768 API output cap vs 65,536 in Google's docs, launch pricing with
+  the 2026-12-01 step, and no explicit caching. Documents routing facts only
+  (`node_01M52TKCJ4SRT9JAWNXPNGD1D2`).
+
 ## 1.3 — 2026-10-16
 
 - ICA refresh (Nick, 2026-10-16): `routes/ica-lanes.md` gains the refresh table and probe facts;
