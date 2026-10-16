@@ -44,6 +44,11 @@ errors = validate_registry(broken, "planted-positive")
 assert any("provider/model value" in error for error in errors), errors
 
 broken = copy.deepcopy(valid)
+broken["task_class_defaults"]["exploration"]["holders"].append("unroutable-model")
+errors = validate_registry(broken, "holder-unroutable-control")
+assert any("holder_unroutable" in error and "unroutable-model" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
 broken["lanes"]["claude_subscription"]["attributes"].pop("retention")
 errors = validate_registry(broken, "planted-positive")
 assert any("lanes.claude_subscription missing attributes" in error for error in errors), errors
@@ -85,7 +90,7 @@ assert sonnet5_pricing["output_per_mtok_usd"] == 10, sonnet5_pricing
 # defaulting to Sonnet 5.5. This is the negative control that would have caught a blanket
 # "Sonnet 5.5 everywhere" widening.
 assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude-opus-5-5"
-assert registry["routing_policy"]["raw_strength"]["chain"][:2] == ["gpt-6.1-sol", "gpt-6-sol"]
+assert registry["routing_policy"]["raw_strength"]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5", "gpt-6-sol"]
 for task_class in ("implementation", "code_review"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude-opus-5-5" not in chain, \
@@ -121,7 +126,7 @@ assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
 # for a model the gateway 403s" control is retired because the gateway no longer 403s it.
 h55 = registry["models"]["claude-haiku-5-5"]
 assert h55["max_context"] == 1000000 and h55["status"] == "active", h55
-assert [p["provider"] for p in h55["providers"]] == ["claude", "ica"], h55["providers"]
+assert [p["lane"] for p in h55["providers"]] == ["claude_subscription", "claude_subscription_1x", "ica_gateway_messages"], h55["providers"]
 h55_ica = next(p for p in h55["providers"] if p["provider"] == "ica")
 assert h55_ica["enabled"] is True and h55_ica["allowance"] == "unlimited" and h55_ica["cost_tier"] == "free", h55_ica
 assert h55_ica["model_id"] == "claude-haiku-5-5[1m]", h55_ica  # ica-claude.sh id; raw-HTTP callers send the bare id
@@ -130,8 +135,9 @@ for task_class in ("exploration", "documentation", "mechanical"):
     chain = registry["routing_policy"][task_class]["chain"]
     assert "claude-haiku-5-5" in chain, (task_class, chain)
     assert "claude-haiku-4-5" not in chain, (task_class, chain)
-    assert chain[0] == "gpt-6-luna", (task_class, chain)  # 2026-10-16: GPT-6 Luna replaces legacy Luna as the lead
-    assert chain.index("claude-haiku-5-5[1m]") < chain.index("gpt-5.6-luna") < chain.index("claude-haiku-5-5"), (task_class, chain)
+    expected = ["claude-haiku-5-5", "gpt-6-luna"] if task_class == "exploration" else ["gpt-6-luna", "claude-haiku-5-5"]
+    assert chain == expected, (task_class, chain)  # v2 holder order; refreshed Luna replaces legacy Luna
+    assert "claude-haiku-5-5[1m]" not in chain and "gpt-5.6-luna" not in chain, (task_class, chain)
     assert "claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
 assert "claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
 h45_ica = next(p for p in registry["models"]["claude-haiku-4-5"]["providers"] if p["provider"] == "ica")
@@ -153,8 +159,9 @@ assert "dzus" not in luna6_ica["model_id"], luna6_ica  # dzus ids are retired (4
 sol61_ica = next(p for p in registry["models"]["gpt-6.1-sol"]["providers"] if p["provider"] == "ica")
 assert sol61_ica["enabled"] is True and sol61_ica["allowance"] == "shared_token_pool" and sol61_ica["model_id"] == "gpt-6.1-sol", sol61_ica
 assert sol61_ica["tool_mode"] == "none", sol61_ica  # tools+reasoning interaction not re-measured for 6.1: stay tool-less
-for task_class in ("review", "adjudication", "critique"):
-    assert registry["routing_policy"][task_class]["chain"] == ["gpt-6.1-sol", "gpt-5.6-sol"], task_class
+assert registry["routing_policy"]["review"]["chain"] == ["gpt-6.1-sol", "claude-sonnet-5-5", "claude-opus-5-5"]
+for task_class in ("adjudication", "critique"):
+    assert registry["routing_policy"][task_class]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5"], task_class
 for legacy in ("gpt-5.6-luna-ica", "gpt-5.6-terra-ica"):
     legacy_ica = next(p for p in registry["models"][legacy]["providers"] if p["provider"] == "ica")
     assert legacy_ica["enabled"] is True, (legacy, legacy_ica)  # still served 2026-10-16; terra has no GPT-6 replacement
@@ -162,8 +169,8 @@ for dead in ("claude-opus-5", "claude-opus-4-8", "claude-opus-4-6"):
     dead_ica = next(p for p in registry["models"][dead]["providers"] if p["provider"] == "ica")
     assert dead_ica["enabled"] is False and dead_ica["health"]["status"] == "unavailable", (dead, dead_ica)
 # design_judgment / raw_strength chains are set by evaluation; the refresh must not touch them.
-assert registry["routing_policy"]["design_judgment"]["chain"] == ["claude-opus-5-5", "claude-opus-5"]
-assert registry["routing_policy"]["raw_strength"]["chain"] == ["gpt-6.1-sol", "gpt-6-sol", "claude-opus-5-5"]
+assert registry["routing_policy"]["design_judgment"]["chain"] == ["claude-opus-5-5", "gpt-6.1-sol", "claude-opus-5"]
+assert registry["routing_policy"]["raw_strength"]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5", "gpt-6-sol"]
 
 # Planted positive: an external row with an undeclared retention fact must fail.
 broken = copy.deepcopy(registry)

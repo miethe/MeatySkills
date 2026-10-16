@@ -72,12 +72,29 @@ def validate_registry(data: dict, source: str) -> list[str]:
     for task_class, spec in defaults.items():
         for holder in spec.get("holders", []) or []:
             if "/" in str(holder): errors.append(f"task_class_defaults.{task_class}.holders contains provider/model value '{holder}'")
-        for key in ("frontier",):
+            model = models.get(holder) or {}
+            requirements = set(spec.get("requires_capabilities") or [])
+            routable = any(
+                isinstance(row, dict)
+                and row.get("enabled") is True
+                and row.get("lane") in (data.get("lanes") or {})
+                and row.get("lane") in lane_order
+                and requirements.issubset(set(((data.get("lanes") or {}).get(row.get("lane")) or {}).get("harness_capabilities") or []))
+                for row in (model.get("providers") or [])
+            )
+            if not routable:
+                errors.append(f"task_class_defaults.{task_class}.holder_unroutable: '{holder}' has no enabled provider lane in lane_order covering {sorted(requirements)}")
+        for key in ("frontier", "cross_family"):
             value = spec.get(key)
-            if isinstance(value, str) and "/" in value: errors.append(f"task_class_defaults.{task_class}.{key} must be a bare model id")
-        for candidate in spec.get("cross_family", []) or []:
-            value = candidate.get("model") if isinstance(candidate, dict) else candidate
-            if "/" in str(value): errors.append(f"task_class_defaults.{task_class}.cross_family contains provider/model value '{value}'")
+            def slash_values(item):
+                if isinstance(item, dict):
+                    for nested in item.values(): yield from slash_values(nested)
+                elif isinstance(item, list):
+                    for nested in item: yield from slash_values(nested)
+                elif isinstance(item, str) and "/" in item:
+                    yield item
+            for value_with_slash in slash_values(value):
+                errors.append(f"task_class_defaults.{task_class}.{key} must not contain '/': '{value_with_slash}'")
         floor_model = (spec.get("fallback") or {}).get("floor_model")
         if floor_model is not None and "/" in str(floor_model):
             errors.append(f"task_class_defaults.{task_class}.fallback.floor_model must be a bare model id")
@@ -87,8 +104,9 @@ def validate_registry(data: dict, source: str) -> list[str]:
             errors.append(f"task_class_defaults.{task_class}.minimum.reason must be one of {', '.join(sorted(allowed_minimum_reasons))}")
         if task_class in (data.get("must_stay_primary") or []):
             caps = spec.get("requires_capabilities") or []
-            if "claude_code_native" not in caps and minimum.get("reason") != "authority_absolute":
-                errors.append(f"task_class_defaults.{task_class} must_stay_primary requires claude_code_native or authority_absolute minimum")
+            primary_lane_pin = minimum.get("lanes") == ["claude_subscription"]
+            if "claude_code_native" not in caps and minimum.get("reason") != "authority_absolute" and not primary_lane_pin:
+                errors.append(f"task_class_defaults.{task_class} must_stay_primary requires claude_code_native, authority_absolute, or an explicit claude_subscription lane minimum")
 
     def contains_min_rung(value):
         if isinstance(value, dict):
