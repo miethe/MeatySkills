@@ -6,7 +6,7 @@ skill_version: 1.2.0
 aligned_app_version: 0.54.0
 status: stable
 created: 2026-06-09
-updated: 2026-07-26
+updated: 2026-10-16
 owner: nick
 source_docs:
   - docs/project_plans/design-specs/model-registry-router-globalization-v1.md
@@ -57,6 +57,34 @@ platform skill executes it.
 - Authoring or editing model metadata — that lives in `model-registry.yaml` (see `references/model-registry.md`).
 - Changing the MUST-stay boundaries — invariant (design §2 non-goals).
 - True 429 / quota accounting — runtime error/timeout is the pragmatic fallback trigger (design §2 non-goals).
+
+## 1a. Registry v3 resolution
+
+Registry v3 separates the model decision from the lane decision. `task_class_defaults.<class>.holders`
+and generated `routing_policy.<class>.chain` contain bare model ids. `lane_order` is the only cost
+order; enabled provider rows map models to lanes. Each lane declares six routing attributes and
+`harness_capabilities`. The resolver first finds the earliest holder with an eligible lane, then
+chooses the first eligible lane in `lane_order` that is not refused or unavailable.
+
+`minimum.predicate` matches lane attributes. An explicit `minimum.lanes` list takes precedence.
+Unknown values fail closed for `disclosure_absolute` and `authority_absolute` and are open for
+negotiable reasons. `requires_capabilities` must be a subset of the lane capabilities. Missing
+capacity data is recorded as `unmeasured` and does not exclude a lane; `refused` and `unavailable`
+do. Codex identity availability is read from the capacity file and the chosen lane binds
+`identity_ref`.
+
+The CLI contract is:
+
+```sh
+node resolve-cli.js resolve --task-class implementation [--model <id>] [--capacity-file <json>] --json
+node resolve-cli.js table [--registry <yaml-or-generated-json>] --json
+```
+
+V3 records add `schema_version: 3`, `model_decision`, `lane_decision`, `floor`, `floor_breached`,
+and `registry_revision`. Fallback entries are ordered `{model, lane, plugin_id, identity_ref, reason}`
+steps and stop at the declared `floor_model`. Exhausting eligible candidates sets
+`floor_breached: true`; the CLI exits non-zero and does not choose a model below the floor.
+`routing-table.generated.json` is generated with the registry JSON and freshness-checked alongside it.
 
 ### RoutingRecord schema (14 fields)
 

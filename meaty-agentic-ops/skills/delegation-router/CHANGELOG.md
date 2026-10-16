@@ -1,5 +1,16 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — WP M1: registry v3, model-only holders, two-step resolver, RoutingRecord v3
+
+- M1 plan: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q` (registry v3 and two-step resolver).
+- Added model-only `task_class_defaults` and generated `routing_policy`, lane attributes and
+  capabilities, ordered lane selection, capacity-file decisions, explicit Codex identity binding,
+  static routing-table output, and v3 RoutingRecord decision/floor/revision fields.
+- Added the v3 resolver and routing-table fixtures. `journal_reflect` retains its existing
+  `egress_absolute` minimum pending Nick's resolution of the conflict with the v3 allowed-reason
+  vocabulary; the builder deliberately rejects that legacy minimum rather than relabeling it.
+- Details and CLI contract: `SPEC.md` §1a and `references/model-registry.md` § Registry v3.
+
 ## 2026-10-16 — ICA refresh: Haiku 5.5, Sonnet 5.5, GPT-6 Luna, GPT-6.1 Sol replace their predecessors
 
 - Nick (2026-10-16): "ICA has finally added more models! claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna,

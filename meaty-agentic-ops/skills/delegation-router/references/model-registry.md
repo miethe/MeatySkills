@@ -1,5 +1,29 @@
 # Reading & Extending the Model Registry
 
+## Registry v3
+
+The v3 source is `model-registry.yaml` with `version: 3`. Class defaults are the source of model
+preference: `task_class_defaults.<class>.holders` contains bare model ids, and
+`routing_policy.<class>.chain` is generated from those holders. Provider rows connect model ids to
+lanes; lane choice follows the top-level `lane_order`.
+
+Every lane declares `attributes` for `compute_custody`, `retention`, `jurisdiction`,
+`account_relationship`, `metering`, and `payer`, plus `harness_capabilities`. A class minimum is
+either a lane allowlist or an attribute predicate. `requires_capabilities` further filters lanes.
+Unknown attribute values fail closed for disclosure or authority absolutes and remain open for
+negotiable minimum reasons.
+
+`resolve-cli.js resolve --task-class <class> [--model <model>] [--capacity-file <json>] --json`
+emits model and lane decisions and an ordered fallback chain. Missing capacity is `unmeasured`;
+refused/unavailable lanes are excluded. Codex identities come from each chosen lane's
+`identity_ref`. `resolve-cli.js table --json` emits the static class × holder × lane table without
+capacity. The builder writes `routing-table.generated.json`, and `check-registry-fresh.py` checks
+both generated artifacts.
+
+V3 `RoutingRecord` carries `model_decision`, `lane_decision`, `floor`, `floor_breached`, and
+`registry_revision`. The fallback chain stops at `fallback.floor_model`; exhausted candidates
+produce a non-zero CLI result with `floor_breached: true`.
+
 How to read `model-registry.yaml` and how to register a new model on release. This is the
 agent-facing companion to the registry.
 

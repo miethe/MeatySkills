@@ -22,6 +22,10 @@ This file holds invocation routing only. For the RoutingRecord schema, scoring/f
 rules, and MUST-stay invariants see `./SPEC.md`. For registry and bootstrap details see
 `./references/`.
 
+V3 CLI: `node resolve-cli.js resolve --task-class <class> [--model <id>] [--capacity-file <json>] --json`
+emits the two-step decision. `node resolve-cli.js table --json` emits the static routing table.
+An exhausted floor emits `floor_breached: true` and exits non-zero.
+
 ---
 
 ## When To Use
@@ -52,7 +56,7 @@ Repo-verified surfaces only:
 | Audit writer (realization) | `appendRealization({task_id, actual_provider_used, realized_model, realization_evidence})` in `audit-log.js` — evidence required; the only path to `realization_confirmed: true` |
 | Audit entry schema | v2 (`schema_version: 2`): intent = `chosen_plugin_id` + `intended_model`; realization = `actual_provider_used` + `realized_model` + `realization_confirmed`; `model_substituted` is `null` when unknowable |
 | Canonical audit append | All writer paths use a Python 3 POSIX `fcntl.flock` helper and refuse malformed or partial ledgers. Deploy `scripts/locked-audit-append.py` beside `audit-log.js`; unsupported runtimes must refuse writes rather than fall back to unlocked appends. |
-| RoutingRecord fields | 14 (see SPEC §1; `context_ref` + `context_class` + `routing_feedback` are additive) |
+| RoutingRecord fields | Legacy records retain 14 core fields; v3 adds model/lane decisions, floor status, and registry revision (SPEC §1a) |
 | MUST-stay classes | `orchestration`, `verdict`, `mode-d`, `council-review`, `schema-recovery`, `cross-wave-merge` |
 | Task-class vocabulary | `task-class-vocabulary.v1.json` (`aos.routing.task_class` v1.3.0) |
 | External feedback guard | `validateFeedbackJoin(...)` in `task-class-vocabulary.js` |
@@ -65,7 +69,7 @@ Repo-verified surfaces only:
 ## Routing Posture
 
 1. **MUST-stay override first** — any MUST-stay task_class resolves to `claude` regardless of input `provider`.
-2. **Registry chain** — resolve task_class to its `routing_policy.chain`; walk top-down by priority/availability/capability.
+2. **Registry v3** — resolve the ordered model holders in `task_class_defaults`, then choose an eligible serving lane by `lane_order`, capacity, and harness capability. `routing_policy` is a generated, model-only copy.
 3. **Free-first** — free-eligible classes start at an ICA free-tier instance; primary only via the chain tail.
 4. **Determinism filter** — when `resume_active=true` on a structural stage, exclude nondeterministic providers.
 5. **Fallback chain** — emit an ordered `fallback_chain`; executors re-dispatch down it on runtime failure/timeout. ⚠️ **Availability failures only. A permission denial is NOT one** — a classifier/hook/user refusal of the shelled invocation is a decision about whether this content may take this path, not a fact about the path, so the executor returns `{status: 'blocked', reason: 'permission_denied', fallback_applied: false}` with evidence and stops. It never re-attempts the same content on another lane (next entry, in-process, or reworded), and never probes to isolate the block. Rerouting after a denial belongs to the orchestrator. Closed trigger list + provenance: SPEC §5a.

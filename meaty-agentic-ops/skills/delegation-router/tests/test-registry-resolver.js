@@ -160,9 +160,11 @@ describe('Codex invocation contract', () => {
       model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'standard',
     });
     const template = record.invocation_template;
+    const identity = record.identity_ref || process.env.AOS_CODEX_IDENTITY || 'codex_secondary';
+    assert.ok(record.identity_ref, 'Codex identity must be explicit on the RoutingRecord');
 
     for (const fragment of [
-      'timeout 600 aos-codex-exec --identity codex_secondary exec',
+      `timeout 600 aos-codex-exec --identity ${identity} exec`,
       '--ignore-user-config',
       '--sandbox read-only',
       '--skip-git-repo-check',
@@ -180,9 +182,11 @@ describe('Codex invocation contract', () => {
     const record = resolveWithRegistry(registryWithCodex(), {
       model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'high',
     });
+    const identity = record.identity_ref || process.env.AOS_CODEX_IDENTITY || 'codex_secondary';
+    assert.ok(record.identity_ref, 'Codex identity must be explicit on the RoutingRecord');
 
     assert.ok(
-      record.invocation_template.startsWith('{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 aos-codex-exec --identity codex_secondary exec'),
+      record.invocation_template.startsWith(`{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 aos-codex-exec --identity ${identity} exec`),
       `write lane must use codex-run.sh: ${record.invocation_template}`
     );
     assert.ok(record.invocation_template.includes('--sandbox workspace-write'));

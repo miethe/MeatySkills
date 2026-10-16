@@ -1,0 +1,43 @@
+{
+  "version": 3,
+  "lane_order": ["ica_gateway_messages", "codex_subscription_primary", "codex_subscription_secondary", "claude_subscription_1x", "claude_subscription"],
+  "lanes": {
+    "ica_gateway_messages": {"provider":"ica","attributes":{"compute_custody":"vendor_hosted","retention":"unknown","jurisdiction":"us","account_relationship":"employer","metering":"free","payer":"employer"},"harness_capabilities":["claude_code_native"]},
+    "codex_subscription_primary": {"provider":"codex","identity_ref":"codex_primary","attributes":{"compute_custody":"vendor_hosted","retention":"none_contractual","jurisdiction":"us","account_relationship":"personal","metering":"flat_rate","payer":"self"},"harness_capabilities":["codex_exec","workspace_write"]},
+    "codex_subscription_secondary": {"provider":"codex","identity_ref":"codex_secondary","attributes":{"compute_custody":"vendor_hosted","retention":"none_contractual","jurisdiction":"us","account_relationship":"personal","metering":"flat_rate","payer":"self"},"harness_capabilities":["codex_exec","workspace_write"]},
+    "claude_subscription_1x": {"provider":"claude","attributes":{"compute_custody":"vendor_hosted","retention":"none_contractual","jurisdiction":"us","account_relationship":"personal","metering":"flat_rate","payer":"self"},"harness_capabilities":["claude_code_native","subagents"]},
+    "claude_subscription": {"provider":"claude","attributes":{"compute_custody":"vendor_hosted","retention":"none_contractual","jurisdiction":"us","account_relationship":"personal","metering":"flat_rate","payer":"self"},"harness_capabilities":["claude_code_native","subagents"]}
+  },
+  "task_class_defaults": {
+    "implementation": {"holders":["gpt-6-luna","claude-sonnet-5-5","claude-sonnet-5"],"minimum":{"predicate":{"account_relationship":["personal"]},"reason":"quality_bar"},"requires_capabilities":[],"fallback":{"policy":"next_lane_then_next_holder","floor_model":"claude-sonnet-5"}},
+    "orchestration": {"holders":["claude-opus-5-5"],"minimum":{"predicate":{"account_relationship":["personal"]},"reason":"quality_bar"},"requires_capabilities":["claude_code_native"],"fallback":{"policy":"next_lane_then_next_holder","floor_model":"claude-opus-5-5"}},
+    "mode_d": {"holders":["claude-opus-5-5"],"minimum":{"predicate":{"retention":["none_contractual"]},"reason":"authority_absolute"},"requires_capabilities":["claude_code_native"],"fallback":{"policy":"next_lane_then_next_holder","floor_model":"claude-opus-5-5"}},
+    "explicit_test": {"holders":["claude-sonnet-5-5"],"requires_capabilities":[],"fallback":{"policy":"next_lane_then_next_holder","floor_model":"claude-sonnet-5-5"}}
+  },
+  "routing_policy": {
+    "implementation":{"chain":["gpt-6-luna","claude-sonnet-5-5","claude-sonnet-5"],"enabled":true},
+    "orchestration":{"chain":["claude-opus-5-5"],"enabled":true},
+    "mode_d":{"chain":["claude-opus-5-5"],"enabled":true},
+    "explicit_test":{"chain":["claude-sonnet-5-5"],"enabled":true}
+  },
+  "must_stay_primary":["orchestration","mode_d"],
+  "models": {
+    "gpt-6-luna":{"class":"luna","sampling":"deterministic","providers":[
+      {"provider":"ica","lane":"ica_gateway_messages","model_id":"gpt-6-luna","enabled":true},
+      {"provider":"codex","lane":"codex_subscription_primary","model_id":"gpt-6-luna","enabled":true},
+      {"provider":"codex","lane":"codex_subscription_secondary","model_id":"gpt-6-luna","enabled":true}
+    ]},
+    "claude-sonnet-5-5":{"class":"sonnet","sampling":"deterministic","providers":[
+      {"provider":"ica","lane":"ica_gateway_messages","model_id":"claude-sonnet-5-5","enabled":true},
+      {"provider":"claude","lane":"claude_subscription","model_id":"claude-sonnet-5-5","enabled":true}
+    ]},
+    "claude-sonnet-5":{"class":"sonnet","sampling":"deterministic","providers":[
+      {"provider":"claude","lane":"claude_subscription","model_id":"claude-sonnet-5","enabled":true}
+    ]},
+    "claude-opus-5-5":{"class":"opus","sampling":"deterministic","providers":[
+      {"provider":"codex","lane":"codex_subscription_primary","model_id":"claude-opus-5-5","enabled":true},
+      {"provider":"claude","lane":"claude_subscription","model_id":"claude-opus-5-5","enabled":true},
+      {"provider":"ica","lane":"ica_gateway_messages","model_id":"claude-opus-5-5","enabled":true}
+    ]}
+  }
+}
