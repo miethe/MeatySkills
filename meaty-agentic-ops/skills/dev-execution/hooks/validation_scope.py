@@ -1218,6 +1218,9 @@ def _default_workdir(repo: Path) -> Path:
     means the base checkout can never land inside ANY worktree, head or
     otherwise -- it is a sibling of every worktree, not a descendant of one.
     """
+    leg_base = os.environ.get("AOS_LEG_BASE_CHECKOUT_DIR")
+    if leg_base:
+        return Path(leg_base)
     return _git_common_dir(repo) / "aos-validation-scope"
 
 
