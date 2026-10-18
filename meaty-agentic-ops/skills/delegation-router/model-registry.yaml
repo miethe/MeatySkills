@@ -43,34 +43,6 @@
 #   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
-# ICA MODEL REFRESH — 2026-10-16 (Nick, authoritative: "ICA has finally added more models!
-#   claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna, gpt-6.1-sol. These should replace all the older
-#   models of the same names in the ICA registry. Additionally, note that these new Haiku and Luna
-#   models are also free/unlimited just like the prior instances.")
-#   Measured 2026-10-16 against the ccx gateway with key CCx3 (GET /v1/models + raw /v1/messages +
-#   ~/ica-claude.sh):
-#     - /v1/models NOW LISTS claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5, gpt-6-luna, gpt-6.1-sol.
-#       Still listed: claude-haiku-4-5, claude-sonnet-5, claude-sonnet-4-6, gpt-5.6-luna, gpt-5.6-sol,
-#       gpt-5.6-terra. ABSENT / 403: claude-opus-5, claude-opus-5[1m], claude-opus-4-8, claude-opus-4-6
-#       (their ICA rows were already enabled:false and now carry unavailable health with this date).
-#     - Raw HTTP /v1/messages, BARE ids: claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5, gpt-6-luna,
-#       gpt-6.1-sol all 200 and echo the same model id. The `[1m]` forms of haiku-5-5 and sonnet-5-5 ALSO
-#       returned 200 on raw HTTP today (new: the 2026-09-10 rule said raw `[1m]` 403s; for these two ids it does not).
-#     - ~/ica-claude.sh -p ... --model X succeeded (is_error false) for claude-haiku-5-5, claude-haiku-5-5[1m],
-#       claude-sonnet-5-5, claude-sonnet-5-5[1m], claude-opus-5-5[1m].
-#     - gpt-6-luna and gpt-6.1-sol: 200 on /v1/messages, /v1/chat/completions AND /v1/responses, BARE ids only.
-#       `-dzus`-suffixed ids (gpt-6-luna-dzus etc.) 403: dzus is retired. The old gpt-5.6-luna / -sol / -terra
-#       ids are still served (200); gpt-5.6-terra has NO named replacement and stays as the remaining 5.6-line ICA id.
-#     - Claude Code driven through the ica-gpt shim for gpt ids fails with 400 "messages: empty array" for
-#       gpt-6-luna, gpt-6.1-sol AND the control gpt-5.6-luna: a pre-existing shim problem, not id-specific. The
-#       Claude-Code-via-shim path is NOT claimed to work for gpt-6 ids; Codex / chat-completions / responses do.
-#   Convention kept: registry model_id for ICA Claude rows is the `[1m]` form (the Claude-Code/ica-claude.sh id);
-#   raw-HTTP adapters send the BARE id. Free ICA set is now: gemma-4-26b, llama-4-maverick, granite-4-small,
-#   glm-5-3, gpt-6-luna, claude-haiku-5-5 (plus the still-served legacy gpt-5.6-luna). claude-haiku-4-5 on ICA stays
-#   PAID per Nick 2026-10-07 (see below); the "just like the prior instances" phrasing is read as a description
-#   of the NEW ids' allowance only: reconcile if Nick meant Haiku 4.5 is free again.
-#   Scores on the new ICA rows are INHERITED from the nearest sibling pending evaluation.
-#
 # ICA ROUTING RESTATEMENT — 2026-08-28 (documentation-only; no chain/score change here):
 #   Prefer ccx / CCx1 (the one focus key for now) for generally eligible ICA work. CCx1 is approximately 2,000 credits/week
 #   (~$1,000/week in API credits) plus the independent free-model list above. (2026-09-22: the old
@@ -129,8 +101,8 @@
 # Reference: docs/project_plans/design-specs/model-registry-router-globalization-v1.md §3
 # ──────────────────────────────────────────────────────────────────────────────
 
-version: 3
-updated: 2026-10-16   # gemini-4-argon added (native paid key + gemini-cli; not on ICA; explicit-selectable, no chain), node_01M52TKCJ4SRT9JAWNXPNGD1D2. Prior: ICA refresh: claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna, gpt-6.1-sol now served on ICA ccx and replace their predecessors as the ICA defaults (Nick 2026-10-16). Prior: GLM 5.3 added and enabled per Nick ratification 2026-10-15. Prior history: CHANGELOG.md.
+version: 1
+updated: 2026-10-15   # GLM 5.3 added and enabled per Nick ratification; see agentic_meta_dev evaluation report. Prior: nvidia/llama-3.3-nemotron-super (49B, ICA ccx), 2026-10-07. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -155,16 +127,15 @@ routing_attributes:
 ica_catalog:
   - { model_id: "BIAN-llama3.1-8b:260213_pad_free_assistant_only", lanes: [ccx, beta], economics: unknown, health: { status: unknown } }
   - { model_id: "TMF-llama3.1-8b:251028_no_sys_prompt", lanes: [ccx, beta], economics: unknown, health: { status: unknown } }
-  - { model_id: "claude-opus-4-6", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, checked_at: 2026-10-16, evidence: "403 E002 tenancy entitlement gap; absent from GET /v1/models 2026-10-16" } }
-  - { model_id: "claude-opus-4-8", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, checked_at: 2026-10-16, evidence: "403 E002 tenancy entitlement gap; absent from GET /v1/models 2026-10-16" } }
-  - { model_id: "claude-opus-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, checked_at: 2026-10-16, evidence: "403 E002 tenancy entitlement gap; bare and [1m] both 403, absent from GET /v1/models 2026-10-16" } }
-  - { model_id: "claude-opus-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-16, evidence: "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-opus-5-5; ica-claude.sh claude-opus-5-5[1m] is_error false (2026-10-16); earlier 2026-09-24 Claude-Code wrapper rc 0, contextWindow 1000000" } }
+  - { model_id: "claude-opus-4-6", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-4-8", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
+  - { model_id: "claude-opus-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-09-24, evidence: "Claude-Code wrapper: claude-opus-5-5[1m] rc 0, canonicalModel claude-opus-5-5, contextWindow 1000000; raw HTTP bare-id unmeasured" } }
   - { model_id: "claude-sonnet-4-5", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-4-6", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
-  - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-16, evidence: "still listed in GET /v1/models; LEGACY fallback behind claude-sonnet-5-5 on ICA" } }
-  - { model_id: "claude-sonnet-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-16, evidence: "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-sonnet-5-5 and [1m] form 200; ica-claude.sh claude-sonnet-5-5 and claude-sonnet-5-5[1m] is_error false" } }
+  - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-haiku-4-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-07, evidence: "PAID per Nick 2026-10-07; gateway meter still reads response-cost-original 0.0 at 41.6k input tokens (open discrepancy, unreconciled)" } }
-  - { model_id: "claude-haiku-5-5", lanes: [ccx], economics: unlimited, health: { status: available, checked_at: 2026-10-16, evidence: "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-haiku-5-5 and [1m] form 200; ica-claude.sh claude-haiku-5-5 and claude-haiku-5-5[1m] is_error false (2026-10-16). Free/unlimited per Nick 2026-10-16. SUPERSEDES the 2026-10-07 403 reading (was unavailable)" } }
+  - { model_id: "claude-haiku-5-5", lanes: [ccx], economics: unknown, health: { status: unavailable, checked_at: 2026-10-07, evidence: "403 team_model_access_denied on CCx3 for bare id, [1m], and dated forms; absent from GET /v1/models (26 ids)" } }
   - { model_id: "gemini-3.1-pro-preview", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "gemini-3.5-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "gemini-3.6-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
@@ -173,11 +144,9 @@ ica_catalog:
   - { model_id: "gpt-4o", lanes: [beta], economics: shared_token_pool, health: { status: unknown } }
   - { model_id: "gpt-5.1", lanes: [ccx], economics: unknown, health: { status: unknown } }
   - { model_id: "gpt-5.4", lanes: [ccx], economics: unknown, health: { status: unknown } }
-  - { model_id: "gpt-6-luna", lanes: [ccx], economics: unlimited, health: { status: available, checked_at: 2026-10-16, evidence: "listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id only; -dzus form 403. Free/unlimited per Nick 2026-10-16" } }
-  - { model_id: "gpt-6.1-sol", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-16, evidence: "listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id only; -dzus form 403. Economics inherited from gpt-5.6-sol (Nick 2026-10-16). tools+reasoning interaction NOT re-measured for 6.1" } }
-  - { model_id: "gpt-5.6-luna", lanes: [ccx], economics: unlimited, health: { status: available, checked_at: 2026-10-16, evidence: "still served (200) 2026-10-16; LEGACY fallback behind gpt-6-luna. economics corrected unknown -> unlimited to match its enabled free provider row (FREE as of 2026-08-26, Nick)" } }
-  - { model_id: "gpt-5.6-sol", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-16, evidence: "still served (200) 2026-10-16; LEGACY fallback behind gpt-6.1-sol" } }
-  - { model_id: "gpt-5.6-terra", lanes: [ccx], economics: unknown, health: { status: available, checked_at: 2026-10-16, evidence: "still served (200) 2026-10-16; NO GPT-6 replacement named, remains the 5.6-line ICA Terra id" } }
+  - { model_id: "gpt-5.6-luna", lanes: [ccx], economics: unknown, health: { status: unknown } }
+  - { model_id: "gpt-5.6-sol", lanes: [ccx], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "gpt-5.6-terra", lanes: [ccx], economics: unknown, health: { status: unknown } }
   - { model_id: "ibm/granite-4-h-small", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
   - { model_id: "meta-llama/llama-3-3-70b-instruct", lanes: [ccx], economics: shared_token_pool, health: { status: unknown } }
   - { model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8", lanes: [ccx, beta], economics: unlimited, health: { status: available } }
@@ -189,148 +158,62 @@ ica_catalog:
 # mapping: entries are "provider/model_id", tried top-down. Free-eligible classes
 # start at a free ICA instance; orchestration / mode_d pin to primary Claude.
 # ──────────────────────────────────────────────────────────────────────────────
-# GENERATED from task_class_defaults — do not edit.
 routing_policy:
-  exploration:
-    chain:
-    - claude-haiku-5-5
-    - gpt-6-luna
-    enabled: true
-  documentation:
-    chain:
-    - gpt-6-luna
-    - claude-haiku-5-5
-    enabled: true
-  mechanical:
-    chain:
-    - gpt-6-luna
-    - claude-haiku-5-5
-    enabled: true
-  second_opinion:
-    chain:
-    - gpt-6-luna
-    - gemini-3.6-flash
-    - claude-haiku-5-5
-    enabled: true
-  implementation:
-    chain:
-    - gpt-6-luna
-    - claude-sonnet-5-5
-    - claude-sonnet-5
-    enabled: true
-  design_judgment:
-    chain:
-    - claude-opus-5-5
-    - gpt-6.1-sol
-    - claude-opus-5
-    enabled: true
-  raw_strength:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    enabled: true
-  web_research:
-    chain:
-    - gemini-3.6-flash
-    - gemini-3.5-flash
-    - gemini-3.1-pro-preview
-    enabled: true
-  code_review:
-    chain:
-    - gpt-6-luna
-    - claude-sonnet-5-5
-    - claude-sonnet-5
-    enabled: true
-  image_generation:
-    chain:
-    - gpt-6-luna
-    - gpt-5.6-terra
-    - nano-banana-2
-    - nano-banana-pro
-    enabled: true
-  svg_generation:
-    chain:
-    - claude-opus-5-5
-    - gemini-3.1-pro-preview
-    - gemini-3.5-flash
-    - gemini-3.6-flash
-    enabled: true
-  video_generation:
-    chain:
-    - sora-2
-    enabled: true
-  review:
-    chain:
-    - gpt-6.1-sol
-    - claude-sonnet-5-5
-    - claude-opus-5-5
-    enabled: true
-  adjudication:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    enabled: true
-  critique:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    enabled: true
-  advanced_sol:
-    chain:
-    - gpt-6-astra
-    - claude-fable-5-1
-    enabled: true
-  orchestration:
-    chain:
-    - claude-opus-5-5
-    - claude-opus-5
-    enabled: true
-  mode_d:
-    chain:
-    - claude-opus-5-5
-    - claude-opus-5
-    enabled: true
-  verdict:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    enabled: true
-  council_review:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    enabled: true
-  synthesis:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    enabled: true
-  schema_recovery:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    enabled: true
-  cross_wave_merge:
-    chain:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    enabled: true
-  journal_reflect:
-    chain:
-    - claude-opus-5-5
-    - claude-opus-5
-    enabled: true
+  # 2026-10-07 (Nick): the native/subscription Haiku leg is now claude-haiku-5-5 (10x cheaper than 4.5, native 1M ctx;
+  # blind bench mean 4.33 vs 3.83/5). ICA Haiku 4.5 now counts as PAID (Nick, "Treat it as paid now"), so the free ICA leg
+  # is gpt-5.6-luna (rule a: still-free ICA model; bench: luna(low) 5.00/5 via Codex, ICA /v1/messages 200 at cost 0.0),
+  # with Haiku 5.5 on the subscription as the fallback (rule b). Haiku 4.5 remains selectable explicitly.
+  exploration:      { chain: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
+  documentation:    { chain: ["ica/gpt-5.6-luna", "claude/claude-haiku-5-5"], enabled: true }
+  mechanical:       { chain: ["ica/gpt-5.6-luna", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }
+  # Grounded 2026-07-28; Nick decision 2026-09-25 moves the Codex subscription workhorse to GPT-6 Luna.
+  second_opinion:   { chain: ["codex/gpt-6-luna", "ica/gemini-3.6-flash", "ica/gemma-4-26b-a4b-it", "claude/claude-haiku-5-5"], enabled: true }   # 2026-10-07: last-resort leg ica/claude-haiku-4-5 (now paid) -> subscription Haiku 5.5 (rule b)
+  # Grounded 2026-08-09 (execution pilot, n=3; see use-case-rankings.yaml `agentic-coding`, conf 0.5). CHAIN DELIBERATELY UNCHANGED — codex/gpt-5.6-terra shipped 3/3 real legs with zero logic defects but is EXPLICITLY-SELECTABLE ONLY, not an auto leg, on n=3 with no head-to-head arm. Explicit selection already resolves (codex-executor, fallback claude/claude-sonnet-5) and needs no chain edit. ⚠️ Dispatch an implementer leg at effort `high` — sandboxModeFor() maps standard→read-only, so a default-effort codex implementer CANNOT WRITE and fails by producing nothing.
+  implementation:   { chain: ["claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # 2026-09-28: workhorse default moves to Sonnet 5.5 (native/subscription only — ICA doesn't serve it yet); fallback claude-sonnet-5. ICA claude-sonnet-5[1m] = explicit opt-in free-offload for bounded waves (shared pool, behind reviewer gate; supersedes the older ICA Sonnet 4.6 offload) — update to claude-sonnet-5-5[1m] once ICA serves 5.5. ⚠️ Updated 2026-09-28 (evening) per Nick: this is the CONTRACT-CLEAR execution default, not a blanket one — `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes below and never resolve through this chain.
+  # Added 2026-09-28 (evening), Nick: Opus 5.5's real role beyond the orchestration/mode_d spine —
+  # design/architecture/UX-visual-design/hard-judgment/ambiguous-synthesis work starts here, not
+  # merely as a two-Sonnet-5.5-miss escalation target. Distinct from `orchestration` (MUST-stay,
+  # personal-account, verdict/schema-recovery/cross-wave-merge) — this class is not must_stay_primary.
+  design_judgment:  { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"], enabled: true }
+  # Added 2026-09-28 (evening), Nick: gpt-6-sol's real role beyond the second_opinion cross-family
+  # lens — hard-algorithmic problems, debugging, and reasoning-heavy legs start here, in addition to
+  # (not a replacement for) its existing cross-family use in second_opinion above.
+  # 2026-09-30, Nick: gpt-6.1-sol supersedes gpt-6-sol as the raw_strength default; gpt-6-sol is the legacy-selectable fallback.
+  raw_strength:     { chain: ["codex/gpt-6.1-sol", "codex/gpt-6-sol", "claude/claude-opus-5-5"], enabled: true }
+  web_research:     { chain: ["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "ica/gemini-3.1-pro-preview"], enabled: true }   # leg1 native = 3.6-flash Google-Search GROUNDED (newer default, 2026-07-27; needs GEMINI_API_KEY in ~/.config/aos/secrets.env). leg2 = 3.5-flash native (grounded fallback). leg3 ICA = DEGRADED ungrounded fallback (proxy can't ground). Free model-agnostic web lane = aos-web (SearXNG) — prefer for plain search; this chain = fused search+reason.
+  code_review:      { chain: ["codex/gpt-6-luna", "claude/claude-sonnet-5-5", "claude/claude-sonnet-5"], enabled: true }   # Codex subscription default = GPT-6 Luna; Claude fallback moves to Sonnet 5.5 (2026-09-28), then legacy Sonnet 5. ⚠️ 2026-09-28 (evening): for a raw-strength review pass (hard algorithmic/debugging/reasoning-heavy), route explicitly to `raw_strength` (codex/gpt-6.1-sol; gpt-6-sol fallback) instead of this chain — this chain is for contract-clear review only.
+  # Raster images, mood boards, mock-up renders, illustrations, and PNG assets: native Codex
+  # image_gen.imagegen first; use the ICA GPT shim only when already on ICA; Gemini/Nano Banana
+  # remains an availability fallback. Native invocation verified from the installed imagegen skill.
+  image_generation: { chain: ["codex/gpt-6-luna", "ica/gpt-5.6-terra", "nano-banana/nano-banana-2", "nano-banana/nano-banana-pro"], enabled: true }
+  # Grounded 2026-07-28 (pilot; rf_run_20260728_pilot_re_eval_svg_generation_routing), see use-case-rankings.yaml, conf 0.6. Cost/taste trade: frontier leg-1 (claude-fable-5) for final/taste-critical assets, flash tier for drafts/bulk.
+  svg_generation:   { chain: ["claude/claude-fable-5-1", "ica/gemini-3.1-pro-preview", "gemini/gemini-3.5-flash", "gemini/gemini-3.6-flash"], enabled: true }
+  video_generation: { chain: ["sora/sora-2"], enabled: true }
+  # Added 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ, citing node_01M0Z7JP9YT7W15X94Z843AM9Y).
+  # gpt-5.6-sol reasons genuinely on the ICA ccx lane ONLY when NO tool declarations are present
+  # (reasoning_tokens=0 the instant a tool is offered, on BOTH /v1/chat/completions and
+  # /v1/responses — measured 2026-08-26/27, mutual exclusivity confirmed structural). These three
+  # classes are pure-text judgment tasks by definition (nothing here ever calls a tool), so they
+  # are safe auto-routes to the tool_mode:"none"-restricted ica/gpt-5.6-sol instance. Deliberately
+  # NEW ids, not a repoint of the existing must_stay_primary `verdict`/`council_review`/`synthesis`
+  # classes — see resolver.js's TOOL_RESTRICTED gate and SPEC.md § "Tool-less Sol lane".
+  review:           { chain: ["ica/gpt-5.6-sol"], enabled: true }
+  adjudication:     { chain: ["ica/gpt-5.6-sol"], enabled: true }
+  critique:         { chain: ["ica/gpt-5.6-sol"], enabled: true }
+  # Contract-only whole-node class. Never inferred from another task class and never a default
+  # build/review lane. The itt execution contract chooses Astra or Fable 5.1 up front.
+  advanced_sol:     { chain: ["codex/gpt-6-astra", "claude/claude-fable-5-1"], enabled: true }
+  orchestration:    { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5.5 supersedes Opus 5 as of 2026-09-22 — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27; Opus 5 stays selectable as the legacy/fallback chain entry)
+  mode_d:           { chain: ["claude/claude-opus-5-5", "claude/claude-opus-5"] }   # MUST-stay (spine; Opus 5.5 supersedes Opus 5 as of 2026-09-22 — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27; Opus 5 stays selectable as the legacy/fallback chain entry)
+
+# LEGACY COMPATIBILITY KEY — superseded by `task_class_sovereignty` below.
+# Retained because foreign/older registries (per-project overrides, test fixtures, the copies
+# frozen into workflow-sets/) still carry only this key; for those the resolver desugars each
+# entry to {min_rung: subscription, reason: quality_bar}, and a registry with NO `lanes:` table
+# at all keeps the pre-ladder behavior verbatim (claude, which is strictly narrower than
+# `>= subscription`). THIS registry declares its floors explicitly below and does not rely on
+# the desugar — the widening from "claude specifically" to "any subscription lane" must be
+# visible in a diff, not arrive as a side effect.
 must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -356,6 +239,7 @@ must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 # resolver REFUSES rather than dropping a rung — which is the correct fail-closed outcome for an
 # egress rule, and is why `journal_reflect` below is written the way it is.
 # ──────────────────────────────────────────────────────────────────────────────
+sovereignty_ladder: [shared_gateway, subscription, local]   # ascending
 
 # A LANE is an ENDPOINT + AUTH unit. It is the thing sovereignty attaches to. Before this table
 # there was no lane concept in the registry at all — only a bare `provider:` string — and the
@@ -364,245 +248,123 @@ must_stay_primary: [orchestration, verdict, mode_d, council_review, synthesis]
 # below are exactly those three branches, so this table is grounded in the invocation code
 # rather than in the ids. (2026-09-24: the `-dzus` branch is gone with the retired beta aliases;
 # the ica-codex.sh branch now keys off `lane: ica_gateway_responses_shim`, not an id suffix.)
-lane_order:
-  - ica_gateway_messages
-  - ica_gateway_messages_shim
-  - ica_gateway_responses_shim
-  - codex_subscription_primary
-  - codex_subscription_secondary
-  - claude_subscription_1x
-  - claude_subscription
-  - gemini_direct
-  - bob_ibm_shell
-  - nano_banana_api
-  - sora_api
-  - external_candidate
 lanes:
   claude_subscription:
     sovereignty: subscription
-    endpoint: anthropic_default
+    endpoint: anthropic_default          # ANTHROPIC_BASE_URL unset
     auth: anthropic_oauth_subscription
-    invocation: claude -p
-    note: The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription session legitimately reports
-      a `[1m]` model id; that suffix is a context-window marker.
-    attributes:
-      compute_custody: vendor_hosted
-      retention: none_contractual
-      jurisdiction: us
-      account_relationship: personal
-      metering: flat_rate
-      payer: self
-    harness_capabilities:
-    - claude_code_native
-    - subagents
-    - workflow_engine
-    - hooks
-    - workspace_write
-    - web_grounding
-    - execution.file_edit
-    provider: claude
+    invocation: "claude -p"
+    note: >-
+      The lane discriminator is ANTHROPIC_BASE_URL, never the model id. A native subscription
+      session legitimately reports a `[1m]` model id; that suffix is a context-window marker.
+
   ica_gateway_messages:
     sovereignty: shared_gateway
-    endpoint: ica_gateway_messages
-    auth: ica_team_key
-    invocation: ~/ica-claude.sh
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: us
-      account_relationship: employer
-      metering: free
-      payer: employer
-    harness_capabilities:
-    - claude_code_native
-    provider: ica
+    endpoint: ica_gateway_messages       # ANTHROPIC_BASE_URL = the ICA gateway
+    auth: ica_team_key                   # ~/.dotfiles/ICA_CLAUDE
+    invocation: "~/ica-claude.sh"
+
   ica_gateway_messages_shim:
     sovereignty: shared_gateway
     endpoint: ica_gateway_messages_via_param_strip_proxy
     auth: ica_team_key
-    invocation: ~/ica-gpt.sh
-    note: Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane is the local param-strip
-      proxy in front of the same shared gateway. Same sovereignty.
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: us
-      account_relationship: employer
-      metering: free
-      payer: employer
-    harness_capabilities:
-    - claude_code_native
-    provider: ica
+    invocation: "~/ica-gpt.sh"
+    note: >-
+      Azure-backed GPT deployments on the gateway reject Claude Code's output_config; this lane
+      is the local param-strip proxy in front of the same shared gateway. Same sovereignty.
+
   ica_gateway_responses_shim:
     sovereignty: shared_gateway
     endpoint: ica_gateway_via_local_responses_to_chat_shim
     auth: ica_team_key
-    invocation: ~/ica-codex.sh
-    note: 'Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not make it local: the tokens
-      are still served by the third-party shared pool. This row is the concrete case invariant 2 exists for.'
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: us
-      account_relationship: employer
-      metering: free
-      payer: employer
-    harness_capabilities:
-    - codex_exec
-    - workspace_write
-    - execution.file_edit
-    - tools.image_generation
-    provider: ica
+    invocation: "~/ica-codex.sh"
+    note: >-
+      Codex driven against a LOCAL shim that fronts the SHARED gateway. The local hop does not
+      make it local: the tokens are still served by the third-party shared pool. This row is the
+      concrete case invariant 2 exists for.
+
+  codex_subscription:
+    sovereignty: subscription
+    endpoint: openai_default
+    auth: chatgpt_subscription
+    invocation: "aos-codex-exec --identity codex_secondary exec"
+    verified: true
+    account_relationship: personal
+    default_identity: codex_secondary
+    identity_choices: [codex_secondary, codex_primary]
+    note: >-
+      Personal ChatGPT subscription execution. Account identity is explicit and orthogonal
+      to provider, model, effort and task role. Secondary is the agentic default; Primary is
+      an equally eligible explicit alternative. Unavailable accounts return a routing fact;
+      a new routing decision names the next account, without silent replay or rotation.
   codex_subscription_secondary:
     sovereignty: subscription
     endpoint: openai_default
     auth: chatgpt_subscription
     account_relationship: personal
     identity_ref: codex_secondary
-    invocation: aos-codex-exec --identity codex_secondary exec
+    invocation: "aos-codex-exec --identity codex_secondary exec"
     eligibility_group: personal_subscription
-    attributes:
-      compute_custody: vendor_hosted
-      retention: none_contractual
-      jurisdiction: us
-      account_relationship: personal
-      metering: flat_rate
-      payer: self
-    harness_capabilities:
-    - codex_exec
-    - workspace_write
-    - execution.file_edit
-    - tools.image_generation
-    provider: codex
   codex_subscription_primary:
     sovereignty: subscription
     endpoint: openai_default
     auth: chatgpt_subscription
     account_relationship: personal
     identity_ref: codex_primary
-    invocation: aos-codex-exec --identity codex_primary exec
+    invocation: "aos-codex-exec --identity codex_primary exec"
     eligibility_group: personal_subscription
-    attributes:
-      compute_custody: vendor_hosted
-      retention: none_contractual
-      jurisdiction: us
-      account_relationship: personal
-      metering: flat_rate
-      payer: self
-    harness_capabilities:
-    - codex_exec
-    - workspace_write
-    - execution.file_edit
-    - tools.image_generation
-    provider: codex
+
   gemini_direct:
-    sovereignty: unknown
+    sovereignty: subscription
     endpoint: google_ai_studio
-    auth: gemini_api_key
+    auth: gemini_api_key                 # ~/.config/aos/secrets.env
     verified: false
-    probe: 'UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we control, not a seat. No
-      class currently declares a floor that would route here, so the classification is not yet load-bearing. Ask Nick alongside
-      codex.'
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: unknown
-      account_relationship: personal
-      metering: metered
-      payer: self
-    harness_capabilities:
-    - web_grounding
-    provider: gemini
+    probe: >-
+      UNCONFIRMED, same shape as codex_subscription: a direct metered API key on an account we
+      control, not a seat. No class currently declares a floor that would route here, so the
+      classification is not yet load-bearing. Ask Nick alongside codex.
+
   bob_ibm_shell:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
-    invocation: bob -p
+    invocation: "bob -p"
     verified: false
-    probe: 'DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor, which is the fail-closed
-      answer. The registry entry says `family: local` / `allowance: local`, but the `bob-shell-delegate` skill describes it
-      as the IBM Bob Shell CLI, i.e. IBM-hosted. `allowance: local` most likely means "a locally-run CLI binary", which is a
-      statement about where the PROCESS runs, not where INFERENCE runs — and inference is what sovereignty is about. PROBE:
-      run `bob` with the network down, or inspect ~/.config/bob* for a gateway URL + credential. Do not classify it from the
-      `allowance` field.'
-    attributes:
-      compute_custody: unknown
-      retention: unknown
-      jurisdiction: unknown
-      account_relationship: unknown
-      metering: unknown
-      payer: unknown
-    harness_capabilities:
-    - workspace_write
-    provider: bob
+    probe: >-
+      DELIBERATELY UNCLASSIFIED — the evidence contradicts itself and `unknown` clears no floor,
+      which is the fail-closed answer. The registry entry says `family: local` / `allowance:
+      local`, but the `bob-shell-delegate` skill describes it as the IBM Bob Shell CLI, i.e.
+      IBM-hosted. `allowance: local` most likely means "a locally-run CLI binary", which is a
+      statement about where the PROCESS runs, not where INFERENCE runs — and inference is what
+      sovereignty is about. PROBE: run `bob` with the network down, or inspect ~/.config/bob* for
+      a gateway URL + credential. Do not classify it from the `allowance` field.
+
   nano_banana_api:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
-    probe: Never classified; has no branch in buildRegistryInvocation() either. No floored class routes to image generation
-      today, so `unknown` costs nothing and asserts nothing.
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: unknown
-      account_relationship: personal
-      metering: metered
-      payer: self
-    harness_capabilities: [tools.image_generation]
+    probe: >-
+      Never classified; has no branch in buildRegistryInvocation() either. No floored class routes
+      to image generation today, so `unknown` costs nothing and asserts nothing.
 
-    provider: nano-banana
   sora_api:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
     probe: Same as nano_banana_api — unclassified, and no floored class reaches it.
-    attributes:
-      compute_custody: vendor_hosted
-      retention: unknown
-      jurisdiction: unknown
-      account_relationship: personal
-      metering: metered
-      payer: self
-    harness_capabilities: [video_output]
 
-    provider: sora
   external_candidate:
     sovereignty: unknown
     endpoint: unknown
     auth: unknown
     verified: false
-    probe: 'Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash, kimi-k2, glm, grok)
-      — all `status: candidate`, `enabled: false`, `executor_status: absent`. Same shape as bob/nano-banana/sora: unclassified
-      on purpose, and no floored class routes to any of them today, so `unknown` costs nothing and asserts nothing.'
-    attributes:
-      compute_custody: unknown
-      retention: unknown
-      jurisdiction: unknown
-      account_relationship: unknown
-      metering: unknown
-      payer: unknown
-    harness_capabilities: []
-    provider: external
-  claude_subscription_1x:
-    provider: claude
-    attributes:
-      compute_custody: vendor_hosted
-      retention: none_contractual
-      jurisdiction: us
-      account_relationship: personal
-      metering: flat_rate
-      payer: self
-    harness_capabilities:
-    - claude_code_native
-    - subagents
-    - workflow_engine
-    - hooks
-    - workspace_write
-    - execution.file_edit
-    invocation: claude1x -p
-    sovereignty: subscription
+    probe: >-
+      Shared lane for the M5b external-provider candidates below (deepseek-v4-flash, qwen3-flash,
+      kimi-k2, glm, grok) — all `status: candidate`, `enabled: false`, `executor_status: absent`.
+      Same shape as bob/nano-banana/sora: unclassified on purpose, and no floored class routes to
+      any of them today, so `unknown` costs nothing and asserts nothing.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # TASK CLASS → MINIMUM RUNG. `reason` is REQUIRED and the resolver THROWS without a valid one
@@ -617,653 +379,31 @@ lanes:
 # If both were merely "a minimum rung" a future cost-tuning pass could not tell them apart, and
 # the one it would relax is the privacy boundary.
 #
-# The seven must_stay_primary classes explicitly pin claude_subscription in minimum.lanes.
-# This preserves the primary Claude lane boundary even though the resolver now makes the lane
-# choice from registry data instead of a hardcoded provider check.
+# ⚠️ MIGRATION NOTE — THIS IS A DELIBERATE WIDENING, WRITTEN OUT SO IT IS VISIBLE.
+# The seven classes below were previously pinned to claude SPECIFICALLY (the resolver hardcoded
+# `chosen_plugin_id: 'claude'`). `>= subscription` also admits `codex_subscription`. In practice
+# `orchestration` and `mode_d` are unchanged — their routing_policy chains pin
+# claude/claude-opus-5-5 (Opus 5 kept as the in-chain legacy/fallback, updated 2026-09-27 to track
+# the Opus 5.5 spine) — and the other five have no chain, so they only reach a codex lane when a
+# caller explicitly asks for a gpt model. But the boundary DID move, and it moved on purpose.
 # ──────────────────────────────────────────────────────────────────────────────
-task_class_defaults:
-  exploration:
-    holders:
-    - claude-haiku-5-5
-    - gpt-6-luna
-    effort: low
-    bar: 5.5
-    quality: {w_intelligence: 0.4, w_taste: 0.1, w_speed: 0.5}
-    margin: {lambda: 0.5}
-    frontier: {required: false, holder: claude-sonnet-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - claude-haiku-5-5
-      - gpt-5.6-luna
-      - gpt-6-luna
-      - claude-sonnet-5-5
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      equivalence: equivalent
-      equivalent:
-      - claude-haiku-5-5
-      - gpt-5.6-luna
-      - gpt-6-luna
-      basis: 'positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): Haiku 5.5, ICA 5.6 Luna and GPT-6 Luna tied on every task the bench could measure for correctness; Cost decides (Haiku 10, ICA Luna 8, GPT-6 Luna 7). Opus 5.5 or Sol 6.1 clear the bar but lose on Cost'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: c1dccb2252f56532}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-haiku-5-5
-  documentation:
-    holders:
-    - gpt-6-luna
-    - claude-haiku-5-5
-    effort: low
-    bar: 6.0
-    quality: {w_intelligence: 0.4, w_taste: 0.4, w_speed: 0.2}
-    margin: {lambda: 0.5}
-    frontier: {required: false, holder: claude-sonnet-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-5.6-luna
-      - claude-haiku-5-5
-      - gpt-6-luna
-      - claude-sonnet-5-5
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      equivalence: priority
-      priority: gpt-5.6-luna
-      basis: 'positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: fbb8e8a3ac34a733}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-haiku-5-5
-  mechanical:
-    holders:
-    - gpt-6-luna
-    - claude-haiku-5-5
-    effort: low
-    bar: 5.0
-    quality: {w_intelligence: 0.5, w_taste: 0.1, w_speed: 0.4}
-    margin: {lambda: 0.5}
-    frontier: {required: false, holder: claude-sonnet-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-5.6-luna
-      - gemma-4-26b-a4b-it
-      - claude-haiku-5-5
-      - gpt-6-luna
-      - claude-sonnet-5-5
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      equivalence: priority
-      priority: gpt-5.6-luna
-      basis: 'positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: ec0631e18577c88b}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-haiku-5-5
-  second_opinion:
-    holders:
-    - gpt-6-luna
-    - gemini-3.6-flash
-    - claude-haiku-5-5
-    effort: medium
-    bar: 3.0
-    quality: {w_intelligence: 0.6, w_taste: 0.3, w_speed: 0.1}
-    margin: {lambda: 0.5}
-    frontier: {required: false, holder: gpt-6.1-sol}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6-luna
-      - gemini-3.6-flash
-      - gemma-4-26b-a4b-it
-      - claude-haiku-5-5
-      - claude-sonnet-5-5
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      equivalence: priority
-      priority: gpt-6-luna
-      basis: 'positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns cross-family review and second opinion (family diversity against every Claude lane)'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: b60ef67087dc65e1}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-haiku-5-5
-  implementation:
-    holders:
-    - gpt-6-luna
-    - claude-sonnet-5-5
-    - claude-sonnet-5
-    effort: medium
-    bar: 7.0
-    quality: {w_intelligence: 0.5, w_taste: 0.3, w_speed: 0.2}
-    margin: {lambda: 0.3}
-    frontier: {required: false, holder: claude-opus-5-5}
-    requires_capabilities: [execution.file_edit]
-    cross_family:
-      candidates:
-      - claude-sonnet-5-5
-      - claude-sonnet-5
-      - claude-opus-5-5
-      equivalence: unmeasured
-      basis: agentic correctness saturated in the study (a failed instrument, not a tie) and it ran no Opus › Sol arm; default = cheapest eligible candidate (Sonnet 5.5, Cost 5, over Opus 5.5, Cost 3)
-      excluded:
-      - {holder: gpt-6-luna, axis: capability, evidence: "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)"}
-      - {holder: gpt-6.1-sol, axis: capability, evidence: "resolver.js sandboxModeFor: a codex holder at effort medium resolves --sandbox read-only, so it cannot meet execution.file_edit at this class's effort (finding node_01M4EJC19SDMP1Z6F14G9QDDFH)"}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: ab088ef9d87f28c3}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-sonnet-5
-    # INTERIM (2026-10-16, Metis): excludes ICA so implementation resolves Codex gpt-6-luna first,
-    # per Nick's 2026-10-16 words and the WP AC; MODEL-ROUTING §4 would put ICA first. Nick's
-    # ruling pending in req_01M52R3RCVQQVN5S8PGC40WZ7A; delete this minimum to restore ICA-first.
-    minimum:
-      predicate:
-        account_relationship:
-        - personal
-      reason: quality_bar
-  design_judgment:
-    holders:
-    - claude-opus-5-5
-    - gpt-6.1-sol
-    - claude-opus-5
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.5, w_taste: 0.5, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      - claude-opus-5
-      equivalence: priority
-      priority: claude-opus-5-5
-      basis: 'MODEL-ROUTING section 5 design_judgment row (Nick 2026-09-28 evening): architecture › UX › hard judgment starts on Opus 5.5; Sol 6.1 is the cross-family first fallback'
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: f8ccee02ee0ffdf6}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  raw_strength:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.8, w_taste: 0.1, w_speed: 0.1}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-sonnet-5-5
-      equivalence: priority
-      priority: gpt-6.1-sol
-      basis: 'MODEL-ROUTING section 5 raw_strength row (Nick 2026-09-30): hard algorithmic › debugging › reasoning-heavy legs start on GPT-6.1 Sol; Opus 5.5 is the cross-family first fallback'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 0c15fe5028d77018}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5-5
-  web_research:
-    holders:
-    - gemini-3.6-flash
-    - gemini-3.5-flash
-    - gemini-3.1-pro-preview
-    # Grounded direct Gemini lanes were exhausted on the old key; #88 re-enabled only 3.1 Pro
-    # on a paid key, so this class currently accepts its routable ICA alternatives.
-    effort: medium
-    bar: 6.0
-    quality: {w_intelligence: 0.5, w_taste: 0.2, w_speed: 0.3}
-    margin: {lambda: 0.5}
-    frontier: {required: false, holder: gemini-3.1-pro-preview}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gemini-3.6-flash
-      - gemini-3.5-flash
-      - gemini-3.1-pro-preview
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      - claude-sonnet-5-5
-      equivalence: priority
-      priority: gemini-3.6-flash
-      basis: 'MODEL-ROUTING section 5 web-grounded research row: native Gemini fuses Google-Search grounding with reasoning; Opus › Sol have no grounded-search lane in the router'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 386c3ec012970087}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: gemini-3.1-pro-preview
-  code_review:
-    holders:
-    - gpt-6-luna
-    - claude-sonnet-5-5
-    - claude-sonnet-5
-    effort: medium
-    bar: 6.5
-    quality: {w_intelligence: 0.6, w_taste: 0.3, w_speed: 0.1}
-    margin: {lambda: 0.3}
-    frontier: {required: false, holder: gpt-6.1-sol}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6-luna
-      - claude-sonnet-5-5
-      - claude-sonnet-5
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      equivalence: priority
-      priority: gpt-6-luna
-      basis: 'positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns AC validation and cross-family review; MODEL-ROUTING section 5 AC-validation row'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 19603113502155d1}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-sonnet-5-5
-  image_generation:
-    holders:
-    - gpt-6-luna
-    - gpt-5.6-terra
-    - nano-banana-2
-    - nano-banana-pro
-    effort: medium
-    bar: 5.0
-    quality: {w_intelligence: 0.2, w_taste: 0.7, w_speed: 0.1}
-    margin: {lambda: 0.2}
-    frontier: {required: false, holder: nano-banana-pro}
-    requires_capabilities: [tools.image_generation]
-    cross_family:
-      candidates:
-      - gpt-6-luna
-      - gpt-5.6-terra
-      - nano-banana-2
-      - nano-banana-pro
-      - gpt-6.1-sol
-      equivalence: priority
-      priority: gpt-6-luna
-      basis: 'MODEL-ROUTING section 5 + codex-executor contract: native Codex image_gen.imagegen first, ICA GPT shim, then Nano Banana; Claude models have no image output'
-      excluded:
-      - {holder: claude-opus-5-5, axis: capability, evidence: capabilities.image_output false (requires tools.image_generation)}
-      - {holder: claude-sonnet-5-5, axis: capability, evidence: capabilities.image_output false (requires tools.image_generation)}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 6597bb1b137f79e3}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: nano-banana-pro
-  svg_generation:
-    holders:
-    - claude-opus-5-5
-    - gemini-3.1-pro-preview
-    - gemini-3.5-flash
-    - gemini-3.6-flash
-    requires_capabilities: []
-    effort: medium
-    bar: 5.0
-    quality: {w_intelligence: 0.2, w_taste: 0.7, w_speed: 0.1}
-    margin: {lambda: 0.2}
-    frontier: {required: false, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - claude-opus-5-5
-      - gemini-3.1-pro-preview
-      - gemini-3.5-flash
-      - gemini-3.6-flash
-      - gpt-6.1-sol
-      - claude-sonnet-5-5
-      equivalence: priority
-      priority: claude-opus-5-5
-      basis: 'Nick decision req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08): svg_generation moves to Opus 5.5 and Fable 5.1 stays explicit opt-in, never auto-routed; Gemini chain from use-case-rankings.yaml svg-generation stays as the cross-family fallback'
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 890cd7af994e399c}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: gemini-3.6-flash
-  video_generation:
-    holders:
-    - sora-2
-    effort: medium
-    bar: 5.0
-    quality: {w_intelligence: 0.2, w_taste: 0.7, w_speed: 0.1}
-    margin: {lambda: 0.2}
-    frontier: {required: false, holder: null}
-    requires_capabilities: [video_output]
-    cross_family:
-      candidates:
-      - sora-2
-      equivalence: priority
-      priority: sora-2
-      basis: 'capability-bound: only sora-2 declares video_output'
-      excluded:
-      - {holder: claude-opus-5-5, axis: capability, evidence: capabilities.video_output false (requires video_output)}
-      - {holder: gpt-6.1-sol, axis: capability, evidence: capabilities.video_output false (requires video_output)}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: f8f9faa68fdef949}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: sora-2
-  review:
-    holders:
-    - gpt-6.1-sol
-    - claude-sonnet-5-5
-    - claude-opus-5-5
-    effort: medium
-    bar: 7.0
-    quality: {w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0}
-    margin: {lambda: 0.3}
-    frontier: {required: false, holder: claude-opus-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-5.6-sol
-      - claude-sonnet-5-5
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-luna
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Sonnet 5.5 (contract-clear review is its named role) is the cross-family first fallback a tool-needing leg lands on
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: adea0d9046fb3e62}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: gpt-5.6-sol
-  adjudication:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    effort: medium
-    bar: 7.0
-    quality: {w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0}
-    margin: {lambda: 0.3}
-    frontier: {required: false, holder: claude-opus-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-5.6-sol
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      - gpt-6-luna
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 365fc20b91552a92}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: gpt-5.6-sol
-  critique:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    effort: medium
-    bar: 7.0
-    quality: {w_intelligence: 0.8, w_taste: 0.2, w_speed: 0.0}
-    margin: {lambda: 0.3}
-    frontier: {required: false, holder: claude-opus-5-5}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-5.6-sol
-      - claude-opus-5-5
-      - gpt-6.1-sol
-      - gpt-6-luna
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheapest eligible candidate (ICA 5.6 Sol, Cost 8, tool-less); Opus 5.5 is the cross-family first fallback a tool-needing leg lands on
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 365fc20b91552a92}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: gpt-5.6-sol
-  advanced_sol:
-    holders:
-    - gpt-6-astra
-    - claude-fable-5-1
-    effort: medium
-    bar: 9.0
-    quality: {w_intelligence: 0.9, w_taste: 0.1, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6-astra
-      - claude-fable-5-1
-      equivalence: priority
-      priority: gpt-6-astra
-      basis: 'MODEL-ROUTING section 1.5 advanced-Sol class: planned from the start for Astra or Fable 5.1 by an explicit execution contract'
-      excluded:
-      - {holder: claude-opus-5-5, axis: bar, evidence: q=8.9 below the class bar 9.0}
-      - {holder: gpt-6.1-sol, axis: bar, evidence: q=8.9 below the class bar 9.0}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 1ad1502a5860beea}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-fable-5-1
-  orchestration:
-    holders:
-    - claude-opus-5-5
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - claude-opus-5-5
-      - claude-opus-5
-      equivalence: priority
-      priority: claude-opus-5-5
-      basis: 'capability-bound: orchestration drives Claude-Code-native mechanisms, the one legitimate reason a class is Claude-only'
-      excluded:
-      - {holder: gpt-6.1-sol, axis: capability, evidence: 'MODEL-ROUTING section 4 point 2a: Claude-Code-native orchestration (Task() › subagent nesting, EnterWorktree, Workflow engine); router-offloaded executors run flat legs only'}
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 295c6734118a0d14}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  mode_d:
-    holders:
-    - claude-opus-5-5
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - claude-opus-5-5
-      - claude-opus-5
-      equivalence: priority
-      priority: claude-opus-5-5
-      basis: "authority-bound: the enforced Mode-D scan rejects a codex producer; the registry's personal-account floor alone would admit Codex (contradiction recorded in the evidence file)"
-      excluded:
-      - {holder: gpt-6.1-sol, axis: authority, evidence: 'agentic_meta_dev docs › rules › mode-d-enforcement.md: mode-d-scan.sh hard-exits 2 when the producing lane is an offload lane (codex included); MODEL-ROUTING section 4 point 2 names mode-d authority_absolute'}
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 1f7011131e7bef17}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  verdict:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-opus-5
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 4d826c72a0860607}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  council_review:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-opus-5
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 4d826c72a0860607}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  synthesis:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-opus-5
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 4d826c72a0860607}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  schema_recovery:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-opus-5
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 4d826c72a0860607}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  cross_wave_merge:
-    holders:
-    - gpt-6.1-sol
-    - claude-opus-5-5
-    - gpt-6-sol
-    - claude-opus-5
-    minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
-    effort: medium
-    bar: 8.0
-    quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
-    margin: {lambda: 0.0}
-    frontier: {required: true, holder: null}
-    requires_capabilities: []
-    cross_family:
-      candidates:
-      - gpt-6.1-sol
-      - claude-opus-5-5
-      - gpt-6-sol
-      - claude-opus-5
-      equivalence: unmeasured
-      basis: positioning study ran neither Opus 5.5 nor GPT-6.1 Sol; use-case-rankings.yaml marks this use case unmeasured; default = cheaper eligible candidate (GPT-6.1 Sol, Cost 4, over Opus 5.5, Cost 3); Opus 5.5 is the cross-family first fallback; Codex subscription clears the personal-account floor
-      excluded:
-      - {holder: claude-sonnet-5-5, axis: doctrine, evidence: 'MODEL-ROUTING section 5 + CLAUDE.md (Nick 2026-09-28 evening): Sonnet 5.5 is for contract-clear execution › review › research, never design, architecture, hard judgment or ambiguous synthesis'}
-    set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 4d826c72a0860607}
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-  journal_reflect:
-    holders:
-    - claude-opus-5-5
-    - claude-opus-5
-    # Migrated 2026-10-16 (v3) from `min_rung: local` / `reason: egress_absolute` — same
-    # meaning (only locally-custodied compute may read the journal; nobody and no process
-    # may widen it), expressed in the §1.4 attribute vocabulary. Nick's 2026-08-25 setting.
-    minimum:
-      predicate:
-        compute_custody: [local]
-      reason: disclosure_absolute
-      set_by: nick
-      set_on: 2026-08-25
-      migrated_from: egress_absolute
-    fallback:
-      policy: next_lane_then_next_holder
-      floor_model: claude-opus-5
-# task_class_sovereignty was retired in v3 (2026-10-16): every former min_rung now lives as an
-# attribute predicate under task_class_defaults.<class>.minimum with the same reason and set_by.
+task_class_sovereignty:
+  orchestration:    { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  verdict:          { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  mode_d:           { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  council_review:   { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  synthesis:        { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  schema_recovery:  { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  cross_wave_merge: { min_rung: subscription, reason: quality_bar, set_by: nick, set_on: 2026-08-25 }
+  # ⚠️ NO WRITER TODAY — declared so `egress_absolute` is not a paper reason class with no
+  # instance in the real registry. Metis's private-journal reflect lane is a launchd single-shot
+  # that does NOT currently resolve through delegation-router, so nothing writes this class here
+  # (`.claude/rules/built-lane-no-writers.md` — naming the absent writer rather than discovering
+  # it later). It is DELIBERATELY UNROUTABLE while the `local` rung has zero members: the
+  # resolver refuses rather than dropping a rung, which for an egress rule is the correct
+  # outcome. If the journal lane is ever routed through here, provision a local lane first —
+  # never relax this minimum. Rule: .claude/rules/metis-journal.md § Egress — absolute.
+  journal_reflect:  { min_rung: local, reason: egress_absolute, set_by: nick, set_on: 2026-08-25 }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MODELS — one entry per DISTINCT model. Provider sub-instances carry the exact
@@ -1290,20 +430,15 @@ models:
     selection_posture: default_spine
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, health: { status: unknown, evidence: "launch page reports Claude Code availability; local model list unavailable while logged out" } }
-      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 2 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
       - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 9, tools: [one_million_context], max_context: 1000000, max_output: 128000, health: { status: available, checked_at: 2026-09-24, evidence: "Claude-Code wrapper rc 0; canonicalModel claude-opus-5-5; contextWindow 1000000" } }
-      # ⚠️ SUPERSEDED 2026-10-16 (Nick): ICA now serves claude-sonnet-5-5, which is the default ICA Sonnet
-      # offload again; this Opus 5.5 ICA row stays enabled for design_judgment / spine-offload, but the
-      # "preferred over Sonnet 5 on ICA" ranking below no longer applies. Raw-HTTP bare id claude-opus-5-5 also
-      # returned 200 on 2026-10-16 (closes the "raw HTTP bare-id unmeasured" gap in the 2026-09-24 note).
-      # ⚠️ 2026-09-28 (evening), Nick: this ICA row WAS PREFERRED over claude-sonnet-5[1m] on the
+      # ⚠️ 2026-09-28 (evening), Nick: this ICA row is now PREFERRED over claude-sonnet-5[1m] on the
       # gateway (until ICA serves claude-sonnet-5-5) — a capability call, not a cost saving. Opus 5.5
       # draws MORE of the shared weekly ccx credit allowance per call than Sonnet 5 (~$4/$20 vs $2/$10
       # per-MTok API-equivalent rate, roughly double); it is NOT free, and cost_score 9 here reflects
       # "cheap relative to real dollars on a shared pool", not "cheaper than Sonnet 5 in credits". The
       # rule is simply: since Opus 5.5 is already servable on this gateway, there is no reason to keep
-      # defaulting to the weaker Sonnet 5 there. claude-sonnet-5-5 now has an ICA provider row (2026-10-16), so that
-      # is the default again (see the `implementation`/`code_review` chain notes above).
+      # defaulting to the weaker Sonnet 5 there. Once claude-sonnet-5-5 gets an ICA provider row, that
+      # becomes the default again (see the `implementation`/`code_review` chain notes above).
 
   claude-opus-5:
     family: claude
@@ -1321,7 +456,7 @@ models:
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1 }
       # ICA: PROMOTED to enabled 2026-07-31 — claude-opus-5 appeared on the gateway /models list and passed the full executor-path verification (see the `updated:` changelog above). This row is `enabled: false` per the "ICA OPUS — RETRACTED 2026-08-26" file-header note (raw gateway 403); if ever re-enabled it sits behind claude-opus-5-5[1m], now the ICA spine-offload lane — claude-opus-4-8[1m] is the older fallback. Keep the [1m] variant ranked first per the file-header 1M invariant. NOTE max_output 64000 on ICA (< the 128000 first-party ceiling). Raw transports must use the PLAIN id — "[1m]" is a Claude-Code client hint and 403s on /v1/messages.
-      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000, health: { status: unavailable, checked_at: 2026-10-16, evidence: "bare and [1m] both 403, absent from GET /v1/models (2026-10-16)" } }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-5", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, max_output: 64000 }
 
   claude-opus-4-8:
     family: claude
@@ -1339,7 +474,7 @@ models:
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-4-8",     cost_tier: premium,  allowance: billed,            enabled: true, priority: 1 }
       # ICA claude-opus-4-8[1m]: stays enabled, but DEMOTED to the spine-offload FALLBACK 2026-07-31 — claude-opus-5[1m] is verified on the gateway and takes the primary spine-offload lane. Prefer opus-5[1m]; reach here only if opus-5 is unavailable or you need 4.8's older/lighter tokenizer.
-      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-4-8", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, health: { status: unavailable, checked_at: 2026-10-16, evidence: "403 / absent from GET /v1/models (2026-10-16)" } }
+      - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-opus-4-8", cost_tier: standard, allowance: shared_token_pool, enabled: false, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   claude-opus-4-7:
     family: claude
@@ -1371,7 +506,7 @@ models:
     status: active
     providers:
       # 1m preferred (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain 200k is demoted fallback.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000, health: { status: unavailable, checked_at: 2026-10-16, evidence: "403 / absent from GET /v1/models (2026-10-16)" } }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-4-6", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, tools: [one_million_context], max_context: 1000000 }
 
   claude-sonnet-5-5:
     family: claude
@@ -1389,19 +524,14 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
-      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: billed, enabled: true, priority: 2 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
-      # ICA SERVES claude-sonnet-5-5 as of 2026-10-16 (Nick; probed same day: GET /v1/models lists it, raw bare id 200
-      # echoing the id, [1m] form 200, ica-claude.sh bare and [1m] is_error false). It is now the DEFAULT ICA Sonnet
-      # offload, superseding claude-sonnet-5[1m] (legacy fallback below) and the Opus-5.5-on-ICA preference.
-      # Economics = the existing ICA Sonnet row (shared ccx credit pool, unchanged): NOT free. model_id carries [1m] (the
-      # ica-claude.sh / Claude Code id, 1M context); raw-HTTP adapters send the bare `claude-sonnet-5-5`.
-      # Scores are the entry's own (inherited from the Sonnet 5.5 subscription evaluation), pending an ICA-lane evaluation.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-sonnet-5-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, health: { status: available, checked_at: 2026-10-16, evidence: "ica-claude.sh claude-sonnet-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200" } }
+      # ICA does not serve claude-sonnet-5-5 yet (measured 2026-09-28). No ICA provider row here —
+      # add one (model_id "claude-sonnet-5-5[1m]") once ICA ships it; until then ICA offload keeps
+      # routing through the claude-sonnet-5 entry below.
 
   claude-sonnet-5:
     family: claude
     class: sonnet
-    descriptor: "Claude Sonnet 5 (released 2026-06-30). LEGACY BUT SELECTABLE as of 2026-09-28 — claude-sonnet-5-5 is now the default subscription/native-execution Sonnet (see that entry above); Sonnet 5 on ICA (`claude-sonnet-5[1m]`, shared pool) is the LEGACY FALLBACK behind `claude-sonnet-5-5[1m]` as of 2026-10-16 (ICA now serves 5.5; still served itself). Near-Opus coding/agentic quality at Sonnet cost. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane."
+    descriptor: "Claude Sonnet 5 (released 2026-06-30). LEGACY BUT SELECTABLE as of 2026-09-28 — claude-sonnet-5-5 is now the default subscription/native-execution Sonnet (see that entry above); Sonnet 5 stays the live ICA offload lane (`claude-sonnet-5[1m]`, shared pool) since ICA does not yet serve 5.5. Near-Opus coding/agentic quality at Sonnet cost. Adaptive thinking on by default (native path); first Sonnet with xhigh effort; new tokenizer (~30% more tokens vs 4.6). $2/$10 per M — the 2026-06-30 intro price is now Anthropic's standard price; the previously-scheduled 2026-09-01 increase to $3/$15 did NOT occur (verified against the live Claude/Anthropic pricing page, retrieved 2026-09-27: $2/$10, cache read $0.20/MTok, no intro-pricing disclaimer; corroborates node_01M3HW1ECPSXFCREDCKC6R8FE4, reconciled 2026-09-27). ALSO on ICA (shared pool) since 2026-07-08 via claude-sonnet-5[1m] (1M) — the current-gen free-offload lane, superseding ICA Sonnet 4.6. 1M context, 128K output. ✅ ICA path reasoning REVALIDATED WORKING (2026-07-20, supersedes the stale 2026-07-09 no-op finding): Claude Code (2.1.215) now emits thinking.type:adaptive + output_config.effort → ICA Sonnet 5 reasons end-to-end (adaptive + effort scaling honored; legacy thinking.type:enabled now 400s). Reasoning-dependent legs MAY offload to ica/claude-sonnet-5[1m] behind a reviewer gate. ⚠️ One gap: output_config.format (structured-JSON schema) is silently dropped by the ICA gateway → prose not schema JSON; use a forced tool-call for structured output on the ICA lane."
     scores: { cost: 5, intelligence: 8, taste: 8, speed: 7 }   # 1-10, higher=better; cost = preferred-lane real spend
     reasoning_caveat: "ICA offload lane (ica/claude-sonnet-5[1m]) reasoning WORKS via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent offload is fine here. Only remaining gap: output_config.format (structured JSON) is dropped by the gateway — use a tool-call for structured output."
     token_economy_note: "Sonnet 5's new tokenizer emits ~30% more tokens than Sonnet 4.6 for the same text, so its EFFECTIVE metered cost is ~$2.60/$13.00-equivalent at the now-standard $2/$10 price (the scheduled rise to $3/$15 did not occur — see descriptor, reconciled 2026-09-27). Capability/one-shot rate on coding+agentic work usually offsets this, and on the subscription lane token count doesn't affect $ (pooled). BUT on the ICA shared-pool lane and any metered lane, prefer claude-sonnet-4-6[1m] (older, token-efficient, free-to-us) or claude-haiku-4-5 for BOUNDED/MECHANICAL high-volume fan-out where 4.6-class capability suffices — reserve claude-sonnet-5[1m] offload for capability-sensitive bounded waves. Sonnet 5 stays the default execution workhorse (see MODEL-ROUTING.md §2)."
@@ -1478,18 +608,13 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-5-5", cost_tier: billed, allowance: billed, enabled: true, priority: 1, cost_score: 10 }
-      - { provider: claude, lane: claude_subscription_1x, model_id: "claude-haiku-5-5", cost_tier: billed, allowance: billed, enabled: true, priority: 2, cost_score: 10 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
-      # ICA SERVES claude-haiku-5-5 as of 2026-10-16 (Nick: free/unlimited like the prior free instances; probed same day:
-      # listed in GET /v1/models, raw bare id 200 echoing the id, [1m] form 200, ica-claude.sh bare and [1m] is_error
-      # false). Supersedes the 2026-10-07 403 reading. model_id carries [1m] (ica-claude.sh / Claude Code id); raw-HTTP
-      # adapters send the bare `claude-haiku-5-5`. Priority 2 keeps the subscription row the unqualified default;
-      # `--provider ica` and the exploration/documentation/mechanical chains reach this free row. Replaces ICA Haiku 4.5.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-5-5[1m]", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 10, health: { status: available, checked_at: 2026-10-16, evidence: "ica-claude.sh claude-haiku-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200; free/unlimited per Nick 2026-10-16 (gateway meter not separately probed)" } }
+      # ICA does not serve claude-haiku-5-5 (403 team_model_access_denied, 2026-10-07). No ICA provider
+      # row on purpose; add one (bare id, NOT [1m]) once a bare-id HTTP 200 check passes against the gateway.
 
   claude-haiku-4-5:
     family: claude
     class: haiku
-    descriptor: "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL SERVED on ICA (`claude-haiku-4-5`, bare id) as the LEGACY fallback behind the free `claude-haiku-5-5[1m]` ICA row (ICA began serving 5.5 on 2026-10-16). Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation."
+    descriptor: "⚠️ PAID ON ICA per Nick 2026-10-07 ('Treat it as paid now'); the gateway meter still reads $0.00 for it (open discrepancy). LEGACY BUT SELECTABLE on the subscription lane as of 2026-10-07 (claude-haiku-5-5 is the default cheap Claude there, Nick); STILL THE LIVE ICA Haiku (`claude-haiku-4-5`, bare id) because ICA does not serve 5.5. Fast, cheap. Mechanical work, extraction, doc-gen, exploration, votes. Best free-tier Claude-quality option. 200k context. Re-checked in the 2026-10-07 bench: rubric mean 3.83/5 (same on subscription and ICA), slow on the subscription lane that day (172s total vs 42s for 5.5), so scores are unchanged. Nick reports it is now paid on ICA; the gateway cost header still reads $0.00 (see the header note at the top of this file) so the ICA row is unchanged pending confirmation."
     scores: { cost: 7, intelligence: 5, taste: 5, speed: 9 }   # 1-10, higher=better; cost = preferred-lane real spend. 2026-10-07: Cost 10 -> 7 because ICA Haiku 4.5 counts as PAID (Nick), matching its subscription cost_score; the $0.00 meter reading is an open discrepancy, not evidence of free. Intelligence/Taste/Speed re-checked, unchanged.
     when_to_use: [mechanical-tasks, doc-gen, adversarial-review, exploration]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-haiku-4-5
@@ -1742,7 +867,7 @@ models:
     providers:
       - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "native AI Studio lane returned hard 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.6-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.5-flash:
     family: google
@@ -1759,7 +884,7 @@ models:
     providers:
       - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: billed, enabled: false, priority: 1, health: { status: unavailable, checked_at: 2026-09-09, quota_limit: 0, evidence: "every native Search call returned 429/RESOURCE_EXHAUSTED in the SOTA retune" } }
       # ICA path: 1m preferred (see "ICA 1M-CONTEXT PREFERENCE"); plain is the demoted 200k fallback. NOT Search-grounded via the gateway.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
+      - { provider: ica, lane: gemini_direct, model_id: "gemini-3.5-flash", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   gemini-3.1-pro-preview:
     family: google
@@ -1775,26 +900,6 @@ models:
     status: preview
     providers:
       - { provider: gemini, lane: gemini_direct, model_id: "gemini-3.1-pro-preview", cost_tier: standard, allowance: billed, enabled: true, priority: 1, health: { status: available, checked_at: 2026-10-07, evidence: "2026-10-07: one minimal native generateContent probe with the PAID key (GEMINI_API_KEY_PAID, a.k.a. GEMINI_PERSONAL_API_KEY in the salon) returned HTTP 200, modelVersion gemini-3.1-pro-preview (1 prompt + 5 thought tokens). This row binds the PAID key: callers must send GEMINI_API_KEY_PAID, not the free GEMINI_API_KEY (the row cannot express the key; lane gemini_direct only names auth gemini_api_key). History: 2026-09-09 quota_limit:0 / hard 429 RESOURCE_EXHAUSTED on the then-key in the SOTA retune; that finding was key-scoped and is superseded by the paid-key probe, kept here as the reason this row was disabled for four weeks." } }
-
-  gemini-4-argon:
-    family: google
-    class: gemini-pro
-    descriptor: "Gemini 4 Argon (Google flagship reasoning model, launched 2026-10-13; model page lists it Stable, the launch post does not say GA vs preview). Exact id gemini-4-argon (models.get 2026-10-16: displayName 'Gemini 4 Argon', version '3.0', inputTokenLimit 1,048,576, outputTokenLimit 32,768, thinking true, methods generateContent/countTokens/batchGenerateContent, NO createCachedContent). OUTPUT CAP: the API reports 32,768 while the docs page says 65,536; maxOutputTokens 65536 is accepted without a validation error (2026-10-16) but no call has proven >32,768 emitted, so treat 32,768 as the safe ceiling. Thinking levels low/medium/high; thinking tokens bill as output. CACHING: implicit only; explicit caching is NOT supported (createCachedContent 400 'Explicit caching is not supported for models/gemini-4-argon', 2026-10-16), so repeated-context workloads (salon packets, the ~16.5k-token gemini-cli preamble) pay full input on every call unless the implicit cache hits. LANES (probed 2026-10-16): native AI Studio PAID key (GEMINI_API_KEY_PAID, the same key the salon reads as GEMINI_PERSONAL_API_KEY) generateContent 200 echoing modelVersion gemini-4-argon; gemini-cli 0.46.0 `-m gemini-4-argon` with the paid key exported as GEMINI_API_KEY returned ok (16,549 input tokens of CLI preamble, cached 0); the FREE key GEMINI_API_KEY is 429 RESOURCE_EXHAUSTED with free_tier limit 0 for this model (Google lists no free tier); ICA ccx does NOT serve it (absent from GET /v1/models; bare and [1m] both 403), so there is no ICA row and no [1m] id. BENCH 2026-10-16 (see scores comment): answered a defensive login-code security review that gemini-3.1-pro-preview and gemini-3.6-flash both REFUSED on the same paid key with no system prompt; implicit caching on a byte-identical 104k-token prefix missed on call 2 and hit on call 3 (102,158 of 104,207 tokens cached, $0.209 -> $0.015), so the cache is probabilistic and cannot be budgeted as a guarantee. Lane eligibility = gemini-paid (MODEL-ROUTING 1.4: vendor_hosted / retained / us / personal; economics per_call / self). Explicit-selectable only: in NO routing_policy chain. Tracker node_01M52TKCJ4SRT9JAWNXPNGD1D2."
-    scores: { cost: 6, intelligence: 8, taste: 7, speed: 7 }   # MEASURED 2026-10-16, n=1 per task, 8 tasks + a 3-call 104k-token repeated-context probe, vs gemini-3.1-pro-preview, gemini-3.5-flash (served as 3.6-flash) and claude-sonnet-5-5; blind judge gpt-6.1-sol (agentic_meta_dev docs/project_plans/reports/model-eval/gemini-4-argon-2026-10-16/). Objective 7/7 (incl. long-context), judge correctness/adherence/taste 4.50/4.62/4.00 (Sonnet 5.5 4.62/4.50/4.50, 3.1 Pro 4.25/4.25/3.62), mean rank 2.38 of 4 (Sonnet 1.88). Cost 6: cheapest arm on the 8 short tasks ($0.034 vs Sonnet $0.049, 3.1 Pro $0.208) because it spends few thinking tokens (mean 367 output tokens vs 3.1 Pro 2,149); a 104k-token prompt is $0.21 uncached. Re-score Cost to 5 when the 2026-12-01 price doubling lands. Speed 7: mean wall 7.7s (Sonnet 4.4s, 3.6-flash 9.3s, 3.1 Pro 29.7s). Intelligence/Taste held at the 3.1 Pro values: n=1 cannot separate 8 from 9.
-    when_to_use: [large-context, planning, adversarial-review, deep-reasoning, second-opinion]
-    playbook_ref: model-playbook/routes/google-gemini.md#gemini-4-argon
-    tools: [web_search, large_context]
-    related_skills: [gemini-cli]
-    max_context: 1048576
-    max_output: 32768
-    pricing: { input_per_mtok_usd: 2, output_per_mtok_usd: 10, cache_read_per_mtok_usd: 0.10 }   # paid tier, launch price THROUGH 2026-11-30 (ai.google.dev pricing page, updated 2026-10-15); batch is half. STEP on 2026-12-01: input 4 / output 20 / cache_read 0.20 (implicit cache only; no cache-write price because explicit caching is unsupported). Re-score Cost when the step lands.
-    pricing_schedule: [ { from: 2026-10-13, to: 2026-11-30, input_per_mtok_usd: 2, output_per_mtok_usd: 10, cache_read_per_mtok_usd: 0.10 }, { from: 2026-12-01, input_per_mtok_usd: 4, output_per_mtok_usd: 20, cache_read_per_mtok_usd: 0.20 } ]
-    caching: { explicit: false, implicit: true, evidence: "createCachedContent 400 on the paid key 2026-10-16" }
-    reasoning_efforts: [low, medium, high]
-    sampling: stochastic
-    status: active
-    providers:
-      - { provider: gemini, lane: gemini_direct, model_id: "gemini-4-argon", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, health: { status: available, checked_at: 2026-10-16, evidence: "PAID key (GEMINI_API_KEY_PAID == GEMINI_PERSONAL_API_KEY): generateContent 200, modelVersion gemini-4-argon, 2.2s for a 45-token prompt; gemini-cli 0.46.0 -m gemini-4-argon 'ok' with the paid key exported. FREE key GEMINI_API_KEY 429 free_tier limit 0: callers must send the paid key (the row cannot express the key; same caveat as gemini-3.1-pro-preview)." } }
 
   gemini-3.1-flash-lite:
     family: google
@@ -1839,17 +944,7 @@ models:
     selection_posture: escalation_or_explicit_itt_advanced_sol_contract
     providers:
       - provider: codex
-        lane: codex_subscription_primary
-        model_id: "gpt-6-astra"
-        cost_tier: premium
-        allowance: billed
-        enabled: true
-        priority: 1
-        account_relationship: personal
-        health: { status: available, checked_at: 2026-09-09, evidence: "Codex CLI 0.153.0+ official availability; local 0.153.4 measured" }
-        write_capability: codex_sandbox
-      - provider: codex
-        lane: codex_subscription_secondary
+        lane: codex_subscription
         model_id: "gpt-6-astra"
         cost_tier: premium
         allowance: billed
@@ -1862,7 +957,7 @@ models:
   gpt-6-sol:
     family: openai
     class: codex
-    descriptor: "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA serves GPT-6.1 Sol (not GPT-6 Sol) from 2026-10-16: see the gpt-6.1-sol entry. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'."
+    descriptor: "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'."
     scores: { cost: 4, intelligence: 9, taste: 8, speed: 5 }
     when_to_use: [debug-escalation, deep-reasoning, agentic-coding, architecture, novel-algorithm-design, raw_strength]
     tools: [functions, web-search, file-search, computer-use]
@@ -1875,8 +970,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
 
   # Promoted 2026-09-30 by Nick (verbatim, /chat): "I did use 6.1-sol in Codex directly to create
   # the hand-off, so accept now as approved ... officially supersedes gpt-6-sol in our registry".
@@ -1886,10 +980,9 @@ models:
   gpt-6.1-sol:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA ccx ALSO serves gpt-6.1-sol as of 2026-10-16 (bare id; Nick: replaces ICA gpt-5.6-sol), see the ICA provider row: tool-less review/adjudication/critique lane, same economics as the old ICA Sol."
+    descriptor: "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA does not serve GPT-6/6.1."
     scores: { cost: 4, intelligence: 9, taste: 8, speed: 5 }   # inherited from gpt-6-sol; not re-measured
     when_to_use: [debug-escalation, deep-reasoning, agentic-coding, architecture, novel-algorithm-design, raw_strength, hard-code-review, cross-family-lens]
-    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-6.1-sol
     tools: [functions, web-search, file-search, computer-use]
     related_skills: [codex]
     max_context: 500000  # Nick-reported 500k context option, 2026-10-13; provider/runtime confirmation remains pending (node_01M4VF0Z6W7MJ9W5AKNCCH0BJB).
@@ -1900,26 +993,14 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
-      # ICA ccx lane, added 2026-10-16 (Nick: gpt-6.1-sol replaces ICA gpt-5.6-sol; same economics as that row). Probed the
-      # same day: listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions AND /v1/responses with the BARE id;
-      # `gpt-6.1-sol-dzus` 403 (dzus retired). Lane/tool_mode/capability_gap are INHERITED from the gpt-5.6-sol ICA row:
-      # tools and reasoning were mutually exclusive on 5.6 and that is NOT re-measured for 6.1, so tool_mode:"none"
-      # keeps this instance out of any tool-requiring request (resolver TOOL_RESTRICTED gate) until a probe that
-      # asserts reasoning_tokens>0 WITH a real tool call says otherwise. Claude Code through the ica-gpt shim fails
-      # with 400 "messages: empty array" for gpt-6 ids (control gpt-5.6-luna fails identically: a pre-existing shim
-      # defect), so do NOT claim the Claude-Code-via-shim path works; use chat-completions / responses / Codex.
-      # max_context deliberately omitted (the 600k ceiling was measured for 5.6 only). Scores inherited, pending evaluation.
-      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tool_mode: "none", capability_gap: "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)", health: { status: available, checked_at: 2026-10-16, evidence: "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403" } }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
 
   gpt-6-luna:
     family: openai
     class: codex
-    descriptor: "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA ccx ALSO serves gpt-6-luna as of 2026-10-16 (bare id; free/unlimited per Nick; replaces ICA gpt-5.6-luna): see the ICA provider row."
+    descriptor: "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA does not serve GPT-6."
     scores: { cost: 7, intelligence: 8, taste: 7, speed: 9 }
     when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
-    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-6-luna
     tools: [functions, web-search, file-search, computer-use]
     related_skills: [codex]
     max_context: 1050000
@@ -1930,19 +1011,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
-      # ICA ccx lane, added 2026-10-16 (Nick: gpt-6-luna replaces ICA gpt-5.6-luna; "free/unlimited just like the prior
-      # instances"). Probed the same day: listed in GET /v1/models; 200 on /v1/messages, /v1/chat/completions AND
-      # /v1/responses with the BARE id; `gpt-6-luna-dzus` 403 (dzus retired). Lane = the Codex-over-local-Responses-shim
-      # lane the old gpt-5.6-luna-ica row uses (`~/ica-codex.sh`), the path Nick named as working. Claude Code through the
-      # ica-gpt shim fails with 400 "messages: empty array" for gpt-6 ids (control gpt-5.6-luna fails identically: a
-      # pre-existing shim defect): not claimed to work. The multi-turn agentic tool loop through ica-codex.sh is NOT
-      # re-verified for gpt-6-luna; the 5.6 caveat (reasoning_effort dropped on tool turns) is assumed to carry over.
-      # Priority 2 keeps the Codex-subscription row the unqualified default. cost_score is the old luna-ica value
-      # (inherited, pending evaluation). A model_id is only unique per entry, so this does not collide with the
-      # legacy `gpt-5.6-luna-ica` entry below.
-      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-6-luna", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 8, health: { status: available, checked_at: 2026-10-16, evidence: "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403; free/unlimited per Nick 2026-10-16" } }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-6-luna", cost_tier: standard, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox }
 
   gpt-5.6-sol:
     family: openai
@@ -1957,9 +1026,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
-      # LEGACY FALLBACK 2026-10-16: still served (200), but ICA gpt-6.1-sol (row under the gpt-6.1-sol entry) now replaces it as the ICA Sol.
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
       # ICA ccx lane — measured 2026-08-26, re-probed 2026-08-27 (node_01M0Z7JP9YT7W15X94Z843AM9Y,
       # won't-wire-direct-tools decision recorded there). SERVABLE (all 3 CCx keys, bare id,
       # 600,007 prompt tokens) but tools and reasoning are mutually exclusive there on BOTH
@@ -2003,8 +1070,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-terra", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.6-luna:
     family: openai
@@ -2019,8 +1085,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.6-luna", cost_tier: standard, allowance: billed, enabled: false, priority: 1, write_capability: codex_sandbox }
 
   # 2026-09-24 (node_01M3AA4SX9F7E8Q59QZ1KJHF8S): these two ICA-lane entries were keyed
   # `gpt-5.6-terra-dzus` / `gpt-5.6-luna-dzus` with the beta-only `-dzus` model ids. The beta keys
@@ -2031,7 +1096,7 @@ models:
   gpt-5.6-terra-ica:
     family: openai
     class: codex
-    descriptor: "NO GPT-6 REPLACEMENT (2026-10-16): this is the remaining 5.6-line ICA id and was still served (200) on 2026-10-16. OpenAI GPT-5.6 Terra via the ICA ccx gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable."
+    descriptor: "OpenAI GPT-5.6 Terra via the ICA ccx gateway (free-to-us shared pool) as an agentic Codex lane — same model as gpt-5.6-terra but $0 to the metered budget. ICA can't serve it on the /responses API Codex speaks (Azure api-version-gated), so the router emits `~/ica-codex.sh exec … -m gpt-5.6-terra …`, which auto-starts a local Responses→ChatCompletions shim (agentic_meta_dev/infra/ica-codex-shim/) and drives codex against it. Verified agentic end-to-end (file edits, multi-turn tool loop) 2026-07-29. CAVEAT: reasoning_effort is dropped on tool turns (ICA can't do reasoning+tools on the chat wire) → effort defaults server-side; escalate to metered codex/gpt-5.6-terra or -sol when that matters. NOT genuinely-free (shared_token_pool) so it won't jump free-first chains; enabled + explicit-selectable."
     scores: { cost: 8, intelligence: 8, taste: 7, speed: 5 }   # 1-10, higher=better; cost = real spend (free-to-us shared pool)
     when_to_use: [agentic-coding, code-review, ac-validation, implementation, second-opinion, image-generation, raster-asset]
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-terra-ica
@@ -2046,7 +1111,7 @@ models:
   gpt-5.6-luna-ica:
     family: openai
     class: codex
-    descriptor: "LEGACY FALLBACK as of 2026-10-16 (still served, 200): ICA gpt-6-luna now replaces this as the ICA free Luna (see the gpt-6-luna entry's ICA row). OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable."
+    descriptor: "OpenAI GPT-5.6 Luna via the ICA ccx gateway (free-to-us) as an agentic Codex lane — the cheaper/faster tier. Same routing as gpt-5.6-terra-ica (via `~/ica-codex.sh` + the local Responses shim, agentic_meta_dev/infra/ica-codex-shim/). Verified 2026-07-29; same reasoning_effort-dropped-on-tool-turns caveat. Prefer for lighter review / mechanical edits / cheap second opinions where the free lane is worth the shim overhead. NOT genuinely-free (shared_token_pool); enabled + explicit-selectable."
     scores: { cost: 8, intelligence: 7, taste: 6, speed: 6 }
     when_to_use: [code-review, ac-validation, mechanical-tasks, second-opinion, exploration]
     playbook_ref: model-playbook/routes/openai-gpt.md#gpt-5.6-luna-ica
@@ -2074,8 +1139,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   gpt-5.5-pro:
     family: openai
@@ -2091,8 +1155,7 @@ models:
     sampling: deterministic
     status: active
     providers:
-      - { provider: codex, lane: codex_subscription_primary, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
-      - { provider: codex, lane: codex_subscription_secondary, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
+      - { provider: codex, lane: codex_subscription, model_id: "gpt-5.5-pro", cost_tier: premium, allowance: billed, enabled: true, priority: 1, write_capability: codex_sandbox }
 
   # ── ICA ccx-only, newly discovered 2026-08-26 — scaffolded per the header's ─────
   # "ADDING A NEW MODEL" convention: registered so agents know they exist, every
