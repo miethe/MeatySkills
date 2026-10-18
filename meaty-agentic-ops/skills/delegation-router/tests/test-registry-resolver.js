@@ -160,9 +160,11 @@ describe('Codex invocation contract', () => {
       model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'standard',
     });
     const template = record.invocation_template;
+    const identity = record.identity_ref || process.env.AOS_CODEX_IDENTITY || 'codex_secondary';
+    assert.ok(record.identity_ref, 'Codex identity must be explicit on the RoutingRecord');
 
     for (const fragment of [
-      'timeout 600 aos-codex-exec --identity codex_secondary exec',
+      `timeout 600 aos-codex-exec --identity ${identity} exec`,
       '--ignore-user-config',
       '--sandbox read-only',
       '--skip-git-repo-check',
@@ -180,9 +182,11 @@ describe('Codex invocation contract', () => {
     const record = resolveWithRegistry(registryWithCodex(), {
       model: 'gpt-5.6-terra', provider: 'codex', task_class: 'ac-validation', effort: 'high',
     });
+    const identity = record.identity_ref || process.env.AOS_CODEX_IDENTITY || 'codex_secondary';
+    assert.ok(record.identity_ref, 'Codex identity must be explicit on the RoutingRecord');
 
     assert.ok(
-      record.invocation_template.startsWith('{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 aos-codex-exec --identity codex_secondary exec'),
+      record.invocation_template.startsWith(`{repo_root}/.claude/skills/codex/scripts/codex-run.sh --task-class write -- timeout 600 aos-codex-exec --identity ${identity} exec`),
       `write lane must use codex-run.sh: ${record.invocation_template}`
     );
     assert.ok(record.invocation_template.includes('--sandbox workspace-write'));
@@ -504,23 +508,23 @@ describe('(g) resume_active determinism filter excludes nondeterministic provide
 
 describe('Smoke — default path loads the real model-registry (3-tier lookup)', () => {
   test('exploration on real registry resolves to ICA free haiku (global canonical tier)', () => {
-    const record = resolve({ model: 'haiku', task_class: 'exploration', effort: 'low' });
+    const record = resolve({ model: 'claude-haiku-5-5', task_class: 'exploration', effort: 'low' }); // v3: registry model ids, not legacy aliases
     assert.strictEqual(record.chosen_plugin_id, 'ica',
       `real-registry free-first exploration should pick ICA; got ${record.chosen_plugin_id}`);
   });
 
   test('orchestration on real registry forces claude (MUST-stay)', () => {
-    const record = resolve({ model: 'opus', provider: 'ica', task_class: 'orchestration' });
+    const record = resolve({ model: 'claude-opus-5-5', provider: 'ica', task_class: 'orchestration' });
     assert.strictEqual(record.chosen_plugin_id, 'claude');
   });
 
-  test('implementation on real registry → claude sonnet (ICA sonnet opt-in only)', () => {
-    const record = resolve({ model: 'sonnet', task_class: 'implementation' });
+  test('implementation on real registry, explicit claude-sonnet-5-5 → claude (ICA sonnet opt-in only)', () => {
+    const record = resolve({ model: 'claude-sonnet-5-5', task_class: 'implementation' });
     assert.strictEqual(record.chosen_plugin_id, 'claude');
   });
 
   test('real registry: every RoutingRecord field present', () => {
-    const record = resolve({ model: 'haiku', task_class: 'exploration' });
+    const record = resolve({ model: 'claude-haiku-5-5', task_class: 'exploration' });
     const REQUIRED = ['chosen_plugin_id', 'model', 'effort', 'agent_type_id', 'invocation_template',
       'scope_flags', 'stage', 'validation_contract', 'continuity_mode', 'fallback_chain', 'reason'];
     for (const f of REQUIRED) {

@@ -13,8 +13,8 @@
   },
   "taxonomy": {
     "taxonomy_id": "aos.routing.task_class",
-    "taxonomy_version": "1.3.0",
-    "taxonomy_digest": "sha256:2e5d00e8ce42b48806b3ffb031d9ad161302c77d264749397d3e568a3df2e26a"
+    "taxonomy_version": "1.4.0",
+    "taxonomy_digest": "sha256:c3cf0f71edd6058195acece806cb1e8bc7d6eefc0550ec3cebe2f62abc63b120"
   },
   "accepted_producers": {
     "ccdash": {

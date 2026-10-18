@@ -70,6 +70,12 @@ source = "model-registry.generated.json"
 target = ".claude/config/model-registry.generated.json"
 overwrite = true
 
+[[ops]]
+op_class = 1                       # FILE_COPY
+source = "routing-table.generated.json"
+target = ".claude/config/routing-table.generated.json"
+overwrite = true
+
 # --- Grounded-evidence layer, co-located with the registry by design ---
 [[ops]]
 op_class = 1                       # FILE_COPY

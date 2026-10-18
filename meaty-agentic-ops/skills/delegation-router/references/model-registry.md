@@ -1,5 +1,32 @@
 # Reading & Extending the Model Registry
 
+## Registry v3
+
+The v3 source is `model-registry.yaml` with `version: 3`. Class defaults are the source of model
+preference: `task_class_defaults.<class>.holders` contains bare model ids, and
+`routing_policy.<class>.chain` is generated from those holders. Provider rows connect model ids to
+lanes; lane choice follows the top-level `lane_order`.
+
+Every lane declares `attributes` for `compute_custody`, `retention`, `jurisdiction`,
+`account_relationship`, `metering`, and `payer`, plus `harness_capabilities`. A class minimum is
+either a lane allowlist or an attribute predicate. `requires_capabilities` further filters lanes.
+Unknown attribute values fail closed for disclosure or authority absolutes and remain open for
+negotiable minimum reasons.
+
+`resolve-cli.js resolve --task-class <class> [--model <model>] [--capacity-file <json>] --json`
+emits model and lane decisions and an ordered fallback chain. A class `bar` applies its weighted
+`quality` score to each holder: below-bar models are skipped as `below_bar`, unscored or
+`UNMEASURED` models as `unmeasured_bar`, and later eligible models after a selection as
+`not_reached`. Decisions record each holder's `q` and `bar`. Missing capacity is `unmeasured`;
+refused/unavailable lanes are excluded. Codex identities come from each chosen lane's `identity_ref`.
+`resolve-cli.js table --json` emits the static class × holder × lane table with per-holder `q` and
+`bar`, without capacity. The builder rejects holders without any enabled, capability-compatible lane.
+It writes `routing-table.generated.json`, and `check-registry-fresh.py` checks both generated artifacts.
+
+V3 `RoutingRecord` carries `model_decision`, `lane_decision`, `floor`, `floor_breached`, and
+`registry_revision`. The fallback chain stops at `fallback.floor_model`; exhausted candidates
+produce a non-zero CLI result with `floor_breached: true`.
+
 How to read `model-registry.yaml` and how to register a new model on release. This is the
 agent-facing companion to the registry.
 
@@ -200,7 +227,7 @@ never assumed**:
 
 Free-first routing applies **only** to `allowance: unlimited` instances. ICA Sonnet/Opus
 (`shared_token_pool`) stay opt-in — never an always-on free route. A model can be free on one
-provider and billed on another (e.g. `claude-haiku-4-5` is `unlimited` on ICA, `billed` on Claude).
+provider and billed on another (e.g. `claude-haiku-5-5` is `unlimited` on ICA since 2026-10-16, `billed` on Claude).
 
 ## Scores block — advisory scorecard metadata
 
@@ -248,12 +275,11 @@ both.** The authoritative editorial decision lives in MODEL-ROUTING §1.5; the r
 machine-readable twin. The operative selection heuristic: pick the highest-`cost` model that clears
 the task's `intelligence`/`taste` bar.
 
-### Resolver caveat — v3 does not read `scores:` yet
+### Resolver quality bar
 
-The **v3 resolver does NOT read `scores:`**. Chain order, `priority`, `enabled` health gating, and
-capability-match (`when_to_use`) drive v3 resolution; `scores:` is advisory metadata for agents
-making their own delegation decisions and a reserved input for a future resolver upgrade. Do not
-rely on `scores:` influencing routing outcomes until a CHANGELOG entry confirms the upgrade.
+The v3 resolver uses the class `quality` weights, each model's `scores`, and the class `bar` before
+selecting a holder. Score axes are 1–10, with higher meaning better; `UNMEASURED` is not a numeric
+score. If a class has no `bar`, scores are reported when measurable but do not gate selection.
 
 ## Adding a new model on release
 
@@ -305,9 +331,11 @@ which copies the YAML to `~/.claude/config/` and regenerates `model-registry.gen
 
 ## Explicit personal Codex subscription accounts
 
-`codex_secondary` is the agentic default. `codex_primary` is an equally eligible explicit
-alternative. `resolve({... identity_ref: 'codex_primary'})` binds the selected account in the
-RoutingRecord and invocation; an omitted identity uses Secondary (or the explicit per-dispatch
+`codex_primary` is the agentic default (Nick, 2026-10-16: `codex_secondary` is downgraded until
+2026-11-12; agentic_meta_dev PR #2466 made Primary the runtime default). `codex_secondary` stays
+equally eligible as an explicit normal routing decision once resubscribed.
+`resolve({... identity_ref: 'codex_secondary'})` binds the selected account in the
+RoutingRecord and invocation; an omitted identity uses Primary (or the explicit per-dispatch
 `AOS_CODEX_IDENTITY`). Invoke through `aos-codex-exec`, not an unbound stock `codex exec`.
 Both account lanes belong to `personal_subscription`, with the same allowed-work, privacy,
 permissions and approval policy as personal Claude Code Primary and claude1x. Model capabilities,

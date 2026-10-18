@@ -15,14 +15,53 @@ import yaml  # noqa: E402
 
 registry = yaml.safe_load((ROOT / "model-registry.yaml").read_text())
 
-# Nick decision 2026-09-25: Codex subscription chains use GPT-6 Luna;
-# the separate ICA GPT-5.6 image fallback remains available.
+# V3 holders are model ids only. Nick decision 2026-09-25: the Codex subscription
+# holder remains GPT-6 Luna; the separate ICA GPT-5.6 image fallback remains selectable.
 for task_class in ("second_opinion", "code_review", "image_generation"):
-    assert registry["routing_policy"][task_class]["chain"][0] == "codex/gpt-6-luna"
-assert "ica/gpt-5.6-terra" in registry["routing_policy"]["image_generation"]["chain"]
+    assert registry["routing_policy"][task_class]["chain"][0] == "gpt-6-luna"
+    assert registry["routing_policy"][task_class]["chain"] == registry["task_class_defaults"][task_class]["holders"]
+    assert all("/" not in item for item in registry["routing_policy"][task_class]["chain"])
+assert "gpt-5.6-terra" in registry["routing_policy"]["image_generation"]["chain"]
 
-# Negative control: the committed registry declares every required fact.
-assert validate_registry(registry, "negative-control") == []
+# Negative control: the live registry passes every v3 builder check (journal_reflect's
+# absolute minimum is expressed as a compute_custody predicate since 2026-10-16).
+valid = copy.deepcopy(registry)
+errors = validate_registry(valid, "negative-control")
+assert errors == [], errors
+assert "task_class_sovereignty" not in registry
+assert registry["task_class_defaults"]["journal_reflect"]["minimum"]["reason"] == "disclosure_absolute"
+
+# Planted positive: a legacy min_rung minimum is refused by name.
+broken = copy.deepcopy(valid)
+broken["task_class_defaults"]["journal_reflect"]["minimum"] = {"min_rung": "local", "reason": "egress_absolute"}
+errors = validate_registry(broken, "legacy-minimum-control")
+assert any("min_rung" in error for error in errors), errors
+assert any("reason must be one of" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
+broken["task_class_defaults"]["implementation"]["holders"][0] = "codex/gpt-6-luna"
+errors = validate_registry(broken, "planted-positive")
+assert any("provider/model value" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
+broken["task_class_defaults"]["exploration"]["holders"].append("unroutable-model")
+errors = validate_registry(broken, "holder-unroutable-control")
+assert any("holder_unroutable" in error and "unroutable-model" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
+broken["lanes"]["claude_subscription"]["attributes"].pop("retention")
+errors = validate_registry(broken, "planted-positive")
+assert any("lanes.claude_subscription missing attributes" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
+broken["lane_order"].append(broken["lane_order"][0])
+errors = validate_registry(broken, "planted-positive")
+assert any("lane_order must not contain duplicate" in error for error in errors), errors
+
+broken = copy.deepcopy(valid)
+broken["models"]["claude-sonnet-5-5"]["providers"][0]["lane"] = "codex_subscription_primary"
+errors = validate_registry(broken, "planted-positive")
+assert any("does not match lane" in error for error in errors), errors
 
 # Spine reconciliation (node_01M3F4F5G93P21P1WAH565MAYQ, 2026-09-27): agentic_meta_dev CLAUDE.md
 # declares Opus 5.5 as the base spine as of 2026-09-22. The two MUST-stay chains (orchestration,
@@ -31,9 +70,9 @@ assert validate_registry(registry, "negative-control") == []
 # doctrine moved to Opus 5.5 but these chains still routed to claude-opus-5.
 for task_class in ("orchestration", "mode_d"):
     chain = registry["routing_policy"][task_class]["chain"]
-    assert chain[0] == "claude/claude-opus-5-5", \
+    assert chain[0] == "claude-opus-5-5", \
         f"{task_class} must pin the Opus 5.5 spine first, got {chain}"
-    assert "claude/claude-opus-5" in chain, \
+    assert "claude-opus-5" in chain, \
         f"{task_class} must keep Opus 5 selectable as a fallback chain entry, got {chain}"
 
 # Sonnet 5 pricing (node_01M3HW1ECPSXFCREDCKC6R8FE4, 2026-09-27): Anthropic made the $2/$10
@@ -50,13 +89,13 @@ assert sonnet5_pricing["output_per_mtok_usd"] == 10, sonnet5_pricing
 # heavy) must start on gpt-6.1-sol (gpt-6-sol fallback, superseded 2026-09-30) — neither may resolve through `implementation`/`code_review`
 # defaulting to Sonnet 5.5. This is the negative control that would have caught a blanket
 # "Sonnet 5.5 everywhere" widening.
-assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude/claude-opus-5-5"
-assert registry["routing_policy"]["raw_strength"]["chain"][:2] == ["codex/gpt-6.1-sol", "codex/gpt-6-sol"]
+assert registry["routing_policy"]["design_judgment"]["chain"][0] == "claude-opus-5-5"
+assert registry["routing_policy"]["raw_strength"]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5", "gpt-6-sol"]
 for task_class in ("implementation", "code_review"):
     chain = registry["routing_policy"][task_class]["chain"]
-    assert "claude/claude-opus-5-5" not in chain, \
+    assert "claude-opus-5-5" not in chain, \
         f"{task_class} must not pin the design_judgment model directly, got {chain}"
-    assert "codex/gpt-6.1-sol" not in chain and "codex/gpt-6-sol" not in chain, \
+    assert "gpt-6.1-sol" not in chain and "gpt-6-sol" not in chain, \
         f"{task_class} must not pin the raw_strength model directly, got {chain}"
 
 # Sonnet 5.5's scorecard Intelligence was raised 8->9 (2026-09-28 evening) on vendor-benchmark +
@@ -80,23 +119,58 @@ assert opus55_ica["enabled"] is True, opus55_ica
 assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
 
 # Haiku 5.5 (2026-10-07, Nick): default native cheap tier. Negative controls that would have caught
-# (a) a native leg still pinned to the superseded Haiku 4.5, (b) an ICA row invented for a model the
-# gateway 403s, (c) the 4.5 ICA free row being dropped on an unconfirmed "now paid" report, and
-# (d) the cheap tier's Intelligence score drifting up past what the bench supports.
+# (a) a native leg still pinned to the superseded Haiku 4.5, (b) the 4.5 ICA row being silently
+# re-labelled free on the 2026-10-16 refresh (it stays PAID per Nick 2026-10-07), and
+# (c) the cheap tier's Intelligence score drifting up past what the bench supports.
+# 2026-10-16 (Nick): ICA now serves claude-haiku-5-5 (free/unlimited); the earlier "(b) no ICA row
+# for a model the gateway 403s" control is retired because the gateway no longer 403s it.
 h55 = registry["models"]["claude-haiku-5-5"]
 assert h55["max_context"] == 1000000 and h55["status"] == "active", h55
-assert [p["provider"] for p in h55["providers"]] == ["claude"], h55["providers"]
+assert [p["lane"] for p in h55["providers"]] == ["claude_subscription", "claude_subscription_1x", "ica_gateway_messages"], h55["providers"]
+h55_ica = next(p for p in h55["providers"] if p["provider"] == "ica")
+assert h55_ica["enabled"] is True and h55_ica["allowance"] == "unlimited" and h55_ica["cost_tier"] == "free", h55_ica
+assert h55_ica["model_id"] == "claude-haiku-5-5[1m]", h55_ica  # ica-claude.sh id; raw-HTTP callers send the bare id
+assert h55_ica["priority"] > next(p for p in h55["providers"] if p["provider"] == "claude")["priority"], h55_ica  # subscription stays the unqualified default
 for task_class in ("exploration", "documentation", "mechanical"):
     chain = registry["routing_policy"][task_class]["chain"]
-    assert "claude/claude-haiku-5-5" in chain, (task_class, chain)
-    assert "claude/claude-haiku-4-5" not in chain, (task_class, chain)
-    assert chain[0] == "ica/gpt-5.6-luna", (task_class, chain)
-    assert "ica/claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
-assert "ica/claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
+    assert "claude-haiku-5-5" in chain, (task_class, chain)
+    assert "claude-haiku-4-5" not in chain, (task_class, chain)
+    expected = ["claude-haiku-5-5", "gpt-6-luna"] if task_class == "exploration" else ["gpt-6-luna", "claude-haiku-5-5"]
+    assert chain == expected, (task_class, chain)  # v2 holder order; refreshed Luna replaces legacy Luna
+    assert "claude-haiku-5-5[1m]" not in chain and "gpt-5.6-luna" not in chain, (task_class, chain)
+    assert "claude-haiku-4-5" not in chain, f"ICA Haiku 4.5 counts as PAID (Nick 2026-10-07); {task_class} must not lead with it: {chain}"
+assert "claude-haiku-4-5" not in registry["routing_policy"]["second_opinion"]["chain"]
 h45_ica = next(p for p in registry["models"]["claude-haiku-4-5"]["providers"] if p["provider"] == "ica")
 assert h45_ica["enabled"] is True and h45_ica["allowance"] == "shared_token_pool" and h45_ica["cost_tier"] == "standard", h45_ica  # paid per Nick 2026-10-07
 assert registry["models"]["claude-haiku-4-5"]["scores"]["cost"] == 7, registry["models"]["claude-haiku-4-5"]["scores"]
 assert h55["scores"]["intelligence"] <= registry["models"]["claude-sonnet-5-5"]["scores"]["intelligence"] - 2, h55["scores"]
+
+# ICA refresh (2026-10-16, Nick): claude-sonnet-5-5, gpt-6-luna and gpt-6.1-sol replace their
+# predecessors as the ICA defaults; the predecessors stay as still-served legacy fallbacks, and the
+# ICA Opus rows the gateway now 403s stay disabled with unavailable health.
+s55_ica = next(p for p in registry["models"]["claude-sonnet-5-5"]["providers"] if p["provider"] == "ica")
+assert s55_ica["enabled"] is True and s55_ica["allowance"] == "shared_token_pool", s55_ica  # shared ccx pool: NOT free
+assert s55_ica["model_id"] == "claude-sonnet-5-5[1m]", s55_ica
+s5_ica = next(p for p in registry["models"]["claude-sonnet-5"]["providers"] if p["provider"] == "ica")
+assert s5_ica["enabled"] is True, s5_ica  # legacy fallback is still served
+luna6_ica = next(p for p in registry["models"]["gpt-6-luna"]["providers"] if p["provider"] == "ica")
+assert luna6_ica["enabled"] is True and luna6_ica["allowance"] == "unlimited" and luna6_ica["model_id"] == "gpt-6-luna", luna6_ica
+assert "dzus" not in luna6_ica["model_id"], luna6_ica  # dzus ids are retired (403)
+sol61_ica = next(p for p in registry["models"]["gpt-6.1-sol"]["providers"] if p["provider"] == "ica")
+assert sol61_ica["enabled"] is True and sol61_ica["allowance"] == "shared_token_pool" and sol61_ica["model_id"] == "gpt-6.1-sol", sol61_ica
+assert sol61_ica["tool_mode"] == "none", sol61_ica  # tools+reasoning interaction not re-measured for 6.1: stay tool-less
+assert registry["routing_policy"]["review"]["chain"] == ["gpt-6.1-sol", "claude-sonnet-5-5", "claude-opus-5-5"]
+for task_class in ("adjudication", "critique"):
+    assert registry["routing_policy"][task_class]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5"], task_class
+for legacy in ("gpt-5.6-luna-ica", "gpt-5.6-terra-ica"):
+    legacy_ica = next(p for p in registry["models"][legacy]["providers"] if p["provider"] == "ica")
+    assert legacy_ica["enabled"] is True, (legacy, legacy_ica)  # still served 2026-10-16; terra has no GPT-6 replacement
+for dead in ("claude-opus-5", "claude-opus-4-8", "claude-opus-4-6"):
+    dead_ica = next(p for p in registry["models"][dead]["providers"] if p["provider"] == "ica")
+    assert dead_ica["enabled"] is False and dead_ica["health"]["status"] == "unavailable", (dead, dead_ica)
+# design_judgment / raw_strength chains are set by evaluation; the refresh must not touch them.
+assert registry["routing_policy"]["design_judgment"]["chain"] == ["claude-opus-5-5", "gpt-6.1-sol", "claude-opus-5"]
+assert registry["routing_policy"]["raw_strength"]["chain"] == ["gpt-6.1-sol", "claude-opus-5-5", "gpt-6-sol"]
 
 # Planted positive: an external row with an undeclared retention fact must fail.
 broken = copy.deepcopy(registry)

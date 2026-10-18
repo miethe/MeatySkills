@@ -1,5 +1,20 @@
 # Changelog — model-playbook
 
+## 1.4 — 2026-10-16
+
+- `routes/google-gemini.md` gains a `gemini-4-argon` section: paid-key-only native lane (free key is
+  limit 0), not served on ICA, 32,768 API output cap vs 65,536 in Google's docs, launch pricing with
+  the 2026-12-01 step, and no explicit caching. Documents routing facts only
+  (`node_01M52TKCJ4SRT9JAWNXPNGD1D2`).
+
+## 1.3 — 2026-10-16
+
+- ICA refresh (Nick, 2026-10-16): `routes/ica-lanes.md` gains the refresh table and probe facts;
+  `routes/anthropic-claude.md` records the ICA lanes for `claude-sonnet-5-5[1m]` (default ICA Sonnet) and the free
+  `claude-haiku-5-5[1m]`; `routes/openai-gpt.md` gains `gpt-6-luna` and `gpt-6.1-sol` sections (ICA lanes) and marks
+  the 5.6 ICA ids legacy (Terra has no replacement); `SKILL.md` routing table lists the new keys. Documents routing
+  facts only; the Claude-Code-via-`ica-gpt`-shim defect is recorded, not fixed.
+
 ## 1.2 — 2026-10-03
 
 - Add the missing sibling changelog required by the skill authoring contract. Publish it as part of the complete artifact bundle so governed deployments carry it alongside all route files.

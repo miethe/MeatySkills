@@ -1,5 +1,86 @@
 # Changelog — delegation-router skill
 
+## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Code: v3 `resolve()` now stamps `context_class` and
+  `node_contract` on floor-breached records (it returned early and dropped them; audit passthrough
+  only, no routing effect); legacy task-class names (`second-opinion`, `mechanical-tasks`, hyphen
+  variants) resolve to their canonical `task_class_defaults` key via the vocabulary's declared
+  aliases, with the class's own minimum/holders unchanged; `resolve-cli` keeps exit 2 /
+  "--identity requires a Codex route" for a non-Codex route; the legacy non-v3 path defaults to
+  `codex_primary`. No protected class, minimum or absolute changed.
+- Docs: `codex_primary` is the agentic default (Nick, 2026-10-16: `codex_secondary` downgraded until
+  2026-11-12); Secondary is an explicit routing decision once resubscribed.
+- Tests updated to the v3 contract (registry model ids instead of `sonnet`/`opus`/`haiku` aliases,
+  canonical task classes, `identity_ref: null` off Codex, explicit non-holder models report
+  `floor_breached`); the previously failing `test-p3-dry-run.js` and `test-registry-resolver.js`
+  smoke cases are rewritten the same way.
+
+## 2026-10-16 — Merge development: gemini-4-argon (MeatySkills#96) folded into v3
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Merged `origin/development` (gemini-4-argon model row with
+  measured scores, `registry/providers/google.yaml` fact row, playbook route section). The row is
+  explicit-selectable only and in no `task_class_defaults` holder list; its `gemini_direct` lane row
+  already fits the v3 lane table. Conflicts in the v2-shape routing chains were resolved by keeping
+  the v3 structure; regenerated both JSON artifacts.
+
+## 2026-10-16 — M1 remainder: registry v3 evaluated data, routable holders, quality verdicts
+
+- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`.
+- Carried all 23 v2 task-class evaluations and holder rankings into v3 (`effort`, `bar`, quality
+  weights, margin, frontier, capability requirements, cross-family evidence and approval
+  provenance); provider prefixes are removed from model references. The ICA refresh replaces the
+  earlier Sol and Luna holders where applicable; implementation keeps its front-approved interim
+  Codex-first order pending Nick's ruling. SVG generation now starts with the approved
+  `claude-opus-5-5` holder and has no Claude-only capability requirement.
+- Builder rejects holders with no enabled capability-compatible lane and provider-prefixed model
+  references. Removed the `claude-haiku-5-5[1m]` placeholder and `gpt-5.6-luna` from exploration,
+  documentation and mechanical; removed `gemma-4-26b-a4b-it` from mechanical and second opinion
+  because history contains no model provider row to restore.
+- `gemini-3.5-flash` and `gemini-3.6-flash` native rows remain disabled: the 2026-09-09 evidence
+  says the then-key hit hard 429/limit:0, while PR #88 only probed `gemini-3.1-pro-preview` on the
+  paid key. `web_research` no longer requires `web_grounding`, allowing its enabled ICA holders.
+- Seven `must_stay_primary` classes explicitly pin `minimum.lanes: [claude_subscription]`;
+  `journal_reflect` is unchanged. Holder verdicts now distinguish `below_bar`, `unmeasured_bar`,
+  `not_reached`, and `chosen`; q/bar appear in decisions and the static routing table.
+- Updated `SPEC.md` and this reference; regenerated both JSON artifacts.
+
+## 2026-10-16 — WP M1: registry v3, model-only holders, two-step resolver, RoutingRecord v3
+
+- M1 plan: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q` (registry v3 and two-step resolver).
+- Added model-only `task_class_defaults` and generated `routing_policy`, lane attributes and
+  capabilities, ordered lane selection, capacity-file decisions, explicit Codex identity binding,
+  static routing-table output, and v3 RoutingRecord decision/floor/revision fields.
+- Added the v3 resolver and routing-table fixtures. On 2026-10-16, `journal_reflect`'s local
+  custody boundary was migrated to `predicate.compute_custody: [local]` with
+  `reason: disclosure_absolute`; the boundary and Nick's 2026-08-25 provenance are preserved.
+- Details and CLI contract: `SPEC.md` §1a and `references/model-registry.md` § Registry v3.
+
+## 2026-10-16 — ICA refresh: Haiku 5.5, Sonnet 5.5, GPT-6 Luna, GPT-6.1 Sol replace their predecessors
+
+- Nick (2026-10-16): "ICA has finally added more models! claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna,
+  gpt-6.1-sol. These should replace all the older models of the same names in the ICA registry.
+  Additionally, note that these new Haiku and Luna models are also free/unlimited just like the prior
+  instances." Probed the same day against the ccx gateway (key CCx3): all four listed in `GET /v1/models`;
+  raw `/v1/messages` bare ids 200 echoing the id (also `claude-opus-5-5`); `[1m]` forms of haiku-5-5 and
+  sonnet-5-5 also 200 raw; `ica-claude.sh` ok for haiku-5-5 / sonnet-5-5 bare and `[1m]` and opus-5-5 `[1m]`;
+  gpt-6-luna and gpt-6.1-sol 200 on `/v1/messages`, `/v1/chat/completions` and `/v1/responses` (bare only,
+  `-dzus` 403). Claude Code through the `ica-gpt` shim returns 400 `messages: empty array` for gpt-6 ids AND
+  the control `gpt-5.6-luna` (pre-existing shim defect; not claimed to work).
+- Registry: new ICA provider rows on `claude-haiku-5-5` (`claude-haiku-5-5[1m]`, free/unlimited, priority 2),
+  `claude-sonnet-5-5` (`claude-sonnet-5-5[1m]`, shared pool, the default ICA Sonnet), `gpt-6-luna`
+  (`ica_gateway_responses_shim`, free/unlimited) and `gpt-6.1-sol` (`ica_gateway_messages_shim`,
+  shared pool, `tool_mode: "none"` inherited and NOT re-measured for 6.1). Scores inherited from the nearest
+  sibling pending evaluation. Predecessors (`claude-haiku-4-5`, `claude-sonnet-5`, `gpt-5.6-luna`,
+  `gpt-5.6-sol`) stay enabled as still-served legacy fallbacks; `gpt-5.6-terra` has no replacement and stays.
+- Chains: `exploration` / `documentation` / `mechanical` now lead `ica/gpt-6-luna`, `ica/claude-haiku-5-5[1m]`,
+  then legacy `ica/gpt-5.6-luna`; `review` / `adjudication` / `critique` are `ica/gpt-6.1-sol` then
+  `ica/gpt-5.6-sol`. `design_judgment` and `raw_strength` are deliberately unchanged.
+- ICA Opus rows `claude-opus-5`, `-4-8`, `-4-6` (403 / absent from the catalog) stay `enabled: false` and now carry
+  `unavailable` health dated 2026-10-16; `claude-opus-5-5` stays enabled. `ica_catalog` updated for all of the above.
+- Open item: Haiku 4.5 on ICA stays PAID (Nick 2026-10-07); Nick's "free ... just like the prior instances" is
+  read as describing the new ids. Reconcile if he meant Haiku 4.5 is free again.
+
 ## 2026-10-03 — Correct Mode-D authority reference
 
 - Point the skill's Mode-D policy reference at `agentic_meta_dev/docs/rules/mode-d-enforcement.md`, the existing AOS authority. The obsolete `.claude/rules/` pointer did not resolve and blocked the consumer's commit gate. No routing, account, model, effort, permission, or node-contract behavior changes.
