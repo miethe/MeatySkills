@@ -13,6 +13,15 @@ validate_registry = builder.validate_registry
 
 import yaml  # noqa: E402
 
+# Duplicate keys must be rejected by the exact loader used by the JSON generator;
+# otherwise PyYAML silently applies last-wins and can hide a malformed registry.
+try:
+    builder.yaml.load("task_class_defaults:\n  example:\n    requires_capabilities: [claude_code_native]\n    requires_capabilities: []\n", Loader=builder.UniqueKeyLoader)
+except yaml.constructor.ConstructorError as exc:
+    assert "duplicate key 'requires_capabilities'" in str(exc), exc
+else:
+    raise AssertionError("registry generator loader accepted a duplicate requires_capabilities key")
+
 registry = yaml.safe_load((ROOT / "model-registry.yaml").read_text())
 
 # V3 holders are model ids only. Nick decision 2026-09-25: the Codex subscription
