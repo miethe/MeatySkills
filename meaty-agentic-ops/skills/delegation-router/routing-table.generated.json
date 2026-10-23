@@ -1,5 +1,5 @@
 {
-  "registry_revision": "3985fecf8ecb229b1fd3ed40118bc1ec0387d51a45296b7fc7586c9ad66fbf95",
+  "registry_revision": "2e9038659a85092b8034df8b025015ac5c2ae228490371f5281f6861e7be8864",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",

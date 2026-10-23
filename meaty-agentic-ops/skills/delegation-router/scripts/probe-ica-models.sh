@@ -35,6 +35,7 @@
 #   --registry PATH   model-registry.yaml to diff against. Default: ../model-registry.yaml.
 #   --base URL        Gateway base. Default: https://api.servicesessentials.ibm.com/v1 (ccx;
 #                     the beta gateway was retired 2026-09-22)
+#   --model ID        Probe only this wire id (repeatable, including negative controls).
 #   --json            Emit the drift result as JSON (for tooling) instead of the table.
 #   --no-diff         Just probe + print the live table; skip the registry diff.
 #
@@ -50,12 +51,14 @@ REGISTRY="${SCRIPT_DIR}/../model-registry.yaml"
 ICA_DOTENV="${HOME}/.dotfiles/ICA_CLAUDE"
 KEY=""
 KEY_BLOCK=""
+PROBE_IDS=()
 AS_JSON=0
 DO_DIFF=1
 
 # ── Args ─────────────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --model)     PROBE_IDS+=("$2"); shift 2 ;;
     --key)       KEY="$2"; shift 2 ;;
     --key-block) KEY_BLOCK="$2"; shift 2 ;;
     --registry)  REGISTRY="$2"; shift 2 ;;
@@ -89,11 +92,16 @@ if [[ -z "${KEY}" ]]; then
 fi
 
 # ── Fetch the live model list ───────────────────────────────────────────────────
-MODELS_JSON="$(curl -sf -H "Authorization: Bearer ${KEY}" "${BASE_URL}/models" 2>&1)" || {
+MODELS_JSON="$(curl --connect-timeout 10 --max-time 60 -sf -H "Authorization: Bearer ${KEY}" "${BASE_URL}/models" 2>&1)" || {
   echo "ERROR: could not reach ${BASE_URL}/models" >&2; echo "  ${MODELS_JSON}" >&2; exit 3
 }
 LIVE_IDS="$(echo "${MODELS_JSON}" | jq -r '.data[].id' 2>/dev/null | sort)"
 [[ -z "${LIVE_IDS}" ]] && { echo "ERROR: empty model list from gateway" >&2; exit 3; }
+
+if [[ ${#PROBE_IDS[@]} -gt 0 ]]; then
+  LIVE_IDS="$(printf '%s\n' "${PROBE_IDS[@]}" | sort -u)"
+  DO_DIFF=0  # A scoped probe is not a full catalog drift audit.
+fi
 
 # ── Probe each model with a UNIQUE nonce, no reasoning param ─────────────────────
 # One line per model:  "<id>\t<verdict>\t<detail>"  where verdict ∈ ok|broken
@@ -108,20 +116,29 @@ probe_all() {
     local resp="" attempt
     for attempt in 1 2; do
       local nonce="probe-${RANDOM}-${RANDOM}"
-      resp="$(curl -s -X POST "${BASE_URL}/chat/completions" \
+      resp="$(curl --connect-timeout 10 --max-time 60 -s -X POST "${BASE_URL}/chat/completions" \
         -H "Authorization: Bearer ${KEY}" -H "Content-Type: application/json" \
         -d "{\"model\":\"${ID}\",\"messages\":[{\"role\":\"user\",\"content\":\"reply with exactly: ${nonce}\"}],\"max_tokens\":32}" 2>/dev/null)"
       echo "${resp}" | grep -q '"choices"' && break
+      # Authorization refusals are terminal, never availability retries.
+      echo "${resp}" | grep -Eq 'E003|team_model_access_denied|not available for this API key' && break
     done
     printf '%s\t%s\n' "${ID}" "${resp}" \
-      | python3 -c '
-import sys,json
+      | PROBE_NONCE="${nonce}" python3 -c '
+import sys,json,os
 line=sys.stdin.readline().rstrip("\n")
 mid,_,raw=line.partition("\t")
 try: d=json.loads(raw)
 except Exception: print(f"{mid}\tbroken\tunparseable response"); sys.exit()
 if d.get("choices"):
-    print(f"{mid}\tok\t")
+    choice=d["choices"][0]
+    finish=choice.get("finish_reason")
+    actual=d.get("model")
+    content=(choice.get("message") or {}).get("content")
+    if content != os.environ["PROBE_NONCE"] or finish != "stop":
+        print(f"{mid}\tbroken\tnonce mismatch or incomplete text; finish={finish}")
+    else:
+        print(f"{mid}\tok\tmodel={actual}; finish=stop")
 else:
     e=d.get("error") or {}
     msg=e.get("message","") if isinstance(e,dict) else str(e)
@@ -174,9 +191,9 @@ def verdict_of(mid): return probe.get(strip1m(mid), ("broken",""))[0]  # probe b
 
 # Classify drift ([1m]-normalized). De-dupe by base id so `x` and `x[1m]` don't both list.
 new_models        = sorted({m for m in live if do_diff and m not in reg_base_ids})
-enabled_broken    = sorted({strip1m(m) for m,meta in reg_ica.items() if meta["enabled"] and verdict_of(m) != "ok"})
-disabled_working  = sorted({strip1m(m) for m,meta in reg_ica.items() if not meta["enabled"] and verdict_of(m) == "ok"})
-gone_from_gateway = sorted({strip1m(m) for m in reg_ica if strip1m(m) not in live})
+enabled_broken    = sorted({strip1m(m) for m,meta in reg_ica.items() if do_diff and meta["enabled"] and verdict_of(m) != "ok"})
+disabled_working  = sorted({strip1m(m) for m,meta in reg_ica.items() if do_diff and not meta["enabled"] and verdict_of(m) == "ok"})
+gone_from_gateway = sorted({strip1m(m) for m in reg_ica if do_diff and strip1m(m) not in live})
 
 if as_json:
     print(json.dumps({

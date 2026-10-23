@@ -1,0 +1,28 @@
+{
+  "base": "https://api.servicesessentials.ibm.com/v1",
+  "live_count": 4,
+  "probe": {
+    "claude-haiku-5-5": {
+      "verdict": "ok",
+      "detail": "model=claude-haiku-5-5; finish=stop"
+    },
+    "claude-sonnet-5-5": {
+      "verdict": "ok",
+      "detail": "model=claude-sonnet-5-5; finish=stop"
+    },
+    "gpt-6-luna": {
+      "verdict": "ok",
+      "detail": "model=gpt-6-luna; finish=stop"
+    },
+    "gpt-6.1-sol": {
+      "verdict": "ok",
+      "detail": "model=gpt-6.1-sol; finish=stop"
+    }
+  },
+  "drift": {
+    "new_models_not_in_registry": [],
+    "registry_enabled_but_broken": [],
+    "registry_disabled_but_working": [],
+    "registry_ica_id_gone_from_gateway": []
+  }
+}
