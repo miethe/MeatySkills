@@ -98,8 +98,9 @@ MODELS_JSON="$(curl --connect-timeout 10 --max-time 60 -sf -H "Authorization: Be
 LIVE_IDS="$(echo "${MODELS_JSON}" | jq -r '.data[].id' 2>/dev/null | sort)"
 [[ -z "${LIVE_IDS}" ]] && { echo "ERROR: empty model list from gateway" >&2; exit 3; }
 
+TARGET_IDS="${LIVE_IDS}"
 if [[ ${#PROBE_IDS[@]} -gt 0 ]]; then
-  LIVE_IDS="$(printf '%s\n' "${PROBE_IDS[@]}" | sort -u)"
+  TARGET_IDS="$(printf '%s\n' "${PROBE_IDS[@]}" | sort -u)"
   DO_DIFF=0  # A scoped probe is not a full catalog drift audit.
 fi
 
@@ -144,7 +145,7 @@ else:
     msg=e.get("message","") if isinstance(e,dict) else str(e)
     print(f"{mid}\tbroken\t{msg[:90].strip()}")
 '
-  done <<< "${LIVE_IDS}"
+  done <<< "${TARGET_IDS}"
 }
 
 PROBE_RESULT="$(probe_all)"

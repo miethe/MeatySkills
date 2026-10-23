@@ -198,3 +198,18 @@ assert sol61["status"] == "active", sol61["status"]
 assert sol61["providers"][0]["enabled"] is True and sol61["providers"][0]["model_id"] == "gpt-6.1-sol"
 assert sol61["providers"][0]["account_relationship"] == "personal"
 assert "LEGACY" in registry["models"]["gpt-6-sol"]["descriptor"]
+
+# Node sizing controls: malformed or widened automatic envelopes cannot render.
+for change, expected in [
+    (lambda r: r["capability_providers"]["image_generation"].update(task_class="unknown"), "unknown task class"),
+    (lambda r: r["envelope"].update(messiness_divisor=0), "messiness_divisor"),
+    (lambda r: r["envelope"]["cells"][0].update(source="measured", n=19), "n >= 20"),
+    (lambda r: r["envelope"]["cells"][0].update(sizes=["xl"]), "cannot automatically admit"),
+    (lambda r: r["envelope"]["cells"].append(copy.deepcopy(r["envelope"]["cells"][0])), "duplicate envelope cell"),
+    (lambda r: r["envelope"]["escalation_ladders"]["implementation"].append("gpt-6-astra"), "cannot infer advanced_sol"),
+]:
+    broken = copy.deepcopy(registry)
+    change(broken)
+    errors = validate_registry(broken, "needs-envelope-negative-control")
+    assert any(expected in error for error in errors), errors
+print("test-registry-builder.py: needs/envelope negative controls passed")

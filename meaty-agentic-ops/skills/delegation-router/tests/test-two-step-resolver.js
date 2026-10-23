@@ -86,7 +86,7 @@ assert.equal(unmeasuredRun.model_decision.holders[0].bar, 7);
 assert.equal(unmeasuredRun.model, 'claude-sonnet-5-5');
 useRegistry(registry);
 
-const explicit = resolve({ task_class: 'explicit_test', model: 'claude-sonnet-5-5', _registryPath: registryPath });
+const explicit = resolve({ preapproval_ref: 'req_test', pin_reason: 'explicit lane test', pin_expires: '2099-01-01', task_class: 'explicit_test', model: 'claude-sonnet-5-5', _registryPath: registryPath });
 assert.equal(explicit.lane, 'ica_gateway_messages');
 assert.equal(explicit.lane_decision.candidates[0].lane, 'ica_gateway_messages');
 

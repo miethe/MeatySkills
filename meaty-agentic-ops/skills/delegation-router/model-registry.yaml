@@ -1857,6 +1857,7 @@ models:
         write_capability: codex_sandbox
 
   gpt-6-sol:
+    superseded_by: gpt-6.1-sol
     family: openai
     class: codex
     descriptor: "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA serves GPT-6.1 Sol (not GPT-6 Sol) from 2026-10-16: see the gpt-6.1-sol entry. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'."
@@ -2269,3 +2270,43 @@ models:
 
 # RATIFIED by Nick 2026-10-13; MODEL-ROUTING §6d is the declaration.
 leg_time_budgets: {"status": "RATIFIED", "ratified_by": "Nick", "ratified_at": "2026-10-13", "effort_seconds": {"xs": 2700, "s": 2700, "m": 7200, "l": 14400}, "raw_strength_or_sol_multiplier": 1.5, "read_and_shape_500k_multiplier": 2, "legacy_seconds": 14400}
+
+# Node sizing v1, spec §§4-5: abstract capabilities select holders or constrain lanes.
+# No declaration here grants a harness; absent harness capabilities fail closed.
+capability_providers:
+  image_generation: { task_class: image_generation, lanes: [codex_subscription_primary], harness_capability: tools.image_generation }
+  svg_generation: { task_class: svg_generation }
+  browser_verification: { harness_capability: browser_verification }
+  ios_simulator: { harness_capability: ios_simulator }
+  estate_ssh: { harness_capability: estate_ssh }
+  network: { harness_capability: network }
+  long_context_500k: { min_context: 500000 }
+
+# Explicitly labelled priors, NOT measured AC-success horizons. Coarse size admissions
+# follow spec §5.2; an estimate, when supplied, additionally obeys p80 / divisor.
+# This oracle does not widen AUTONOMY-RELEASE: hop's xs/s default grant stays separate.
+envelope:
+  messiness_divisor: 2
+  health_max_age_hours: 168
+  escalation_ladders:
+    implementation: [gpt-6-luna, claude-sonnet-5-5, gpt-6.1-sol, claude-opus-5-5]
+    code_review: [gpt-6-luna, claude-sonnet-5-5, gpt-6.1-sol, claude-opus-5-5]
+    exploration: [claude-haiku-5-5, gpt-6-luna, claude-sonnet-5-5, gpt-6.1-sol, claude-opus-5-5]
+    documentation: [gpt-6-luna, claude-haiku-5-5, claude-sonnet-5-5, gpt-6.1-sol, claude-opus-5-5]
+    mechanical: [gpt-6-luna, claude-haiku-5-5, claude-sonnet-5-5, gpt-6.1-sol, claude-opus-5-5]
+  cells:
+    - {"model": "claude-haiku-5-5", "lane": "claude_subscription", "effort": "medium", "p80_horizon_minutes": 30, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry", "class_sizes": {"mechanical": ["xs", "s"]}}
+    - {"model": "claude-haiku-5-5", "lane": "claude_subscription_1x", "effort": "medium", "p80_horizon_minutes": 30, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry", "class_sizes": {"mechanical": ["xs", "s"]}}
+    - {"model": "claude-haiku-5-5", "lane": "ica_gateway_messages", "effort": "medium", "p80_horizon_minutes": 30, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "N10-ica-nonce-probe.json", "class_sizes": {"mechanical": ["xs", "s"]}}
+    - {"model": "gpt-6-luna", "lane": "codex_subscription_primary", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "gpt-6-luna", "lane": "codex_subscription_secondary", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "No fresh account-specific probe in this leg"}
+    - {"model": "gpt-6-luna", "lane": "ica_gateway_responses_shim", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "N10-ica-nonce-probe.json"}
+    - {"model": "claude-sonnet-5-5", "lane": "claude_subscription", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "claude-sonnet-5-5", "lane": "claude_subscription_1x", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "claude-sonnet-5-5", "lane": "ica_gateway_messages", "effort": "medium", "p80_horizon_minutes": 60, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "N10-ica-nonce-probe.json"}
+    - {"model": "gpt-6.1-sol", "lane": "codex_subscription_primary", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "gpt-6.1-sol", "lane": "codex_subscription_secondary", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "No fresh account-specific probe in this leg"}
+    - {"model": "gpt-6.1-sol", "lane": "ica_gateway_messages_shim", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "available", "health_checked_at": "2026-10-23", "health_evidence": "N10-ica-nonce-probe.json"}
+    - {"model": "claude-opus-5-5", "lane": "claude_subscription", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "claude-opus-5-5", "lane": "claude_subscription_1x", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "unknown", "health_checked_at": null, "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"}
+    - {"model": "claude-opus-5-5", "lane": "ica_gateway_messages", "effort": "medium", "p80_horizon_minutes": 180, "source": "prior", "n": 0, "date": "2026-10-23", "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope", "sizes": ["xs", "s", "m"], "health_status": "degraded", "health_checked_at": null, "health_evidence": "N10-ica-nonce-probe.json"}

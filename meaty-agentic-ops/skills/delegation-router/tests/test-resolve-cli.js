@@ -69,6 +69,10 @@ const GUS_REGISTRY = path.join(SCRATCH_DIR, 'registry.json');
  * Never throws on a non-zero exit — callers assert on `status` explicitly.
  */
 function runCli(args, env) {
+  const fs = require('fs');
+  const approvalPath = path.join(SCRATCH_DIR, 'pin-approval.json');
+  fs.writeFileSync(approvalPath, JSON.stringify({ preapproval_ref: 'req_cli_test', pin_reason: 'transport fixture', pin_expires: '2099-01-01' }));
+  if (args.includes('--model')) args = [...args, '--needs-file', approvalPath];
   try {
     const stdout = execFileSync(process.execPath, [CLI_PATH, ...args], {
       encoding: 'utf8',
