@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "3985fecf8ecb229b1fd3ed40118bc1ec0387d51a45296b7fc7586c9ad66fbf95",
+  "_yaml_sha256": "b2dec322bbe6ca077363ab992ba8b0efa3c92d32d8b00ccf5cece28fbb6a7f15",
   "version": 3,
   "updated": "2026-10-16",
   "routing_attributes": {
@@ -2169,9 +2169,9 @@
           "max_context": 1000000,
           "max_output": 128000,
           "health": {
-            "status": "available",
-            "checked_at": "2026-09-24",
-            "evidence": "Claude-Code wrapper rc 0; canonicalModel claude-opus-5-5; contextWindow 1000000"
+            "status": "degraded",
+            "checked_at": "2026-10-23",
+            "evidence": "N10: chat/completions denied E003 Model not available for Coding Agents; messages wrapper NOT re-probed. Prior wrapper success 2026-09-24 is stale. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
           }
         }
       ]
@@ -2383,7 +2383,7 @@
     "claude-sonnet-5-5": {
       "family": "claude",
       "class": "sonnet",
-      "descriptor": "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). Default subscription/native-execution Sonnet for CONTRACT-CLEAR execution/review/research, superseding claude-sonnet-5 (Nick, 2026-09-28) — NOT a blanket default: `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes that never resolve here (Nick, 2026-09-28 evening; see the routing_policy chains above). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 (within a few points on several) at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ⚠️ ICA does NOT yet serve Sonnet 5.5 as of 2026-09-28 (same shape as the Codex-subscription/ICA GPT-5.6 split) — the ICA Sonnet offload lane stays `claude-sonnet-5[1m]` until ICA adds it, and until then ICA's preferred Claude model is `claude-opus-5-5[1m]` (see that model's ICA provider row), not Sonnet 5. Tracker `node_01M3MWZ6564YV32VCMMGAV5DN2` (tree tree_01KVTH95ETM8YRYCV2ENHVR124, 'Update ICA Sonnet mapping to 5.5 when ICA serves it'); probe = a bare-id HTTP 200 check against the ICA gateway (see `ica-ccx-bare-ids-only` lesson) with model_id `claude-sonnet-5-5` (not `[1m]`).",
+      "descriptor": "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). Default subscription/native-execution Sonnet for CONTRACT-CLEAR execution/review/research, superseding claude-sonnet-5 (Nick, 2026-09-28) — NOT a blanket default: `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes that never resolve here (Nick, 2026-09-28 evening; see the routing_policy chains above). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 (within a few points on several) at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ICA serves Sonnet 5.5 as of 2026-10-16, re-probed 2026-10-23: completed chat/completions text on bare claude-sonnet-5-5. The older NOT-served note is superseded. Receipt: docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-wire-probe.json.",
       "scores": {
         "cost": 5,
         "intelligence": 9,
@@ -2448,8 +2448,8 @@
           "max_context": 1000000,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-16",
-            "evidence": "ica-claude.sh claude-sonnet-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200"
+            "checked_at": "2026-10-23",
+            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
           }
         }
       ]
@@ -2620,7 +2620,7 @@
     "claude-haiku-5-5": {
       "family": "claude",
       "class": "haiku",
-      "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). NOT served on ICA: 403 team_model_access_denied on CCx3 for the bare id, [1m] and dated forms, and absent from the gateway /v1/models catalog, so every ICA lane keeps claude-haiku-4-5. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens.",
+      "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). ICA served-state refreshed 2026-10-23: bare claude-haiku-5-5 returns completed text on chat/completions; the 2026-10-07 access denial is historical. ICA free/unlimited remains Nick's 2026-10-16 declaration (not a metering measurement). Receipt: docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-wire-probe.json. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens.",
       "scores": {
         "cost": 10,
         "intelligence": 6,
@@ -2683,8 +2683,8 @@
           "cost_score": 10,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-16",
-            "evidence": "ica-claude.sh claude-haiku-5-5[1m] is_error false; raw /v1/messages bare and [1m] 200; free/unlimited per Nick 2026-10-16 (gateway meter not separately probed)"
+            "checked_at": "2026-10-23",
+            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
           }
         }
       ]
@@ -3548,6 +3548,7 @@
       ]
     },
     "gpt-6-sol": {
+      "superseded_by": "gpt-6.1-sol",
       "family": "openai",
       "class": "codex",
       "descriptor": "LEGACY-SELECTABLE (superseded 2026-09-30 by gpt-6.1-sol, Nick) — kept as the fallback behind gpt-6.1-sol in raw_strength; previously the frontier/hardest personal-Codex tier. OpenAI GPT-6 Sol via the personal Codex account (replaced GPT-5.6 Sol for Codex subscription defaults). GPT-6 family: Astra is the escalation-only highest-capability tier; Sol balances frontier coding and agentic work; Luna is the efficient high-volume tier. Reported API: 1.05M context, 128K output, $2/$10 per MTok; efforts none|low|medium|high|xhigh|max. ICA serves GPT-6.1 Sol (not GPT-6 Sol) from 2026-10-16: see the gpt-6.1-sol entry. ⚠️ 2026-09-28 (evening), Nick: Sol is the default for the `raw_strength` task class (hard algorithmic problems, debugging, reasoning-heavy legs) — this is IN ADDITION TO its existing `second_opinion` cross-family-lens use, not a replacement for it; Sol's pick is 'raw strength', not merely 'a different model family'.",
@@ -3619,7 +3620,7 @@
     "gpt-6.1-sol": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA ccx ALSO serves gpt-6.1-sol as of 2026-10-16 (bare id; Nick: replaces ICA gpt-5.6-sol), see the ICA provider row: tool-less review/adjudication/critique lane, same economics as the old ICA Sol.",
+      "descriptor": "OpenAI GPT-6.1 Sol via the personal Codex account — frontier/hardest personal-Codex tier and the raw_strength default; SUPERSEDES gpt-6-sol (Nick, 2026-09-30), which stays selectable as the fallback. Astra remains escalation-only with Nick's explicit permission; Luna remains the workhorse/default. ICA ccx ALSO serves gpt-6.1-sol as of 2026-10-16 (bare id; Nick: replaces ICA gpt-5.6-sol), see the ICA provider row: tool-less review/adjudication/critique lane, same economics as the old ICA Sol. N10 2026-10-23: a minimal chat completion succeeds; the six historical rc=3 runs were write-delivery guards (two uncommitted_work, four no_diff), each with provider_terminal=success, not serving failures. See docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md. The existing messages-shim tool restriction remains until separately verified.",
       "scores": {
         "cost": 4,
         "intelligence": 9,
@@ -3709,8 +3710,8 @@
           "capability_gap": "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)",
           "health": {
             "status": "available",
-            "checked_at": "2026-10-16",
-            "evidence": "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403"
+            "checked_at": "2026-10-23",
+            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
           }
         }
       ]
@@ -3793,8 +3794,8 @@
           "cost_score": 8,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-16",
-            "evidence": "200 on /v1/messages, /v1/chat/completions and /v1/responses, bare id; -dzus 403; free/unlimited per Nick 2026-10-16"
+            "checked_at": "2026-10-23",
+            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
           }
         }
       ]
@@ -4560,5 +4561,349 @@
     "raw_strength_or_sol_multiplier": 1.5,
     "read_and_shape_500k_multiplier": 2,
     "legacy_seconds": 14400
+  },
+  "capability_providers": {
+    "image_generation": {
+      "task_class": "image_generation",
+      "lanes": [
+        "codex_subscription_primary"
+      ],
+      "harness_capability": "tools.image_generation"
+    },
+    "svg_generation": {
+      "task_class": "svg_generation"
+    },
+    "browser_verification": {
+      "harness_capability": "browser_verification"
+    },
+    "ios_simulator": {
+      "harness_capability": "ios_simulator"
+    },
+    "estate_ssh": {
+      "harness_capability": "estate_ssh"
+    },
+    "network": {
+      "harness_capability": "network"
+    },
+    "long_context_500k": {
+      "min_context": 500000
+    }
+  },
+  "envelope": {
+    "messiness_divisor": 2,
+    "health_max_age_hours": 168,
+    "escalation_ladders": {
+      "implementation": [
+        "gpt-6-luna",
+        "claude-sonnet-5-5",
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
+      ],
+      "code_review": [
+        "gpt-6-luna",
+        "claude-sonnet-5-5",
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
+      ],
+      "exploration": [
+        "claude-haiku-5-5",
+        "gpt-6-luna",
+        "claude-sonnet-5-5",
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
+      ],
+      "documentation": [
+        "gpt-6-luna",
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
+      ],
+      "mechanical": [
+        "gpt-6-luna",
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
+      ]
+    },
+    "cells": [
+      {
+        "model": "claude-haiku-5-5",
+        "lane": "claude_subscription",
+        "effort": "medium",
+        "p80_horizon_minutes": 30,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry",
+        "class_sizes": {
+          "mechanical": [
+            "xs",
+            "s"
+          ]
+        }
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "lane": "claude_subscription_1x",
+        "effort": "medium",
+        "p80_horizon_minutes": 30,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry",
+        "class_sizes": {
+          "mechanical": [
+            "xs",
+            "s"
+          ]
+        }
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "lane": "ica_gateway_messages",
+        "effort": "medium",
+        "p80_horizon_minutes": 30,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "N10-ica-nonce-probe.json",
+        "class_sizes": {
+          "mechanical": [
+            "xs",
+            "s"
+          ]
+        }
+      },
+      {
+        "model": "gpt-6-luna",
+        "lane": "codex_subscription_primary",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "gpt-6-luna",
+        "lane": "codex_subscription_secondary",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "No fresh account-specific probe in this leg"
+      },
+      {
+        "model": "gpt-6-luna",
+        "lane": "ica_gateway_responses_shim",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "N10-ica-nonce-probe.json"
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "lane": "claude_subscription",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "lane": "claude_subscription_1x",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "lane": "ica_gateway_messages",
+        "effort": "medium",
+        "p80_horizon_minutes": 60,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "N10-ica-nonce-probe.json"
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "lane": "codex_subscription_primary",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "lane": "codex_subscription_secondary",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "No fresh account-specific probe in this leg"
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "lane": "ica_gateway_messages_shim",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "available",
+        "health_checked_at": "2026-10-23",
+        "health_evidence": "N10-ica-nonce-probe.json"
+      },
+      {
+        "model": "claude-opus-5-5",
+        "lane": "claude_subscription",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "claude-opus-5-5",
+        "lane": "claude_subscription_1x",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "unknown",
+        "health_checked_at": null,
+        "health_evidence": "A2-runtime-outcomes.md (2026-10-23 snapshot); live harness health must be refreshed before expiry"
+      },
+      {
+        "model": "claude-opus-5-5",
+        "lane": "ica_gateway_messages",
+        "effort": "medium",
+        "p80_horizon_minutes": 180,
+        "source": "prior",
+        "n": 0,
+        "date": "2026-10-23",
+        "evidence": "docs/project_plans/design-specs/node-sizing-and-capability-routing-v1.md#52-todays-envelope",
+        "sizes": [
+          "xs",
+          "s",
+          "m"
+        ],
+        "health_status": "degraded",
+        "health_checked_at": null,
+        "health_evidence": "N10-ica-nonce-probe.json"
+      }
+    ]
   }
 }

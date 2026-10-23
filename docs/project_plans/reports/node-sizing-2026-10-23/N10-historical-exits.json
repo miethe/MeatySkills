@@ -1,0 +1,98 @@
+[
+  {
+    "dispatch_stamp": "20261021T232508Z-2848",
+    "rc": 3,
+    "reason": "uncommitted_work",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T232508Z-2848-ica.provider-stdout.jsonl#line=146",
+    "receipt_sha256": "8af1658a47e261eb11a01129275f50d3188a6eb86de5119c7aa9cb7c9668da32",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T232508Z-2848.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 36
+    },
+    "result_line": 82
+  },
+  {
+    "dispatch_stamp": "20261021T232922Z-12046",
+    "rc": 3,
+    "reason": "no_diff",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T232922Z-12046-ica.provider-stdout.jsonl#line=151",
+    "receipt_sha256": "c60f856289d62ad321ac3c8b7a49a58eb3e347c7df781d61d00ddb8bdc108924",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T232922Z-12046.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 60
+    },
+    "result_line": 127
+  },
+  {
+    "dispatch_stamp": "20261021T235225Z-89822",
+    "rc": 3,
+    "reason": "uncommitted_work",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T235225Z-89822-ica.provider-stdout.jsonl#line=195",
+    "receipt_sha256": "0478677fd0f332d003d4897522ae8bc66d843e59039be751d54a972b781b5167",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261021T235225Z-89822.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 74
+    },
+    "result_line": 157
+  },
+  {
+    "dispatch_stamp": "20261022T000348Z-28967",
+    "rc": 3,
+    "reason": "no_diff",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T000348Z-28967-ica.provider-stdout.jsonl#line=184",
+    "receipt_sha256": "f2cd60a00baf95dc7f62560af947470a66fcac8c3bbed476cf53a8dac63ace51",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T000348Z-28967.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 72
+    },
+    "result_line": 151
+  },
+  {
+    "dispatch_stamp": "20261022T033959Z-95637",
+    "rc": 3,
+    "reason": "no_diff",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T033959Z-95637-ica.provider-stdout.jsonl#line=170",
+    "receipt_sha256": "374128aa00731cb9a2b96901dcf8f85b3548bf073f94090870edfcd3f078ef26",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T033959Z-95637.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 67
+    },
+    "result_line": 143
+  },
+  {
+    "dispatch_stamp": "20261022T041813Z-71923",
+    "rc": 3,
+    "reason": "no_diff",
+    "provider_terminal": "success",
+    "realized_model": "gpt-6.1-sol",
+    "realized_model_source": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T041813Z-71923-ica.provider-stdout.jsonl#line=111",
+    "receipt_sha256": "3056c1fa092eb8c1c0438e3d661303ee437d04198c67551f526124579de56737",
+    "receipt": "/Users/miethe/dev/homelab/development/agentic_meta_dev/.claude/reports/legs/20261022T041813Z-71923.dispatch.json",
+    "result": {
+      "subtype": "success",
+      "is_error": false,
+      "num_turns": 34
+    },
+    "result_line": 73
+  }
+]
