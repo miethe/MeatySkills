@@ -898,7 +898,6 @@ task_class_defaults:
     - gemini-3.1-pro-preview
     - gemini-3.5-flash
     - gemini-3.6-flash
-    requires_capabilities: []
     effort: medium
     bar: 5.0
     quality: {w_intelligence: 0.2, w_taste: 0.7, w_speed: 0.1}
@@ -1072,8 +1071,6 @@ task_class_defaults:
     minimum:
       lanes: [claude_subscription]
       reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
@@ -1103,8 +1100,6 @@ task_class_defaults:
     minimum:
       lanes: [claude_subscription]
       reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
@@ -1134,8 +1129,6 @@ task_class_defaults:
     minimum:
       lanes: [claude_subscription]
       reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
@@ -1165,8 +1158,6 @@ task_class_defaults:
     minimum:
       lanes: [claude_subscription]
       reason: quality_bar
-    requires_capabilities:
-    - claude_code_native
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}

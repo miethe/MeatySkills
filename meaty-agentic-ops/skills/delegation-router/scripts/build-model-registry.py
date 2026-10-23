@@ -47,6 +47,30 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    """Safe YAML loader that refuses duplicate mapping keys instead of last-wins."""
+
+
+def _construct_unique_mapping(loader, node, deep=False):
+    loader.flatten_mapping(node)
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            mark = key_node.start_mark
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping", node.start_mark,
+                f"duplicate key {key!r}", mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping
+)
+
+
 def validate_registry(data: dict, source: str) -> list[str]:
     """Return deterministic, human-readable registry integrity errors."""
     errors: list[str] = []
@@ -229,7 +253,11 @@ def main() -> int:
     with open(args.src, "rb") as fh:
         raw_yaml_bytes = fh.read()
 
-    data = yaml.safe_load(raw_yaml_bytes)
+    try:
+        data = yaml.load(raw_yaml_bytes, Loader=UniqueKeyLoader)
+    except yaml.YAMLError as exc:
+        sys.stderr.write(f"ERROR: {args.src} contains invalid YAML: {exc}\n")
+        return 1
 
     if not isinstance(data, dict):
         sys.stderr.write(f"ERROR: {args.src} did not parse to a mapping.\n")
