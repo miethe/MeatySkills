@@ -1,0 +1,33 @@
+{
+  "base": "https://api.servicesessentials.ibm.com/v1",
+  "live_count": null,
+  "probe": {
+    "claude-haiku-5-5": {
+      "verdict": "ok",
+      "detail": "model=claude-haiku-5-5; finish=stop"
+    },
+    "claude-opus-5-5": {
+      "verdict": "broken",
+      "detail": "E003: Model not available for Coding Agents. Please use Advantage Assist models"
+    },
+    "claude-sonnet-5-5": {
+      "verdict": "ok",
+      "detail": "model=claude-sonnet-5-5; finish=stop"
+    },
+    "gpt-6-luna": {
+      "verdict": "ok",
+      "detail": "model=gpt-6-luna; finish=stop"
+    },
+    "gpt-6.1-sol": {
+      "verdict": "ok",
+      "detail": "model=gpt-6.1-sol; finish=stop"
+    },
+    "gpt-6.1-sol-dzus": {
+      "verdict": "broken",
+      "detail": "The requested model 'gpt-6.1-sol-dzus' is not available for this API key, or the model nam"
+    }
+  },
+  "drift": {},
+  "scope": "six requested wire ids; catalog drift not evaluated",
+  "checked_at": "2026-10-23"
+}

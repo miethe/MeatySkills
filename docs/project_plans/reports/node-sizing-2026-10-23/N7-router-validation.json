@@ -1,0 +1,217 @@
+{
+  "observed_at": "2026-10-23T21:52:39.420137+00:00",
+  "node": "node_01M5N38319CGZVF3BKW0SRVHHN",
+  "status": "all_commands_passed",
+  "needs_scenarios": 19,
+  "commands": [
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-audit-log-blocked.js",
+      "exit_code": 0,
+      "output_sha256": "745f19837ac6c7050b9c1458b5e8779f2a0d0c5062457017834fdce7696f89aa"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-audit-log-realization.js",
+      "exit_code": 0,
+      "output_sha256": "776178af7efd3f295e6430ad4a17b11a4d9a54ebbf03e65c88af56191641c053"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-codex-identities.js",
+      "exit_code": 0,
+      "output_sha256": "131c57f8c56820cdfb40b17d7df8160eff397090ab6a9afe2928140bf70135d3"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-context-class.js",
+      "exit_code": 0,
+      "output_sha256": "949f5c5d643f2f9e7565ed792dd00d0c873aecf3eac800b5c26644c6d1341400"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-entry-key.js",
+      "exit_code": 0,
+      "output_sha256": "825bc615e2748fe7f5df27cbbe7ab894d7d6b2566673de42f02272771c9b377d"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-feedback-cli.js",
+      "exit_code": 0,
+      "output_sha256": "3572019fb84d6cc480f2ac267223daa8ac95143bc5ab4283ec959b79eb357aab"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-local-overrides.js",
+      "exit_code": 0,
+      "output_sha256": "560e024c3fb55cd855e3732e414ae898745be9e2e2b8be257364359f0e4caacd"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-native-routing-intent.js",
+      "exit_code": 0,
+      "output_sha256": "d2af383bc75dde26b31af526e5ee55d46359180789edaccb0dd3c7ca161e0a78"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-p3-dry-run.js",
+      "exit_code": 0,
+      "output_sha256": "6e83d2352d5251d2dcd17e9ddcf08846fd4ccff84fbb6d7799a2026dc76fe319"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-p4-mode-d-injection.js",
+      "exit_code": 0,
+      "output_sha256": "c5432d0ce8975cbc24700864bdf8a3bead42891c9b4eeae515e6a91f874f65f1"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-registry-resolver.js",
+      "exit_code": 0,
+      "output_sha256": "570f0a6017c0d7577b5e259d63b91e3b96de6bf6b0a5cfa2b34c10dee7929570"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-resolve-cli.js",
+      "exit_code": 0,
+      "output_sha256": "e7930955bbafa58acc4693af15a9d8fdc9193c5f8460bfa3b851a31f2aff8204"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-resolver.js",
+      "exit_code": 0,
+      "output_sha256": "fd88e32383611834fc7cd5b093dde16419e0b3be575534edac61a916dc060d07"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-routing-feedback.js",
+      "exit_code": 0,
+      "output_sha256": "824170dabbf60278d05337cbf6f1f6600bd8647f17422e73e74a56b209c18e74"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-routing-log-run-drain.js",
+      "exit_code": 0,
+      "output_sha256": "43199a3464ac6ae24a209bef66499cdd73116b15b0e5de905562bd6491c4f2d9"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-routing-table.js",
+      "exit_code": 0,
+      "output_sha256": "55f49ebf718870f798d613058dd2b93c13d75b0e3a84ee112dc7c4206920f924"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-sovereignty-ladder.js",
+      "exit_code": 0,
+      "output_sha256": "c24b9c54e09ed5ecd7a97b6adc9e68d0ffc04dfa3d495cf8395039f5607fd080"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-task-class-vocabulary.js",
+      "exit_code": 0,
+      "output_sha256": "6ed0dc336eb5a3e872f503053ee79281aba752504790fd701dfd3ea2ced8b57f"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-tool-mode-and-sandwich.js",
+      "exit_code": 0,
+      "output_sha256": "6123fb8264ecbaa3ff82146faecdfd8813086a00a76c50cf53580121a2844dc1"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-two-step-resolver.js",
+      "exit_code": 0,
+      "output_sha256": "78e008c185b1aac255fec9cac01843fe80fb38bc4b303e0c19df9e83fe688efd"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-workflow-routing-log-shape.js",
+      "exit_code": 0,
+      "output_sha256": "6843729f87796bdd6539c0bd786928c073e5faba49a20ffe40122ff1ea42c1c5"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/tests/test-write-authority.js",
+      "exit_code": 0,
+      "output_sha256": "5af8eac656cf0c615c32a3f72e3b65351c5857244fa2514b37662672a0a7d24a"
+    },
+    {
+      "command": "python3 meaty-agentic-ops/skills/delegation-router/tests/test-ica-probe.py",
+      "exit_code": 0,
+      "output_sha256": "86eee959af8be43bb81521445737b3dd137071da4e22d0bd3d880c4ed7d84068"
+    },
+    {
+      "command": "python3 meaty-agentic-ops/skills/delegation-router/tests/test-provider-facts.py",
+      "exit_code": 0,
+      "output_sha256": "53506060ceefd9d6a79242cdeeabf82403654f8130e3837c93f95769aaf4977d"
+    },
+    {
+      "command": "python3 meaty-agentic-ops/skills/delegation-router/tests/test-registry-builder.py",
+      "exit_code": 0,
+      "output_sha256": "3455acdb25748b7f08050de97173062a176348204c5781984e36df266bc07318"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/test-needs-envelope.js",
+      "exit_code": 0,
+      "output_sha256": "be67db3682a190ad58ca83ed3461a1bdd9ee5b93faeb91c92ed86b022b37fda7"
+    },
+    {
+      "command": "node meaty-agentic-ops/skills/delegation-router/routing-record.test.js",
+      "exit_code": 0,
+      "output_sha256": "63cbbb94d4c04509f36be93d14caacf6cba170287d39f4fcce422b6dd554e1df"
+    },
+    {
+      "command": "python3 meaty-agentic-ops/skills/delegation-router/scripts/check-registry-fresh.py",
+      "exit_code": 0,
+      "output_sha256": "68d4ab40c7b27984d34c3f5bfd8d2d677dda4e66e90543177f7332d9f1e6434f"
+    }
+  ],
+  "tested_files_sha256": {
+    "meaty-agentic-ops/skills/delegation-router/audit-log.js": "5edcd344e9e2fa3ba05714c04858f957ddb6b07ae94f147d5e8e2b760935738a",
+    "meaty-agentic-ops/skills/delegation-router/entry-key.js": "98f6d0c71cc9d6802a88180fb4f6c569e4be6cee3076236441aae29d3f895a89",
+    "meaty-agentic-ops/skills/delegation-router/feedback-cli.js": "6411f47e1f1d3ce9ec371c983b39338dae529e828b41f7615b3b488e77efc624",
+    "meaty-agentic-ops/skills/delegation-router/hooks/routing-log-sink.py": "69c902211fe34ac0261cb2520d1327e64e763e784e13189cd44de298494e51ac",
+    "meaty-agentic-ops/skills/delegation-router/log-cli.js": "dc39e99c1c01cf32f53c4191e4caa7535ad2a8e904979162a577e0a806b6b8b2",
+    "meaty-agentic-ops/skills/delegation-router/model-registry.generated.json": "95dcf6ef18e46f041caca03c8eb093b99293e50e1e81ff331f15823ab1159b06",
+    "meaty-agentic-ops/skills/delegation-router/model-registry.yaml": "b2dec322bbe6ca077363ab992ba8b0efa3c92d32d8b00ccf5cece28fbb6a7f15",
+    "meaty-agentic-ops/skills/delegation-router/needs-routing.js": "b74ed4ca72e6e924b038b76b78e36d210b576ac9212408f60ba75c990ba5f442",
+    "meaty-agentic-ops/skills/delegation-router/registry/private-only.yaml": "4702b0cf3cb41776eded0a86ea3d51ccc3ae03e2ec675e03acae4d574ffa37f4",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/alibaba.yaml": "fd94a3f94c76ea3b03ea4444baae040361d2dc8baeeeb1b41bef96fd8c78310d",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/anthropic.yaml": "223c5a1c0dd1a73ef42bfb5fb8f908a797f95e4b40edac67b1ea9fe954e1d423",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/deepseek.yaml": "b0b82fcd690157d235b3be4aa0725bc053c9be5b66f5230a995a1b8e01fe0579",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/google.yaml": "3f8d24f3f7c498fcf178f1b9b5eab242a6dd201757b97d20374db85731bfd41f",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/ibm.yaml": "f650ada7d6e5a208ccb0e3da064771280d53cef184fbcf15b4636f820bc83ac2",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/meta.yaml": "4dcae693c848bbf86450a7cb78764fd4e0aab9ddc14e089b02a7bd2303cacd7d",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/mistral.yaml": "798fe35fd6745f5fb16e340c6d1c2ca0d39dbaa11c695d61a38e81a607b294eb",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/moonshot.yaml": "d10e760528abc9f5154319af67eddedac3515b0246573419aae37640aefb0ef0",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/nvidia.yaml": "617a9fe13a3a9b9dd4f3e39a1811f9b8cdfb83bcbab34389f972c1672574e964",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/openai.yaml": "337bc3681dd055b41ccc649c374056166d1f8be4995d1e2b0aeb849c68ad13a1",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/xai.yaml": "c3ec9445ed39698e1c2b37a09eb34308f90c44a6e7d3193eb088b103231337f3",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers/zai.yaml": "cea22f9c5cf6bb7c2434ae976bf2174bc0b2db1f580fdd1f3d1410c021376139",
+    "meaty-agentic-ops/skills/delegation-router/registry/providers.schema.json": "a7952195fd4f45636e6011819b5c9cc60dae23be4748c9554f4096994dd9d73f",
+    "meaty-agentic-ops/skills/delegation-router/resolve-cli.js": "a9d02804e7102166d601e534063a6ef3d09098215c57cc8ac3e3ded77705a2ff",
+    "meaty-agentic-ops/skills/delegation-router/resolver.js": "77eb82bcade255d2b37d8288760dd9f98507c6fb42746ef32535ea13075ee472",
+    "meaty-agentic-ops/skills/delegation-router/routing-feedback-contract.v1.json": "9c6c0a516bd55762aac1706438b96b003ef67e6b14d0a56190614c2e9ddd0ac0",
+    "meaty-agentic-ops/skills/delegation-router/routing-feedback.js": "b6f4a4a1e47d2d0c248e54ed87e266a0d6385cc6a55018a7fb1b1f6b19dbddaf",
+    "meaty-agentic-ops/skills/delegation-router/routing-record.js": "ded6e10319ff98cb0c309659bafca530a8399bbcf6cccf4e397e8ba2c4d97ebf",
+    "meaty-agentic-ops/skills/delegation-router/routing-record.test.js": "7b4215896489e6eaa19ea873d73488f8aeec30abf99f1f3fcf8b448d9cde98a9",
+    "meaty-agentic-ops/skills/delegation-router/routing-table.generated.json": "d4eb94844fbb52193bdde3894d88389c6fd7c6044f08546084b704c271ae8e24",
+    "meaty-agentic-ops/skills/delegation-router/scripts/build-model-registry.py": "759d22751c3cbcd9e807d6b0238f28d0ae36156f870b1b4f6ceb515cee11c0bf",
+    "meaty-agentic-ops/skills/delegation-router/scripts/check-registry-fresh.py": "64c87df156442472c36366f0638ac4697bd1b3fa6b34034c5664f800214223fb",
+    "meaty-agentic-ops/skills/delegation-router/scripts/locked-audit-append.py": "e3a0e16827c80cc8373dcd6f4ac75debdcc24887c1d7ac66f06526575ddb94dc",
+    "meaty-agentic-ops/skills/delegation-router/scripts/probe-ica-models.sh": "a9cc8c5a1304d44b955f7e10f301b47c5c978399418340d4ac9fd3e1dc0886e0",
+    "meaty-agentic-ops/skills/delegation-router/scripts/sync-to-global.sh": "9304d36bc87679cfe865300387696f207f6e7930effc6dbcbd0f8dc89b84a394",
+    "meaty-agentic-ops/skills/delegation-router/task-class-vocabulary.js": "c90c8970ccc89e79a32e3d673232703d43f7182f860bc53e44803a1e87be026f",
+    "meaty-agentic-ops/skills/delegation-router/task-class-vocabulary.v1.json": "c3cf0f71edd6058195acece806cb1e8bc7d6eefc0550ec3cebe2f62abc63b120",
+    "meaty-agentic-ops/skills/delegation-router/test-needs-envelope.js": "187421f92f22836ca1d203b0996597ac3df759621a8c7eaafea91f6c42d577d8",
+    "meaty-agentic-ops/skills/delegation-router/tests/fixtures/ccdash-routing-rollup.live.json": "9c8d0ffa9f0bbf9dca8396922f799f6da900e110cce5b81d2b860995055e5ca0",
+    "meaty-agentic-ops/skills/delegation-router/tests/fixtures/real-run-wf_2908b911-58f.report.json": "04a9a5effc3b8eaddbc898f437a46d241f0e9a463f72a011b42e3701aed7ea8e",
+    "meaty-agentic-ops/skills/delegation-router/tests/fixtures/v3/registry.json": "b519b2060f6fc2de81b69e944830d5ae2672ae05c0749e9843ad5c02f423ba11",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-audit-log-blocked.js": "017af276fb8b045f8a9474a8b9f2b5d5ab10496ec62cfd0c25865d362cf58d5a",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-audit-log-realization.js": "4895fee076378036d8b6bcb04ab58ca10c61e7728dc6faca12826261ac276004",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-codex-identities.js": "da759a9578172890d1bcf55cb22e49c9b4ccc8483c21bf0f3c93e20b6af5a8cb",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-context-class.js": "a896b3a246bd1e40308007d9614a6959dedf70bb4f46b70b88b79a3da64de1f8",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-entry-key.js": "ba8dfcd387c8433afba205c7ac259541f6a1e6400ccc7ffb021bc14fcba8d96a",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-feedback-cli.js": "e79223429b48f9a03b7983285c049841529b2c5fe7d201b0c6907e7b32d7bb6f",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-ica-probe.py": "69f4e891284ceeadec90013543e9e87038d99a3ffee9fb1fd595df03d5e06ce1",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-local-overrides.js": "fbaac2be35c9548dac95d6119c0c0966154ea489f40709cdfa0ffa6eb3cb4bf6",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-native-routing-intent.js": "fd7f8ff24bf81eafef9efb0fd66084b91c5966fd4cbf4875789f98710f26d0ab",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-p3-dry-run.js": "53e2d46217498d8d802b83fe4967ee471095de8123df2a479ed515cca414fdff",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-p4-mode-d-injection.js": "0952a09621d5a7f150b7b2ce6b41877b3721bfe9e64a912b27b01a2abe98fa70",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-provider-facts.py": "c0a964bc9cbf99311322a7faf2f617885ad88eef9b98706aa8231c207eace5f4",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-registry-builder.py": "6bcaabb92ea366ef218fbc13e1f9c36de52fe8468911328f5f709b4f3535a0f2",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-registry-resolver.js": "783e5bae4db3ee50894c0f85e42a146da026e438441e5850132cd1eda0ca70dd",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-resolve-cli.js": "a579ce2491ede3b3159ec3221be7733b4876ea061038160d0084fb2ada408af9",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-resolver.js": "c2192aadc7da9e4a8aca3dc6f10bb4b7bf2ec2915232025460d067e10e0cdcff",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-routing-feedback.js": "0c9d6970a44c31f6aa20d04dc271ea12a31b9024a6fce5a2fec24a723222b5fc",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-routing-log-run-drain.js": "57ec01fe1aadbd4433d2889c357ee70f582ffba229b82c5594db407adb2a4cde",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-routing-table.js": "aed743ffdf198d5bf58b292d1062e89dc6289c549e20436f1799bc36cdeacd80",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-sovereignty-ladder.js": "aaab12d8eff241cafc85250a56e757a1adcf69d142a2c9ab5b63c5cb47c1da5d",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-task-class-vocabulary.js": "d0ff4e1c7fd9f0ffaa04ee3b12efcf37a5ee549f989ef52203d24281d5d716a3",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-tool-mode-and-sandwich.js": "dce567845a7508e06d486afb62bbcbeb1c3672be536c40b1ce4758ad5f7d0cb8",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-two-step-resolver.js": "bb4d21b139a07dfba2f5218d0676e5d91e69acfc258e85019608ad094ab53362",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-workflow-routing-log-shape.js": "98ff19cfd14c117ad82b3874a7cdd9c52bbab581d88d1bba200235dda8ff6c69",
+    "meaty-agentic-ops/skills/delegation-router/tests/test-write-authority.js": "79f377fd584bd0014aa1e830c0009dc7a2d3e9b18c21d29e8e685329829e8637",
+    "meaty-agentic-ops/skills/delegation-router/use-case-rankings.yaml": "919c71a3ce11cba9f49bd4f1075ec072c2e27d26c3e11cb2e725dc7f08f87583"
+  },
+  "log_sha256": "4af73b78fbc87eee0d2dacb780e80990d00e10488572f39c862ec4005aaf411a"
+}

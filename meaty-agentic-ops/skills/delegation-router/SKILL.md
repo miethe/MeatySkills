@@ -26,6 +26,11 @@ V3 CLI: `node resolve-cli.js resolve --task-class <class> [--model <id>] [--capa
 emits the two-step decision. `node resolve-cli.js table --json` emits the static routing table.
 An exhausted floor emits `floor_breached: true` and exits non-zero.
 
+For node needs, pass `size`, `capabilities`, `modifiers` and optional `sizing`, or use
+`--size` / `--needs-file` in the v3 CLI. Exact model pins now require a preapproval
+reference, reason and expiry. See [needs and envelope](references/needs-envelope.md)
+for the capability-provider table, envelope priors, escalation contract and pin migration.
+
 ---
 
 ## When To Use

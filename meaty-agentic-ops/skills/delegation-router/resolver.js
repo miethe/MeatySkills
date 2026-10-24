@@ -41,6 +41,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { prepareNeeds, candidateNeeds, hasAbstractNeeds } = require('./needs-routing.js');
 
 const {
   MUST_STAY_PRIMARY_CLASSES,
@@ -888,6 +889,7 @@ function routingPolicyKeyFor(task_class) {
  * @returns {import('./routing-record.js').RoutingRecord}
  */
 function resolve(input) {
+  if (input && input._configPath && hasAbstractNeeds(input)) throw new Error('Abstract needs require a v3 registry');
   const record = (input && input._configPath)
     ? resolveFromToml(input)
     : resolveFromRegistry(input);
@@ -1033,7 +1035,7 @@ function capacityFor(capacity, laneId, identityRef) {
 
 function modelRows(registry, modelId) {
   const model = (registry.models || {})[modelId];
-  if (!model) return [];
+  if (!model || ['scaffolded', 'candidate', 'retired', 'deprecated'].includes(model.status)) return [];
   return (model.providers || []).filter(row => row.enabled !== false).map(row => ({ model, row }));
 }
 
@@ -1068,7 +1070,7 @@ function canonicalTaskClassKey(defaults, taskClass) {
 function resolveModel(registry, input) {
   const defaults = registry.task_class_defaults || {};
   const taskClassKey = canonicalTaskClassKey(defaults, input.task_class);
-  const classSpec = defaults[taskClassKey];
+  const classSpec = input._needsSpec || defaults[taskClassKey];
   if (!classSpec) throw new Error(`Unknown task class '${input.task_class}'`);
   const holders = input.model ? [input.model] : (classSpec.holders || []);
   const laneOrder = registry.lane_order || [];
@@ -1088,13 +1090,7 @@ function resolveModel(registry, input) {
       decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
       continue;
     }
-    const viable = modelRows(registry, modelId).some(({ row }) => {
-      const lane = registry.lanes && registry.lanes[row.lane];
-      if (!lane || !laneOrder.includes(row.lane)) return false;
-      const eligibility = laneEligible({ ...lane, id: row.lane }, classSpec);
-      const status = capacityFor(capacity, row.lane, lane.identity_ref).state;
-      return eligibility.eligible && !['refused', 'unavailable'].includes(status);
-    });
+    const viable = resolveLane(registry, modelId, classSpec, capacity).chosen !== null;
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
     decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
@@ -1120,6 +1116,12 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
       const availability = capacityFor(capacity, laneId, lane.identity_ref);
+      const originalEligibility = classSpec._originalSpec
+        ? laneEligible({ ...lane, id: laneId }, classSpec._originalSpec) : { eligible: true, reason: '' };
+      const needs = candidateNeeds(registry, modelId, row, lane, classSpec);
+      eligibility.eligible = eligibility.eligible && originalEligibility.eligible && needs.eligible;
+      if (!originalEligibility.eligible) eligibility.reason += `; original class: ${originalEligibility.reason}`;
+      if (!needs.eligible) eligibility.reason += `; ${needs.reason}`;
       const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
@@ -1128,7 +1130,7 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
         identity_ref: lane.identity_ref || null,
         verdict: excluded ? 'excluded' : 'eligible',
         reason: !eligibility.eligible ? eligibility.reason : (excluded ? availability.reason || `capacity is ${availability.state}` : `lane admitted with capacity ${availability.state}`),
-        provider: row.provider, model_id: row.model_id, model_entry: model,
+        provider: row.provider, model_id: row.model_id, model_entry: model, tool_restricted: row.tool_mode === 'none',
       });
     }
   }
@@ -1136,15 +1138,12 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
 }
 
 function resolveV3(registry, input) {
+  const prepared = prepareNeeds(registry, input, canonicalTaskClassKey);
+  input = { ...prepared.input, _needsSpec: prepared.spec };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;
   const floorModel = classSpec.fallback && classSpec.fallback.floor_model;
   const holderList = modelDecision.holders;
-  const configuredHolders = classSpec.holders || [];
-  const configuredFloorIndex = configuredHolders.indexOf(floorModel);
-  const explicitIndex = input.model ? configuredHolders.indexOf(input.model) : -1;
-  const explicitBelowFloor = Boolean(input.model && floorModel &&
-    (explicitIndex < 0 || (configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex)));
   const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
@@ -1156,12 +1155,13 @@ function resolveV3(registry, input) {
     if (!override) throw new Error(`identity/lane override '${input.identity_ref}' does not serve ${chosenModel} as an eligible lane`);
     selectedLane = override;
   }
-  if (explicitBelowFloor) selectedLane = null;
-  const floorBreached = (!selectedLane && Boolean(floorModel)) || explicitBelowFloor;
+  const floorBreached = !selectedLane;
   const fallback = [];
   if (selectedLane) {
     const models = examined.slice(selectedIndex);
     for (const candidateModel of models) {
+      const decision = modelDecision.decisions.find(d => d.model === candidateModel);
+      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane'].includes(decision.verdict)) continue;
       const lanes = allLaneDecisions[candidateModel].candidates;
       for (const candidate of lanes) {
         if (candidateModel === chosenModel && candidate.lane === selectedLane.lane) continue;
@@ -1171,11 +1171,13 @@ function resolveV3(registry, input) {
     }
   }
   const laneCandidates = chosenModel ? allLaneDecisions[chosenModel].candidates : [];
+  const invocationProfile = input.requires_write && !(input.profile || '').includes('sandbox=')
+    ? `${input.profile || ''} sandbox=workspace-write`.trim() : input.profile;
   const record = {
     chosen_plugin_id: selectedLane ? selectedLane.provider : null,
     model: chosenModel || (input.model || holderList[0] || 'unresolved'), effort: input.effort || 'standard',
     agent_type_id: selectedLane ? (AGENT_TYPE_ID_MAP[selectedLane.provider] || selectedLane.provider) : 'claude',
-    invocation_template: selectedLane ? buildRegistryInvocation({ providerId: selectedLane.provider, modelId: selectedLane.model_id, lane: selectedLane.lane, toolRestricted: false }, input.profile || null, input.effort || 'standard') : '',
+    invocation_template: selectedLane ? buildRegistryInvocation({ providerId: selectedLane.provider, modelId: selectedLane.model_id, lane: selectedLane.lane, toolRestricted: selectedLane.tool_restricted }, invocationProfile || null, input.effort || 'standard') : '',
     scope_flags: [], stage: 'A', validation_contract: 'none', continuity_mode: 'resumable',
     fallback_chain: fallback, reason: floorBreached ? `floor_breached: no eligible lane at or above ${floorModel}` : `registry v3 selected ${chosenModel} on ${selectedLane.lane}`,
     lane: selectedLane ? selectedLane.lane : null,
@@ -1189,7 +1191,26 @@ function resolveV3(registry, input) {
     schema_version: 3,
     registry_revision: registry._yaml_sha256 || require('crypto').createHash('sha256').update(input._registryPath && fs.existsSync(input._registryPath) ? fs.readFileSync(input._registryPath) : JSON.stringify(registry)).digest('hex'),
     routing_feedback: null, context_ref: null, context_class: null, node_contract: null,
+    needs_decision: { original_task_class: prepared.spec._needs.originalClass, pin: prepared.pin, size: prepared.spec._needs.size || null, capabilities: prepared.spec._needs.capabilities,
+      modifiers: prepared.spec._needs.modifiers, findings: prepared.findings },
+    escalation_policy: { max_attempts: 2, automatic_continuations_per_attempt: 3, terminal_state: 'blocked' },
+    escalation_ladder: selectedLane ? [{ model: chosenModel, lane: selectedLane.lane, plugin_id: selectedLane.provider,
+      identity_ref: selectedLane.identity_ref }, ...fallback] : [],
   };
+  if (prepared.spec._needs.modifiers.includes('cross_family_review') && selectedLane) {
+    const family = registry.models[chosenModel].family;
+    const reviewInput = { ...input, modifiers: [], model: undefined, capabilities: prepared.spec._needs.capabilities,
+      task_class: 'second_opinion', execution_contract: { ...input.execution_contract, model: null, modifiers: [] } };
+    const reviewerRegistry = { ...registry, models: Object.fromEntries(Object.entries(registry.models)
+      .map(([id, model]) => [id, { ...model, providers: (model.providers || []).filter(row => {
+        const lane = registry.lanes[row.lane];
+        return model.family !== family && lane && laneEligible({ ...lane, id: row.lane }, classSpec).eligible &&
+          laneEligible({ ...lane, id: row.lane }, classSpec._originalSpec).eligible;
+      }) }])) };
+    const reviewer = resolveV3(reviewerRegistry, reviewInput);
+    if (reviewer.floor_breached) throw new Error('No eligible cross-family reviewer');
+    record.reviewer = reviewer;
+  }
   return record;
 }
 
@@ -1232,6 +1253,7 @@ function resolveFromRegistry(input) {
   if (loadedRegistry.version >= 3 && loadedRegistry.task_class_defaults) {
     return resolveV3(loadedRegistry, input);
   }
+  if (hasAbstractNeeds(input)) throw new Error('Abstract needs require a v3 registry');
   const registryMustStay = (loadedRegistry.must_stay_primary || []).map(normalizeClass);
 
   // Hard-fail on a malformed lane table or a reason-less minimum. Deliberately a THROW and

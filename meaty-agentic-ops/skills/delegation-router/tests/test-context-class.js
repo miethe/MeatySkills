@@ -10,7 +10,10 @@
  */
 
 const assert = require('assert');
-const { resolve } = require('../resolver.js');
+const { resolve: rawResolve } = require('../resolver.js');
+const upstreamRegistry = require('path').join(__dirname, '..', 'model-registry.generated.json');
+const approval = { preapproval_ref: 'req_context_test', pin_reason: 'audit passthrough test', pin_expires: '2099-01-01' };
+const resolve = input => rawResolve({ ...approval, _registryPath: upstreamRegistry, ...input });
 const {
   CONTEXT_CLASSES,
   validateRoutingRecord,
@@ -80,11 +83,11 @@ test('it survives a MUST-stay override (unlike context_ref, it is not gated)', (
 });
 
 test('it is stamped on a floor-breached v3 record too (audit joins to the breach)', () => {
-  const record = resolve({ model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C3' });
+  const record = resolve({ model: 'claude-sonnet-5-5', capacity: { lanes: Object.fromEntries(require(upstreamRegistry).lane_order.map(id => [id, { state: 'refused' }])) }, provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C3' });
   assert.strictEqual(record.floor_breached, true);
   assert.strictEqual(record.context_class, 'C3');
   assert.throws(
-    () => resolve({ model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C9' }),
+    () => resolve({ model: 'claude-sonnet-5-5', capacity: { lanes: Object.fromEntries(require(upstreamRegistry).lane_order.map(id => [id, { state: 'refused' }])) }, provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C9' }),
     /context_class must be one of C1\|C2\|C3\|C4/
   );
 });
