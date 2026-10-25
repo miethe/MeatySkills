@@ -1,9 +1,9 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "b2dec322bbe6ca077363ab992ba8b0efa3c92d32d8b00ccf5cece28fbb6a7f15",
+  "_yaml_sha256": "4a10b912ccac52aa5aa25b3ddcb17eff499346d22b828b43d0222464aeae01a5",
   "version": 3,
-  "updated": "2026-10-16",
+  "updated": "2026-10-25",
   "routing_attributes": {
     "health": {
       "statuses": [
@@ -1355,7 +1355,6 @@
         "gemini-3.5-flash",
         "gemini-3.6-flash"
       ],
-      "requires_capabilities": [],
       "effort": "medium",
       "bar": 5.0,
       "quality": {
@@ -1370,6 +1369,7 @@
         "required": false,
         "holder": null
       },
+      "requires_capabilities": [],
       "cross_family": {
         "candidates": [
           "claude-opus-5-5",
@@ -1720,7 +1720,6 @@
         ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [],
       "effort": "medium",
       "bar": 8.0,
       "quality": {
@@ -1735,6 +1734,7 @@
         "required": true,
         "holder": null
       },
+      "requires_capabilities": [],
       "cross_family": {
         "candidates": [
           "claude-opus-5-5",
@@ -1782,7 +1782,6 @@
         ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [],
       "effort": "medium",
       "bar": 8.0,
       "quality": {
@@ -1797,6 +1796,7 @@
         "required": true,
         "holder": null
       },
+      "requires_capabilities": [],
       "cross_family": {
         "candidates": [
           "gpt-6.1-sol",
@@ -1840,7 +1840,6 @@
         ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [],
       "effort": "medium",
       "bar": 8.0,
       "quality": {
@@ -1855,6 +1854,7 @@
         "required": true,
         "holder": null
       },
+      "requires_capabilities": [],
       "cross_family": {
         "candidates": [
           "gpt-6.1-sol",
@@ -1898,7 +1898,6 @@
         ],
         "reason": "quality_bar"
       },
-      "requires_capabilities": [],
       "effort": "medium",
       "bar": 8.0,
       "quality": {
@@ -1913,6 +1912,7 @@
         "required": true,
         "holder": null
       },
+      "requires_capabilities": [],
       "cross_family": {
         "candidates": [
           "gpt-6.1-sol",
@@ -2448,8 +2448,8 @@
           "max_context": 1000000,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-23",
-            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
+            "checked_at": "2026-10-25",
+            "evidence": "bare id HTTP 200 on 2026-10-25; [1m] form served via ica-claude.sh. ICA Claude default (front policy)"
           }
         }
       ]
@@ -2683,8 +2683,8 @@
           "cost_score": 10,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-23",
-            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
+            "checked_at": "2026-10-25",
+            "evidence": "bare id HTTP 200 on 2026-10-25; [1m] form served via ica-claude.sh. Economy-only, free on ICA (front policy)"
           }
         }
       ]
@@ -3710,8 +3710,8 @@
           "capability_gap": "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)",
           "health": {
             "status": "available",
-            "checked_at": "2026-10-23",
-            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
+            "checked_at": "2026-10-25",
+            "evidence": "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-sol"
           }
         }
       ]
@@ -3794,8 +3794,8 @@
           "cost_score": 8,
           "health": {
             "status": "available",
-            "checked_at": "2026-10-23",
-            "evidence": "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
+            "checked_at": "2026-10-25",
+            "evidence": "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-luna"
           }
         }
       ]

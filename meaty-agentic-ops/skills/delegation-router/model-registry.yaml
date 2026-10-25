@@ -130,7 +130,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 3
-updated: 2026-10-16   # gemini-4-argon added (native paid key + gemini-cli; not on ICA; explicit-selectable, no chain), node_01M52TKCJ4SRT9JAWNXPNGD1D2. Prior: ICA refresh: claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna, gpt-6.1-sol now served on ICA ccx and replace their predecessors as the ICA defaults (Nick 2026-10-16). Prior: GLM 5.3 added and enabled per Nick ratification 2026-10-15. Prior history: CHANGELOG.md.
+updated: 2026-10-25   # gemini-4-argon added (native paid key + gemini-cli; not on ICA; explicit-selectable, no chain), node_01M52TKCJ4SRT9JAWNXPNGD1D2. Prior: ICA refresh: claude-haiku-5-5, claude-sonnet-5-5, gpt-6-luna, gpt-6.1-sol now served on ICA ccx and replace their predecessors as the ICA defaults (Nick 2026-10-16). Prior: GLM 5.3 added and enabled per Nick ratification 2026-10-15. Prior history: CHANGELOG.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -1282,6 +1282,7 @@ models:
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, health: { status: unknown, evidence: "launch page reports Claude Code availability; local model list unavailable while logged out" } }
       - { provider: claude, lane: claude_subscription_1x, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 2 }   # CC-1x account: same model, lane_order rung before CC-primary (v3, 2026-10-16)
+      # claude-opus-5-5[1m] is the ICA spine-offload id. Opus 5 / 4.8 / 4.6 on ICA return 403 (not served).
       - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 9, tools: [one_million_context], max_context: 1000000, max_output: 128000, health: { status: degraded, checked_at: 2026-10-23, evidence: "N10: chat/completions denied E003 Model not available for Coding Agents; messages wrapper NOT re-probed. Prior wrapper success 2026-09-24 is stale. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md" } }
       # ⚠️ SUPERSEDED 2026-10-16 (Nick): ICA now serves claude-sonnet-5-5, which is the default ICA Sonnet
       # offload again; this Opus 5.5 ICA row stays enabled for design_judgment / spine-offload, but the
@@ -1386,7 +1387,7 @@ models:
       # Economics = the existing ICA Sonnet row (shared ccx credit pool, unchanged): NOT free. model_id carries [1m] (the
       # ica-claude.sh / Claude Code id, 1M context); raw-HTTP adapters send the bare `claude-sonnet-5-5`.
       # Scores are the entry's own (inherited from the Sonnet 5.5 subscription evaluation), pending an ICA-lane evaluation.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-sonnet-5-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, health: { status: available, checked_at: 2026-10-23, evidence: "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md" } }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-sonnet-5-5[1m]", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000, health: { status: available, checked_at: 2026-10-25, evidence: "bare id HTTP 200 on 2026-10-25; [1m] form served via ica-claude.sh. ICA Claude default (front policy)" } }
   claude-sonnet-5:
     family: claude
     class: sonnet
@@ -1408,6 +1409,7 @@ models:
       - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
       # On ICA, 1m preferred over plain 200k (see "ICA 1M-CONTEXT PREFERENCE" invariant); plain is the demoted 200k fallback. Verified 2026-07-08: [1m]=1M, plain=200k via modelUsage.
       # ✅ reasoning WORKS on this ICA lane via Claude Code (revalidated 2026-07-20 — supersedes the 2026-07-09 no-op finding): adaptive thinking + output_config.effort honored end-to-end. Reasoning-dependent legs OK here. Only gap: output_config.format (structured JSON) dropped by the gateway — use a tool-call.
+      # LEGACY 2026-10-25: claude-sonnet-5 on ICA is a fallback behind claude-sonnet-5-5, the ICA Claude default.
       - { provider: ica, lane: ica_gateway_messages,    model_id: "claude-sonnet-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tools: [one_million_context], max_context: 1000000 }
 
   claude-sonnet-4-6:
@@ -1473,7 +1475,7 @@ models:
       # false). Supersedes the 2026-10-07 403 reading. model_id carries [1m] (ica-claude.sh / Claude Code id); raw-HTTP
       # adapters send the bare `claude-haiku-5-5`. Priority 2 keeps the subscription row the unqualified default;
       # `--provider ica` and the exploration/documentation/mechanical chains reach this free row. Replaces ICA Haiku 4.5.
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-5-5[1m]", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 10, health: { status: available, checked_at: 2026-10-23, evidence: "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md" } }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-5-5[1m]", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 10, health: { status: available, checked_at: 2026-10-25, evidence: "bare id HTTP 200 on 2026-10-25; [1m] form served via ica-claude.sh. Economy-only, free on ICA (front policy)" } }
   claude-haiku-4-5:
     family: claude
     class: haiku
@@ -1492,6 +1494,7 @@ models:
     observed_ids: ["claude-haiku-4-5-20251001"]
     providers:
       # PAID per Nick 2026-10-07 (was free/unlimited); cheapest ICA Claude. Meter still reads 0.0: open discrepancy.
+      # LEGACY-SELECTABLE 2026-10-25: claude-haiku-4-5 on ICA is never a default; claude-haiku-5-5 is the ICA economy row.
       - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-4-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 7 }
       - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-4-5", cost_tier: billed, allowance: billed,    enabled: true, priority: 2, cost_score: 7 }
 
@@ -1900,7 +1903,7 @@ models:
       # with 400 "messages: empty array" for gpt-6 ids (control gpt-5.6-luna fails identically: a pre-existing shim
       # defect), so do NOT claim the Claude-Code-via-shim path works; use chat-completions / responses / Codex.
       # max_context deliberately omitted (the 600k ceiling was measured for 5.6 only). Scores inherited, pending evaluation.
-      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tool_mode: "none", capability_gap: "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)", health: { status: available, checked_at: 2026-10-23, evidence: "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md" } }
+      - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tool_mode: "none", capability_gap: "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)", health: { status: available, checked_at: 2026-10-25, evidence: "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-sol" } }
   gpt-6-luna:
     family: openai
     class: codex
@@ -1930,7 +1933,7 @@ models:
       # Priority 2 keeps the Codex-subscription row the unqualified default. cost_score is the old luna-ica value
       # (inherited, pending evaluation). A model_id is only unique per entry, so this does not collide with the
       # legacy `gpt-5.6-luna-ica` entry below.
-      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-6-luna", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 8, health: { status: available, checked_at: 2026-10-23, evidence: "N10: fresh nonce exact echo and finish=stop on bare-id chat/completions; messages harness not re-probed. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md" } }
+      - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-6-luna", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, cost_score: 8, health: { status: available, checked_at: 2026-10-25, evidence: "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-luna" } }
   gpt-5.6-sol:
     family: openai
     class: codex
@@ -1960,6 +1963,7 @@ models:
       # review/adjudication/critique routing_policy chains or an explicit needs_tools:false call.
       # Do not flip capability_gap's premise on the strength of a 200 — assert reasoning_tokens>0
       # WITH NO tool call made before trusting any future retest.
+      # LEGACY / SUPERSEDED 2026-10-25: ICA id gpt-5.6-sol is superseded by gpt-6.1-sol; fallback only, never a default. The -dzus ids are retired.
       - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-5.6-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, max_context: 600000, tool_mode: "none", capability_gap: "tools+reasoning mutually exclusive on BOTH transports (reasoning_tokens=0 whenever a tool call is made) — measured 2026-08-26/27; tool_mode:none is how the resolver keeps this instance out of any tool-requiring request" }
 
   gpt-5.6-terra:
@@ -2043,6 +2047,7 @@ models:
     sampling: deterministic
     status: active
     providers:
+      # LEGACY / SUPERSEDED 2026-10-25: ICA id gpt-5.6-luna is superseded by gpt-6-luna; kept selectable only as a fallback, never a default. The -dzus ids are retired.
       - { provider: ica, lane: ica_gateway_responses_shim, model_id: "gpt-5.6-luna", cost_tier: free, allowance: unlimited, enabled: true, priority: 1 }  # FREE as of 2026-08-26 (Nick, authoritative) — joined the ICA free tier alongside claude-haiku-4-5 / gemma-4-26b / llama-4-maverick / granite-4-h-small. Was shared_token_pool.
 
   # ── Codex legacy (gpt-5.5 line — SUPERSEDED by gpt-5.6; retained for compatibility, not a default) ──
