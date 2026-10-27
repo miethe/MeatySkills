@@ -453,6 +453,33 @@ lanes:
     - execution.file_edit
     - tools.image_generation
     provider: ica
+  codex_subscription:
+    sovereignty: subscription
+    endpoint: openai_default
+    auth: chatgpt_subscription
+    account_relationship: personal
+    invocation: aos-codex-exec --identity codex_primary exec
+    attributes:
+      compute_custody: vendor_hosted
+      retention: none_contractual
+      jurisdiction: us
+      account_relationship: personal
+      metering: flat_rate
+      payer: self
+    harness_capabilities:
+    - codex_exec
+    - workspace_write
+    - execution.file_edit
+    - tools.image_generation
+    provider: codex
+    default_identity: codex_primary
+    identity_choices:
+    - codex_primary
+    - codex_secondary
+    verified: true
+    note: Compatibility lane for personal subscription execution. Primary is the default;
+      account changes require an explicit routing decision, without silent replay or
+      rotation.
   codex_subscription_secondary:
     sovereignty: subscription
     endpoint: openai_default
@@ -1904,6 +1931,104 @@ models:
       # defect), so do NOT claim the Claude-Code-via-shim path works; use chat-completions / responses / Codex.
       # max_context deliberately omitted (the 600k ceiling was measured for 5.6 only). Scores inherited, pending evaluation.
       - { provider: ica, lane: ica_gateway_messages_shim, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 2, cost_score: 8, tool_mode: "none", capability_gap: "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)", health: { status: available, checked_at: 2026-10-25, evidence: "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-sol" } }
+  gpt-6.1-terra:
+    family: openai
+    class: codex
+    descriptor: 'GPT-6.1 Terra: available on codex_primary; scoped code/review/extraction
+      pilot after Luna misses; medium effort; no proven Sonnet 5.5 replacement. API
+      and installed CLI context/effort surfaces differ; see the dated onboarding probe.
+      No automatic role promotion.'
+    scores:
+      cost: UNMEASURED
+      intelligence: 8
+      taste: UNMEASURED
+      speed: 7
+    scores_basis: 'Provisional agent estimates from docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/results.md:
+      Intelligence 8 is a scoped AOS bracket between Luna 7 and Sol 9, not a general
+      capability measurement; Speed 7 brackets observed native latency near Luna on
+      bounded work. Cost and Taste remain UNMEASURED: no actual quota/cash conversion
+      or taste instrument. Advisory only; no holder/chain change.'
+    when_to_use:
+    - explicit-evaluation
+    - scoped-code-pilot
+    - code-review-pilot
+    - extraction-pilot
+    playbook_ref: model-playbook/routes/openai-gpt.md#gpt-6.1-terra
+    tools:
+    - functions
+    - web-search
+    - file-search
+    - computer-use
+    related_skills:
+    - codex
+    max_context: 500000
+    max_output: 128000
+    capabilities:
+      context_window: 500000
+      api_context_window: 1050000
+      cli_effective_context_window_percent: 95
+      cli_default_effort: low
+      api_default_effort: medium
+      api_reasoning_efforts:
+      - none
+      - low
+      - medium
+      - high
+      - xhigh
+      - max
+      tool_calling_api: responses
+      basis: Official API page and docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/raw/codex-model-metadata.json,
+        2026-10-26; capacity and tools advertised, not stress-tested.
+    pricing:
+      input_per_mtok_usd: 1
+      output_per_mtok_usd: 5
+      cache_read_per_mtok_usd: 0.05
+      cache_write_per_mtok_usd: null
+      basis: Standard short API price. Official source specifies 30-minute writes ($1.25/MTok),
+        not the legacy registry five-minute retention field. Subscription cash/quota
+        conversion is unmeasured.
+      as_of: '2026-10-26'
+      source: https://developers.openai.com/api/docs/models/gpt-6.1-terra
+    reasoning_efforts:
+    - low
+    - medium
+    - high
+    - xhigh
+    - max
+    - ultra
+    default_effort: medium
+    default_effort_basis: Explicit medium benchmark selection; not a task_class_defaults
+      change or measured effort optimum. Installed CLI default remains low.
+    sampling: stochastic
+    status: active
+    providers:
+    - provider: codex
+      lane: codex_subscription_primary
+      model_id: gpt-6.1-terra
+      cost_tier: standard
+      allowance: billed
+      enabled: true
+      priority: 1
+      account_relationship: personal
+      write_capability: codex_sandbox
+      health:
+        status: available
+        checked_at: '2026-10-26'
+        evidence: 'docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/raw/codex-{low,medium,high,xhigh,max,ultra}.receipt.json:
+          rc0 and OK on codex_primary. Secondary not probed.'
+    - provider: ica
+      lane: ica_gateway_messages_shim
+      model_id: gpt-6.1-terra
+      cost_tier: standard
+      allowance: shared_token_pool
+      enabled: false
+      priority: 2
+      health:
+        status: unavailable
+        checked_at: '2026-10-26'
+        evidence: 'docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/raw/ica-gpt-6.1-terra-chat.json
+          and docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/raw/ica-terra.json:
+          HTTP 403 team_model_access_denied on the probed key; no broader catalog claim.'
   gpt-6-luna:
     family: openai
     class: codex
