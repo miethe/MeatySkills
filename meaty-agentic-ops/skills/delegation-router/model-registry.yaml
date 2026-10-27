@@ -1070,7 +1070,7 @@ task_class_defaults:
     - claude-opus-5
     minimum:
       lanes: [claude_subscription]
-      reason: quality_bar
+      reason: authority_absolute
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
