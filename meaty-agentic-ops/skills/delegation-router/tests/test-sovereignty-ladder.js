@@ -206,7 +206,7 @@ describe('(0) the ladder is ordered, and `unknown` sits below every real rung', 
   });
 
   test('the reason vocabulary is exactly the three declared classes', () => {
-    assert.deepStrictEqual(SOVEREIGNTY_MINIMUM_REASONS, ['cost_policy', 'quality_bar', 'egress_absolute']);
+    assert.deepStrictEqual(SOVEREIGNTY_MINIMUM_REASONS, ['cost_policy', 'quality_bar', 'egress_absolute', 'authority_absolute']);
   });
 
   test('clearsFloor is >=, not ==: a HIGHER rung satisfies a lower minimum', () => {
@@ -370,6 +370,20 @@ describe('(3) the minimum is enforced at every selection site, not just one', ()
 // ---------------------------------------------------------------------------
 // (4) FAIL-CLOSED — an unclassified lane satisfies nothing
 // ---------------------------------------------------------------------------
+
+describe('authority_absolute minimum', () => {
+  test('mode_d accepts the reason and unknown lanes cannot satisfy it', () => {
+    const reg = ladderRegistry();
+    reg.task_class_sovereignty.mode_d = { min_rung: 'subscription', reason: 'authority_absolute' };
+    const r = resolveWith(reg, { model: 'gpt-5.6-terra', task_class: 'mode_d' });
+    assert.strictEqual(r.sovereignty_floor.reason, 'authority_absolute');
+    assert.ok(sovereigntyRung(r.sovereignty) >= SOVEREIGNTY_RUNGS.subscription);
+    for (const entry of Object.values(reg.models)) {
+      for (const provider of entry.providers || []) provider.lane = 'mystery_lane';
+    }
+    assert.throws(() => resolveWith(reg, { model: 'gpt-5.6-terra', task_class: 'mode_d' }));
+  });
+});
 
 describe('(4) fail-closed: "could not determine the lane" never reads as "the lane is fine"', () => {
   test('an instance with NO lane in a ladder-live registry clears no floor', () => {

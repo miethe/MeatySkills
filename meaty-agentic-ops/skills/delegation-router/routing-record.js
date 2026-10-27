@@ -189,7 +189,7 @@ const SOVEREIGNTY_UNKNOWN_RUNG = -1;
  * @readonly
  * @type {string[]}
  */
-const SOVEREIGNTY_MINIMUM_REASONS = ['cost_policy', 'quality_bar', 'egress_absolute'];
+const SOVEREIGNTY_MINIMUM_REASONS = ['cost_policy', 'quality_bar', 'egress_absolute', 'authority_absolute'];
 
 /**
  * Resolve a sovereignty label to its numeric rung. Anything unrecognized (including null,

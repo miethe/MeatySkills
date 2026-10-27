@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "4a10b912ccac52aa5aa25b3ddcb17eff499346d22b828b43d0222464aeae01a5",
+  "_yaml_sha256": "df4432a5009482cd1dc93a5f2d1647137fe9928ca83b174d84656202434365aa",
   "version": 3,
   "updated": "2026-10-25",
   "routing_attributes": {
@@ -1718,7 +1718,7 @@
         "lanes": [
           "claude_subscription"
         ],
-        "reason": "quality_bar"
+        "reason": "authority_absolute"
       },
       "effort": "medium",
       "bar": 8.0,
