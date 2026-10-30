@@ -1238,12 +1238,13 @@ function resolveFromRegistry(input) {
   const {
     model,
     effort = 'standard',
-    profile = null,
+    profile: rawProfile = null,
     task_class,
     resume_active = false,
     requires_write = false,
     _registryPath,
   } = input;
+  const profile = withWriteSandbox(rawProfile, effort, input);
 
   const requestedProvider = (input.provider && typeof input.provider === 'string')
     ? input.provider
@@ -1913,12 +1914,13 @@ function resolveFromToml(input) {
   const {
     model,
     effort = 'standard',
-    profile = null,
+    profile: rawProfile = null,
     task_class,
     resume_active = false,
     requires_write = false,
     _configPath,
   } = input;
+  const profile = withWriteSandbox(rawProfile, effort, input);
 
   const requestedProvider = (input.provider && typeof input.provider === 'string')
     ? input.provider
@@ -2121,6 +2123,20 @@ function buildTomlReason(best, requestedProvider, model, task_class, resume_acti
 // ---------------------------------------------------------------------------
 // Shared helpers (both paths)
 // ---------------------------------------------------------------------------
+
+/**
+ * Write capability is an attribute of the dispatch, not the model or effort (Nick 2026-10-25:
+ * a sandbox gap is a defect to close, never a reason for cc1x). A write dispatch
+ * (task_class 'write' or requires_write) pins workspace-write at every effort unless the profile
+ * already names a sandbox (explicit read-only wins). xhigh keeps its wider danger-full-access.
+ * A missing task_class is NOT write intent: it stays on the effort-derived default.
+ */
+function withWriteSandbox(profile, effort, input) {
+  const writeIntent = input && (input.requires_write === true || input.task_class === 'write');
+  if (!writeIntent || effort === 'xhigh') return profile;
+  if (profile && profile.includes('sandbox=')) return profile;
+  return `${profile || ''} sandbox=workspace-write`.trim();
+}
 
 function sandboxModeFor(profile, effort) {
   if (profile && profile.includes('sandbox=')) {
