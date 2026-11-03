@@ -26,6 +26,12 @@ V3 CLI: `node resolve-cli.js resolve --task-class <class> [--model <id>] [--capa
 emits the two-step decision. `node resolve-cli.js table --json` emits the static routing table.
 An exhausted floor emits `floor_breached: true` and exits non-zero.
 
+## Bound-front dispatch
+
+Use [dispatch-preflight.md](references/dispatch-preflight.md) for ordered credential,
+context, worktree and authorization checks, ICA/Codex write recipes, and refusal remedies.
+Run `aos-leg --check-only` before the first send.
+
 ---
 
 ## When To Use
