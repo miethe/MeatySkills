@@ -1022,13 +1022,54 @@ function laneEligible(lane, classSpec) {
   return { eligible: predicateOk && capabilityOk, capabilityOk, reason };
 }
 
-function capacityFor(capacity, laneId, identityRef) {
+// Read the zero-model reader's published receipt, never the raw dispatch streams.
+// TTL policy and observations belong to operator_core.core.lane_availability.
+function observedCapacity(input) {
+  const receiptPath = input.availability_path || process.env.AOS_LANE_AVAILABILITY_PATH ||
+    path.join(process.env.AOS_DATA_HOME || path.join(require('os').homedir(), '.local/share/aos'), 'lane-availability.json');
+  try {
+    const receipt = input.capacity && input.capacity.schema === 'aos.lane-availability/1'
+      ? input.capacity : JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    if (receipt.schema !== 'aos.lane-availability/1' || !receipt.lanes) return null;
+    return { ...receipt, source: receipt === input.capacity ? 'input.capacity' : receiptPath, now: Date.now() / 1000 };
+  } catch (error) {
+    if (error.code === 'ENOENT' || error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+function capacityFor(capacity, laneId, identityRef, observed, providerRow) {
   const laneState = (capacity && capacity.lanes && capacity.lanes[laneId]) || { state: 'unmeasured' };
   const identity = identityRef && capacity && capacity.identities && capacity.identities[identityRef];
   if (identity && identity.available === false) {
     return { state: 'unavailable', reason: identity.reason || `identity ${identityRef} unavailable` };
   }
-  return { state: laneState.state || 'unmeasured', reason: laneState.reason || null, until: laneState.until || null };
+  if (['refused', 'unavailable'].includes(laneState.state)) return laneState;
+  const aliases = { ica_gateway_messages: 'ica', ica_gateway_messages_shim: 'ica',
+    ica_gateway_responses_shim: 'ica', ica_gateway: 'ica',
+    claude_subscription_1x: 'cc1x', claude_subscription: 'cc-primary', gemini_cli: 'gemini', gemini_direct: 'gemini' };
+  const key = identityRef || aliases[laneId] || laneId;
+  const row = observed && observed.lanes[key];
+  const hold = observed && observed.manual_holds && observed.manual_holds[key];
+  if (observed && observed.manual_holds_error) throw new Error(observed.manual_holds_error);
+  if (hold) return { state: 'unavailable', reason: hold.reason || 'manual_hold', until: hold.until, source: observed.source };
+  // Receipt rewrite time is irrelevant. Trust only the producer's observation/expiry.
+  const fresh = row && Number.isFinite(row.observed_at) && row.observed_at <= observed.now &&
+    Number.isFinite(row.expires_at) && row.expires_at > observed.now;
+  const resetPending = row && (row.status === 'LIMITED' || row.previous_status === 'LIMITED') &&
+    Number.isFinite(row.observed_at) && row.observed_at <= observed.now && Number.isFinite(row.until) && row.until > observed.now;
+  if (row && ((fresh && ['LIMITED', 'DOWN'].includes(row.status)) || resetPending)) {
+    return { state: 'unavailable', reason: `${key}: ${row.status}: ${row.reason}`, until: row.until,
+      source: row.source || observed.source, observed_status: row.status };
+  }
+  const paid = row && row.paid_pool;
+  if (key === 'ica' && providerRow && providerRow.allowance !== 'unlimited' && paid &&
+      Number.isFinite(paid.observed_at) && paid.observed_at <= observed.now &&
+      Number.isFinite(observed.ttl_seconds) && paid.observed_at + observed.ttl_seconds > observed.now && ['LIMITED', 'DOWN'].includes(paid.status)) {
+    return { state: 'unavailable', reason: `ica paid pool: ${paid.status}`, source: paid.source };
+  }
+  return { state: laneState.state || (fresh && row.status === 'AVAILABLE' ? 'admitted' : 'unmeasured'),
+    reason: laneState.reason || null, until: laneState.until || null };
 }
 
 function modelRows(registry, modelId) {
@@ -1092,7 +1133,7 @@ function resolveModel(registry, input) {
       const lane = registry.lanes && registry.lanes[row.lane];
       if (!lane || !laneOrder.includes(row.lane)) return false;
       const eligibility = laneEligible({ ...lane, id: row.lane }, classSpec);
-      const status = capacityFor(capacity, row.lane, lane.identity_ref).state;
+      const status = capacityFor(capacity, row.lane, lane.identity_ref, input._observedAvailability, row).state;
       return eligibility.eligible && !['refused', 'unavailable'].includes(status);
     });
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
@@ -1110,7 +1151,7 @@ function resolveModel(registry, input) {
   return { classSpec, taskClassKey, holders, decisions, chosenModel };
 }
 
-function resolveLane(registry, modelId, classSpec, capacity = {}) {
+function resolveLane(registry, modelId, classSpec, capacity = {}, observed = null) {
   const rows = modelRows(registry, modelId);
   const laneOrder = registry.lane_order || [];
   const candidates = [];
@@ -1119,12 +1160,13 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
     for (const { model, row } of matches) {
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
-      const availability = capacityFor(capacity, laneId, lane.identity_ref);
+      const availability = capacityFor(capacity, laneId, lane.identity_ref, observed, row);
       const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
         eligible: eligibility.eligible, eligibility_reason: eligibility.reason,
         capability_ok: eligibility.capabilityOk, capacity: availability.state,
+        availability: availability,
         identity_ref: lane.identity_ref || null,
         verdict: excluded ? 'excluded' : 'eligible',
         reason: !eligibility.eligible ? eligibility.reason : (excluded ? availability.reason || `capacity is ${availability.state}` : `lane admitted with capacity ${availability.state}`),
@@ -1136,6 +1178,11 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
 }
 
 function resolveV3(registry, input) {
+  if ((input.model || input.provider || input.identity_ref) &&
+      !(typeof input.pin_reason === 'string' && input.pin_reason.trim())) {
+    throw new Error('Explicit model/provider/account pin requires pin_reason');
+  }
+  input = { ...input, _observedAvailability: observedCapacity(input) };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;
   const floorModel = classSpec.fallback && classSpec.fallback.floor_model;
@@ -1148,7 +1195,7 @@ function resolveV3(registry, input) {
   const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
-  for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {});
+  for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {}, input._observedAvailability);
   const chosenModel = selectedIndex >= 0 ? modelDecision.chosenModel : null;
   let selectedLane = chosenModel && allLaneDecisions[chosenModel].chosen;
   if (input.identity_ref && chosenModel) {
@@ -1183,6 +1230,9 @@ function resolveV3(registry, input) {
     credential_lane: selectedLane && selectedLane.identity_ref ? selectedLane.lane : null,
     model_decision: { task_class: input.task_class, canonical_task_class: modelDecision.taskClassKey, explicit: Boolean(input.model), holders: modelDecision.decisions, chosen: chosenModel },
     lane_decision: { candidates: laneCandidates.map(({ model_entry, ...candidate }) => candidate), chosen: selectedLane ? selectedLane.lane : null, identity_ref: selectedLane ? selectedLane.identity_ref : null },
+    availability_decisions: Object.fromEntries(Object.entries(allLaneDecisions).map(([model, decision]) => [model, decision.candidates.map(({ model_entry, ...candidate }) => candidate)])),
+    pin_reason: input.pin_reason || null,
+    availability_source: input._observedAvailability && input._observedAvailability.source,
     lane_order: registry.lane_order || [],
     floor: floorModel ? { model: floorModel, reason: classSpec.minimum && classSpec.minimum.reason || 'holder floor' } : null,
     floor_breached: floorBreached,

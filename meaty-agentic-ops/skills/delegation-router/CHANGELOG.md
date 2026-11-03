@@ -1,5 +1,18 @@
 # Changelog — delegation-router skill
 
+## 3.6 — 2026-11-03 — Observed lane availability
+
+- Node: `node_01M6H8TAQK9PPV2YCF0MRM55P2`. Consume the existing zero-model
+  lane-availability receipt in v3 lane and holder selection, retaining skip reasons,
+  provider evidence and resets. Exclude LIMITED/DOWN/manual holds from fallbacks;
+  retain class minimums, capabilities and holder floors. ICA paid pools remain scoped.
+- Explicit v3 model/provider/account pins require a recorded explanation. CLI accepts
+  `--pin-reason` and `--availability-file`; `--capacity-file` also accepts the reader's schema.
+- Boundary tests cover primary quota, stale/reset observations, pin provenance and
+  complete eligible-lane exhaustion. Legacy TOML/v2 routing remains unchanged.
+- Refresh the published receipt with the launchpad reader before routing. Deploy only
+  after upstream merge via SkillMeat; no deployed copies are changed by this PR.
+
 ## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
 
 - Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Code: v3 `resolve()` now stamps `context_class` and
