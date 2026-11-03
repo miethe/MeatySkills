@@ -3,6 +3,12 @@
 Human orientation for the `delegation-router` skill. For agent invocation see `SKILL.md`;
 for the capability contract see `SPEC.md`.
 
+## Bound-front dispatch
+
+Use [dispatch-preflight.md](references/dispatch-preflight.md) for ordered credential,
+context, worktree and authorization checks, ICA/Codex write recipes, and refusal remedies.
+Run `aos-leg --check-only` before the first send.
+
 ## What it is
 
 A pure resolver engine that decides **where** a delegated unit of work should run before any

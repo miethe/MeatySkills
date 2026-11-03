@@ -39,7 +39,7 @@
 #   free set is now FIVE (gemma-4, llama-4-maverick, granite-4-small, gpt-5.6-luna, glm-5-3). The $0.00 meter
 #   reading stays recorded as an OPEN DISCREPANCY (tracker: ICA Haiku 4.5 metering shows $0 though Nick
 #   reports paid: verify with a portal credit delta, child of node_01M4C1MXHVCZTA6Y71RNEVXT4R).
-#   claude-haiku-5-5 is NOT served on ICA (403).
+#   Nick, 2026-10-16: claude-haiku-5-5 is served and unlimited on ICA; this supersedes the 2026-10-07 403 probe.
 #   Everything else ICA-served is `allowance: shared_token_pool` — token-limited
 #   against ICA's shared pool and therefore NOT free. They remain opt-in cost-shifts.
 #
@@ -102,7 +102,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-10-15   # GLM 5.3 added and enabled per Nick ratification; see agentic_meta_dev evaluation report. Prior: nvidia/llama-3.3-nemotron-super (49B, ICA ccx), 2026-10-07. Prior history: CHANGELOG.md.
+updated: 2026-11-03   # Reconciled launchpad GPT-6.1 Terra pilot and 2026-10-16/24 ICA availability decisions; see docs/reconcile/delegation-router-2026-11-03.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -130,12 +130,13 @@ ica_catalog:
   - { model_id: "claude-opus-4-6", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
   - { model_id: "claude-opus-4-8", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
   - { model_id: "claude-opus-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, evidence: "403 E002 tenancy entitlement gap" } }
-  - { model_id: "claude-opus-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-09-24, evidence: "Claude-Code wrapper: claude-opus-5-5[1m] rc 0, canonicalModel claude-opus-5-5, contextWindow 1000000; raw HTTP bare-id unmeasured" } }
+  - { model_id: "claude-opus-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: unavailable, checked_at: 2026-10-24, evidence: "Nick: Opus 5.5 unavailable on ICA since 2026-10-24 (MODEL-ROUTING.md)" } }
   - { model_id: "claude-sonnet-4-5", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-4-6", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "claude-sonnet-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
+  - { model_id: "claude-sonnet-5-5", lanes: [ccx], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-24, evidence: "ICA default since 2026-10-16 (node_01M5QHZTRPC6JRB9RGVPS3M9HE)" } }
   - { model_id: "claude-haiku-4-5", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available, checked_at: 2026-10-07, evidence: "PAID per Nick 2026-10-07; gateway meter still reads response-cost-original 0.0 at 41.6k input tokens (open discrepancy, unreconciled)" } }
-  - { model_id: "claude-haiku-5-5", lanes: [ccx], economics: unknown, health: { status: unavailable, checked_at: 2026-10-07, evidence: "403 team_model_access_denied on CCx3 for bare id, [1m], and dated forms; absent from GET /v1/models (26 ids)" } }
+  - { model_id: "claude-haiku-5-5", lanes: [ccx], economics: unlimited, health: { status: available, checked_at: 2026-10-16, evidence: "Nick: served and FREE/unlimited on ICA as of 2026-10-16 (MODEL-ROUTING.md)" } }
   - { model_id: "gemini-3.1-pro-preview", lanes: [beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "gemini-3.5-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
   - { model_id: "gemini-3.6-flash", lanes: [ccx, beta], economics: shared_token_pool, health: { status: available } }
@@ -416,7 +417,7 @@ models:
   claude-opus-5-5:
     family: claude
     class: opus
-    descriptor: "Claude Opus 5.5 (released 2026-09-22) — the AOS SPINE / MUST-stay tier as of 2026-09-22 (orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge; agentic_meta_dev CLAUDE.md 'Model × provider × effort'), superseding claude-opus-5 (kept selectable as the legacy/fallback chain entry — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27). Exact API ID claude-opus-5-5; Anthropic documents 1M context, 128K maximum output, adaptive thinking always on, and $4/$20 per input/output MTok ($0.20 cache reads). Anthropic reports >30% faster output than Opus 5 and recommends starting most workloads here, escalating to Fable 5.1 after higher-effort Opus 5.5 falls short. Those routing/performance claims are vendor-reported, not locally measured. Harness caveat MEASURED FROM PRIMARY: preserved thinking applies to API accounts created on/after 2026-08-31, so prior Claude context cannot be edited. Forced-tool-choice and thinking-history behavior are UNKNOWN. ICA ccx Claude-Code wrapper smoke 2026-09-24: claude-opus-5-5[1m] rc 0, canonicalModel claude-opus-5-5, contextWindow 1000000; raw-HTTP bare-id behavior was not re-measured. Native availability in this checkout is unmeasured because claude models requires login."
+    descriptor: "Claude Opus 5.5 (released 2026-09-22) — the AOS SPINE / MUST-stay tier as of 2026-09-22 (orchestration, verdict/adjudication, final synthesis, architecture, mode-d, schema-recovery, cross-wave merge; agentic_meta_dev CLAUDE.md 'Model × provider × effort'), superseding claude-opus-5 (kept selectable as the legacy/fallback chain entry — reconciled node_01M3F4F5G93P21P1WAH565MAYQ 2026-09-27). Exact API ID claude-opus-5-5; Anthropic documents 1M context, 128K maximum output, adaptive thinking always on, and $4/$20 per input/output MTok ($0.20 cache reads). Anthropic reports >30% faster output than Opus 5 and recommends starting most workloads here, escalating to Fable 5.1 after higher-effort Opus 5.5 falls short. Those routing/performance claims are vendor-reported, not locally measured. Harness caveat MEASURED FROM PRIMARY: preserved thinking applies to API accounts created on/after 2026-08-31, so prior Claude context cannot be edited. Forced-tool-choice and thinking-history behavior are UNKNOWN. ICA ccx Claude-Code wrapper smoke 2026-09-24 succeeded with 1M context; Nick reported ICA unavailability on 2026-10-24, superseding that earlier health observation. Native availability in this checkout is unmeasured because claude models requires login."
     scores: { cost: 3, intelligence: 9, taste: 8, speed: 6 }   # Cost holds Opus 5's subscription score: actual spend unmeasured; lower published price alone does not change it. Intelligence/Taste/Speed are vendor-reported (not local evals); Speed 6 follows reported >30% gain vs Opus 5=5.
     when_to_use: [orchestration, deep-reasoning, architecture, verdicts, novel-algorithm-design, synthesis, mode-d, agentic-coding, long-running-agentic-coding, knowledge-work, design_judgment, ux-visual-design, hard-judgment, ambiguous-synthesis]
     tools: [agent_tool, task_tool, one_million_context]
@@ -430,7 +431,7 @@ models:
     selection_posture: default_spine
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-opus-5-5", cost_tier: premium, allowance: billed, enabled: true, priority: 1, health: { status: unknown, evidence: "launch page reports Claude Code availability; local model list unavailable while logged out" } }
-      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: true, priority: 1, cost_score: 9, tools: [one_million_context], max_context: 1000000, max_output: 128000, health: { status: available, checked_at: 2026-09-24, evidence: "Claude-Code wrapper rc 0; canonicalModel claude-opus-5-5; contextWindow 1000000" } }
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-opus-5-5[1m]", cost_tier: premium, allowance: shared_token_pool, enabled: false, priority: 1, cost_score: 9, tools: [one_million_context], max_context: 1000000, max_output: 128000, health: { status: unavailable, checked_at: 2026-10-24, evidence: "Nick: Opus 5.5 unavailable on ICA since 2026-10-24 (MODEL-ROUTING.md)" } }
       # ⚠️ 2026-09-28 (evening), Nick: this ICA row is now PREFERRED over claude-sonnet-5[1m] on the
       # gateway (until ICA serves claude-sonnet-5-5) — a capability call, not a cost saving. Opus 5.5
       # draws MORE of the shared weekly ccx credit allowance per call than Sonnet 5 (~$4/$20 vs $2/$10
@@ -511,7 +512,7 @@ models:
   claude-sonnet-5-5:
     family: claude
     class: sonnet
-    descriptor: "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). Default subscription/native-execution Sonnet for CONTRACT-CLEAR execution/review/research, superseding claude-sonnet-5 (Nick, 2026-09-28) — NOT a blanket default: `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes that never resolve here (Nick, 2026-09-28 evening; see the routing_policy chains above). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 (within a few points on several) at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ⚠️ ICA does NOT yet serve Sonnet 5.5 as of 2026-09-28 (same shape as the Codex-subscription/ICA GPT-5.6 split) — the ICA Sonnet offload lane stays `claude-sonnet-5[1m]` until ICA adds it, and until then ICA's preferred Claude model is `claude-opus-5-5[1m]` (see that model's ICA provider row), not Sonnet 5. Tracker `node_01M3MWZ6564YV32VCMMGAV5DN2` (tree tree_01KVTH95ETM8YRYCV2ENHVR124, 'Update ICA Sonnet mapping to 5.5 when ICA serves it'); probe = a bare-id HTTP 200 check against the ICA gateway (see `ica-ccx-bare-ids-only` lesson) with model_id `claude-sonnet-5-5` (not `[1m]`)."
+    descriptor: "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). Default subscription/native-execution Sonnet for CONTRACT-CLEAR execution/review/research, superseding claude-sonnet-5 (Nick, 2026-09-28) — NOT a blanket default: `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes that never resolve here (Nick, 2026-09-28 evening; see the routing_policy chains above). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 (within a few points on several) at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ICA serves claude-sonnet-5-5 as its default since 2026-10-16 (Nick; bare HTTP id, 1M capacity projection), superseding the 2026-09-28 availability note. Tracker `node_01M3MWZ6564YV32VCMMGAV5DN2` (tree tree_01KVTH95ETM8YRYCV2ENHVR124, 'Update ICA Sonnet mapping to 5.5 when ICA serves it'); probe = a bare-id HTTP 200 check against the ICA gateway (see `ica-ccx-bare-ids-only` lesson) with model_id `claude-sonnet-5-5` (not `[1m]`)."
     scores: { cost: 5, intelligence: 9, taste: 8, speed: 8 }   # 1-10, higher=better; cost = preferred-lane real spend. Same $2/$10 as Sonnet 5 so cost unchanged; speed/taste raised on the measured 30%+ faster output + across-the-board benchmark gains vs Sonnet 5. Intelligence raised 8→9 (2026-09-28 evening, Nick) per the announcement-page benchmark table showing it within a few points of Opus 5.5 (e.g. Terminal-Bench 70.6% vs 66.4%) PLUS community reviews cited in the 2026-09-28 intake brief (.claude/reports/chat-2026-09-28-day/sonnet-5-5/brief.md in agentic_meta_dev) — vendor-reported and community-reported, NOT independently measured by us. This score does not license routing design_judgment/raw_strength work here; see the descriptor and the routing_policy chains above.
     when_to_use: [implementation, agentic-coding, code-review, multi-file-refactoring, planning, exploration, deep-reasoning]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-sonnet-5-5
@@ -524,9 +525,9 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: billed, enabled: true, priority: 1 }
-      # ICA does not serve claude-sonnet-5-5 yet (measured 2026-09-28). No ICA provider row here —
-      # add one (model_id "claude-sonnet-5-5[1m]") once ICA ships it; until then ICA offload keeps
-      # routing through the claude-sonnet-5 entry below.
+      # Nick, 2026-10-16: ICA serves claude-sonnet-5-5 and it is the ICA default.
+      # Bare HTTP id; max_context carries the canonical [1m] capacity projection.
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-sonnet-5-5", cost_tier: standard, allowance: shared_token_pool, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000, health: { status: available, checked_at: 2026-10-24, evidence: "ICA default since 2026-10-16 (node_01M5QHZTRPC6JRB9RGVPS3M9HE)" } }
 
   claude-sonnet-5:
     family: claude
@@ -595,7 +596,7 @@ models:
   claude-haiku-5-5:
     family: claude
     class: haiku
-    descriptor: "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). NOT served on ICA: 403 team_model_access_denied on CCx3 for the bare id, [1m] and dated forms, and absent from the gateway /v1/models catalog, so every ICA lane keeps claude-haiku-4-5. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens."
+    descriptor: "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). Nick confirmed it is served and free/unlimited on ICA as of 2026-10-16, superseding the October 7 entitlement probe. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens."
     scores: { cost: 10, intelligence: 6, taste: 6, speed: 9 }   # 1-10, higher=better. Cost 10: list $0.10/$0.50, cheapest paid Claude by 10x. Intelligence 6 (4.5 was 5): bench mean 4.33 vs Haiku 4.5 3.83 and Sonnet 5.5 4.50 on easy contract-clear tasks, but n=1 per task and the tasks are small, so it is capped below Sonnet 5.5's 9 and does NOT license design_judgment/raw_strength work. Speed 9: ~5s per small task, fastest tier per Anthropic.
     when_to_use: [mechanical-tasks, extraction, classification, routing-triage, structured-json-output, doc-gen, exploration, adversarial-review]
     playbook_ref: model-playbook/routes/anthropic-claude.md#claude-haiku-5-5
@@ -608,8 +609,9 @@ models:
     status: active
     providers:
       - { provider: claude, lane: claude_subscription, model_id: "claude-haiku-5-5", cost_tier: billed, allowance: billed, enabled: true, priority: 1, cost_score: 10 }
-      # ICA does not serve claude-haiku-5-5 (403 team_model_access_denied, 2026-10-07). No ICA provider
-      # row on purpose; add one (bare id, NOT [1m]) once a bare-id HTTP 200 check passes against the gateway.
+      # Nick, 2026-10-16: ICA serves claude-haiku-5-5 and it is FREE/unlimited.
+      # Supersedes the October 7 entitlement probe.
+      - { provider: ica, lane: ica_gateway_messages, model_id: "claude-haiku-5-5", cost_tier: free, allowance: unlimited, enabled: true, priority: 2, tools: [one_million_context], max_context: 1000000, health: { status: available, checked_at: 2026-10-16, evidence: "Nick: served and FREE/unlimited on ICA as of 2026-10-16 (MODEL-ROUTING.md)" } }
 
   claude-haiku-4-5:
     family: claude
@@ -994,6 +996,37 @@ models:
     status: active
     providers:
       - { provider: codex, lane: codex_subscription, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
+
+  # Scoped pilot; do not add to an automatic routing chain without a separate decision.
+  gpt-6.1-terra:
+    family: openai
+    class: codex
+    descriptor: "GPT-6.1 Terra on codex_primary; scoped code, review and extraction pilot after Luna misses. Medium effort selected for the pilot; no proven Sonnet 5.5 replacement or automatic role promotion. API and installed CLI context/effort surfaces differ; see the dated onboarding probe."
+    scores: { cost: UNMEASURED, intelligence: 8, taste: UNMEASURED, speed: 7 }
+    when_to_use: [explicit-evaluation, scoped-code-pilot, code-review-pilot, extraction-pilot]
+    tools: [functions, web-search, file-search, computer-use]
+    related_skills: [codex]
+    max_context: 500000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 1, output_per_mtok_usd: 5, cache_read_per_mtok_usd: 0.05 }
+    reasoning_efforts: [low, medium, high, xhigh, max, ultra]
+    default_effort: medium
+    sampling: stochastic
+    status: active
+    providers:
+      - provider: codex
+        lane: codex_subscription_primary
+        model_id: gpt-6.1-terra
+        cost_tier: standard
+        allowance: billed
+        enabled: true
+        priority: 1
+        account_relationship: personal
+        write_capability: codex_sandbox
+        health:
+          status: available
+          checked_at: 2026-10-26
+          evidence: "Codex CLI low/medium/high/xhigh/max/ultra receipts returned rc 0 on codex_primary; secondary not probed. Source report: docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26."
 
   gpt-6-luna:
     family: openai

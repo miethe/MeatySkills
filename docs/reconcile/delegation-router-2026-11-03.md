@@ -1,47 +1,85 @@
 # delegation-router reconcile — 2026-11-03
 
-Node `node_01M6H8TAQK9PPV2YCF0MRM55P2`. Base: `2230c85a` (PR #107 merged). Upstream: `meaty-agentic-ops/skills/delegation-router`.
-Method: whole-file `diff -rq`, blob lookup in upstream history (`git log --find-object`), and a line-set check for
-deployed lines absent from upstream; launchpad history from `git -C agentic_meta_dev log --follow`. Neither deployed copy was edited.
+Target node: `node_01M6H8TAQK9PPV2YCF0MRM55P2`. Comparison base: `2230c85a` (PR #107 merged).
+Canonical path: `meaty-agentic-ops/skills/delegation-router`. Neither deployed copy was edited.
 
-Classes: **PORTED** (real deployed-ahead work, now upstream) · **SUPERSEDED** (deployed is an older snapshot; upstream `2230c85a` already holds the behavior) · **UPSTREAM-ONLY** (deployed lacks the file).
+## Method and counts
 
-## Counts
+Compared tracked paths and bytes against the pinned base with `git ls-tree` / `git show`, then
+reviewed unified diffs. For every conflicting launchpad file, queried
+`git -C /Users/miethe/dev/homelab/development/agentic_meta_dev log --follow -1 --
+.claude/skills/delegation-router/<file>`; latest-touch results are below. The SkillMeat summary
+captured earlier on the node was launchpad `13 deployed-ahead / 6 upstream-ahead / 25 conflicting`
+and home `0 / 1 / 17`. A fresh byte comparison in this worktree instead finds:
 
-| Copy | differing files | PORTED | SUPERSEDED | UPSTREAM-ONLY (missing from copy) | deployed-only files |
-|---|---|---|---|---|---|
-| launchpad `.claude/skills/delegation-router` | 25 | 1 hunk (`SKILL.md`) | 24 | 6 | 1 (`references/dispatch-preflight.md`, PORTED whole) |
-| home `~/.claude/skills/delegation-router` | 17 | 0 | 17 | 1 | 0 |
+| Copy | Same-path conflicts | Deployed-only at 2230c85a | Upstream-only at 2230c85a |
+|---|---:|---:|---:|
+| launchpad | 25 | 1 (`references/dispatch-preflight.md`) | 6 |
+| home | 17 | 0 | 1 (`tests/test-observed-availability.js`) |
 
-Launchpad history: last touch `ae1bebf949` (2026-10-27) — all registry/ICA/Terra churn there predates upstream v3 (`a21c601`, 2026-10-16 registry v3 + `e43e798`/`3821d43`) or is already in upstream. Home is an older v3.5 snapshot (SPEC updated 2026-09-09); launchpad is newer than home wherever the two disagree, and upstream is newer than both.
+The earlier SkillMeat class totals and the fresh path comparison do not use the same observable
+classification; both measurements are preserved here rather than conflated.
 
-## PORTED
+## Ported and conflict decisions
 
-| File | Deployed source | Action |
+| Path / hunk | Decision | Evidence and rationale |
 |---|---|---|
-| `references/dispatch-preflight.md` | launchpad, `c09a6020b8` (#2522, 2026-10-21; node_01M52WQT5JX6QBKESK80GMS1WR) | copied; one edit (see conflicts) |
-| `SKILL.md` § "Bound-front dispatch" | launchpad `c09a6020b8` | inserted before "When To Use" |
+| `references/dispatch-preflight.md` (launchpad-only file) | PORTED, with account correction | Launchpad `c09a6020b8` (#2522, 2026-10-21). Ported ordered preflight, worktree/context checks, write recipes and refusal remedies. Kept the canonical Primary default from upstream; `codex_secondary` remains explicit-only. |
+| `SKILL.md`, `README.md` — “Bound-front dispatch” block | PORTED | Launchpad added the same pointer block with `c09a6020b8`; linked to the ported reference. Older surrounding text is superseded by upstream v3. |
+| `model-registry.yaml`, `model-registry.generated.json` — Terra pilot and ICA availability facts | PORTED, needs-nick | Launchpad `7440379526` (#3233, 2026-10-27) adds GPT-6.1 Terra as a codex_primary scoped pilot; `ae1bebf949` (#3361, 2026-10-27) records Opus 5.5 unavailable on ICA, Sonnet 5.5 as ICA default, and Haiku 5.5 available/free on ICA. Mapped these into upstream v3 and added Terra to `registry/providers/openai.yaml`; Terra is not added to any automatic chain. Preserved #107 selection and floors. Generator validation already fails on the base tree; generated JSON was updated to match source facts, with no claim of clean regeneration. |
+| `resolver.js`, `resolve-cli.js`, `tests/test-codex-identities.js` — missing availability and pin-reason behavior | SUPERSEDED by #107 (`abdb6eb3`, in `2230c85a`) | The deployed versions predate receipt consumption, skip reasons and explicit pin provenance. Kept #107. |
+| `tests/test-observed-availability.js` and its fixture | UPSTREAM-ONLY at base | Added by #107 and retained. |
+| All remaining differing files listed below | SUPERSEDED by upstream `2230c85a` | Deployed versions are older schema/API snapshots. Reviewed their unique hunks; none beyond the listed ports is compatible with the v3 registry/resolver contract. Where launchpad/home disagree, launchpad is the later deployed snapshot by launchpad history; upstream v3 remains authoritative. |
 
-## Conflicts resolved
+### File-by-file classification
 
-| Hunk | Choice | Why |
+`PORTED` denotes the specific hunks above; other hunks in a listed file are `SUPERSEDED`.
+
+| Launchpad conflicting path | Latest `--follow` touch | Decision |
 |---|---|---|
-| preflight "standing account is `codex_secondary`" + `--codex-identity codex_secondary` | **upstream**: `codex_primary` standing, secondary explicit | upstream SKILL/SPEC (Nick 2026-10-16, agentic_meta_dev #2466) says Primary is default until 2026-11-12; the doc's own text contradicted it |
-| `resolve-cli.js`, `resolver.js` (both copies) lack `--pin-reason`, `--availability-file`, observed-availability | **#107** | deployed predates `abdb6eb` |
-| `tests/test-codex-identities.js` (both copies: unnamed call, no `pin_reason`) | **#107** | #107 requires a recorded `pin_reason` for explicit pins |
-| launchpad/home `resolver.js` inline `stampNodeContract` object | superseded | upstream `normalizeNodeContract` (`a21c601`) is the same mapping |
-| home vs launchpad disagreement (SPEC, registry, tests) | launchpad newer by history; upstream newer than both | no hunk needed porting |
+| `CHANGELOG.md` | `7440379526` (2026-10-27, Terra onboarding) | SUPERSEDED; upstream changelog has later v3/#107 entries |
+| `README.md` | `c09a6020b8` (2026-10-21, dispatch preflight) | PORTED pointer hunk |
+| `SKILL.md` | `7440379526` (2026-10-27, Terra onboarding) | PORTED pointer hunk; old surrounding CLI text superseded |
+| `SPEC.md` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by v3 spec |
+| `model-registry.generated.json` | `ae1bebf949` (2026-10-27, ICA availability) | PORTED availability facts; remaining snapshot superseded |
+| `model-registry.yaml` | `ae1bebf949` (2026-10-27, ICA availability; also `7440379526` Terra) | PORTED Terra and availability facts; remaining snapshot superseded |
+| `recipe.toml` | `3e3ddb79f5` (2026-08-14, routing audit) | SUPERSEDED by upstream routing contract |
+| `references/model-registry.md` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by v3 registry guide |
+| `registry/private-only.yaml` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by upstream provider data |
+| `registry/providers/google.yaml` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED; upstream has newer catalog |
+| `resolve-cli.js` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by #107 CLI |
+| `resolver.js` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by #107 resolver |
+| `routing-feedback-contract.v1.json` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by upstream taxonomy |
+| `routing-record.js` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by schema v3 validation |
+| `scripts/build-model-registry.py` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by v3 generator |
+| `scripts/check-registry-fresh.py` | `f5395a45fe` (2026-08-14, deployed snapshot) | SUPERSEDED by upstream generator checks |
+| `task-class-vocabulary.v1.json` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by upstream vocabulary |
+| `tests/test-codex-identities.js` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by #107 pin contract |
+| `tests/test-context-class.js` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by v3 test contract |
+| `tests/test-p3-dry-run.js` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by v3 resolver tests |
+| `tests/test-provider-facts.py` | `92c58c8e36` (2026-10-09, integration) | SUPERSEDED by upstream registry model |
+| `tests/test-registry-builder.py` | `ae1bebf949` (2026-10-27, ICA availability) | SUPERSEDED by v3 generator contract |
+| `tests/test-registry-resolver.js` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by v3 resolver tests |
+| `tests/test-resolve-cli.js` | `3e3ddb79f5` (2026-08-14, routing audit) | SUPERSEDED by #107 CLI contract |
+| `tests/test-sovereignty-ladder.js` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by upstream v3 floors |
 
-## Per-file table (SUPERSEDED unless noted; upstream SHA = `2230c85a`)
+Home conflicts: `CHANGELOG.md`, `SKILL.md`, `SPEC.md`, `model-registry.generated.json`,
+`model-registry.yaml`, `references/model-registry.md`, `registry/providers/google.yaml`,
+`resolve-cli.js`, `resolver.js`, `routing-table.generated.json`, `tests/test-codex-identities.js`,
+`tests/test-context-class.js`, `tests/test-p3-dry-run.js`, `tests/test-provider-facts.py`,
+`tests/test-registry-resolver.js`, `tests/test-resolve-cli.js`, and `tests/test-two-step-resolver.js`.
+All are `SUPERSEDED` by `2230c85a`; the ports above come from newer launchpad hunks. Home lacks
+`tests/test-observed-availability.js`, retained upstream. `registry/providers/openai.yaml` is a
+scope addition needed to register the ported Terra model in the canonical provider catalog; it
+was not itself a deployed conflict.
 
-Both copies unless marked L (launchpad only) / H (home only).
+## Validation
 
-- Docs: `CHANGELOG.md` (3.6 entry; L also lacks it; the L-only 2026-10-26 Terra entry is already in upstream CHANGELOG/registry), `README.md` L, `SPEC.md` (§1a v3 absent), `SKILL.md` (v3 CLI + observed-availability sections absent), `references/model-registry.md` (v3-scores caveat is stale: upstream v3 rewrites it).
-- Registry data: `model-registry.yaml`, `model-registry.generated.json` (deployed = pre-v3 chain format; H 1000+ lines older), `registry/providers/google.yaml` (lacks gemini-4-argon), `registry/private-only.yaml` L (lacks glm-5-3), `task-class-vocabulary.v1.json` L (1.3.0 < 1.4.0, lacks journal_reflect), `routing-feedback-contract.v1.json` L (taxonomy 1.3.0), `routing-table.generated.json` H (stale revision), `recipe.toml` L (lacks routing-table op).
-- Code: `resolver.js`, `resolve-cli.js`, `routing-record.js` L (lacks schema_version 3 validation), `scripts/build-model-registry.py` L, `scripts/check-registry-fresh.py` L.
-- Tests (older fixtures): `test-codex-identities.js`, `test-context-class.js`, `test-p3-dry-run.js`, `test-provider-facts.py`, `test-registry-resolver.js`, `test-resolve-cli.js`, `test-two-step-resolver.js` H; L also `test-registry-builder.py`, `test-sovereignty-ladder.js`.
-- UPSTREAM-ONLY: L lacks `registry/providers/nvidia.yaml`, `routing-table.generated.json`, `tests/fixtures/v3/`, `test-observed-availability.js`, `test-routing-table.js`, `test-two-step-resolver.js`; H lacks `test-observed-availability.js`.
-
-## Tests
-
-`tests/*.js|py` run in the foreground. `test-observed-availability.js` passes. Six files fail identically on base `2230c85a` and after this change (docs-only): the three known (`test-codex-identities`, `test-p3-dry-run`, `test-resolve-cli`; node_01M6HBYE8EFKYP6G1F9F4DD187) plus `test-two-step-resolver.js`, `test-provider-facts.py`, `test-registry-builder.py` — pre-existing, filed as a finding. No new failures.
+Ran every `tests/test-*.js` and `tests/test-*.py` in the foreground on this branch and on an
+archive of `2230c85a`. Current: 6 failures; base: 7 failures; no new failures. The shared failures
+are `test-codex-identities.js`, `test-p3-dry-run.js`, `test-resolve-cli.js`,
+`test-two-step-resolver.js`, `test-provider-facts.py`, and `test-registry-builder.py`.
+`test-observed-availability.js` passes in both trees. `test-workflow-routing-log-shape.js` fails
+only at base and passes on this branch. The v3 registry generator emits pre-existing validation
+errors for lane/provider declarations, so generated output cannot be cleanly rebuilt from YAML at
+this base; see `hub-out/registry-generation.log`.
