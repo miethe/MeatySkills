@@ -26,7 +26,7 @@ classification; both measurements are preserved here rather than conflated.
 |---|---|---|
 | `references/dispatch-preflight.md` (launchpad-only file) | PORTED, with account correction | Launchpad `c09a6020b8` (#2522, 2026-10-21). Ported ordered preflight, worktree/context checks, write recipes and refusal remedies. Kept the canonical Primary default from upstream; `codex_secondary` remains explicit-only. |
 | `SKILL.md`, `README.md` — “Bound-front dispatch” block | PORTED | Launchpad added the same pointer block with `c09a6020b8`; linked to the ported reference. Older surrounding text is superseded by upstream v3. |
-| `model-registry.yaml`, `model-registry.generated.json` — Terra pilot and ICA availability facts | PORTED, needs-nick | Launchpad `7440379526` (#3233, 2026-10-27) adds GPT-6.1 Terra as a codex_primary scoped pilot; `ae1bebf949` (#3361, 2026-10-27) records Opus 5.5 unavailable on ICA, Sonnet 5.5 as ICA default, and Haiku 5.5 available/free on ICA. Mapped these into upstream v3 and added Terra to `registry/providers/openai.yaml`; Terra is not added to any automatic chain. Preserved #107 selection and floors. Generator validation already fails on the base tree; generated JSON was updated to match source facts, with no claim of clean regeneration. |
+| `model-registry.yaml`, generated registry JSON — pilot and ICA availability facts | PARTIALLY PORTED, needs-nick | Removed the deployed-only model/account pilot. A node declares its task class and optional floor; the resolver selects a registry model and eligible lane, and nodes never pin a model, lane, or Codex account. Retained the separate `ae1bebf949` (#3361, 2026-10-27) ICA availability updates for Opus 5.5, Sonnet 5.5, and Haiku 5.5. Preserved #107 selection and floors. |
 | `resolver.js`, `resolve-cli.js`, `tests/test-codex-identities.js` — missing availability and pin-reason behavior | SUPERSEDED by #107 (`abdb6eb3`, in `2230c85a`) | The deployed versions predate receipt consumption, skip reasons and explicit pin provenance. Kept #107. |
 | `tests/test-observed-availability.js` and its fixture | UPSTREAM-ONLY at base | Added by #107 and retained. |
 | All remaining differing files listed below | SUPERSEDED by upstream `2230c85a` | Deployed versions are older schema/API snapshots. Reviewed their unique hunks; none beyond the listed ports is compatible with the v3 registry/resolver contract. Where launchpad/home disagree, launchpad is the later deployed snapshot by launchpad history; upstream v3 remains authoritative. |
@@ -37,12 +37,12 @@ classification; both measurements are preserved here rather than conflated.
 
 | Launchpad conflicting path | Latest `--follow` touch | Decision |
 |---|---|---|
-| `CHANGELOG.md` | `7440379526` (2026-10-27, Terra onboarding) | SUPERSEDED; upstream changelog has later v3/#107 entries |
+| `CHANGELOG.md` | `7440379526` (2026-10-27, model onboarding) | PARTIALLY PORTED; unregistered model/account pilot removed |
 | `README.md` | `c09a6020b8` (2026-10-21, dispatch preflight) | PORTED pointer hunk |
-| `SKILL.md` | `7440379526` (2026-10-27, Terra onboarding) | PORTED pointer hunk; old surrounding CLI text superseded |
+| `SKILL.md` | `7440379526` (2026-10-27, model onboarding) | PORTED pointer hunk; old surrounding CLI text superseded |
 | `SPEC.md` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by v3 spec |
 | `model-registry.generated.json` | `ae1bebf949` (2026-10-27, ICA availability) | PORTED availability facts; remaining snapshot superseded |
-| `model-registry.yaml` | `ae1bebf949` (2026-10-27, ICA availability; also `7440379526` Terra) | PORTED Terra and availability facts; remaining snapshot superseded |
+| `model-registry.yaml` | `ae1bebf949` (2026-10-27, ICA availability; also `7440379526` model onboarding) | PORTED ICA availability facts; removed unregistered model/account pilot |
 | `recipe.toml` | `3e3ddb79f5` (2026-08-14, routing audit) | SUPERSEDED by upstream routing contract |
 | `references/model-registry.md` | `de06faf28e` (2026-10-17, integration) | SUPERSEDED by v3 registry guide |
 | `registry/private-only.yaml` | `8c48fa92b6` (2026-10-04, integration) | SUPERSEDED by upstream provider data |
@@ -70,16 +70,18 @@ Home conflicts: `CHANGELOG.md`, `SKILL.md`, `SPEC.md`, `model-registry.generated
 `tests/test-registry-resolver.js`, `tests/test-resolve-cli.js`, and `tests/test-two-step-resolver.js`.
 All are `SUPERSEDED` by `2230c85a`; the ports above come from newer launchpad hunks. Home lacks
 `tests/test-observed-availability.js`, retained upstream. `registry/providers/openai.yaml` is a
-scope addition needed to register the ported Terra model in the canonical provider catalog; it
-was not itself a deployed conflict.
+scope addition for the canonical provider catalog; every provider entry must refer to a model
+registered in `model-registry.yaml`.
 
 ## Validation
 
-Ran every `tests/test-*.js` and `tests/test-*.py` in the foreground on this branch and on an
-archive of `2230c85a`. Current: 6 failures; base: 7 failures; no new failures. The shared failures
-are `test-codex-identities.js`, `test-p3-dry-run.js`, `test-resolve-cli.js`,
-`test-two-step-resolver.js`, `test-provider-facts.py`, and `test-registry-builder.py`.
-`test-observed-availability.js` passes in both trees. `test-workflow-routing-log-shape.js` fails
-only at base and passes on this branch. The v3 registry generator emits pre-existing validation
-errors for lane/provider declarations, so generated output cannot be cleanly rebuilt from YAML at
-this base; see `hub-out/registry-generation.log`.
+The follow-up correction ran `node --test tests/*.js` (17/23 pass; six baseline failures in
+`test-codex-identities.js`, `test-p3-dry-run.js`, `test-registry-resolver.js`,
+`test-resolve-cli.js`, `test-sovereignty-ladder.js`, and `test-two-step-resolver.js`) and
+`python3 tests/test-registry-builder.py` (fails at its existing task-class chain assertion).
+The new OpenAI provider-catalog consistency assertion passes before that legacy assertion.
+`python3 scripts/build-model-registry.py --in model-registry.yaml --out model-registry.generated.json`
+was also run, but exits 1 on pre-existing schema/lane validation errors. Therefore the generated
+JSON could not be regenerated with the repo builder and still contains the removed pilot row; it
+was not hand-edited. The earlier full-suite comparison on this branch and `2230c85a` remains as
+recorded above; no claim is made that these baseline failures are fixed.

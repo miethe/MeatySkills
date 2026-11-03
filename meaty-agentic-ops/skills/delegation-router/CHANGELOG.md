@@ -14,8 +14,8 @@
   after upstream merge via SkillMeat; no deployed copies are changed by this PR.
 - Reconcile deployed bound-front preflight guidance into the canonical skill. Update ICA
   health records from the 2026-10-16/24 decisions: Opus 5.5 unavailable, Sonnet 5.5 default,
-  and Haiku 5.5 available/unlimited. Add GPT-6.1 Terra as a scoped codex_primary pilot with
-  no automatic routing-chain promotion. These registry declarations need Nick review.
+  and Haiku 5.5 available/unlimited. Remove the unregistered model/account pilot; task-class
+  nodes may declare an optional floor, while the resolver selects registry models and lanes.
 
 ## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
 

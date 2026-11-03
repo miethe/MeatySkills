@@ -15,6 +15,13 @@ import yaml  # noqa: E402
 
 registry = yaml.safe_load((ROOT / "model-registry.yaml").read_text())
 
+# Provider catalog rows must name a model registered in the canonical resolver registry.
+# This prevents an available-looking catalog row from inventing a phantom selectable model.
+registered_ids = set(registry["models"])
+provider_data = yaml.safe_load((ROOT / "registry" / "providers" / "openai.yaml").read_text()) or {}
+for row in provider_data.get("models", []):
+    assert row["id"] in registered_ids, ("registry/providers/openai.yaml", row["id"])
+
 # V3 holders are model ids only. Nick decision 2026-09-25: the Codex subscription
 # holder remains GPT-6 Luna; the separate ICA GPT-5.6 image fallback remains selectable.
 for task_class in ("second_opinion", "code_review", "image_generation"):

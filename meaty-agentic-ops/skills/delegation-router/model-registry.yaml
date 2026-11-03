@@ -102,7 +102,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 version: 1
-updated: 2026-11-03   # Reconciled launchpad GPT-6.1 Terra pilot and 2026-10-16/24 ICA availability decisions; see docs/reconcile/delegation-router-2026-11-03.md.
+updated: 2026-11-03   # Reconciled 2026-10-16/24 ICA availability decisions; see docs/reconcile/delegation-router-2026-11-03.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Additive registry metadata. The v3 RoutingRecord shape is unchanged.
@@ -996,37 +996,6 @@ models:
     status: active
     providers:
       - { provider: codex, lane: codex_subscription, model_id: "gpt-6.1-sol", cost_tier: premium, allowance: billed, enabled: true, priority: 1, account_relationship: personal, write_capability: codex_sandbox, health: { status: available, checked_at: 2026-09-30, evidence: "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day" } }
-
-  # Scoped pilot; do not add to an automatic routing chain without a separate decision.
-  gpt-6.1-terra:
-    family: openai
-    class: codex
-    descriptor: "GPT-6.1 Terra on codex_primary; scoped code, review and extraction pilot after Luna misses. Medium effort selected for the pilot; no proven Sonnet 5.5 replacement or automatic role promotion. API and installed CLI context/effort surfaces differ; see the dated onboarding probe."
-    scores: { cost: UNMEASURED, intelligence: 8, taste: UNMEASURED, speed: 7 }
-    when_to_use: [explicit-evaluation, scoped-code-pilot, code-review-pilot, extraction-pilot]
-    tools: [functions, web-search, file-search, computer-use]
-    related_skills: [codex]
-    max_context: 500000
-    max_output: 128000
-    pricing: { input_per_mtok_usd: 1, output_per_mtok_usd: 5, cache_read_per_mtok_usd: 0.05 }
-    reasoning_efforts: [low, medium, high, xhigh, max, ultra]
-    default_effort: medium
-    sampling: stochastic
-    status: active
-    providers:
-      - provider: codex
-        lane: codex_subscription_primary
-        model_id: gpt-6.1-terra
-        cost_tier: standard
-        allowance: billed
-        enabled: true
-        priority: 1
-        account_relationship: personal
-        write_capability: codex_sandbox
-        health:
-          status: available
-          checked_at: 2026-10-26
-          evidence: "Codex CLI low/medium/high/xhigh/max/ultra receipts returned rc 0 on codex_primary; secondary not probed. Source report: docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26."
 
   gpt-6-luna:
     family: openai
