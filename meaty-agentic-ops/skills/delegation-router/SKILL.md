@@ -8,9 +8,9 @@ description: >-
   raster images, illustrations, and PNG assets, it resolves native Codex first, the ICA GPT shim
   only when already on ICA, and Gemini/Nano Banana as fallback. Emits a routing decision only;
   the chosen platform skill executes it.
-version: "3.5"
+version: "3.6"
 app_version: "2026-06-09"
-updated: 2026-09-09
+updated: 2026-11-03
 scope: repo
 spec: ./SPEC.md
 ---
@@ -322,3 +322,24 @@ Local state mapping: `~/.config/aos/codex-identities.toml`. Shared policy source
 `~/.config/aos/codex-settings/config.template.toml`, rendered by `aos-codex-parity` into separate
 homes. Authentication, session databases, Electron storage and native hook approval hashes remain
 independent. Desktop/interactive settings do not override a headless task's explicit sandbox.
+
+## Observed lane availability
+
+The v3 resolver reads `$AOS_DATA_HOME/lane-availability.json` (default
+`~/.local/share/aos/lane-availability.json`), published by the launchpad's existing
+`operator_core.core.lane_availability` zero-model reader. Refresh with
+`PYTHONPATH=src python3 -m operator_core.core.lane_availability status` from that
+repository before routing; the router performs no provider probes or receipt writes.
+`availability_path` / CLI `--availability-file` selects the receipt. Missing or malformed
+receipts are unmeasured. Producer expiry, never file rewrite time, determines freshness;
+a pending quota reset remains excluded. LIMITED/DOWN lanes and manual holds cannot win
+or enter fallback chains. Existing class minimums and holder floors still apply.
+The record's `availability_decisions` retains every examined holder's lane reasons,
+sources and resets, including when no lane is dispatchable. ICA paid-pool exhaustion
+only excludes provider rows that do not declare unlimited allowance.
+
+Explicit v3 model, provider or account requests require a concrete `pin_reason`
+(CLI `--pin-reason`); the reason is recorded and never overrides availability or eligibility.
+This is a new routing decision, never automatic replay of an already dispatched task.
+Legacy registry/TOML routing remains unchanged. Deployment must wait for upstream merge,
+then use a SkillMeat project deployment rather than copying this directory.

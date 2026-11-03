@@ -801,9 +801,9 @@ function makeInstanceCandidate(modelKey, modelEntry, instance, registry) {
     allowance: instance.allowance,
     priority: typeof instance.priority === 'number' ? instance.priority : 99,
     free: isGenuinelyFree(instance),
-    // Additive, 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ). A provider ROW, not a model, can be
+    // Additive, 2026-08-27 (internal work record). A provider ROW, not a model, can be
     // restricted to tool-less calls (e.g. ica/gpt-5.6-sol: reasoning_tokens=0 the instant a tool
-    // call is made, on both ICA transports — node_01M0Z7JP9YT7W15X94Z843AM9Y). Mirrors the
+    // call is made, on both ICA transports — internal work record). Mirrors the
     // WRITE_INCAPABLE_PROVIDERS axis in shape, but this one is per-INSTANCE (codex/gpt-5.6-sol is
     // NOT restricted — only the ICA row is), so it lives on the instance rather than a provider-id
     // set.
@@ -1024,13 +1024,53 @@ function laneEligible(lane, classSpec) {
   return { eligible: predicateOk && capabilityOk, capabilityOk, reason };
 }
 
-function capacityFor(capacity, laneId, identityRef) {
+// Read the zero-model reader's published receipt, never the raw dispatch streams.
+// TTL policy and observations belong to operator_core.core.lane_availability.
+function observedCapacity(input) {
+  const receiptPath = input.availability_path || process.env.AOS_LANE_AVAILABILITY_PATH ||
+    path.join(process.env.AOS_DATA_HOME || path.join(require('os').homedir(), '.local/share/aos'), 'lane-availability.json');
+  try {
+    const receipt = input.capacity && input.capacity.schema === 'aos.lane-availability/1'
+      ? input.capacity : JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    if (receipt.schema !== 'aos.lane-availability/1' || !receipt.lanes) return null;
+    return { ...receipt, source: receipt === input.capacity ? 'input.capacity' : receiptPath, now: Date.now() / 1000 };
+  } catch (error) {
+    if (error.code === 'ENOENT' || error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+function capacityFor(capacity, laneId, identityRef, observed, providerRow) {
   const laneState = (capacity && capacity.lanes && capacity.lanes[laneId]) || { state: 'unmeasured' };
   const identity = identityRef && capacity && capacity.identities && capacity.identities[identityRef];
   if (identity && identity.available === false) {
     return { state: 'unavailable', reason: identity.reason || `identity ${identityRef} unavailable` };
   }
-  return { state: laneState.state || 'unmeasured', reason: laneState.reason || null, until: laneState.until || null };
+  if (['refused', 'unavailable'].includes(laneState.state)) return laneState;
+  const aliases = { ica_gateway_messages: 'ica', ica_gateway_messages_shim: 'ica',
+    ica_gateway_responses_shim: 'ica', ica_gateway: 'ica',
+    claude_subscription_1x: 'cc1x', claude_subscription: 'cc-primary', gemini_cli: 'gemini', gemini_direct: 'gemini' };
+  const key = identityRef || aliases[laneId] || laneId;
+  const row = observed && observed.lanes[key];
+  const hold = observed && observed.manual_holds && observed.manual_holds[key];
+  if (observed && observed.manual_holds_error) throw new Error(observed.manual_holds_error);
+  if (hold) return { state: 'unavailable', reason: hold.reason || 'manual_hold', until: hold.until, source: observed.source };
+  const fresh = row && Number.isFinite(row.observed_at) && row.observed_at <= observed.now &&
+    Number.isFinite(row.expires_at) && row.expires_at > observed.now;
+  const resetPending = row && (row.status === 'LIMITED' || row.previous_status === 'LIMITED') &&
+    Number.isFinite(row.observed_at) && row.observed_at <= observed.now && Number.isFinite(row.until) && row.until > observed.now;
+  if (row && ((fresh && ['LIMITED', 'DOWN'].includes(row.status)) || resetPending)) {
+    return { state: 'unavailable', reason: `${key}: ${row.status}: ${row.reason}`, until: row.until,
+      source: row.source || observed.source, observed_status: row.status };
+  }
+  const paid = row && row.paid_pool;
+  if (key === 'ica' && providerRow && providerRow.allowance !== 'unlimited' && paid &&
+      Number.isFinite(paid.observed_at) && paid.observed_at <= observed.now &&
+      Number.isFinite(observed.ttl_seconds) && paid.observed_at + observed.ttl_seconds > observed.now && ['LIMITED', 'DOWN'].includes(paid.status)) {
+    return { state: 'unavailable', reason: `ica paid pool: ${paid.status}`, source: paid.source };
+  }
+  return { state: laneState.state || (fresh && row.status === 'AVAILABLE' ? 'admitted' : 'unmeasured'),
+    reason: laneState.reason || null, until: laneState.until || null };
 }
 
 function modelRows(registry, modelId) {
@@ -1090,7 +1130,7 @@ function resolveModel(registry, input) {
       decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
       continue;
     }
-    const viable = resolveLane(registry, modelId, classSpec, capacity).chosen !== null;
+    const viable = resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability).chosen !== null;
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
     decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
@@ -1106,7 +1146,7 @@ function resolveModel(registry, input) {
   return { classSpec, taskClassKey, holders, decisions, chosenModel };
 }
 
-function resolveLane(registry, modelId, classSpec, capacity = {}) {
+function resolveLane(registry, modelId, classSpec, capacity = {}, observed = null) {
   const rows = modelRows(registry, modelId);
   const laneOrder = registry.lane_order || [];
   const candidates = [];
@@ -1115,7 +1155,7 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
     for (const { model, row } of matches) {
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
-      const availability = capacityFor(capacity, laneId, lane.identity_ref);
+      const availability = capacityFor(capacity, laneId, lane.identity_ref, observed, row);
       const originalEligibility = classSpec._originalSpec
         ? laneEligible({ ...lane, id: laneId }, classSpec._originalSpec) : { eligible: true, reason: '' };
       const needs = candidateNeeds(registry, modelId, row, lane, classSpec);
@@ -1126,7 +1166,7 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
         eligible: eligibility.eligible, eligibility_reason: eligibility.reason,
-        capability_ok: eligibility.capabilityOk, capacity: availability.state,
+        capability_ok: eligibility.capabilityOk, capacity: availability.state, availability,
         identity_ref: lane.identity_ref || null,
         verdict: excluded ? 'excluded' : 'eligible',
         reason: !eligibility.eligible ? eligibility.reason : (excluded ? availability.reason || `capacity is ${availability.state}` : `lane admitted with capacity ${availability.state}`),
@@ -1138,8 +1178,12 @@ function resolveLane(registry, modelId, classSpec, capacity = {}) {
 }
 
 function resolveV3(registry, input) {
+  if ((input.model || input.provider || input.identity_ref) &&
+      !(typeof input.pin_reason === 'string' && input.pin_reason.trim())) {
+    throw new Error('Explicit model/provider/account pin requires pin_reason');
+  }
   const prepared = prepareNeeds(registry, input, canonicalTaskClassKey);
-  input = { ...prepared.input, _needsSpec: prepared.spec };
+  input = { ...prepared.input, _needsSpec: prepared.spec, _observedAvailability: observedCapacity(prepared.input) };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;
   const floorModel = classSpec.fallback && classSpec.fallback.floor_model;
@@ -1147,7 +1191,7 @@ function resolveV3(registry, input) {
   const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
-  for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {});
+  for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {}, input._observedAvailability);
   const chosenModel = selectedIndex >= 0 ? modelDecision.chosenModel : null;
   let selectedLane = chosenModel && allLaneDecisions[chosenModel].chosen;
   if (input.identity_ref && chosenModel) {
@@ -1185,6 +1229,9 @@ function resolveV3(registry, input) {
     credential_lane: selectedLane && selectedLane.identity_ref ? selectedLane.lane : null,
     model_decision: { task_class: input.task_class, canonical_task_class: modelDecision.taskClassKey, explicit: Boolean(input.model), holders: modelDecision.decisions, chosen: chosenModel },
     lane_decision: { candidates: laneCandidates.map(({ model_entry, ...candidate }) => candidate), chosen: selectedLane ? selectedLane.lane : null, identity_ref: selectedLane ? selectedLane.identity_ref : null },
+    availability_decisions: Object.fromEntries(Object.entries(allLaneDecisions).map(([model, decision]) => [model, decision.candidates.map(({ model_entry, ...candidate }) => candidate)])),
+    pin_reason: input.pin_reason || null,
+    availability_source: input._observedAvailability && input._observedAvailability.source,
     lane_order: registry.lane_order || [],
     floor: floorModel ? { model: floorModel, reason: classSpec.minimum && classSpec.minimum.reason || 'holder floor' } : null,
     floor_breached: floorBreached,
@@ -1335,7 +1382,7 @@ function resolveFromRegistry(input) {
   // ----- Tool-mode filter (needs_tools) -----
   // A candidate INSTANCE can be tool_mode:"none"-restricted (currently only ica/gpt-5.6-sol:
   // reasoning_tokens=0 the instant a tool call is made, on both ICA transports — measured
-  // node_01M0Z7JP9YT7W15X94Z843AM9Y). Unlike the write-authority axis this is per-INSTANCE, not
+  // internal work record). Unlike the write-authority axis this is per-INSTANCE, not
   // per-provider (codex/gpt-5.6-sol is NOT restricted), so there is no early-return here — it is
   // applied per-candidate at every selection site below via `cand.toolRestricted`. Default TRUE
   // (conservative): a caller must explicitly pass needs_tools:false to reach a restricted
@@ -1843,7 +1890,7 @@ function buildRegistryInvocation(chosen, profile, effort) {
       // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/.
       if (/gpt/i.test(modelId)) {
         // tool_mode:"none" (currently gpt-5.6-sol only): reasoning_tokens=0 the instant a tool
-        // call is made on this lane (node_01M0Z7JP9YT7W15X94Z843AM9Y). --allowedTools "" is real
+        // call is made on this lane (internal work record). --allowedTools "" is real
         // enforcement here, not description-only — embedded directly in the invocation, mirroring
         // how --sandbox is embedded (not left to scope_flags alone) elsewhere in this function.
         const toolFlag = chosen.toolRestricted ? ' --allowedTools ""' : '';
@@ -2169,13 +2216,13 @@ function inferValidationContract(providerId, task_class) {
 }
 
 // ---------------------------------------------------------------------------
-// Sol -> Terra -> Sol sandwich recipe (node_01M122PQQ86YWJWDA9GT83PBWQ)
+// Sol -> Terra -> Sol sandwich recipe (internal work record)
 // ---------------------------------------------------------------------------
 
 /**
  * Compose the Sol->Terra->Sol sandwich: a three-leg recipe for a task that needs BOTH gpt-5.6-sol's
  * frontier reasoning AND a tool-calling step, given the two are mutually exclusive on the ICA lane
- * (node_01M0Z7JP9YT7W15X94Z843AM9Y — reasoning_tokens=0 the instant a tool call is made).
+ * (internal work record — reasoning_tokens=0 the instant a tool call is made).
  *
  * plan:    gpt-5.6-sol, tool-less (needs_tools:false)  — produces the plan/reasoning
  * execute: gpt-5.6-terra, tools required (needs_tools defaults true) — carries out the tool-using
