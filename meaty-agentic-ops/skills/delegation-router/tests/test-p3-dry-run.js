@@ -27,10 +27,6 @@
 'use strict';
 
 const path = require('path');
-// Resolve against this checkout and a deterministic receipt, independent of host accounts.
-process.env.MODEL_REGISTRY_PATH = path.join(__dirname, '..', 'model-registry.generated.json');
-process.env.AOS_LANE_AVAILABILITY_PATH = path.join(__dirname, 'fixtures', 'v3', 'availability.json');
-
 const fs = require('fs');
 const os = require('os');
 const { execSync } = require('child_process');
@@ -59,18 +55,29 @@ if (fs.existsSync(TMP_LOG_PATH)) {
 // Mirrors the P3 offload table from phase-3-low-risk-wiring.md.
 // ---------------------------------------------------------------------------
 
-// V3 callers declare task classes; the registry selects models and eligible lanes.
+// Registry v3 (two-step resolver): the caller names a canonical task class and the registry
+// picks the model (class holders, quality bar) and then the lane (lane_order is the cost order,
+// so ICA free lanes come first; Codex subscription serves `implementation`; MUST-stay classes
+// are pinned to claude_subscription). Callers no longer name a provider or a legacy model alias.
 const WAVE_PLAN_TASKS = [
-  { id: 'EXPLORE-LEG-1', task_class: 'exploration', expected_agent_type_id: 'ica-executor' },
-  { id: 'EXPLORE-LEG-2', task_class: 'web_research', expected_agent_type_id: 'ica-executor' },
-  { id: 'SKEPTIC-1', task_class: 'review', expected_agent_type_id: 'ica-executor' },
-  { id: 'SKEPTIC-2', task_class: 'critique', expected_agent_type_id: 'ica-executor' },
-  { id: 'EVID-SCRIBE-1', task_class: 'mechanical', expected_agent_type_id: 'ica-executor' },
-  { id: 'AC-VALIDATE-1', task_class: 'code_review', expected_agent_type_id: 'ica-executor' },
-  { id: 'AC-VALIDATE-2', task_class: 'code_review', expected_agent_type_id: 'ica-executor' },
-  { id: 'CRITIC-1', task_class: 'critique', expected_agent_type_id: 'ica-executor' },
-  { id: 'SYNTHESIS-1', task_class: 'orchestration', expected_agent_type_id: 'claude' },
-  { id: 'VERDICT-1', task_class: 'verdict', expected_agent_type_id: 'claude' },
+  // P3-002: explore.js — exploration legs follow the free-first ICA lane.
+  { id: 'EXPLORE-LEG-1', task_class: 'exploration',   expected_agent_type_id: 'ica-executor',   resume_active: false },
+  { id: 'EXPLORE-LEG-2', task_class: 'second_opinion', expected_agent_type_id: 'ica-executor',  resume_active: false },
+  // P3-003: spike.js — adversarial skeptic votes → ica-executor
+  { id: 'SKEPTIC-1',     task_class: 'critique',      expected_agent_type_id: 'ica-executor',   resume_active: false },
+  { id: 'SKEPTIC-2',     task_class: 'adjudication',  expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // P3-004: review-council.js — evidence scribe is mechanical work on the free ICA lane
+  { id: 'EVID-SCRIBE-1', task_class: 'mechanical',    expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // P3-005: execute-plan.js — AC validation (legacy alias of code_review) follows the free lane
+  { id: 'AC-VALIDATE-1', task_class: 'ac-validation', expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // Implementation legs are the Codex subscription work class.
+  { id: 'AC-VALIDATE-2', task_class: 'implementation', expected_agent_type_id: 'codex-executor', resume_active: false },
+  // P3-003/004: completeness critic follows the free-first ICA lane.
+  { id: 'CRITIC-1',      task_class: 'review',        expected_agent_type_id: 'ica-executor',   resume_active: false },
+  // MUST-stay: synthesis stage → claude (should NOT offload regardless of routing)
+  { id: 'SYNTHESIS-1',   task_class: 'orchestration', expected_agent_type_id: 'claude',         resume_active: false },
+  // MUST-stay: verdict sign-off → claude
+  { id: 'VERDICT-1',     task_class: 'verdict',       expected_agent_type_id: 'claude',         resume_active: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -151,7 +158,7 @@ if (missingCount === 0) {
 console.log('\n[P3-007] Test 3: Checking --violations count (expect 0)...');
 
 const MUST_STAY_PRIMARY_CLASSES = new Set([
-  'orchestration', 'verdict', 'mode-d', 'council-review', 'schema-recovery', 'cross-wave-merge',
+  'orchestration', 'verdict', 'mode_d', 'council_review', 'schema_recovery', 'cross_wave_merge', 'synthesis',
 ]);
 
 const violationEntries = entries.filter(e => {
@@ -185,7 +192,7 @@ const EXPECTED_OFFLOADS = {
   'SKEPTIC-2':      'ica',
   'EVID-SCRIBE-1':  'ica',
   'AC-VALIDATE-1':  'ica',
-  'AC-VALIDATE-2':  'ica',
+  'AC-VALIDATE-2':  'codex',
   'CRITIC-1':       'ica',
   'SYNTHESIS-1':    'claude',
   'VERDICT-1':      'claude',
