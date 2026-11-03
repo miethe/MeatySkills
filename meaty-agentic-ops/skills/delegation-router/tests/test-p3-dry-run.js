@@ -93,6 +93,7 @@ for (const task of WAVE_PLAN_TASKS) {
   let record;
   try {
     record = resolve({
+      pin_reason: 'dry-run roster fixture',
       model: task.model,
       provider: task.provider,
       effort: 'standard',

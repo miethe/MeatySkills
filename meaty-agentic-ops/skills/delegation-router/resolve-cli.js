@@ -69,6 +69,8 @@ function printHelp(stream) {
       '  --provider <id>       Requested provider (claude|ica|bob|gemini|codex). Default: claude.',
       '  --task-class <class>  Task class driving MUST-stay + chain lookup (e.g. second_opinion).',
       '  --identity <name>     Explicit codex_primary or codex_secondary account.',
+      '  --pin-reason <text>   Required explanation for explicit v3 model/provider/account pins.',
+      '  --availability-file <path>  Published zero-model lane availability receipt.',
       '  --effort <level>      Effort level (low|standard|high|xhigh|…). Default: standard.',
       '  --profile <name>      Profile name (e.g. free-tier).',
       '  --resume-active       Set resume_active=true (excludes nondeterministic providers on',
@@ -101,6 +103,12 @@ function parseArgs(argv) {
         break;
       case '--provider':
         args.provider = argv[++i];
+        break;
+      case '--pin-reason':
+        args.pin_reason = argv[++i];
+        break;
+      case '--availability-file':
+        args.availability_path = argv[++i];
         break;
       case '--identity':
         args.identity_ref = argv[++i];
@@ -163,7 +171,7 @@ function main() {
     for (let i = 0; i < argv.length; i++) {
       const key = argv[i];
       if (key === '--json') { flags.json = true; continue; }
-      if (['--task-class', '--model', '--capacity-file', '--registry', '--identity', '--effort'].includes(key)) {
+      if (['--task-class', '--model', '--capacity-file', '--registry', '--identity', '--effort', '--pin-reason', '--availability-file'].includes(key)) {
         if (i + 1 >= argv.length) { process.stderr.write(`resolve-cli: ${key} requires a value\n`); process.exit(2); return; }
         flags[key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
         continue;
@@ -178,7 +186,7 @@ function main() {
       }
       if (!flags.taskClass) throw new Error('--task-class is required');
       const capacity = flags.capacityFile ? JSON.parse(fs.readFileSync(flags.capacityFile, 'utf8')) : {};
-      const record = resolve({ task_class: flags.taskClass, model: flags.model, identity_ref: flags.identity, effort: flags.effort, capacity, _registryPath: flags.registry });
+      const record = resolve({ task_class: flags.taskClass, model: flags.model, identity_ref: flags.identity, effort: flags.effort, pin_reason: flags.pinReason, availability_path: flags.availabilityFile, capacity, _registryPath: flags.registry });
       process.stdout.write(JSON.stringify(record, null, 2) + '\n');
       process.exit(record.floor_breached ? 1 : 0); return;
     } catch (err) {
