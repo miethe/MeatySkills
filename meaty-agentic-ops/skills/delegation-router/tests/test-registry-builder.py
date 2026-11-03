@@ -117,12 +117,13 @@ assert sonnet55_scores["intelligence"] <= opus55_scores["intelligence"], \
 
 # ICA lane preference (2026-09-28 evening), Nick: since Opus 5.5 is already servable on ICA, there
 # is no reason to keep defaulting to Sonnet 5 there. The claude-opus-5-5 ICA provider row must
-# stay enabled and remain a shared_token_pool row (never described as literally free — it draws
+# retain its shared_token_pool classification; October 24 unavailability disables it (it draws
 # more credits per call than Sonnet 5).
 opus55_ica = next(
     p for p in registry["models"]["claude-opus-5-5"]["providers"] if p["provider"] == "ica"
 )
-assert opus55_ica["enabled"] is True, opus55_ica
+assert opus55_ica["enabled"] is False, opus55_ica
+assert opus55_ica["health"]["status"] == "unavailable", opus55_ica
 assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
 
 # Haiku 5.5 (2026-10-07, Nick): default native cheap tier. Negative controls that would have caught

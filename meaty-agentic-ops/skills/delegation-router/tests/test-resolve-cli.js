@@ -22,6 +22,10 @@
 
 const assert = require('assert');
 const path = require('path');
+// Resolve against this checkout and a deterministic receipt, independent of host accounts.
+process.env.MODEL_REGISTRY_PATH = path.join(__dirname, '..', 'model-registry.generated.json');
+process.env.AOS_LANE_AVAILABILITY_PATH = path.join(__dirname, 'fixtures', 'v3', 'availability.json');
+
 const { execFileSync } = require('child_process');
 
 let passCount = 0;
@@ -58,7 +62,8 @@ const GUS_REGISTRY = path.join(SCRATCH_DIR, 'registry.json');
   const fs = require('fs');
   const registry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8'));
   const spec = registry.task_class_defaults.second_opinion;
-  spec.holders = ['gpt-5.5-gus'];
+  spec.holders = ['gpt-5.5-gus', 'claude-haiku-4-5'];
+  registry.task_class_defaults.exploration = { holders: ['claude-haiku-4-5'] };
   delete spec.bar;
   spec.fallback = { policy: 'next_lane_then_next_holder', floor_model: 'gpt-5.5-gus' };
   fs.writeFileSync(GUS_REGISTRY, JSON.stringify(registry));
@@ -70,7 +75,7 @@ const GUS_REGISTRY = path.join(SCRATCH_DIR, 'registry.json');
  */
 function runCli(args, env) {
   try {
-    const stdout = execFileSync(process.execPath, [CLI_PATH, ...args], {
+    const stdout = execFileSync(process.execPath, [CLI_PATH, ...(args.includes('--model') ? ['--pin-reason', 'CLI boundary fixture'] : []), ...args], {
       encoding: 'utf8',
       env: { ...process.env, ...(env || {}) },
     });

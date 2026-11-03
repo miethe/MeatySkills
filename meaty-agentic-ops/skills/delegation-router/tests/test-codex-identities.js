@@ -1,6 +1,10 @@
 const assert = require('assert');
 const {spawnSync} = require('child_process');
 const path = require('path');
+// Resolve against this checkout and a deterministic receipt, independent of host accounts.
+process.env.MODEL_REGISTRY_PATH = path.join(__dirname, '..', 'model-registry.generated.json');
+process.env.AOS_LANE_AVAILABILITY_PATH = path.join(__dirname, 'fixtures', 'v3', 'availability.json');
+
 const {resolve} = require('../resolver.js');
 const input = {pin_reason:'account binding fixture',model:'gpt-6-luna', provider:'codex', effort:'medium', task_class:'implementation'};
 const previous = process.env.AOS_CODEX_IDENTITY;

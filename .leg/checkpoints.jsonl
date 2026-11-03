@@ -1,9 +1,0 @@
-{"ac":"1","state":"progress","evidence":"meaty-agentic-ops/skills/delegation-router/model-registry.yaml"}
-{"ac":"2","state":"started","evidence":"/Volumes/SKNVME/aos-scratch/leg/20261103T200142Z-8952-codex.656d4f11/tmp/router-tests.log"}
-{"ac":"3","state":"progress","evidence":"meaty-agentic-ops/skills/delegation-router/scripts/build-model-registry.py"}
-{"ac":"2","state":"progress","evidence":"/Volumes/SKNVME/aos-scratch/leg/20261103T200142Z-8952-codex.656d4f11/tmp/router-tests.log"}
-{"ac":"4","state":"blocked","evidence":"meaty-agentic-ops/skills/delegation-router/scripts/build-model-registry.py"}
-{"ac":"1","state":"blocked","evidence":"meaty-agentic-ops/skills/delegation-router/model-registry.generated.json"}
-{"ac":"2","state":"done","evidence":"78a32da"}
-{"ac":"3","state":"blocked","evidence":"/Volumes/SKNVME/aos-scratch/leg/20261103T200142Z-8952-codex.656d4f11/tmp/router-tests.log"}
-{"ac":"4","state":"blocked","evidence":"https://github.com/miethe/MeatySkills/pull/109"}

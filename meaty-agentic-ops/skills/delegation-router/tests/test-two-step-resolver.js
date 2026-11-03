@@ -4,6 +4,10 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+// Resolve against this checkout and a deterministic receipt, independent of host accounts.
+process.env.MODEL_REGISTRY_PATH = path.join(__dirname, '..', 'model-registry.generated.json');
+process.env.AOS_LANE_AVAILABILITY_PATH = path.join(__dirname, 'fixtures', 'v3', 'availability.json');
+
 const { spawnSync } = require('child_process');
 const { resolve } = require('../resolver.js');
 
