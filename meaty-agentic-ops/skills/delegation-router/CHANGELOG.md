@@ -12,10 +12,7 @@
   complete eligible-lane exhaustion. Legacy TOML/v2 routing remains unchanged.
 - Refresh the published receipt with the launchpad reader before routing. Deploy only
   after upstream merge via SkillMeat; no deployed copies are changed by this PR.
-- Reconcile deployed bound-front preflight guidance into the canonical skill. Update ICA
-  health records from the 2026-10-16/24 decisions: Opus 5.5 unavailable, Sonnet 5.5 default,
-  and Haiku 5.5 available/unlimited. Remove the unregistered model/account pilot; task-class
-  nodes may declare an optional floor, while the resolver selects registry models and lanes.
+- Reconcile deployed bound-front preflight guidance into the canonical skill (docs only; registry rows were already reconciled on development by #102/#104, so this PR carries no registry change).
 
 ## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
 
