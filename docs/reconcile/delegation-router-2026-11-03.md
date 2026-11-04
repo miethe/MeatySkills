@@ -1,13 +1,13 @@
 # delegation-router reconcile — 2026-11-03
 
-Target node: `node_01M6H8TAQK9PPV2YCF0MRM55P2`. Comparison base: `2230c85a` (PR #107 merged).
+Target node: `internal work record`. Comparison base: `2230c85a` (PR #107 merged).
 Canonical path: `meaty-agentic-ops/skills/delegation-router`. Neither deployed copy was edited.
 
 ## Method and counts
 
 Compared tracked paths and bytes against the pinned base with `git ls-tree` / `git show`, then
 reviewed unified diffs. For every conflicting launchpad file, queried
-`git -C /Users/miethe/dev/homelab/development/agentic_meta_dev log --follow -1 --
+`git -C the launchpad checkout log --follow -1 --
 .claude/skills/delegation-router/<file>`; latest-touch results are below. The SkillMeat summary
 captured earlier on the node was launchpad `13 deployed-ahead / 6 upstream-ahead / 25 conflicting`
 and home `0 / 1 / 17`. A fresh byte comparison in this worktree instead finds:

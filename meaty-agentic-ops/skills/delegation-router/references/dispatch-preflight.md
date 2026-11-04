@@ -1,7 +1,5 @@
 # Bound-front dispatch preflight
 
-Target-Node: node_01M52WQT5JX6QBKESK80GMS1WR
-
 Resolve lane eligibility, account, model, effort and write capability first. Keep one
 whole-node owner and cap its return at 300 words, pointers only. A refusal is evidence;
 never rotate credentials/accounts or waive a gate to make the same send pass.
@@ -59,7 +57,7 @@ checkout. A branch edit alone does not update the running dispatcher.
 | Predicate/refusal | Evidence and fix |
 | --- | --- |
 | `campaign_suspended` | Read the stopping leg/node/front and suspension receipt. Human decision only: `campaign_admission.py reauthorize --decision <Nick-quote> --evidence <receipt> --answer-ref <answer>`. |
-| `campaign_genesis_or_head_mismatch` | The anchor and ledger disagree; admission stays suspended. There is no automatic re-anchor: clearance goes through the same human-receipted `reauthorize` path as any other suspension. A receipted re-anchor design is tracked on `node_01M532BPP630XG9QA3P3WMET2A`. |
+| `campaign_genesis_or_head_mismatch` | The anchor and ledger disagree; admission stays suspended. There is no automatic re-anchor: clearance goes through the same human-receipted `reauthorize` path as any other suspension. A receipted re-anchor design is tracked internally. |
 | `ica_authorization_out_of_scope:<paths>` | Pre-gather authorized reads into the worktree; remove outside paths in prose; run the offline authorization check. Never enlarge scope without authority. |
 | `CONTEXT-BLIND-REFUSED` | Stamp, export both returned paths, verify external-safe resolver output. Disk packs avoid the live binding refresh deadline. |
 | `parent_lacks:<NAME>` | Source existing secrets in the parent, then explicitly grant only the needed name. |
@@ -68,5 +66,4 @@ checkout. A branch edit alone does not update the running dispatcher.
 
 Project hooks capture failure events and Stop-scan refusal markers into the existing
 hazard register, with fingerprint deduplication and hit counts. They do not clear gates
-or decide whether a refusal counts as a campaign red. That decision remains on
-node_01M4SN2DGZ2XH4EC0XN6BTDYE2. Tests prove branch wiring; deployment follows merge.
+or decide whether a refusal counts as a campaign red. That decision remains an internal governance decision. Tests prove branch wiring; deployment follows merge.
