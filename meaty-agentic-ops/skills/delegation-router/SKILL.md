@@ -8,7 +8,7 @@ description: >-
   raster images, illustrations, and PNG assets, it resolves native Codex first, the ICA GPT shim
   only when already on ICA, and Gemini/Nano Banana as fallback. Emits a routing decision only;
   the chosen platform skill executes it.
-version: "3.6"
+version: "3.6.1"
 app_version: "2026-06-09"
 updated: 2026-11-03
 scope: repo

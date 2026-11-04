@@ -1,5 +1,12 @@
 # Changelog — delegation-router skill
 
+## 3.6.1 — 2026-11-04 — Preserve deployed routing evidence
+
+Preserve the measured Haiku/Luna positioning scores and explicit reasoning efforts.
+Disable unavailable ICA Opus 5.5 and exclude Sonnet 4.6 from the denied ccx catalog.
+Clarify availability-selected Codex accounts with Primary as the no-choice fallback.
+Regenerate lookup tables from the reconciled source; private overlays remain external.
+
 ## 3.6 — 2026-11-03 — Observed lane availability
 
 - Node: `internal work record`. Consume the existing zero-model

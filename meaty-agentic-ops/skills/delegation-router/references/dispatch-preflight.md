@@ -33,14 +33,20 @@ aos-leg --lane ica --model 'claude-opus-5-5[1m]' --task-class write \
 
 ## Codex write
 
-The standing account is `codex_primary` (Nick, 2026-10-16: `codex_secondary` is downgraded
-until 2026-11-12). Use `codex_secondary` only as an explicit routing decision.
+The account comes from the availability mechanism; `codex_primary` is used when nothing
+chooses. `codex_secondary` is an equal explicit alternative. Neither account is hard-pinned
+as the leg default. Nick, 2026-11-03: "we shouldn't set the specific codex account ideally.
+That should be set by whichever is available as a broader estate mechanism."
+The existing `codex_primary` agentic-default fact is the fallback when that mechanism
+returns no choice. Preserve the selected account in the dispatch receipt.
 
 ```bash
+# codex_identity is the account selected by the availability mechanism;
+# use codex_primary only if it returns no choice.
 op context pack --node-id "$node" --destination codex-external \
   --session-id "$sid" --project-root . --project agentic_meta_dev
 # Export AOS_CONTEXT_BUNDLE_PATH to the path printed by that command.
-aos-leg --lane codex --codex-identity codex_primary --model gpt-6-luna \
+aos-leg --lane codex --codex-identity "$codex_identity" --model gpt-6-luna \
   --task-class write --prompt-file "$brief" --node "$node" --session "$sid" \
   --codex-network --cwd "$wt" --allow-cred INTENTTREE_API_TOKEN \
   --timeout 3300 --effort medium --check-only

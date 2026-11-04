@@ -1,5 +1,5 @@
 {
-  "registry_revision": "a8f76945e6a2106a3960ab7d17872bc2b55a52199b2441cd0ddf5399fb0c4948",
+  "registry_revision": "3728f5609f3b1d2d4209f4ad9975c590fc89a79342c75bf35c947639b964b14d",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",
@@ -19,7 +19,7 @@
       "holders": [
         {
           "model": "claude-haiku-5-5",
-          "q": 7.5,
+          "q": 8,
           "bar": 5.5,
           "lanes": [
             {
@@ -50,7 +50,7 @@
         },
         {
           "model": "gpt-6-luna",
-          "q": 8.4,
+          "q": 7,
           "bar": 5.5,
           "lanes": [
             {
@@ -88,7 +88,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 7.8,
+          "q": 7.000000000000001,
           "bar": 6,
           "lanes": [
             {
@@ -119,7 +119,7 @@
         },
         {
           "model": "claude-haiku-5-5",
-          "q": 6.6000000000000005,
+          "q": 7.4,
           "bar": 6,
           "lanes": [
             {
@@ -157,7 +157,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 8.3,
+          "q": 7,
           "bar": 5,
           "lanes": [
             {
@@ -188,7 +188,7 @@
         },
         {
           "model": "claude-haiku-5-5",
-          "q": 7.2,
+          "q": 7.800000000000001,
           "bar": 5,
           "lanes": [
             {
@@ -226,7 +226,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 7.800000000000001,
+          "q": 7.000000000000001,
           "bar": 3,
           "lanes": [
             {
@@ -272,7 +272,7 @@
         },
         {
           "model": "claude-haiku-5-5",
-          "q": 6.3,
+          "q": 7.200000000000001,
           "bar": 3,
           "lanes": [
             {
@@ -310,7 +310,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 7.8999999999999995,
+          "q": 7,
           "bar": 7,
           "lanes": [
             {
@@ -414,14 +414,6 @@
           "q": 8.5,
           "bar": 8,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -530,14 +522,6 @@
           "bar": 8,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -639,7 +623,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 7.800000000000001,
+          "q": 7.000000000000001,
           "bar": 6.5,
           "lanes": [
             {
@@ -731,7 +715,7 @@
       "holders": [
         {
           "model": "gpt-6-luna",
-          "q": 7.4,
+          "q": 7,
           "bar": 5,
           "lanes": [
             {
@@ -827,14 +811,6 @@
           "q": 8,
           "bar": 5,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -997,14 +973,6 @@
           "bar": 7,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1066,14 +1034,6 @@
           "bar": 7,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1134,14 +1094,6 @@
           "q": 8.8,
           "bar": 7,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -1218,14 +1170,6 @@
           "bar": 8,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1275,14 +1219,6 @@
           "q": 8.6,
           "bar": 8,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -1364,14 +1300,6 @@
           "q": 8.6,
           "bar": 8,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -1477,14 +1405,6 @@
           "bar": 8,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1588,14 +1508,6 @@
           "q": 8.6,
           "bar": 8,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
@@ -1701,14 +1613,6 @@
           "bar": 8,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1813,14 +1717,6 @@
           "bar": 8,
           "lanes": [
             {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "lane is not named by minimum",
-              "capability_ok": true
-            },
-            {
               "lane": "claude_subscription_1x",
               "order": 5,
               "serves": true,
@@ -1893,14 +1789,6 @@
           "q": null,
           "bar": null,
           "lanes": [
-            {
-              "lane": "ica_gateway_messages",
-              "order": 0,
-              "serves": true,
-              "eligible": false,
-              "eligibility_reason": "minimum predicate failed: compute_custody=vendor_hosted",
-              "capability_ok": true
-            },
             {
               "lane": "claude_subscription_1x",
               "order": 5,
