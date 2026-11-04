@@ -117,14 +117,13 @@ assert sonnet55_scores["intelligence"] == 9, sonnet55_scores
 assert sonnet55_scores["intelligence"] <= opus55_scores["intelligence"], \
     (sonnet55_scores, opus55_scores)
 
-# ICA lane preference (2026-09-28 evening), Nick: since Opus 5.5 is already servable on ICA, there
-# is no reason to keep defaulting to Sonnet 5 there. The claude-opus-5-5 ICA provider row must
-# stay enabled and remain a shared_token_pool row (never described as literally free — it draws
-# more credits per call than Sonnet 5).
+# Human availability decision, 2026-10-24: Opus 5.5 is unavailable on ICA.
+# Keep the instance disabled, with unavailable health; shared pool is not literally free.
 opus55_ica = next(
     p for p in registry["models"]["claude-opus-5-5"]["providers"] if p["provider"] == "ica"
 )
-assert opus55_ica["enabled"] is True, opus55_ica
+assert opus55_ica["enabled"] is False, opus55_ica
+assert opus55_ica["health"]["status"] == "unavailable", opus55_ica
 assert opus55_ica["allowance"] == "shared_token_pool", opus55_ica
 
 # Haiku 5.5 (2026-10-07, Nick): default native cheap tier. Negative controls that would have caught
@@ -222,3 +221,11 @@ for change, expected in [
     errors = validate_registry(broken, "needs-envelope-negative-control")
     assert any(expected in error for error in errors), errors
 print("test-registry-builder.py: needs/envelope negative controls passed")
+
+# Preserve the measured positioning scores when migrating registry schemas.
+assert h55["scores"] == {"cost": 10, "intelligence": 7, "taste": 7, "speed": 9}
+assert registry["models"]["gpt-6-luna"]["scores"] == {"cost": 7, "intelligence": 7, "taste": 7, "speed": 7}
+assert registry["models"]["gpt-5.6-luna-ica"]["scores"]["speed"] == 5
+
+assert registry["machinery_reviewer_families"]["openai"]["eligible"] is True
+assert registry["models"]["gpt-6.1-sol"]["max_context"] == 500000
