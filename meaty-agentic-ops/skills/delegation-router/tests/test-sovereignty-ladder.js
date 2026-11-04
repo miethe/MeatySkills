@@ -751,7 +751,8 @@ describe('(8) the v3 fixture declares complete attribute-based minimums', () => 
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'v3-open-unknown-'));
     const regPath = path.join(temp, 'registry.json');
     fs.writeFileSync(regPath, JSON.stringify(reg));
-    const r = resolve({ task_class: 'explicit_test', _registryPath: regPath });
+    const r = resolve({ task_class: 'explicit_test', _registryPath: regPath,
+      availability_path: path.join(temp, 'availability.json') });
     assert.equal(r.lane, 'ica_gateway_messages');
   });
 });

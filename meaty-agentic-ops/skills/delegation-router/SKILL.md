@@ -8,9 +8,9 @@ description: >-
   raster images, illustrations, and PNG assets, it resolves native Codex first, the ICA GPT shim
   only when already on ICA, and Gemini/Nano Banana as fallback. Emits a routing decision only;
   the chosen platform skill executes it.
-version: "3.5"
+version: "3.6.1"
 app_version: "2026-06-09"
-updated: 2026-09-09
+updated: 2026-11-03
 scope: repo
 spec: ./SPEC.md
 ---
@@ -30,6 +30,12 @@ For node needs, pass `size`, `capabilities`, `modifiers` and optional `sizing`, 
 `--size` / `--needs-file` in the v3 CLI. Exact model pins now require a preapproval
 reference, reason and expiry. See [needs and envelope](references/needs-envelope.md)
 for the capability-provider table, envelope priors, escalation contract and pin migration.
+
+## Bound-front dispatch
+
+Use [dispatch-preflight.md](references/dispatch-preflight.md) for ordered credential,
+context, worktree and authorization checks, ICA/Codex write recipes, and refusal remedies.
+Run `aos-leg --check-only` before the first send.
 
 ---
 
@@ -173,7 +179,7 @@ of the intent, so the two could never disagree. Measured across the two live log
 **112 of 123 entries (91%) had `actual === chosen`, and 0 of 123 carried any model at all**. The
 executor's own self-report is not a substitute either — `appendRealization` requires
 `realization_evidence` precisely because a leg reporting on itself is not a measurement
-(`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; the never-trust-a-leg's-self-report rule is
+(`internal work record`; the never-trust-a-leg's-self-report rule is
 `agentic_meta_dev/docs/rules/mode-d-enforcement.md`, whose local sibling here is
 `meaty-agentic-ops/rules/delegation-modes.md`).
 
@@ -286,10 +292,10 @@ shelled-out `invocation_template` decides the provider itself.
 | Task-class vocabulary | `task-class-vocabulary.v1.json` |
 | Feedback contract + validator | `routing-feedback-contract.v1.json`, `task-class-vocabulary.js` |
 | Model registry (authoritative source) | `~/.claude/config/model-registry.yaml` (global canonical) |
-| Grounded evidence layer (`use-case-rankings.yaml`) | `/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/delegation-router/use-case-rankings.yaml` (co-located, rf-provenanced, human-gated; **advisory only — never read by `resolver.js`**); see `references/use-case-rankings.md` |
-| Per-model playbook (`playbook_ref` targets) | `/Users/miethe/dev/homelab/development/MeatySkills/meaty-agentic-ops/skills/model-playbook/` (routes: `anthropic-claude.md`, `openai-gpt.md`, `google-gemini.md`, `ica-lanes.md`, `open-models.md`) |
-| Routing rules / cost policy (human) | `/Users/miethe/dev/homelab/development/skillmeat/.claude/specs/provider-routing-spec.md` |
-| Design spec | `/Users/miethe/dev/homelab/development/skillmeat/docs/project_plans/design-specs/model-registry-router-globalization-v1.md` |
+| Grounded evidence layer (`use-case-rankings.yaml`) | `the launchpad checkout` (co-located, rf-provenanced, human-gated; **advisory only — never read by `resolver.js`**); see `references/use-case-rankings.md` |
+| Per-model playbook (`playbook_ref` targets) | `the launchpad checkout` (routes: `anthropic-claude.md`, `openai-gpt.md`, `google-gemini.md`, `ica-lanes.md`, `open-models.md`) |
+| Routing rules / cost policy (human) | `the launchpad checkout` |
+| Design spec | `the launchpad checkout` |
 | Audit CLI | `skillmeat routing audit --help` |
 
 
@@ -316,3 +322,24 @@ Local state mapping: `~/.config/aos/codex-identities.toml`. Shared policy source
 `~/.config/aos/codex-settings/config.template.toml`, rendered by `aos-codex-parity` into separate
 homes. Authentication, session databases, Electron storage and native hook approval hashes remain
 independent. Desktop/interactive settings do not override a headless task's explicit sandbox.
+
+## Observed lane availability
+
+The v3 resolver reads `$AOS_DATA_HOME/lane-availability.json` (default
+`~/.local/share/aos/lane-availability.json`), published by the launchpad's existing
+`operator_core.core.lane_availability` zero-model reader. Refresh with
+`PYTHONPATH=src python3 -m operator_core.core.lane_availability status` from that
+repository before routing; the router performs no provider probes or receipt writes.
+`availability_path` / CLI `--availability-file` selects the receipt. Missing or malformed
+receipts are unmeasured. Producer expiry, never file rewrite time, determines freshness;
+a pending quota reset remains excluded. LIMITED/DOWN lanes and manual holds cannot win
+or enter fallback chains. Existing class minimums and holder floors still apply.
+The record's `availability_decisions` retains every examined holder's lane reasons,
+sources and resets, including when no lane is dispatchable. ICA paid-pool exhaustion
+only excludes provider rows that do not declare unlimited allowance.
+
+Explicit v3 model, provider or account requests require a concrete `pin_reason`
+(CLI `--pin-reason`); the reason is recorded and never overrides availability or eligibility.
+This is a new routing decision, never automatic replay of an already dispatched task.
+Legacy registry/TOML routing remains unchanged. Deployment must wait for upstream merge,
+then use a SkillMeat project deployment rather than copying this directory.
