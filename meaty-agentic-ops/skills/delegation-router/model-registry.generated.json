@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "a8f76945e6a2106a3960ab7d17872bc2b55a52199b2441cd0ddf5399fb0c4948",
+  "_yaml_sha256": "842f9394e185aafcb1729e5b798af022f5357042c532f7eb9dd30a3f4d7ebca8",
   "version": 3,
   "updated": "2026-10-25",
   "routing_attributes": {
@@ -384,28 +384,28 @@
   "routing_policy": {
     "exploration": {
       "chain": [
-        "claude-haiku-5-5",
-        "gpt-6-luna"
+        "gpt-6-luna",
+        "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "documentation": {
       "chain": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "mechanical": {
       "chain": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-haiku-5-5"
       ],
       "enabled": true
     },
     "second_opinion": {
       "chain": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "gemini-3.6-flash",
         "claude-haiku-5-5"
       ],
@@ -413,7 +413,7 @@
     },
     "implementation": {
       "chain": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-sonnet-5-5",
         "claude-sonnet-5"
       ],
@@ -421,8 +421,8 @@
     },
     "design_judgment": {
       "chain": [
-        "claude-opus-5-5",
         "gpt-6.1-sol",
+        "claude-opus-5-5",
         "claude-opus-5"
       ],
       "enabled": true
@@ -430,8 +430,7 @@
     "raw_strength": {
       "chain": [
         "gpt-6.1-sol",
-        "claude-opus-5-5",
-        "gpt-6-sol"
+        "claude-opus-5-5"
       ],
       "enabled": true
     },
@@ -445,7 +444,7 @@
     },
     "code_review": {
       "chain": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-sonnet-5-5",
         "claude-sonnet-5"
       ],
@@ -453,8 +452,7 @@
     },
     "image_generation": {
       "chain": [
-        "gpt-6-luna",
-        "gpt-5.6-terra",
+        "gpt-6.1-terra",
         "nano-banana-2",
         "nano-banana-pro"
       ],
@@ -522,7 +520,6 @@
       "chain": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "enabled": true
@@ -531,7 +528,6 @@
       "chain": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "enabled": true
@@ -540,7 +536,6 @@
       "chain": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "enabled": true
@@ -549,7 +544,6 @@
       "chain": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "enabled": true
@@ -558,7 +552,6 @@
       "chain": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "enabled": true
@@ -873,8 +866,8 @@
   "task_class_defaults": {
     "exploration": {
       "holders": [
-        "claude-haiku-5-5",
-        "gpt-6-luna"
+        "gpt-6-luna",
+        "claude-haiku-5-5"
       ],
       "effort": "low",
       "bar": 5.5,
@@ -894,7 +887,6 @@
       "cross_family": {
         "candidates": [
           "claude-haiku-5-5",
-          "gpt-5.6-luna",
           "gpt-6-luna",
           "claude-sonnet-5-5",
           "claude-opus-5-5",
@@ -903,7 +895,6 @@
         "equivalence": "equivalent",
         "equivalent": [
           "claude-haiku-5-5",
-          "gpt-5.6-luna",
           "gpt-6-luna"
         ],
         "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): Haiku 5.5, ICA 5.6 Luna and GPT-6 Luna tied on every task the bench could measure for correctness; Cost decides (Haiku 10, ICA Luna 8, GPT-6 Luna 7). Opus 5.5 or Sol 6.1 clear the bar but lose on Cost"
@@ -923,7 +914,7 @@
     },
     "documentation": {
       "holders": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-haiku-5-5"
       ],
       "effort": "low",
@@ -943,7 +934,7 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
-          "gpt-5.6-luna",
+          "gpt-6.1-terra",
           "claude-haiku-5-5",
           "gpt-6-luna",
           "claude-sonnet-5-5",
@@ -951,7 +942,7 @@
           "gpt-6.1-sol"
         ],
         "equivalence": "priority",
-        "priority": "gpt-5.6-luna",
+        "priority": "gpt-6.1-terra",
         "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
       },
       "set_by": {
@@ -969,7 +960,7 @@
     },
     "mechanical": {
       "holders": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-haiku-5-5"
       ],
       "effort": "low",
@@ -989,7 +980,7 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
-          "gpt-5.6-luna",
+          "gpt-6.1-terra",
           "gemma-4-26b-a4b-it",
           "claude-haiku-5-5",
           "gpt-6-luna",
@@ -998,7 +989,7 @@
           "gpt-6.1-sol"
         ],
         "equivalence": "priority",
-        "priority": "gpt-5.6-luna",
+        "priority": "gpt-6.1-terra",
         "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
       },
       "set_by": {
@@ -1016,7 +1007,7 @@
     },
     "second_opinion": {
       "holders": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "gemini-3.6-flash",
         "claude-haiku-5-5"
       ],
@@ -1037,6 +1028,7 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
+          "gpt-6.1-terra",
           "gpt-6-luna",
           "gemini-3.6-flash",
           "gemma-4-26b-a4b-it",
@@ -1046,7 +1038,7 @@
           "gpt-6.1-sol"
         ],
         "equivalence": "priority",
-        "priority": "gpt-6-luna",
+        "priority": "gpt-6.1-terra",
         "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns cross-family review and second opinion (family diversity against every Claude lane)"
       },
       "set_by": {
@@ -1064,7 +1056,7 @@
     },
     "implementation": {
       "holders": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-sonnet-5-5",
         "claude-sonnet-5"
       ],
@@ -1087,6 +1079,7 @@
       ],
       "cross_family": {
         "candidates": [
+          "gpt-6.1-terra",
           "claude-sonnet-5-5",
           "claude-sonnet-5",
           "claude-opus-5-5"
@@ -1129,8 +1122,8 @@
     },
     "design_judgment": {
       "holders": [
-        "claude-opus-5-5",
         "gpt-6.1-sol",
+        "claude-opus-5-5",
         "claude-opus-5"
       ],
       "effort": "medium",
@@ -1155,7 +1148,7 @@
           "claude-opus-5"
         ],
         "equivalence": "priority",
-        "priority": "claude-opus-5-5",
+        "priority": "gpt-6.1-sol",
         "basis": "MODEL-ROUTING section 5 design_judgment row (Nick 2026-09-28 evening): architecture › UX › hard judgment starts on Opus 5.5; Sol 6.1 is the cross-family first fallback",
         "excluded": [
           {
@@ -1181,8 +1174,7 @@
     "raw_strength": {
       "holders": [
         "gpt-6.1-sol",
-        "claude-opus-5-5",
-        "gpt-6-sol"
+        "claude-opus-5-5"
       ],
       "effort": "medium",
       "bar": 8.0,
@@ -1203,7 +1195,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-sonnet-5-5"
         ],
         "equivalence": "priority",
@@ -1272,7 +1263,7 @@
     },
     "code_review": {
       "holders": [
-        "gpt-6-luna",
+        "gpt-6.1-terra",
         "claude-sonnet-5-5",
         "claude-sonnet-5"
       ],
@@ -1293,6 +1284,7 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
+          "gpt-6.1-terra",
           "gpt-6-luna",
           "claude-sonnet-5-5",
           "claude-sonnet-5",
@@ -1300,7 +1292,7 @@
           "gpt-6.1-sol"
         ],
         "equivalence": "priority",
-        "priority": "gpt-6-luna",
+        "priority": "gpt-6.1-terra",
         "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns AC validation and cross-family review; MODEL-ROUTING section 5 AC-validation row"
       },
       "set_by": {
@@ -1318,8 +1310,7 @@
     },
     "image_generation": {
       "holders": [
-        "gpt-6-luna",
-        "gpt-5.6-terra",
+        "gpt-6.1-terra",
         "nano-banana-2",
         "nano-banana-pro"
       ],
@@ -1342,14 +1333,14 @@
       ],
       "cross_family": {
         "candidates": [
+          "gpt-6.1-terra",
           "gpt-6-luna",
-          "gpt-5.6-terra",
           "nano-banana-2",
           "nano-banana-pro",
           "gpt-6.1-sol"
         ],
         "equivalence": "priority",
-        "priority": "gpt-6-luna",
+        "priority": "gpt-6.1-terra",
         "basis": "MODEL-ROUTING section 5 + codex-executor contract: native Codex image_gen.imagegen first, ICA GPT shim, then Nano Banana; Claude models have no image output",
         "excluded": [
           {
@@ -1502,7 +1493,6 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
-          "gpt-5.6-sol",
           "claude-sonnet-5-5",
           "gpt-6.1-sol",
           "claude-opus-5-5",
@@ -1521,7 +1511,7 @@
       },
       "fallback": {
         "policy": "next_lane_then_next_holder",
-        "floor_model": "gpt-5.6-sol"
+        "floor_model": "claude-opus-5-5"
       }
     },
     "adjudication": {
@@ -1546,7 +1536,6 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
-          "gpt-5.6-sol",
           "claude-opus-5-5",
           "gpt-6.1-sol",
           "gpt-6-luna"
@@ -1571,7 +1560,7 @@
       },
       "fallback": {
         "policy": "next_lane_then_next_holder",
-        "floor_model": "gpt-5.6-sol"
+        "floor_model": "claude-opus-5-5"
       }
     },
     "critique": {
@@ -1596,7 +1585,6 @@
       "requires_capabilities": [],
       "cross_family": {
         "candidates": [
-          "gpt-5.6-sol",
           "claude-opus-5-5",
           "gpt-6.1-sol",
           "gpt-6-luna"
@@ -1621,7 +1609,7 @@
       },
       "fallback": {
         "policy": "next_lane_then_next_holder",
-        "floor_model": "gpt-5.6-sol"
+        "floor_model": "claude-opus-5-5"
       }
     },
     "advanced_sol": {
@@ -1802,7 +1790,6 @@
       "holders": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "minimum": {
@@ -1830,7 +1817,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-opus-5"
         ],
         "equivalence": "unmeasured",
@@ -1860,7 +1846,6 @@
       "holders": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "minimum": {
@@ -1888,7 +1873,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-opus-5"
         ],
         "equivalence": "unmeasured",
@@ -1918,7 +1902,6 @@
       "holders": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "minimum": {
@@ -1946,7 +1929,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-opus-5"
         ],
         "equivalence": "unmeasured",
@@ -1976,7 +1958,6 @@
       "holders": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "minimum": {
@@ -2004,7 +1985,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-opus-5"
         ],
         "equivalence": "unmeasured",
@@ -2034,7 +2014,6 @@
       "holders": [
         "gpt-6.1-sol",
         "claude-opus-5-5",
-        "gpt-6-sol",
         "claude-opus-5"
       ],
       "minimum": {
@@ -2062,7 +2041,6 @@
         "candidates": [
           "gpt-6.1-sol",
           "claude-opus-5-5",
-          "gpt-6-sol",
           "claude-opus-5"
         ],
         "equivalence": "unmeasured",
@@ -3748,14 +3726,14 @@
     "gpt-6.1-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "GPT-6.1 Terra: available on codex_primary; scoped code/review/extraction pilot after Luna misses; medium effort; no proven Sonnet 5.5 replacement. API and installed CLI context/effort surfaces differ; see the dated onboarding probe. No automatic role promotion.",
+      "descriptor": "GPT-6.1 Terra: personal Codex workhorse for implementation, review and bounded execution; ICA availability remains unmeasured beyond the scoped probe.",
       "scores": {
-        "cost": "UNMEASURED",
+        "cost": 7,
         "intelligence": 8,
-        "taste": "UNMEASURED",
-        "speed": 7
+        "taste": 7,
+        "speed": 8
       },
-      "scores_basis": "Provisional agent estimates from docs/project_plans/reports/model-eval/gpt-6-1-terra-2026-10-26/results.md: Intelligence 8 is a scoped AOS bracket between Luna 7 and Sol 9, not a general capability measurement; Speed 7 brackets observed native latency near Luna on bounded work. Cost and Taste remain UNMEASURED: no actual quota/cash conversion or taste instrument. Advisory only; no holder/chain change.",
+      "scores_basis": "nick-evaluation-2026-10-29: Nick said \"Terra 6.1 is likely now the primary workhorse\" and \"replacing Luna and Sonnet with Terra in most locations\". Cost matches Luna; Speed is Luna minus one, an UNMEASURED-derived estimate; Intelligence is capped at Sol minus one; Taste is capped below Sol by the 2026-10-30 front decision.",
       "when_to_use": [
         "explicit-evaluation",
         "scoped-code-pilot",
