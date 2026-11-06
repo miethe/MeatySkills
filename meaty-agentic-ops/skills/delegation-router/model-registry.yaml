@@ -1098,8 +1098,12 @@ task_class_defaults:
     - claude-opus-5-5
     - claude-opus-5
     minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
+      # Personal subscription lanes only (Nick 2026-10-18 parity ruling: Codex subscription may do anything
+      # Claude subscription may do). ICA lanes (ica_gateway_messages, ica_gateway_messages_shim,
+      # ica_gateway_responses_shim) are EXCLUDED and must stay excluded: employer-held, no personal eligibility.
+      lanes: [claude_subscription, codex_subscription_primary, codex_subscription_secondary]
+      excluded_lanes: [ica_gateway_messages, ica_gateway_messages_shim, ica_gateway_responses_shim]
+      reason: authority_absolute
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
