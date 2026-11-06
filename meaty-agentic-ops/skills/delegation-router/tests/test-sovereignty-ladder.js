@@ -371,6 +371,21 @@ describe('(3) the minimum is enforced at every selection site, not just one', ()
 // (4) FAIL-CLOSED — an unclassified lane satisfies nothing
 // ---------------------------------------------------------------------------
 
+describe('mode_d lane list on the real registry (Nick 2026-10-18 parity ruling)', () => {
+  test('admits personal Codex primary/secondary alongside Claude subscription, ICA stays excluded', () => {
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8'));
+    const min = real.task_class_defaults.mode_d.minimum;
+    assert.strictEqual(min.reason, 'authority_absolute');
+    for (const lane of ['claude_subscription', 'codex_subscription_primary', 'codex_subscription_secondary']) {
+      assert.ok(min.lanes.includes(lane), lane);
+    }
+    for (const lane of Object.keys(real.lanes).filter((l) => l.startsWith('ica_'))) {
+      assert.ok(!min.lanes.includes(lane), `${lane} must not satisfy mode_d`);
+      assert.ok(min.excluded_lanes.includes(lane), `${lane} must be explicitly excluded`);
+    }
+  });
+});
+
 describe('authority_absolute minimum', () => {
   test('mode_d accepts the reason and unknown lanes cannot satisfy it', () => {
     const reg = ladderRegistry();

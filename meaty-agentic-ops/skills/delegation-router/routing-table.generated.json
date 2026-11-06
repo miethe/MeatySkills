@@ -1,5 +1,5 @@
 {
-  "registry_revision": "35022ca31a16206be23950f47257e3dc002dc6e8195eb7585ce44e2db4491ec2",
+  "registry_revision": "68d0e6b82685847a169b09cc0a14efa31e2ed5517b580c868c238d2d464f3d2c",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",
@@ -1255,7 +1255,14 @@
       ],
       "minimum": {
         "lanes": [
-          "claude_subscription"
+          "claude_subscription",
+          "codex_subscription_primary",
+          "codex_subscription_secondary"
+        ],
+        "excluded_lanes": [
+          "ica_gateway_messages",
+          "ica_gateway_messages_shim",
+          "ica_gateway_responses_shim"
         ],
         "reason": "authority_absolute"
       },
