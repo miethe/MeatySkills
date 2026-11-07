@@ -1158,6 +1158,27 @@ if (lenses.length > 1 && !gateArgs.gate_lens_reason) {
 // scope without it, and running it per-lens would measure the same trees N times.
 const measurement = await runMeasureStage(gateArgs)
 
+// Only an exact measured disappearance at the reviewed full commit can be justified.
+// The headless host overwrites reviewed_head with its independently observed Git head.
+const justifiedDisappearances = []
+const rejectedDisappearanceJustifications = []
+const reviewedHead = gateArgs.reviewed_head
+for (const entry of asList(gateArgs.justified_disappearances)) {
+  let reason = null
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) reason = 'entry must be an object'
+  else if (typeof reviewedHead !== 'string' || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(reviewedHead)) reason = 'reviewed head is missing or not a full SHA'
+  else if (entry.head !== reviewedHead) reason = 'head does not match reviewed head'
+  else if (typeof entry.nodeid !== 'string' || !entry.nodeid.trim() || /[*?]/.test(entry.nodeid)) reason = 'nodeid must be an exact pytest id, not a pattern'
+  else if (typeof entry.reason !== 'string' || !entry.reason.trim()) reason = 'reason is required'
+  else if (typeof entry.ref !== 'string' || !entry.ref.trim()) reason = 'ref is required'
+  else if (!measurement.regressions.some(r => r.kind === 'no-longer-collected' && r.nodeid === entry.nodeid)) reason = 'nodeid is not a measured disappearance'
+  if (reason) rejectedDisappearanceJustifications.push({ entry, reason })
+  else {
+    justifiedDisappearances.push({ head: entry.head, nodeid: entry.nodeid, reason: entry.reason, ref: entry.ref })
+    measurement.regressions = measurement.regressions.filter(r => !(r.kind === 'no-longer-collected' && r.nodeid === entry.nodeid))
+  }
+}
+
 phase('Review')
 
 log(`Reviewer gate: ${lenses.length} lens(es) — ${lenses.map(l => `${l} → ${LENS_REVIEWER_MAP[l] || 'UNMAPPED'}`).join(', ')}`)
@@ -1230,6 +1251,8 @@ return {
   scope: gateArgs.scope || null,
   lenses,
   gate_lens_reason: gateArgs.gate_lens_reason || null,
+  justified_disappearances: justifiedDisappearances,
+  rejected_disappearance_justifications: rejectedDisappearanceJustifications,
   verdicts,
   gate_failures: gateFailures,
   // Verdicts that EXIST but cannot be trusted (approved with no verification path). Distinct
