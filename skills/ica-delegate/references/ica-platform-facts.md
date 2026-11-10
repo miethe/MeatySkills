@@ -29,7 +29,7 @@ env | grep -E "^(ANTHROPIC_BASE_URL|ANTHROPIC_MODEL|CCDASH_LAUNCHER)="
 
 | Signal | Meaning |
 |---|---|
-| `ANTHROPIC_BASE_URL=https://api.nextgen-beta.ica.ibm.com/ica` | this session's conversation is carried by ICA |
+| `ANTHROPIC_BASE_URL` matches the configured employer gateway | this session's conversation is carried by ICA |
 | `CCDASH_LAUNCHER=ica-claude.sh` | launched through the wrapper |
 | `ANTHROPIC_MODEL=claude-opus-5[1m]` | corroborating, but the base URL is the authority |
 
