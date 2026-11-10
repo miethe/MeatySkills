@@ -18,9 +18,6 @@
 #     We probe WITHOUT it — effort defaults server-side — so a model that only
 #     works with the param stripped (e.g. the retired beta gpt-5.6-luna-dzus via the CODEX key)
 #     shows as working, matching how a param-strip proxy would reach it.
-#   • KEY SCOPE MATTERS: the CC key and the CODEX key see the same /models list
-#     but have different deployment access. Pass --key to probe a specific one;
-#     the drift verdict is only as good as the key you probe with.
 #
 # Usage:
 #   ./probe-ica-models.sh [--key <token>] [--key-block <NAME>] [--registry <path>]
@@ -29,12 +26,9 @@
 #   --key <token>     ICA bearer token. Default: resolved from ~/.dotfiles/ICA_CLAUDE
 #                     (first uncommented ICA_CLAUDE_CODE_API_KEY=, i.e. the CC key).
 #   --key-block NAME  Pick a named block from ~/.dotfiles/ICA_CLAUDE instead (e.g. CCx3;
-#                     enumerate with `ica-key list`). One ccx key serves every model on
-#                     the gateway. (The beta CC1..CC6 / CODEX blocks and the -dzus ids
-#                     they reached were retired 2026-09-22.)
+#                     enumerate with `ica-key list`).
 #   --registry PATH   model-registry.yaml to diff against. Default: ../model-registry.yaml.
-#   --base URL        Gateway base. Default: https://api.servicesessentials.ibm.com/v1 (ccx;
-#                     the beta gateway was retired 2026-09-22)
+#   --base URL        Gateway base. Default: ICA_BASE_URL or a neutral placeholder.
 #   --model ID        Probe only this wire id (repeatable, including negative controls).
 #   --json            Emit the drift result as JSON (for tooling) instead of the table.
 #   --no-diff         Just probe + print the live table; skip the registry diff.
@@ -46,7 +40,7 @@ set -euo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_URL="https://api.servicesessentials.ibm.com/v1"
+BASE_URL="${ICA_BASE_URL:-https://gateway.example.invalid/v1}"
 REGISTRY="${SCRIPT_DIR}/../model-registry.yaml"
 ICA_DOTENV="${HOME}/.dotfiles/ICA_CLAUDE"
 KEY=""
