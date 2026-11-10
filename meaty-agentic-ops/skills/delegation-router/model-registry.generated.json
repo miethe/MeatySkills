@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "842f9394e185aafcb1729e5b798af022f5357042c532f7eb9dd30a3f4d7ebca8",
+  "_yaml_sha256": "77974fd256787dd163a32dc873c0f6961cf1044db3a0c47d7afc1174d3ee665e",
   "version": 3,
   "updated": "2026-10-25",
   "routing_attributes": {
@@ -97,9 +97,9 @@
       ],
       "economics": "shared_token_pool",
       "health": {
-        "status": "available",
-        "checked_at": "2026-10-16",
-        "evidence": "listed in GET /v1/models; raw /v1/messages bare id 200 echoing claude-opus-5-5; ica-claude.sh claude-opus-5-5[1m] is_error false (2026-10-16); earlier 2026-09-24 Claude-Code wrapper rc 0, contextWindow 1000000"
+        "status": "unavailable",
+        "checked_at": "2026-10-24",
+        "evidence": "Nick: Opus 5.5 unavailable on ICA since 2026-10-24"
       }
     },
     {
@@ -115,7 +115,6 @@
     {
       "model_id": "claude-sonnet-4-6",
       "lanes": [
-        "ccx",
         "beta"
       ],
       "economics": "shared_token_pool",
@@ -498,7 +497,7 @@
     "advanced_sol": {
       "chain": [
         "gpt-6-astra",
-        "claude-fable-5-1"
+        "claude-fable-5-2"
       ],
       "enabled": true
     },
@@ -943,7 +942,7 @@
         ],
         "equivalence": "priority",
         "priority": "gpt-6.1-terra",
-        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+        "basis": "Registry refresh 2026-10-30: GPT-6.1 Terra is the personal Codex workhorse for bulk documentation and mechanical work; this explicit priority supersedes the earlier study winner rather than claiming a measured Cost win"
       },
       "set_by": {
         "evidence": "evidence/cross-provider-2026-10-08.md",
@@ -990,7 +989,7 @@
         ],
         "equivalence": "priority",
         "priority": "gpt-6.1-terra",
-        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): ICA 5.6 Luna owns free bulk work on PUBLIC content ($0); the registry Cost scores rank Haiku 5.5 (10) above it (8), so this is a study priority, not a Cost pick"
+        "basis": "Registry refresh 2026-10-30: GPT-6.1 Terra is the personal Codex workhorse for bulk documentation and mechanical work; this explicit priority supersedes the earlier study winner rather than claiming a measured Cost win"
       },
       "set_by": {
         "evidence": "evidence/cross-provider-2026-10-08.md",
@@ -1039,7 +1038,7 @@
         ],
         "equivalence": "priority",
         "priority": "gpt-6.1-terra",
-        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns cross-family review and second opinion (family diversity against every Claude lane)"
+        "basis": "Registry refresh 2026-10-30: GPT-6.1 Terra takes cross-family review and second opinion as the personal Codex workhorse, preserving family diversity against Claude lanes"
       },
       "set_by": {
         "evidence": "evidence/cross-provider-2026-10-08.md",
@@ -1149,7 +1148,7 @@
         ],
         "equivalence": "priority",
         "priority": "gpt-6.1-sol",
-        "basis": "MODEL-ROUTING section 5 design_judgment row (Nick 2026-09-28 evening): architecture › UX › hard judgment starts on Opus 5.5; Sol 6.1 is the cross-family first fallback",
+        "basis": "Registry refresh 2026-10-30: architecture, UX and hard judgment start on GPT-6.1 Sol; Opus 5.5 is the cross-family first fallback, superseding the 2026-09-28 order",
         "excluded": [
           {
             "holder": "claude-sonnet-5-5",
@@ -1293,7 +1292,7 @@
         ],
         "equivalence": "priority",
         "priority": "gpt-6.1-terra",
-        "basis": "positioning study report.md section 3 (node_01M4C58QYW0KP7987JWADP8YKV): GPT-6 Luna owns AC validation and cross-family review; MODEL-ROUTING section 5 AC-validation row"
+        "basis": "Registry refresh 2026-10-30: GPT-6.1 Terra takes AC validation and cross-family review as the personal Codex workhorse, superseding the earlier Luna priority"
       },
       "set_by": {
         "evidence": "evidence/cross-provider-2026-10-08.md",
@@ -1615,7 +1614,7 @@
     "advanced_sol": {
       "holders": [
         "gpt-6-astra",
-        "claude-fable-5-1"
+        "claude-fable-5-2"
       ],
       "effort": "medium",
       "bar": 9.0,
@@ -1635,7 +1634,7 @@
       "cross_family": {
         "candidates": [
           "gpt-6-astra",
-          "claude-fable-5-1"
+          "claude-fable-5-2"
         ],
         "equivalence": "priority",
         "priority": "gpt-6-astra",
@@ -1663,7 +1662,7 @@
       },
       "fallback": {
         "policy": "next_lane_then_next_holder",
-        "floor_model": "claude-fable-5-1"
+        "floor_model": "claude-fable-5-2"
       }
     },
     "orchestration": {
@@ -2167,7 +2166,7 @@
           "model_id": "claude-opus-5-5[1m]",
           "cost_tier": "premium",
           "allowance": "shared_token_pool",
-          "enabled": true,
+          "enabled": false,
           "priority": 1,
           "cost_score": 9,
           "tools": [
@@ -2176,9 +2175,9 @@
           "max_context": 1000000,
           "max_output": 128000,
           "health": {
-            "status": "degraded",
-            "checked_at": "2026-10-23",
-            "evidence": "N10: chat/completions denied E003 Model not available for Coding Agents; messages wrapper NOT re-probed. Prior wrapper success 2026-09-24 is stale. docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-lane-probe.md"
+            "status": "unavailable",
+            "checked_at": "2026-10-24",
+            "evidence": "Nick: Opus 5.5 unavailable on ICA since 2026-10-24"
           }
         }
       ]
@@ -2388,6 +2387,13 @@
       ]
     },
     "claude-sonnet-5-5": {
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
       "family": "claude",
       "class": "sonnet",
       "descriptor": "Claude Sonnet 5.5 (released 2026-09-28, https://www.anthropic.com/claude-sonnet-5-5). Default subscription/native-execution Sonnet for CONTRACT-CLEAR execution/review/research, superseding claude-sonnet-5 (Nick, 2026-09-28) — NOT a blanket default: `design_judgment` (architecture/UX-visual-design/hard-judgment/ambiguous-synthesis) and `raw_strength` (hard-algorithmic/debugging/reasoning-heavy) are separate task classes that never resolve here (Nick, 2026-09-28 evening; see the routing_policy chains above). Adaptive thinking; default effort `high` on the raw API but Claude Code itself defaults it to Medium; extended-thinking params (thinking.type:enabled + budget_tokens) NOT accepted — adaptive-only. Sourced from platform.claude.com/docs/en/models/overview (authoritative for id/pricing/limits) + the announcement page for benchmarks: 1M context, 128K output (300K via Batches API with the output-300k-2026-03-24 beta header). $2/$10 per MTok — same headline price as Sonnet 5 — plus cache read $0.20/MTok, cache write $2.50/MTok; Anthropic claims 30%+ faster output and up to 30% lower cost-per-task vs Sonnet 5 via token efficiency. Benchmarks (self-reported announcement page, Sonnet 5.5 / Sonnet 5 / Opus 5.5): Terminal-Bench 4.0 70.6%/10.3%/66.4%; FrontierCode 1.1 (Main, Max effort) 46.2%/42.4%/54.4%; CursorBench 4.0 55.5%/34.1%/57.8%; OSWorld 2.1 (partial) 80.1%/57.0%/81.8%; GDPval-AA v2.1 1844/1449/1846; Chartography (no tools) 61.6%/15.6%/64.4% — beats Sonnet 5 on every listed benchmark and sits close to Opus 5.5 (within a few points on several) at half its per-MTok price. Local Claude Code probe (2026-09-28): `claude -p --model claude-sonnet-5-5 'reply ok'` → stderr `[claude-code:unrecognized_model]` (benign, per the `unrecognized-model-stderr-is-benign` lesson) + stdout `ok`, exit 0 — this harness accepts the id. ICA serves Sonnet 5.5 as of 2026-10-16, re-probed 2026-10-23: completed chat/completions text on bare claude-sonnet-5-5. The older NOT-served note is superseded. Receipt: docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-wire-probe.json.",
@@ -2625,13 +2631,20 @@
       ]
     },
     "claude-haiku-5-5": {
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
       "family": "claude",
       "class": "haiku",
       "descriptor": "Claude Haiku 5.5 (released 2026-10-07; Claude Code 2.1.293 resolves the `haiku` alias to it). Default CHEAP/MECHANICAL Claude on the subscription lane, superseding claude-haiku-4-5 (Nick, 2026-10-07). Exact API id claude-haiku-5-5 (dateless pinned snapshot); 1M context NATIVE (4.5 was 200k; the `[1m]` suffix is accepted but a no-op), 128K output, adaptive thinking, default effort medium, retirement not before 2027-10-07. Anthropic list price from $0.10/$0.50 per MTok (10x below Haiku 4.5's $1/$5; cache read 10% of input). Positioned by Anthropic for high-volume latency-sensitive classification, extraction and routing. Served on both claude-primary and claude-1x (cc1x) accounts (smoke 2026-10-07). ICA served-state refreshed 2026-10-23: bare claude-haiku-5-5 returns completed text on chat/completions; the 2026-10-07 access denial is historical. ICA free/unlimited remains Nick's 2026-10-16 declaration (not a metering measurement). Receipt: docs/project_plans/reports/node-sizing-2026-10-23/N10-ica-wire-probe.json. Blind bench 2026-10-07 (6 AOS tasks x 6 arms, docs/project_plans/reports/model-eval/haiku-5-5-2026-10-07/results.md): rubric mean 4.33/5 vs Haiku 4.5 3.83, Sonnet 5.5 4.50, gpt-6-luna(low) 5.00; perfect on extraction, classification, bug fix and routing, clean JSON (no fences), exact word-count discipline; weaker on schema fields that need inference (tier) and on a 150-word summary's coverage (n=1 each). Across the six bench tasks Claude Code's list-basis cost was $0.0042 total vs $0.105 for Haiku 4.5 (~25x lower) and $0.081 for Sonnet 5.5 (~20x lower); the per-token price gap is 10x, the rest is fewer thinking tokens.",
       "scores": {
         "cost": 10,
-        "intelligence": 6,
-        "taste": 6,
+        "intelligence": 7,
+        "taste": 7,
         "speed": 9
       },
       "when_to_use": [
@@ -2678,21 +2691,6 @@
           "enabled": true,
           "priority": 2,
           "cost_score": 10
-        },
-        {
-          "provider": "ica",
-          "lane": "ica_gateway_messages",
-          "model_id": "claude-haiku-5-5[1m]",
-          "cost_tier": "free",
-          "allowance": "unlimited",
-          "enabled": true,
-          "priority": 2,
-          "cost_score": 10,
-          "health": {
-            "status": "available",
-            "checked_at": "2026-10-25",
-            "evidence": "bare id HTTP 200 on 2026-10-25; [1m] form served via ica-claude.sh. Economy-only, free on ICA (front policy)"
-          }
         }
       ]
     },
@@ -2746,7 +2744,62 @@
         }
       ]
     },
+    "claude-fable-5-2": {
+      "auto_select": false,
+      "family": "claude",
+      "class": "fable",
+      "descriptor": "Claude Fable 5.2: 1M context, 128K maximum output, $8/$40 per input/output MTok. Adaptive thinking is always on; tool_choice any or tool returns HTTP 400. Editing earlier turns invalidates preserved thinking; thinking blocks are account-bound. Sources: https://platform.claude.com/docs/en/models/fable-5-2/overview and https://platform.claude.com/docs/en/models/fable-5-2/migration-guide. Explicit model selection or an advanced-Sol execution contract only; availability is unmeasured.",
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "when_to_use": [
+        "long-horizon-autonomy",
+        "deep-reasoning",
+        "planning",
+        "architecture"
+      ],
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "tool_choice": "auto_only",
+      "related_skills": [],
+      "max_context": 1000000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 8,
+        "output_per_mtok_usd": 40,
+        "cache_read_per_mtok_usd": 0.2
+      },
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_effort": "high",
+      "status": "active",
+      "allowed_dispatch_lanes": [
+        "native"
+      ],
+      "selection_posture": "explicit_or_advanced_sol_contract",
+      "providers": [
+        {
+          "provider": "claude",
+          "lane": "claude_subscription",
+          "model_id": "claude-fable-5-2",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
     "claude-fable-5-1": {
+      "superseded_by": "claude-fable-5-2",
       "family": "claude",
       "class": "fable",
       "descriptor": "Claude Fable 5.1 — the widely released Mythos-level frontier model for demanding reasoning and long-horizon agentic work. Anthropic recommends starting most work on Opus 5 and escalating when Opus at high effort falls short; this registry additionally permits explicit advanced_sol whole-node contracts and Nick's deliberately selected interactive register. Forced tool choice returns an error, and thinking blocks are prefix-bound/forward-only, so append history exactly rather than editing prior turns.",
@@ -3703,30 +3756,13 @@
             "checked_at": "2026-09-30",
             "evidence": "codex exec -m gpt-6.1-sol read-only smoke returned OK 2026-09-30; Nick direct Codex use same day"
           }
-        },
-        {
-          "provider": "ica",
-          "lane": "ica_gateway_messages_shim",
-          "model_id": "gpt-6.1-sol",
-          "cost_tier": "premium",
-          "allowance": "shared_token_pool",
-          "enabled": true,
-          "priority": 2,
-          "cost_score": 8,
-          "tool_mode": "none",
-          "capability_gap": "INHERITED from gpt-5.6-sol, NOT re-measured for 6.1: tools+reasoning mutually exclusive on the ICA gateway (reasoning_tokens=0 whenever a tool call is made); tool_mode:none keeps the resolver from routing tool-requiring work here. Claude-Code-via-ica-gpt-shim returns 400 'messages: empty array' (pre-existing shim defect, 2026-10-16)",
-          "health": {
-            "status": "available",
-            "checked_at": "2026-10-25",
-            "evidence": "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-sol"
-          }
         }
       ]
     },
     "gpt-6.1-terra": {
       "family": "openai",
       "class": "codex",
-      "descriptor": "GPT-6.1 Terra: personal Codex workhorse for implementation, review and bounded execution; ICA availability remains unmeasured beyond the scoped probe.",
+      "descriptor": "GPT-6.1 Terra: personal Codex workhorse for implementation, review and bounded execution.",
       "scores": {
         "cost": 7,
         "intelligence": 8,
@@ -3829,9 +3865,9 @@
       "descriptor": "OpenAI GPT-6 Luna via the personal Codex account — workhorse/default Codex subscription tier (replaces GPT-5.6 Terra for Codex subscription defaults). Reported API: 1.05M context, 128K output, $0.10/$0.50 per MTok; efforts none|low|medium|high|xhigh|max. ICA ccx ALSO serves gpt-6-luna as of 2026-10-16 (bare id; free/unlimited per Nick; replaces ICA gpt-5.6-luna): see the ICA provider row.",
       "scores": {
         "cost": 7,
-        "intelligence": 8,
+        "intelligence": 7,
         "taste": 7,
-        "speed": 9
+        "speed": 7
       },
       "when_to_use": [
         "code-review",
@@ -3889,21 +3925,6 @@
           "priority": 1,
           "account_relationship": "personal",
           "write_capability": "codex_sandbox"
-        },
-        {
-          "provider": "ica",
-          "lane": "ica_gateway_responses_shim",
-          "model_id": "gpt-6-luna",
-          "cost_tier": "free",
-          "allowance": "unlimited",
-          "enabled": true,
-          "priority": 2,
-          "cost_score": 8,
-          "health": {
-            "status": "available",
-            "checked_at": "2026-10-25",
-            "evidence": "bare id HTTP 200 on 2026-10-25; supersedes gpt-5.6-luna"
-          }
         }
       ]
     },
@@ -4120,7 +4141,7 @@
         "cost": 8,
         "intelligence": 7,
         "taste": 6,
-        "speed": 6
+        "speed": 5
       },
       "when_to_use": [
         "code-review",
@@ -5012,5 +5033,27 @@
         "health_evidence": "N10-ica-nonce-probe.json"
       }
     ]
+  },
+  "machinery_reviewer_families": {
+    "anthropic": {
+      "argv": [
+        "--lane",
+        "ica",
+        "--model",
+        "claude-sonnet-5-5[1m]"
+      ],
+      "eligible": true
+    },
+    "openai": {
+      "argv": [
+        "--lane",
+        "codex",
+        "--codex-identity",
+        "codex_secondary",
+        "--model",
+        "gpt-6.1-sol"
+      ],
+      "eligible": true
+    }
   }
 }

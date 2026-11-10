@@ -3,6 +3,12 @@
 Human orientation for the `delegation-router` skill. For agent invocation see `SKILL.md`;
 for the capability contract see `SPEC.md`.
 
+## Bound-front dispatch
+
+Use [dispatch-preflight.md](references/dispatch-preflight.md) for ordered credential,
+context, worktree and authorization checks, ICA/Codex write recipes, and refusal remedies.
+Run `aos-leg --check-only` before the first send.
+
 ## What it is
 
 A pure resolver engine that decides **where** a delegated unit of work should run before any
@@ -17,8 +23,8 @@ invocation template, and an ordered fallback chain. It never runs the work itsel
 Nothing in a workflow calls them: `withRouting()` puts each decision into the workflow's RETURN
 ENVELOPE (`routing_log`) and workflow scripts cannot do filesystem work. For a long stretch that
 producer wire was deployed fleet-wide with **no consumer at all**, so the audit log stayed empty —
-and an empty log reads exactly like a clean one (`node_01KZVV9R3EK13DJXS44VCQ8E9C`, reopened as
-`node_01KZYDYVAD8N82NHZMTEKR7YH2`).
+and an empty log reads exactly like a clean one (`internal work record`, reopened as
+`internal work record`).
 
 `hooks/routing-log-sink.py` is that consumer: a Claude Code **`Stop`** hook that reads each
 completed workflow's returned `routing_log` and drives `log-cli.js --ingest`. It ships beside the

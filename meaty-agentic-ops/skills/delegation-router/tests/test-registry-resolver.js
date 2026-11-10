@@ -661,7 +661,7 @@ describe('cross-model priority scope', () => {
 
 // ---------------------------------------------------------------------------
 // Positive control — --dangerously-skip-permissions must never appear in an
-// invocation_template for claude/ica/ica-gpt (node_01M34T2M6MVT8P9CY3ZXBCEC38).
+// invocation_template for claude/ica/ica-gpt (internal work record).
 //
 // buildRegistryInvocation() and buildRegistryMustStayRecord() (resolver.js) previously
 // baked --dangerously-skip-permissions directly into every emitted invocation_template for

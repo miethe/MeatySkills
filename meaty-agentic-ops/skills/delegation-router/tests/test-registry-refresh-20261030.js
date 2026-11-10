@@ -18,3 +18,12 @@ for (const [name, first] of Object.entries(expected)) test(`${name} chain bounda
 for (const name of ['implementation', 'code_review', 'design_judgment']) test(`${name} model selection`, () => {
   assert.equal(resolveModel(registry, {task_class: name}).chosenModel, expected[name]);
 });
+
+for (const name of ['documentation', 'mechanical', 'second_opinion', 'code_review', 'design_judgment']) {
+  test(`${name} priority rationale`, () => {
+    const { priority, basis } = registry.task_class_defaults[name].cross_family;
+    assert.equal(priority, expected[name]);
+    assert.match(basis, /Registry refresh 2026-10-30/);
+    assert.ok(basis.includes(name === 'design_judgment' ? 'GPT-6.1 Sol' : 'GPT-6.1 Terra'));
+  });
+}
