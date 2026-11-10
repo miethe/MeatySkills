@@ -1,5 +1,5 @@
 {
-  "registry_revision": "3728f5609f3b1d2d4209f4ad9975c590fc89a79342c75bf35c947639b964b14d",
+  "registry_revision": "cddca68012ab2405ef99136f11ffa984a70b26f56134275a15d0c0f573b02482",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",
@@ -1141,26 +1141,11 @@
               "capability_ok": true
             }
           ]
-        },
-        {
-          "model": "claude-fable-5-1",
-          "q": null,
-          "bar": 9,
-          "lanes": [
-            {
-              "lane": "claude_subscription",
-              "order": 6,
-              "serves": true,
-              "eligible": true,
-              "eligibility_reason": "no minimum declared",
-              "capability_ok": true
-            }
-          ]
         }
       ],
       "minimum": null,
       "requires_capabilities": [],
-      "floor_model": "claude-fable-5-1"
+      "floor_model": "gpt-6-astra"
     },
     "orchestration": {
       "holders": [

@@ -141,6 +141,19 @@ models:
   - text_generation
   lifecycle: legacy-selectable
   as_of: '2026-10-07'
+- id: claude-fable-5-2
+  label: Claude Fable 5.2
+  family: claude
+  generation: '5.2'
+  context_windows:
+  - 1000000
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  - tool_use
+  - extended_context
+  lifecycle: current
+  as_of: '2026-11-10'
 - id: claude-fable-5-1
   label: Claude Fable 5.1
   family: claude
@@ -152,8 +165,8 @@ models:
   - text_generation
   - tool_use
   - extended_context
-  lifecycle: current
-  as_of: '2026-09-26'
+  lifecycle: superseded
+  as_of: '2026-11-10'
 - id: claude-fable-5
   label: Claude Fable 5
   family: claude
