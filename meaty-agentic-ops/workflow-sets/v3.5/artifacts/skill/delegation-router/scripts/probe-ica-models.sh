@@ -32,7 +32,7 @@
 #                     CC1..CC6 (Claude keys) or CODEX (the OpenAI-line key). The
 #                     CODEX key is the one that reaches gpt-5.6-luna-dzus on chat.
 #   --registry PATH   model-registry.yaml to diff against. Default: ../model-registry.yaml.
-#   --base URL        Gateway base. Default: https://api.nextgen-beta.ica.ibm.com/ica/v1
+#   --base URL        Gateway base. Default: ICA_BASE_URL or a neutral placeholder.
 #   --json            Emit the drift result as JSON (for tooling) instead of the table.
 #   --no-diff         Just probe + print the live table; skip the registry diff.
 #
@@ -43,7 +43,7 @@ set -euo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_URL="https://api.nextgen-beta.ica.ibm.com/ica/v1"
+BASE_URL="${ICA_BASE_URL:-https://gateway.example.invalid/v1}"
 REGISTRY="${SCRIPT_DIR}/../model-registry.yaml"
 ICA_DOTENV="${HOME}/.dotfiles/ICA_CLAUDE"
 KEY=""

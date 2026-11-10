@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "68d0e6b82685847a169b09cc0a14efa31e2ed5517b580c868c238d2d464f3d2c",
+  "_yaml_sha256": "117bdde146a397f4a3936e90f146d15b98c0c98a8ff3f3fc919dc93901f3bf6c",
   "version": 3,
   "updated": "2026-10-25",
   "routing_attributes": {
@@ -499,7 +499,7 @@
     "advanced_sol": {
       "chain": [
         "gpt-6-astra",
-        "claude-fable-5-1"
+        "claude-fable-5-2"
       ],
       "enabled": true
     },
@@ -1626,7 +1626,7 @@
     "advanced_sol": {
       "holders": [
         "gpt-6-astra",
-        "claude-fable-5-1"
+        "claude-fable-5-2"
       ],
       "effort": "medium",
       "bar": 9.0,
@@ -1646,7 +1646,7 @@
       "cross_family": {
         "candidates": [
           "gpt-6-astra",
-          "claude-fable-5-1"
+          "claude-fable-5-2"
         ],
         "equivalence": "priority",
         "priority": "gpt-6-astra",
@@ -1674,7 +1674,7 @@
       },
       "fallback": {
         "policy": "next_lane_then_next_holder",
-        "floor_model": "claude-fable-5-1"
+        "floor_model": "claude-fable-5-2"
       }
     },
     "orchestration": {
@@ -1747,11 +1747,6 @@
           "claude_subscription",
           "codex_subscription_primary",
           "codex_subscription_secondary"
-        ],
-        "excluded_lanes": [
-          "ica_gateway_messages",
-          "ica_gateway_messages_shim",
-          "ica_gateway_responses_shim"
         ],
         "reason": "authority_absolute"
       },
@@ -2788,7 +2783,62 @@
         }
       ]
     },
+    "claude-fable-5-2": {
+      "auto_select": false,
+      "family": "claude",
+      "class": "fable",
+      "descriptor": "Claude Fable 5.2: 1M context, 128K maximum output, $8/$40 per input/output MTok. Adaptive thinking is always on; tool_choice any or tool returns HTTP 400. Editing earlier turns invalidates preserved thinking; thinking blocks are account-bound. Sources: https://platform.claude.com/docs/en/models/fable-5-2/overview and https://platform.claude.com/docs/en/models/fable-5-2/migration-guide. Explicit model selection or an advanced-Sol execution contract only; availability is unmeasured.",
+      "scores": {
+        "cost": "UNMEASURED",
+        "intelligence": "UNMEASURED",
+        "taste": "UNMEASURED",
+        "speed": "UNMEASURED"
+      },
+      "when_to_use": [
+        "long-horizon-autonomy",
+        "deep-reasoning",
+        "planning",
+        "architecture"
+      ],
+      "tools": [
+        "agent_tool",
+        "task_tool",
+        "one_million_context"
+      ],
+      "tool_choice": "auto_only",
+      "related_skills": [],
+      "max_context": 1000000,
+      "max_output": 128000,
+      "pricing": {
+        "input_per_mtok_usd": 8,
+        "output_per_mtok_usd": 40,
+        "cache_read_per_mtok_usd": 0.2
+      },
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_effort": "high",
+      "status": "active",
+      "allowed_dispatch_lanes": [
+        "native"
+      ],
+      "selection_posture": "explicit_or_advanced_sol_contract",
+      "providers": [
+        {
+          "provider": "claude",
+          "lane": "claude_subscription",
+          "model_id": "claude-fable-5-2",
+          "enabled": true,
+          "priority": 1
+        }
+      ]
+    },
     "claude-fable-5-1": {
+      "superseded_by": "claude-fable-5-2",
       "family": "claude",
       "class": "fable",
       "descriptor": "Claude Fable 5.1 — the widely released Mythos-level frontier model for demanding reasoning and long-horizon agentic work. Anthropic recommends starting most work on Opus 5 and escalating when Opus at high effort falls short; this registry additionally permits explicit advanced_sol whole-node contracts and Nick's deliberately selected interactive register. Forced tool choice returns an error, and thinking blocks are prefix-bound/forward-only, so append history exactly rather than editing prior turns.",

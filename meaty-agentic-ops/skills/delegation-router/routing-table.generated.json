@@ -1,5 +1,5 @@
 {
-  "registry_revision": "68d0e6b82685847a169b09cc0a14efa31e2ed5517b580c868c238d2d464f3d2c",
+  "registry_revision": "117bdde146a397f4a3936e90f146d15b98c0c98a8ff3f3fc919dc93901f3bf6c",
   "lane_order": [
     "ica_gateway_messages",
     "ica_gateway_messages_shim",
@@ -1143,7 +1143,7 @@
           ]
         },
         {
-          "model": "claude-fable-5-1",
+          "model": "claude-fable-5-2",
           "q": null,
           "bar": 9,
           "lanes": [
@@ -1160,7 +1160,7 @@
       ],
       "minimum": null,
       "requires_capabilities": [],
-      "floor_model": "claude-fable-5-1"
+      "floor_model": "claude-fable-5-2"
     },
     "orchestration": {
       "holders": [
@@ -1258,11 +1258,6 @@
           "claude_subscription",
           "codex_subscription_primary",
           "codex_subscription_secondary"
-        ],
-        "excluded_lanes": [
-          "ica_gateway_messages",
-          "ica_gateway_messages_shim",
-          "ica_gateway_responses_shim"
         ],
         "reason": "authority_absolute"
       },

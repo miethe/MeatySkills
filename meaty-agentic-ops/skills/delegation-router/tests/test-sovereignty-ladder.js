@@ -205,7 +205,7 @@ describe('(0) the ladder is ordered, and `unknown` sits below every real rung', 
     }
   });
 
-  test('the reason vocabulary is exactly the three declared classes', () => {
+  test('the reason vocabulary includes the authority boundary', () => {
     assert.deepStrictEqual(SOVEREIGNTY_MINIMUM_REASONS, ['cost_policy', 'quality_bar', 'egress_absolute', 'authority_absolute']);
   });
 
@@ -371,18 +371,27 @@ describe('(3) the minimum is enforced at every selection site, not just one', ()
 // (4) FAIL-CLOSED — an unclassified lane satisfies nothing
 // ---------------------------------------------------------------------------
 
-describe('mode_d lane list on the real registry (Nick 2026-10-18 parity ruling)', () => {
-  test('admits personal Codex primary/secondary alongside Claude subscription, ICA stays excluded', () => {
+describe('mode_d personal subscription allowlist', () => {
+  test('only the named personal subscriptions satisfy the authority boundary', () => {
     const real = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8'));
     const min = real.task_class_defaults.mode_d.minimum;
+    const allowed = ['claude_subscription', 'codex_subscription_primary', 'codex_subscription_secondary'];
     assert.strictEqual(min.reason, 'authority_absolute');
-    for (const lane of ['claude_subscription', 'codex_subscription_primary', 'codex_subscription_secondary']) {
-      assert.ok(min.lanes.includes(lane), lane);
+    assert.deepStrictEqual(min.lanes, allowed);
+    const probe = JSON.parse(JSON.stringify(real));
+    const laneIds = [...Object.keys(real.lanes), 'unconfigured_lane'];
+    probe.lane_order = laneIds;
+    probe.models = { boundary_probe: { scores: { cost: 1, intelligence: 10, taste: 10, speed: 1 }, providers:
+      laneIds.map(lane => ({ provider: 'probe', lane, model_id: 'boundary_probe', enabled: true })) } };
+    probe.task_class_defaults.mode_d.holders = ['boundary_probe'];
+    const { buildRoutingTable } = require(resolverPath);
+    const table = buildRoutingTable(probe);
+    const lanes = table.classes.mode_d.holders[0].lanes;
+    for (const lane of lanes) {
+      assert.strictEqual(lane.eligible, allowed.includes(lane.lane), lane.lane);
     }
-    for (const lane of Object.keys(real.lanes).filter((l) => l.startsWith('ica_'))) {
-      assert.ok(!min.lanes.includes(lane), `${lane} must not satisfy mode_d`);
-      assert.ok(min.excluded_lanes.includes(lane), `${lane} must be explicitly excluded`);
-    }
+    for (const lane of allowed) assert.ok(lanes.some(row => row.lane === lane && row.eligible), lane);
+    assert.ok(lanes.some(row => row.lane === 'unconfigured_lane' && !row.eligible));
   });
 });
 

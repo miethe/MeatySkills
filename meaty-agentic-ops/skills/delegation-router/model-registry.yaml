@@ -281,7 +281,7 @@ routing_policy:
   advanced_sol:
     chain:
     - gpt-6-astra
-    - claude-fable-5-1
+    - claude-fable-5-2
     enabled: true
   orchestration:
     chain:
@@ -1045,7 +1045,7 @@ task_class_defaults:
   advanced_sol:
     holders:
     - gpt-6-astra
-    - claude-fable-5-1
+    - claude-fable-5-2
     effort: medium
     bar: 9.0
     quality: {w_intelligence: 0.9, w_taste: 0.1, w_speed: 0.0}
@@ -1055,7 +1055,7 @@ task_class_defaults:
     cross_family:
       candidates:
       - gpt-6-astra
-      - claude-fable-5-1
+      - claude-fable-5-2
       equivalence: priority
       priority: gpt-6-astra
       basis: 'MODEL-ROUTING section 1.5 advanced-Sol class: planned from the start for Astra or Fable 5.1 by an explicit execution contract'
@@ -1065,7 +1065,7 @@ task_class_defaults:
     set_by: {evidence: evidence/cross-provider-2026-10-08.md, node: node_01M4C696HR9WVV6BVZ2FXQZH0Y, date: '2026-10-08', approved_by: nick, approved_via: 'Nick on req_01M4EFJ6ZBKFXWPHSWEPT9MDVE (2026-10-08: svg_generation to Opus 5.5; defaults cross-provider per class) + MeatySkills PR merge of registry v2 (routing M1)', fingerprint: 1ad1502a5860beea}
     fallback:
       policy: next_lane_then_next_holder
-      floor_model: claude-fable-5-1
+      floor_model: claude-fable-5-2
   orchestration:
     holders:
     - claude-opus-5-5
@@ -1098,11 +1098,9 @@ task_class_defaults:
     - claude-opus-5-5
     - claude-opus-5
     minimum:
-      # Personal subscription lanes only (Nick 2026-10-18 parity ruling: Codex subscription may do anything
-      # Claude subscription may do). ICA lanes (ica_gateway_messages, ica_gateway_messages_shim,
-      # ica_gateway_responses_shim) are EXCLUDED and must stay excluded: employer-held, no personal eligibility.
+      # Only the named personal subscription lanes satisfy this authority boundary.
+      # All other lanes, including unknown or newly configured lanes, fail closed.
       lanes: [claude_subscription, codex_subscription_primary, codex_subscription_secondary]
-      excluded_lanes: [ica_gateway_messages, ica_gateway_messages_shim, ica_gateway_responses_shim]
       reason: authority_absolute
     effort: medium
     bar: 8.0
@@ -1559,7 +1557,29 @@ models:
   #   routine implementation (Sonnet/Opus already strong) · high-volume mechanical work
   #   (→ Haiku/ICA, free) · latency-sensitive interactive loops · tight iterate-many-times
   #   loops · anything you run dozens of times where 2× compounds.
+  claude-fable-5-2:
+    auto_select: false
+    family: claude
+    class: fable
+    descriptor: "Claude Fable 5.2: 1M context, 128K maximum output, $8/$40 per input/output MTok. Adaptive thinking is always on; tool_choice any or tool returns HTTP 400. Editing earlier turns invalidates preserved thinking; thinking blocks are account-bound. Sources: https://platform.claude.com/docs/en/models/fable-5-2/overview and https://platform.claude.com/docs/en/models/fable-5-2/migration-guide. Explicit model selection or an advanced-Sol execution contract only; availability is unmeasured."
+    scores: { cost: UNMEASURED, intelligence: UNMEASURED, taste: UNMEASURED, speed: UNMEASURED }
+    when_to_use: [long-horizon-autonomy, deep-reasoning, planning, architecture]
+    tools: [agent_tool, task_tool, one_million_context]
+    tool_choice: auto_only
+    related_skills: []
+    max_context: 1000000
+    max_output: 128000
+    pricing: { input_per_mtok_usd: 8, output_per_mtok_usd: 40, cache_read_per_mtok_usd: 0.20 }
+    reasoning_efforts: [low, medium, high, xhigh, max]
+    default_effort: high
+    status: active
+    allowed_dispatch_lanes: [native]
+    selection_posture: explicit_or_advanced_sol_contract
+    providers:
+      - { provider: claude, lane: claude_subscription, model_id: "claude-fable-5-2", enabled: true, priority: 1 }
+
   claude-fable-5-1:
+    superseded_by: claude-fable-5-2
     family: claude
     class: fable
     descriptor: "Claude Fable 5.1 — the widely released Mythos-level frontier model for demanding reasoning and long-horizon agentic work. Anthropic recommends starting most work on Opus 5 and escalating when Opus at high effort falls short; this registry additionally permits explicit advanced_sol whole-node contracts and Nick's deliberately selected interactive register. Forced tool choice returns an error, and thinking blocks are prefix-bound/forward-only, so append history exactly rather than editing prior turns."
