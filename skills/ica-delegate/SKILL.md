@@ -139,7 +139,7 @@ Pre-Flight and `dev-execution/orchestration/batch-delegation.md`).
 |-------|----------|
 | `~/ica-claude.sh` exists and is executable | `test -x ~/ica-claude.sh` passes |
 | API key file present | `~/.dotfiles/ICA_CLAUDE` contains `ICA_CLAUDE_CODE_API_KEY=...` |
-| Gateway endpoint | `https://api.nextgen-beta.ica.ibm.com/ica` |
+| Gateway endpoint | `ICA_BASE_URL` (configured gateway URL) |
 | Default model in script | ⚠️ **Superseded 2026-08-26 — was `claude-opus-4-8[1m]`; that id 403s tenancy-wide now (no ICA Opus lane) and `[1m]` 403s independently.** Default should be bare `claude-sonnet-5` — still prefer an explicit `--model` regardless. |
 | Free-tier models | `claude-haiku-4-5`, `gemma-4-26b-a4b-it`, `meta-llama/llama-4-maverick-17b-128e-instruct-fp8`, `ibm/granite-4-h-small` |
 | Context cap | ⚠️ **Superseded 2026-08-26.** Bare ids now carry native context (measured up to 950,007 tokens on `claude-sonnet-5`, ccx; 600,007 on beta). The old "200k plain / ~1M via `[1m]`" split is dead — `[1m]` 403s everywhere and there is no ICA Opus lane to pair it with. |
@@ -232,7 +232,7 @@ availability question gets misread as an access problem).
 
 ```bash
 KEY="$(grep -E '^ICA_CLAUDE_CODE_API_KEY=' ~/.dotfiles/ICA_CLAUDE | head -n1 | cut -d= -f2-)"
-curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" \
+curl -s "${ICA_BASE_URL:-https://gateway.example.invalid}/v1/models" -H "x-api-key: $KEY" \
   | python3 -c 'import json,sys;[print(m["id"]) for m in json.load(sys.stdin)["data"]]'
 ```
 
@@ -272,7 +272,7 @@ else on ICA for it to resolve to:
 {
   "model": "claude-sonnet-5",                 // bare id — no-`--model` default now carries native context
   "env": {
-    "ANTHROPIC_BASE_URL": "https://api.nextgen-beta.ica.ibm.com/ica",
+    "ANTHROPIC_BASE_URL": "https://gateway.example.invalid",
     "ANTHROPIC_DEFAULT_OPUS_MODEL":   "claude-sonnet-5",       // `opus` alias — no ICA Opus lane exists; remap to Sonnet 5
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5",       // `sonnet` alias → Sonnet 5, bare (ICA serves Sonnet 5 since 2026-07-08)
     "ANTHROPIC_DEFAULT_HAIKU_MODEL":  "claude-haiku-4-5"       // `haiku` alias + background tasks → global-models id (kills the 401)

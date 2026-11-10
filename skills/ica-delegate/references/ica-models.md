@@ -1,6 +1,6 @@
 # ICA Gateway Model Inventory
 
-Model reference for the IBM ICA gateway (`https://api.nextgen-beta.ica.ibm.com/ica`, the "beta"
+Model reference for the IBM ICA gateway (`ICA_BASE_URL`, the "beta"
 lane; the sibling "ccx" gateway is covered where noted below).
 Accessed via `~/ica-claude.sh --model <identifier>`.
 
@@ -209,7 +209,7 @@ an access problem (and it burns shared-pool quota).
 
 ```bash
 KEY="$(grep -E '^ICA_CLAUDE_CODE_API_KEY=' ~/.dotfiles/ICA_CLAUDE | head -n1 | cut -d= -f2-)"
-curl -s https://api.nextgen-beta.ica.ibm.com/ica/v1/models -H "x-api-key: $KEY" \
+curl -s "${ICA_BASE_URL:-https://gateway.example.invalid}/v1/models" -H "x-api-key: $KEY" \
   | python3 -c 'import json,sys;[print(m["id"]) for m in json.load(sys.stdin)["data"]]'
 ```
 

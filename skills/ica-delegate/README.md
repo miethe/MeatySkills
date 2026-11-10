@@ -10,7 +10,7 @@ Delegate bounded work to IBM ICA-provisioned Claude instances.
 
 - `~/ica-claude.sh` must exist and be executable
 - API key configured in `~/.dotfiles/ICA_CLAUDE` (`ICA_CLAUDE_CODE_API_KEY=...`)
-- Gateway reachable: `https://api.nextgen-beta.ica.ibm.com/ica`
+- Gateway reachable at the configured `ICA_BASE_URL`
 
 ## Directory Structure
 
