@@ -30,7 +30,7 @@ try {
   });
   test('taste_high selects design_judgment holder; baseline stays cheap', () => {
     assert.equal(run({ modifiers: ['taste_high'] }).model, source.task_class_defaults.design_judgment.holders[0]);
-    assert.equal(run().model, 'gpt-6-luna');
+    assert.equal(run().model, 'gpt-6.1-terra');
   });
   test('image_generation resolves through provider table', () => {
     const image = run({ capabilities: ['image_generation'] });
@@ -52,7 +52,7 @@ try {
   });
   test('retired pin returns class selection and a structured finding', () => {
     const retired = run({ model: 'gpt-6-sol', ...approval });
-    assert.equal(retired.model, 'gpt-6-luna');
+    assert.equal(retired.model, 'gpt-6.1-terra');
     assert.equal(retired.needs_decision.findings[0].kind, 'retired_model_pin');
   });
   test('unknown needs, wrong shapes and l/xl fail closed', () => {
