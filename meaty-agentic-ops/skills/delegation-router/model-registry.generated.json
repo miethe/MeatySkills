@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "77974fd256787dd163a32dc873c0f6961cf1044db3a0c47d7afc1174d3ee665e",
+  "_yaml_sha256": "1f29061b489c240378867c131ab22afd81a7d5e2b7b7a7e6002cb9584db187b0",
   "version": 3,
   "updated": "2026-10-25",
   "routing_attributes": {
@@ -1732,9 +1732,11 @@
       ],
       "minimum": {
         "lanes": [
-          "claude_subscription"
+          "claude_subscription",
+          "codex_subscription_primary",
+          "codex_subscription_secondary"
         ],
-        "reason": "quality_bar"
+        "reason": "authority_absolute"
       },
       "effort": "medium",
       "bar": 8.0,

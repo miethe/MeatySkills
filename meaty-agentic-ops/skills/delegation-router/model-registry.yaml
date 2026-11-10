@@ -1087,8 +1087,10 @@ task_class_defaults:
     - claude-opus-5-5
     - claude-opus-5
     minimum:
-      lanes: [claude_subscription]
-      reason: quality_bar
+      # Only the named personal subscription lanes satisfy this authority boundary.
+      # All other lanes, including unknown or newly configured lanes, fail closed.
+      lanes: [claude_subscription, codex_subscription_primary, codex_subscription_secondary]
+      reason: authority_absolute
     effort: medium
     bar: 8.0
     quality: {w_intelligence: 0.6, w_taste: 0.4, w_speed: 0.0}
