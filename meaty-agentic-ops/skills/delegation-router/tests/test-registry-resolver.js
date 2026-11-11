@@ -508,23 +508,23 @@ describe('(g) resume_active determinism filter excludes nondeterministic provide
 
 describe('Smoke — default path loads the real model-registry (3-tier lookup)', () => {
   test('exploration on real registry resolves to ICA free haiku (global canonical tier)', () => {
-    const record = resolve({ pin_reason: 'registry selection boundary fixture', model: 'claude-haiku-5-5', task_class: 'exploration', effort: 'low' }); // v3: registry model ids, not legacy aliases
+    const record = resolve({ preapproval_ref: 'req_registry_smoke', pin_reason: 'live registry fixture', pin_expires: '2099-01-01', model: 'claude-haiku-5-5', task_class: 'exploration', effort: 'low' }); // v3: registry model ids, not legacy aliases
     assert.strictEqual(record.chosen_plugin_id, 'ica',
       `real-registry free-first exploration should pick ICA; got ${record.chosen_plugin_id}`);
   });
 
   test('orchestration on real registry forces claude (MUST-stay)', () => {
-    const record = resolve({ pin_reason: 'registry selection boundary fixture', model: 'claude-opus-5-5', provider: 'ica', task_class: 'orchestration' });
+    const record = resolve({ preapproval_ref: 'req_registry_smoke', pin_reason: 'live registry fixture', pin_expires: '2099-01-01', model: 'claude-opus-5-5', provider: 'ica', task_class: 'orchestration' });
     assert.strictEqual(record.chosen_plugin_id, 'claude');
   });
 
   test('implementation on real registry, explicit claude-sonnet-5-5 → claude (ICA sonnet opt-in only)', () => {
-    const record = resolve({ pin_reason: 'registry selection boundary fixture', model: 'claude-sonnet-5-5', task_class: 'implementation' });
+    const record = resolve({ preapproval_ref: 'req_registry_smoke', pin_reason: 'live registry fixture', pin_expires: '2099-01-01', model: 'claude-sonnet-5-5', task_class: 'implementation' });
     assert.strictEqual(record.chosen_plugin_id, 'claude');
   });
 
   test('real registry: every RoutingRecord field present', () => {
-    const record = resolve({ pin_reason: 'registry selection boundary fixture', model: 'claude-haiku-5-5', task_class: 'exploration' });
+    const record = resolve({ preapproval_ref: 'req_registry_smoke', pin_reason: 'live registry fixture', pin_expires: '2099-01-01', model: 'claude-haiku-5-5', task_class: 'exploration' });
     const REQUIRED = ['chosen_plugin_id', 'model', 'effort', 'agent_type_id', 'invocation_template',
       'scope_flags', 'stage', 'validation_contract', 'continuity_mode', 'fallback_chain', 'reason'];
     for (const f of REQUIRED) {
@@ -578,7 +578,7 @@ describe('Registry lookup tiers', () => {
     try {
       process.env.MODEL_REGISTRY_PATH = pA;  // env points to regA
       // But _registryPath in resolve() input points to regB — it must win.
-      const record = resolve({ pin_reason: 'registry selection boundary fixture', model: 'haiku', task_class: 'exploration', _registryPath: pB });
+      const record = resolve({ model: 'haiku', task_class: 'exploration', _registryPath: pB });
       // If regB was loaded, the routing still works (both have same structure).
       // We can't inspect the registry object from outside resolve(), but we can confirm
       // the call succeeds and returns a valid record.
@@ -661,7 +661,7 @@ describe('cross-model priority scope', () => {
 
 // ---------------------------------------------------------------------------
 // Positive control — --dangerously-skip-permissions must never appear in an
-// invocation_template for claude/ica/ica-gpt (node_01M34T2M6MVT8P9CY3ZXBCEC38).
+// invocation_template for claude/ica/ica-gpt (internal work record).
 //
 // buildRegistryInvocation() and buildRegistryMustStayRecord() (resolver.js) previously
 // baked --dangerously-skip-permissions directly into every emitted invocation_template for

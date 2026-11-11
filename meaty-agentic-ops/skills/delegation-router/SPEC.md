@@ -785,3 +785,12 @@ Local state mapping: `~/.config/aos/codex-identities.toml`. Shared policy source
 `~/.config/aos/codex-settings/config.template.toml`, rendered by `aos-codex-parity` into separate
 homes. Authentication, session databases, Electron storage and native hook approval hashes remain
 independent. Desktop/interactive settings do not override a headless task's explicit sandbox.
+
+
+## Node sizing v1: abstract needs
+
+The v3 needs contract is [references/needs-envelope.md](references/needs-envelope.md).
+It adds capability-provider and model/lane/effort envelope filters to the existing two-step
+resolver; exact pins require approval-reference metadata. Emitted `needs_decision`,
+`escalation_ladder`, `escalation_policy` and optional `reviewer` are additive RoutingRecord
+fields. The caller owns approval validation, finding persistence and bounded execution.

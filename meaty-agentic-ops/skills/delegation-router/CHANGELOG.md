@@ -1,8 +1,15 @@
 # Changelog — delegation-router skill
 
+## 3.6.1 — 2026-11-04 — Preserve deployed routing evidence
+
+Preserve the measured Haiku/Luna positioning scores and explicit reasoning efforts.
+Disable unavailable ICA Opus 5.5 and exclude Sonnet 4.6 from the denied ccx catalog.
+Clarify availability-selected Codex accounts with Primary as the no-choice fallback.
+Regenerate lookup tables from the reconciled source; private overlays remain external.
+
 ## 3.6 — 2026-11-03 — Observed lane availability
 
-- Node: `node_01M6H8TAQK9PPV2YCF0MRM55P2`. Consume the existing zero-model
+- Node: `internal work record`. Consume the existing zero-model
   lane-availability receipt in v3 lane and holder selection, retaining skip reasons,
   provider evidence and resets. Exclude LIMITED/DOWN/manual holds from fallbacks;
   retain class minimums, capabilities and holder floors. ICA paid pools remain scoped.
@@ -12,10 +19,11 @@
   complete eligible-lane exhaustion. Legacy TOML/v2 routing remains unchanged.
 - Refresh the published receipt with the launchpad reader before routing. Deploy only
   after upstream merge via SkillMeat; no deployed copies are changed by this PR.
+- Reconcile deployed bound-front preflight guidance into the canonical skill (docs only; registry rows were already reconciled on development by #102/#104, so this PR carries no registry change).
 
 ## 2026-10-16 — M1 test-suite green: v3 compatibility fixes, Primary-default docs
 
-- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Code: v3 `resolve()` now stamps `context_class` and
+- Node: `internal work record`. Code: v3 `resolve()` now stamps `context_class` and
   `node_contract` on floor-breached records (it returned early and dropped them; audit passthrough
   only, no routing effect); legacy task-class names (`second-opinion`, `mechanical-tasks`, hyphen
   variants) resolve to their canonical `task_class_defaults` key via the vocabulary's declared
@@ -31,7 +39,7 @@
 
 ## 2026-10-16 — Merge development: gemini-4-argon (MeatySkills#96) folded into v3
 
-- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`. Merged `origin/development` (gemini-4-argon model row with
+- Node: `internal work record`. Merged `origin/development` (gemini-4-argon model row with
   measured scores, `registry/providers/google.yaml` fact row, playbook route section). The row is
   explicit-selectable only and in no `task_class_defaults` holder list; its `gemini_direct` lane row
   already fits the v3 lane table. Conflicts in the v2-shape routing chains were resolved by keeping
@@ -39,7 +47,7 @@
 
 ## 2026-10-16 — M1 remainder: registry v3 evaluated data, routable holders, quality verdicts
 
-- Node: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q`.
+- Node: `internal work record`.
 - Carried all 23 v2 task-class evaluations and holder rankings into v3 (`effort`, `bar`, quality
   weights, margin, frontier, capability requirements, cross-family evidence and approval
   provenance); provider prefixes are removed from model references. The ICA refresh replaces the
@@ -60,7 +68,7 @@
 
 ## 2026-10-16 — WP M1: registry v3, model-only holders, two-step resolver, RoutingRecord v3
 
-- M1 plan: `node_01M52P9MR7ZW8HXBXFT2AXJH9Q` (registry v3 and two-step resolver).
+- M1 plan: `internal work record` (registry v3 and two-step resolver).
 - Added model-only `task_class_defaults` and generated `routing_policy`, lane attributes and
   capabilities, ordered lane selection, capacity-file decisions, explicit Codex identity binding,
   static routing-table output, and v3 RoutingRecord decision/floor/revision fields.
@@ -114,7 +122,7 @@ contract version history see `SPEC.md § 5`.
 
 - The ICA beta keys (`CC1`–`CC8`, `BB1`) were deactivated 2026-09-22 and the beta-only
   `gpt-5.6-{terra,luna}-dzus` aliases with them (agentic_meta_dev #1395,
-  node_01M3AA4SX9F7E8Q59QZ1KJHF8S). Registry: the two ICA Codex-shim entries are re-keyed
+  internal work record). Registry: the two ICA Codex-shim entries are re-keyed
   `gpt-5.6-terra-ica` / `gpt-5.6-luna-ica` with the bare ccx `model_id`s; `image_generation`
   chain leg is now `ica/gpt-5.6-terra`; the header's beta-key sentence is replaced.
 - `resolver.js` routes ICA → `~/ica-codex.sh` by the declared `lane: ica_gateway_responses_shim`
@@ -147,7 +155,7 @@ that would have kept validating the broken shape). Added a positive-control suit
 (not the config-injected TOML path) for `claude`/`ica`/`ica-gpt`/the MUST-stay fallback record and
 asserts the flag's absence in the actual emitted `invocation_template` string — confirmed to fail
 against the pre-fix resolver.js (4/4 failures reproducing the exact broken strings) and pass
-against the fix. `node_01M34T2M6MVT8P9CY3ZXBCEC38`.
+against the fix. `internal work record`.
 
 ## 2026-09-09 — Fable 5.1 / Astra registry posture and registry integrity gates
 
@@ -166,7 +174,7 @@ against the fix. `node_01M34T2M6MVT8P9CY3ZXBCEC38`.
 
 `gpt-5.6-sol` reasons genuinely on the ICA ccx lane only when NO tool call is made
 (`reasoning_tokens=0` the instant one is, on both `/v1/chat/completions` and `/v1/responses` —
-measured 2026-08-26/27, `node_01M0Z7JP9YT7W15X94Z843AM9Y`). The `ica/gpt-5.6-sol` provider row now
+measured 2026-08-26/27, `internal work record`). The `ica/gpt-5.6-sol` provider row now
 carries `tool_mode: "none"` (previously left `enabled: false` entirely) and the resolver adds a
 `needs_tools` input (default `true`, conservative) that refuses to route a tool-requiring request to
 any `tool_mode: "none"`-restricted instance — mirroring `requires_write`'s shape but per-INSTANCE,
@@ -175,9 +183,9 @@ not per-provider, and with the opposite default polarity. Three new routable tas
 `synthesis`) is untouched. Enforcement is real (`--allowedTools ""` embedded in the invocation, not
 description-only). New export `resolveSandwich()` composes a Sol→Terra→Sol recipe (tool-less
 plan → tools-required execute → tool-less review) for tasks needing both. See SPEC.md
-§ "Tool-less Sol lane + the Sol→Terra→Sol sandwich". node_01M122PQQ86YWJWDA9GT83PBWQ.
+§ "Tool-less Sol lane + the Sol→Terra→Sol sandwich". internal work record.
 ⚠️ Deploy deliberately withheld — see the HOLD note in `model-registry.yaml`'s header
-(`node_01M0X28GWQYPZFGH8TQC9V9DAB`).
+(`internal work record`).
 
 ## 2026-08-25 — the sovereignty ladder: a task class declares a MINIMUM RUNG, not a vendor
 
@@ -255,7 +263,7 @@ deliberately left alone; whoever owns bundle versioning decides whether they mov
 The RoutingRecord had **no write-authority dimension at all**, and `task-class-vocabulary.v1.json`
 cannot supply one: it classifies the kind of cognition, so `implementation`, `documentation` and
 `mechanical` are all `routable` and all were eligible for a write-incapable executor. Measured
-2026-08-16 (`node_01M06NSPRWSS987V5DMZXHRVJ5`): three file-authoring legs resolved to `ica-executor`
+2026-08-16 (`internal work record`): three file-authoring legs resolved to `ica-executor`
 — which carried `disallowedTools: Write, Edit, MultiEdit` — and produced **zero files** for ~610k
 subagent tokens. Two of the three then looped on a backgrounded shell-out. It was neither an
 availability failure nor a permission denial, so the fallback chain was the wrong instrument; it was
@@ -277,7 +285,7 @@ a mis-route, and it was recorded as `fallback_applied / ica_lane_unavailable`.
   `codex-executor` and `bob-delegate-executor` never carried `disallowedTools`.
 - **`disallowedTools` is the membership test, NOT enforcement.** Bash stays enabled for every
   executor, a leg wrote two files through Bash redirection under that denial on 2026-08-11
-  (`node_01KZS943C1NBSNFCY4DH1EMSVD`), and skillmeat's `tool_canonicalization` already classifies it
+  (`internal work record`), and skillmeat's `tool_canonicalization` already classifies it
   `descriptive_only` for claude_code. The set means "will not reliably produce a file".
 - **Legacy-path coverage is narrower on purpose** — the `provider-plugins.toml` path guards the
   requested provider only, not `buildTomlCandidates`' chain. Stated in SPEC §4c rather than left to
@@ -296,8 +304,8 @@ permission_denied outcome, not as a provider substitution" — and the writer ha
 denial has neither field, because nothing ran. Measured 2026-08-14 while routing 5 legs: two
 `ica-executor` legs were denied by the auto-mode classifier, both returned the correct
 `{status: blocked, reason: permission_denied, fallback_applied: false}` shape, and **neither outcome
-could be recorded.** Origin: `node_01M00JTM8FVBK12GF4AYQ7S2JN`; the denials themselves,
-`node_01KZW2PT7PFNS4RKTYPYBMKEV1`.
+could be recorded.** Origin: `internal work record`; the denials themselves,
+`internal work record`.
 
 The consequence was the quiet-gate class. The only representable options were to leave the decision
 entry unconfirmed — byte-identical to a leg that simply had not reported yet — or to write a realized
@@ -336,7 +344,7 @@ which is how a broken offload lane stayed `not_started` through two filings.
 The audit log could not detect the substitution it exists to detect. Measured across both live logs
 in this estate (123 entries): **112 (91%) had `actual_provider_used === chosen_plugin_id`** — the
 shape the shipped Pattern B example produced — and **0 carried any model field at all**. Origin:
-`node_01KZS5A4S1YEZBPVBRFXWM3RY4`; sibling `node_01KZS33HCND9T13BW7FGRQ8WAA` (the same example threw
+`internal work record`; sibling `internal work record` (the same example threw
 as written).
 
 - `audit-log.js` schema v2. Realized fields (`actual_provider_used`, `realized_model`) default to

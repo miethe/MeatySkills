@@ -205,8 +205,8 @@ describe('(0) the ladder is ordered, and `unknown` sits below every real rung', 
     }
   });
 
-  test('the reason vocabulary is exactly the three declared classes', () => {
-    assert.deepStrictEqual(SOVEREIGNTY_MINIMUM_REASONS, ['cost_policy', 'quality_bar', 'egress_absolute']);
+  test('the reason vocabulary includes the authority boundary', () => {
+    assert.deepStrictEqual(SOVEREIGNTY_MINIMUM_REASONS, ['cost_policy', 'quality_bar', 'egress_absolute', 'authority_absolute']);
   });
 
   test('clearsFloor is >=, not ==: a HIGHER rung satisfies a lower minimum', () => {
@@ -370,6 +370,44 @@ describe('(3) the minimum is enforced at every selection site, not just one', ()
 // ---------------------------------------------------------------------------
 // (4) FAIL-CLOSED — an unclassified lane satisfies nothing
 // ---------------------------------------------------------------------------
+
+describe('mode_d personal subscription allowlist', () => {
+  test('only the named personal subscriptions satisfy the authority boundary', () => {
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'model-registry.generated.json'), 'utf8'));
+    const min = real.task_class_defaults.mode_d.minimum;
+    const allowed = ['claude_subscription', 'codex_subscription_primary', 'codex_subscription_secondary'];
+    assert.strictEqual(min.reason, 'authority_absolute');
+    assert.deepStrictEqual(min.lanes, allowed);
+    const probe = JSON.parse(JSON.stringify(real));
+    const laneIds = [...Object.keys(real.lanes), 'unconfigured_lane'];
+    probe.lane_order = laneIds;
+    probe.models = { boundary_probe: { scores: { cost: 1, intelligence: 10, taste: 10, speed: 1 }, providers:
+      laneIds.map(lane => ({ provider: 'probe', lane, model_id: 'boundary_probe', enabled: true })) } };
+    probe.task_class_defaults.mode_d.holders = ['boundary_probe'];
+    const { buildRoutingTable } = require(resolverPath);
+    const table = buildRoutingTable(probe);
+    const lanes = table.classes.mode_d.holders[0].lanes;
+    for (const lane of lanes) {
+      assert.strictEqual(lane.eligible, allowed.includes(lane.lane), lane.lane);
+    }
+    for (const lane of allowed) assert.ok(lanes.some(row => row.lane === lane && row.eligible), lane);
+    assert.ok(lanes.some(row => row.lane === 'unconfigured_lane' && !row.eligible));
+  });
+});
+
+describe('authority_absolute minimum', () => {
+  test('mode_d accepts the reason and unknown lanes cannot satisfy it', () => {
+    const reg = ladderRegistry();
+    reg.task_class_sovereignty.mode_d = { min_rung: 'subscription', reason: 'authority_absolute' };
+    const r = resolveWith(reg, { model: 'gpt-5.6-terra', task_class: 'mode_d' });
+    assert.strictEqual(r.sovereignty_floor.reason, 'authority_absolute');
+    assert.ok(sovereigntyRung(r.sovereignty) >= SOVEREIGNTY_RUNGS.subscription);
+    for (const entry of Object.values(reg.models)) {
+      for (const provider of entry.providers || []) provider.lane = 'mystery_lane';
+    }
+    assert.throws(() => resolveWith(reg, { model: 'gpt-5.6-terra', task_class: 'mode_d' }));
+  });
+});
 
 describe('(4) fail-closed: "could not determine the lane" never reads as "the lane is fine"', () => {
   test('an instance with NO lane in a ladder-live registry clears no floor', () => {
@@ -737,7 +775,8 @@ describe('(8) the v3 fixture declares complete attribute-based minimums', () => 
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'v3-open-unknown-'));
     const regPath = path.join(temp, 'registry.json');
     fs.writeFileSync(regPath, JSON.stringify(reg));
-    const r = resolve({ task_class: 'explicit_test', _registryPath: regPath });
+    const r = resolve({ task_class: 'explicit_test', _registryPath: regPath,
+      availability_path: path.join(temp, 'availability.json') });
     assert.equal(r.lane, 'ica_gateway_messages');
   });
 });

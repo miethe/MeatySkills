@@ -41,6 +41,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { prepareNeeds, candidateNeeds, hasAbstractNeeds } = require('./needs-routing.js');
 
 const {
   MUST_STAY_PRIMARY_CLASSES,
@@ -800,9 +801,9 @@ function makeInstanceCandidate(modelKey, modelEntry, instance, registry) {
     allowance: instance.allowance,
     priority: typeof instance.priority === 'number' ? instance.priority : 99,
     free: isGenuinelyFree(instance),
-    // Additive, 2026-08-27 (node_01M122PQQ86YWJWDA9GT83PBWQ). A provider ROW, not a model, can be
+    // Additive, 2026-08-27 (internal work record). A provider ROW, not a model, can be
     // restricted to tool-less calls (e.g. ica/gpt-5.6-sol: reasoning_tokens=0 the instant a tool
-    // call is made, on both ICA transports — node_01M0Z7JP9YT7W15X94Z843AM9Y). Mirrors the
+    // call is made, on both ICA transports — internal work record). Mirrors the
     // WRITE_INCAPABLE_PROVIDERS axis in shape, but this one is per-INSTANCE (codex/gpt-5.6-sol is
     // NOT restricted — only the ICA row is), so it lives on the instance rather than a provider-id
     // set.
@@ -888,6 +889,7 @@ function routingPolicyKeyFor(task_class) {
  * @returns {import('./routing-record.js').RoutingRecord}
  */
 function resolve(input) {
+  if (input && input._configPath && hasAbstractNeeds(input)) throw new Error('Abstract needs require a v3 registry');
   const record = (input && input._configPath)
     ? resolveFromToml(input)
     : resolveFromRegistry(input);
@@ -1053,7 +1055,6 @@ function capacityFor(capacity, laneId, identityRef, observed, providerRow) {
   const hold = observed && observed.manual_holds && observed.manual_holds[key];
   if (observed && observed.manual_holds_error) throw new Error(observed.manual_holds_error);
   if (hold) return { state: 'unavailable', reason: hold.reason || 'manual_hold', until: hold.until, source: observed.source };
-  // Receipt rewrite time is irrelevant. Trust only the producer's observation/expiry.
   const fresh = row && Number.isFinite(row.observed_at) && row.observed_at <= observed.now &&
     Number.isFinite(row.expires_at) && row.expires_at > observed.now;
   const resetPending = row && (row.status === 'LIMITED' || row.previous_status === 'LIMITED') &&
@@ -1074,7 +1075,7 @@ function capacityFor(capacity, laneId, identityRef, observed, providerRow) {
 
 function modelRows(registry, modelId) {
   const model = (registry.models || {})[modelId];
-  if (!model) return [];
+  if (!model || ['scaffolded', 'candidate', 'retired', 'deprecated'].includes(model.status)) return [];
   return (model.providers || []).filter(row => row.enabled !== false).map(row => ({ model, row }));
 }
 
@@ -1109,7 +1110,7 @@ function canonicalTaskClassKey(defaults, taskClass) {
 function resolveModel(registry, input) {
   const defaults = registry.task_class_defaults || {};
   const taskClassKey = canonicalTaskClassKey(defaults, input.task_class);
-  const classSpec = defaults[taskClassKey];
+  const classSpec = input._needsSpec || defaults[taskClassKey];
   if (!classSpec) throw new Error(`Unknown task class '${input.task_class}'`);
   const holders = input.model ? [input.model] : (classSpec.holders || []);
   const laneOrder = registry.lane_order || [];
@@ -1129,13 +1130,7 @@ function resolveModel(registry, input) {
       decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
       continue;
     }
-    const viable = modelRows(registry, modelId).some(({ row }) => {
-      const lane = registry.lanes && registry.lanes[row.lane];
-      if (!lane || !laneOrder.includes(row.lane)) return false;
-      const eligibility = laneEligible({ ...lane, id: row.lane }, classSpec);
-      const status = capacityFor(capacity, row.lane, lane.identity_ref, input._observedAvailability, row).state;
-      return eligibility.eligible && !['refused', 'unavailable'].includes(status);
-    });
+    const viable = resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability).chosen !== null;
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
     decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
@@ -1161,16 +1156,21 @@ function resolveLane(registry, modelId, classSpec, capacity = {}, observed = nul
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
       const availability = capacityFor(capacity, laneId, lane.identity_ref, observed, row);
+      const originalEligibility = classSpec._originalSpec
+        ? laneEligible({ ...lane, id: laneId }, classSpec._originalSpec) : { eligible: true, reason: '' };
+      const needs = candidateNeeds(registry, modelId, row, lane, classSpec);
+      eligibility.eligible = eligibility.eligible && originalEligibility.eligible && needs.eligible;
+      if (!originalEligibility.eligible) eligibility.reason += `; original class: ${originalEligibility.reason}`;
+      if (!needs.eligible) eligibility.reason += `; ${needs.reason}`;
       const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
         eligible: eligibility.eligible, eligibility_reason: eligibility.reason,
-        capability_ok: eligibility.capabilityOk, capacity: availability.state,
-        availability: availability,
+        capability_ok: eligibility.capabilityOk, capacity: availability.state, availability,
         identity_ref: lane.identity_ref || null,
         verdict: excluded ? 'excluded' : 'eligible',
         reason: !eligibility.eligible ? eligibility.reason : (excluded ? availability.reason || `capacity is ${availability.state}` : `lane admitted with capacity ${availability.state}`),
-        provider: row.provider, model_id: row.model_id, model_entry: model,
+        provider: row.provider, model_id: row.model_id, model_entry: model, tool_restricted: row.tool_mode === 'none',
       });
     }
   }
@@ -1182,7 +1182,8 @@ function resolveV3(registry, input) {
       !(typeof input.pin_reason === 'string' && input.pin_reason.trim())) {
     throw new Error('Explicit model/provider/account pin requires pin_reason');
   }
-  input = { ...input, _observedAvailability: observedCapacity(input) };
+  const prepared = prepareNeeds(registry, input, canonicalTaskClassKey);
+  input = { ...prepared.input, _needsSpec: prepared.spec, _observedAvailability: observedCapacity(prepared.input) };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;
   const floorModel = classSpec.fallback && classSpec.fallback.floor_model;
@@ -1190,8 +1191,10 @@ function resolveV3(registry, input) {
   const configuredHolders = classSpec.holders || [];
   const configuredFloorIndex = configuredHolders.indexOf(floorModel);
   const explicitIndex = input.model ? configuredHolders.indexOf(input.model) : -1;
+  // Holder ordering establishes a floor only for models in that ordering. An explicit
+  // non-holder is instead subject to the class quality bar and lane eligibility.
   const explicitBelowFloor = Boolean(input.model && floorModel &&
-    (explicitIndex < 0 || (configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex)));
+    explicitIndex >= 0 && configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex);
   const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
@@ -1204,11 +1207,13 @@ function resolveV3(registry, input) {
     selectedLane = override;
   }
   if (explicitBelowFloor) selectedLane = null;
-  const floorBreached = (!selectedLane && Boolean(floorModel)) || explicitBelowFloor;
+  const floorBreached = !selectedLane;
   const fallback = [];
   if (selectedLane) {
     const models = examined.slice(selectedIndex);
     for (const candidateModel of models) {
+      const decision = modelDecision.decisions.find(d => d.model === candidateModel);
+      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane'].includes(decision.verdict)) continue;
       const lanes = allLaneDecisions[candidateModel].candidates;
       for (const candidate of lanes) {
         if (candidateModel === chosenModel && candidate.lane === selectedLane.lane) continue;
@@ -1218,11 +1223,13 @@ function resolveV3(registry, input) {
     }
   }
   const laneCandidates = chosenModel ? allLaneDecisions[chosenModel].candidates : [];
+  const invocationProfile = input.requires_write && !(input.profile || '').includes('sandbox=')
+    ? `${input.profile || ''} sandbox=workspace-write`.trim() : input.profile;
   const record = {
     chosen_plugin_id: selectedLane ? selectedLane.provider : null,
     model: chosenModel || (input.model || holderList[0] || 'unresolved'), effort: input.effort || 'standard',
     agent_type_id: selectedLane ? (AGENT_TYPE_ID_MAP[selectedLane.provider] || selectedLane.provider) : 'claude',
-    invocation_template: selectedLane ? buildRegistryInvocation({ providerId: selectedLane.provider, modelId: selectedLane.model_id, lane: selectedLane.lane, toolRestricted: false }, input.profile || null, input.effort || 'standard') : '',
+    invocation_template: selectedLane ? buildRegistryInvocation({ providerId: selectedLane.provider, modelId: selectedLane.model_id, lane: selectedLane.lane, toolRestricted: selectedLane.tool_restricted }, invocationProfile || null, input.effort || 'standard') : '',
     scope_flags: [], stage: 'A', validation_contract: 'none', continuity_mode: 'resumable',
     fallback_chain: fallback, reason: floorBreached ? `floor_breached: no eligible lane at or above ${floorModel}` : `registry v3 selected ${chosenModel} on ${selectedLane.lane}`,
     lane: selectedLane ? selectedLane.lane : null,
@@ -1239,7 +1246,26 @@ function resolveV3(registry, input) {
     schema_version: 3,
     registry_revision: registry._yaml_sha256 || require('crypto').createHash('sha256').update(input._registryPath && fs.existsSync(input._registryPath) ? fs.readFileSync(input._registryPath) : JSON.stringify(registry)).digest('hex'),
     routing_feedback: null, context_ref: null, context_class: null, node_contract: null,
+    needs_decision: { original_task_class: prepared.spec._needs.originalClass, pin: prepared.pin, size: prepared.spec._needs.size || null, capabilities: prepared.spec._needs.capabilities,
+      modifiers: prepared.spec._needs.modifiers, findings: prepared.findings },
+    escalation_policy: { max_attempts: 2, automatic_continuations_per_attempt: 3, terminal_state: 'blocked' },
+    escalation_ladder: selectedLane ? [{ model: chosenModel, lane: selectedLane.lane, plugin_id: selectedLane.provider,
+      identity_ref: selectedLane.identity_ref }, ...fallback] : [],
   };
+  if (prepared.spec._needs.modifiers.includes('cross_family_review') && selectedLane) {
+    const family = registry.models[chosenModel].family;
+    const reviewInput = { ...input, modifiers: [], model: undefined, capabilities: prepared.spec._needs.capabilities,
+      task_class: 'second_opinion', execution_contract: { ...input.execution_contract, model: null, modifiers: [] } };
+    const reviewerRegistry = { ...registry, models: Object.fromEntries(Object.entries(registry.models)
+      .map(([id, model]) => [id, { ...model, providers: (model.providers || []).filter(row => {
+        const lane = registry.lanes[row.lane];
+        return model.family !== family && lane && laneEligible({ ...lane, id: row.lane }, classSpec).eligible &&
+          laneEligible({ ...lane, id: row.lane }, classSpec._originalSpec).eligible;
+      }) }])) };
+    const reviewer = resolveV3(reviewerRegistry, reviewInput);
+    if (reviewer.floor_breached) throw new Error('No eligible cross-family reviewer');
+    record.reviewer = reviewer;
+  }
   return record;
 }
 
@@ -1267,12 +1293,13 @@ function resolveFromRegistry(input) {
   const {
     model,
     effort = 'standard',
-    profile = null,
+    profile: rawProfile = null,
     task_class,
     resume_active = false,
     requires_write = false,
     _registryPath,
   } = input;
+  const profile = withWriteSandbox(rawProfile, effort, input);
 
   const requestedProvider = (input.provider && typeof input.provider === 'string')
     ? input.provider
@@ -1282,6 +1309,7 @@ function resolveFromRegistry(input) {
   if (loadedRegistry.version >= 3 && loadedRegistry.task_class_defaults) {
     return resolveV3(loadedRegistry, input);
   }
+  if (hasAbstractNeeds(input)) throw new Error('Abstract needs require a v3 registry');
   const registryMustStay = (loadedRegistry.must_stay_primary || []).map(normalizeClass);
 
   // Hard-fail on a malformed lane table or a reason-less minimum. Deliberately a THROW and
@@ -1362,7 +1390,7 @@ function resolveFromRegistry(input) {
   // ----- Tool-mode filter (needs_tools) -----
   // A candidate INSTANCE can be tool_mode:"none"-restricted (currently only ica/gpt-5.6-sol:
   // reasoning_tokens=0 the instant a tool call is made, on both ICA transports — measured
-  // node_01M0Z7JP9YT7W15X94Z843AM9Y). Unlike the write-authority axis this is per-INSTANCE, not
+  // internal work record). Unlike the write-authority axis this is per-INSTANCE, not
   // per-provider (codex/gpt-5.6-sol is NOT restricted), so there is no early-return here — it is
   // applied per-candidate at every selection site below via `cand.toolRestricted`. Default TRUE
   // (conservative): a caller must explicitly pass needs_tools:false to reach a restricted
@@ -1870,7 +1898,7 @@ function buildRegistryInvocation(chosen, profile, effort) {
       // ica-claude.sh path. See agentic_meta_dev/infra/ica-gpt-shim/.
       if (/gpt/i.test(modelId)) {
         // tool_mode:"none" (currently gpt-5.6-sol only): reasoning_tokens=0 the instant a tool
-        // call is made on this lane (node_01M0Z7JP9YT7W15X94Z843AM9Y). --allowedTools "" is real
+        // call is made on this lane (internal work record). --allowedTools "" is real
         // enforcement here, not description-only — embedded directly in the invocation, mirroring
         // how --sandbox is embedded (not left to scope_flags alone) elsewhere in this function.
         const toolFlag = chosen.toolRestricted ? ' --allowedTools ""' : '';
@@ -1941,12 +1969,13 @@ function resolveFromToml(input) {
   const {
     model,
     effort = 'standard',
-    profile = null,
+    profile: rawProfile = null,
     task_class,
     resume_active = false,
     requires_write = false,
     _configPath,
   } = input;
+  const profile = withWriteSandbox(rawProfile, effort, input);
 
   const requestedProvider = (input.provider && typeof input.provider === 'string')
     ? input.provider
@@ -2150,6 +2179,20 @@ function buildTomlReason(best, requestedProvider, model, task_class, resume_acti
 // Shared helpers (both paths)
 // ---------------------------------------------------------------------------
 
+/**
+ * Write capability is an attribute of the dispatch, not the model or effort (Nick 2026-10-25:
+ * a sandbox gap is a defect to close, never a reason for cc1x). A write dispatch
+ * (task_class 'write' or requires_write) pins workspace-write at every effort unless the profile
+ * already names a sandbox (explicit read-only wins). xhigh keeps its wider danger-full-access.
+ * A missing task_class is NOT write intent: it stays on the effort-derived default.
+ */
+function withWriteSandbox(profile, effort, input) {
+  const writeIntent = input && (input.requires_write === true || input.task_class === 'write');
+  if (!writeIntent || effort === 'xhigh') return profile;
+  if (profile && profile.includes('sandbox=')) return profile;
+  return `${profile || ''} sandbox=workspace-write`.trim();
+}
+
 function sandboxModeFor(profile, effort) {
   if (profile && profile.includes('sandbox=')) {
     return profile.split('sandbox=')[1].split(' ')[0];
@@ -2181,13 +2224,13 @@ function inferValidationContract(providerId, task_class) {
 }
 
 // ---------------------------------------------------------------------------
-// Sol -> Terra -> Sol sandwich recipe (node_01M122PQQ86YWJWDA9GT83PBWQ)
+// Sol -> Terra -> Sol sandwich recipe (internal work record)
 // ---------------------------------------------------------------------------
 
 /**
  * Compose the Sol->Terra->Sol sandwich: a three-leg recipe for a task that needs BOTH gpt-5.6-sol's
  * frontier reasoning AND a tool-calling step, given the two are mutually exclusive on the ICA lane
- * (node_01M0Z7JP9YT7W15X94Z843AM9Y — reasoning_tokens=0 the instant a tool call is made).
+ * (internal work record — reasoning_tokens=0 the instant a tool call is made).
  *
  * plan:    gpt-5.6-sol, tool-less (needs_tools:false)  — produces the plan/reasoning
  * execute: gpt-5.6-terra, tools required (needs_tools defaults true) — carries out the tool-using

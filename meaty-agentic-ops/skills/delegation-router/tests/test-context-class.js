@@ -10,7 +10,10 @@
  */
 
 const assert = require('assert');
-const { resolve } = require('../resolver.js');
+const { resolve: rawResolve } = require('../resolver.js');
+const upstreamRegistry = require('path').join(__dirname, '..', 'model-registry.generated.json');
+const approval = { preapproval_ref: 'req_context_test', pin_reason: 'audit passthrough test', pin_expires: '2099-01-01' };
+const resolve = input => rawResolve({ ...approval, _registryPath: upstreamRegistry, ...input });
 const {
   CONTEXT_CLASSES,
   validateRoutingRecord,
@@ -34,8 +37,8 @@ console.log('context_class passthrough');
 
 // Registry v3 resolves registry model ids (legacy aliases such as 'sonnet'/'opus' are not
 // holders and report floor_breached rather than choosing below the floor).
-const OFFLOADABLE = { pin_reason: 'context audit fixture', model: 'claude-sonnet-5-5', provider: 'ica', effort: 'high', task_class: 'implementation' };
-const MUST_STAY = { pin_reason: 'context audit fixture', model: 'claude-opus-5-5', provider: 'ica', effort: 'high', task_class: 'verdict' };
+const OFFLOADABLE = { model: 'claude-sonnet-5-5', provider: 'ica', effort: 'high', task_class: 'implementation' };
+const MUST_STAY = { model: 'claude-opus-5-5', provider: 'ica', effort: 'high', task_class: 'verdict' };
 
 test('vocabulary is exactly C1–C4', () => {
   assert.deepStrictEqual(CONTEXT_CLASSES, ['C1', 'C2', 'C3', 'C4']);
@@ -80,11 +83,11 @@ test('it survives a MUST-stay override (unlike context_ref, it is not gated)', (
 });
 
 test('it is stamped on a floor-breached v3 record too (audit joins to the breach)', () => {
-  const record = resolve({ pin_reason: 'context audit boundary fixture', model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C3' });
+  const record = resolve({ model: 'claude-sonnet-5-5', capacity: { lanes: Object.fromEntries(require(upstreamRegistry).lane_order.map(id => [id, { state: 'refused' }])) }, provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C3' });
   assert.strictEqual(record.floor_breached, true);
   assert.strictEqual(record.context_class, 'C3');
   assert.throws(
-    () => resolve({ pin_reason: 'context audit boundary fixture', model: 'sonnet', provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C9' }),
+    () => resolve({ model: 'claude-sonnet-5-5', capacity: { lanes: Object.fromEntries(require(upstreamRegistry).lane_order.map(id => [id, { state: 'refused' }])) }, provider: 'ica', effort: 'high', task_class: 'implementation', context_class: 'C9' }),
     /context_class must be one of C1\|C2\|C3\|C4/
   );
 });
@@ -111,7 +114,7 @@ test('node_contract falls back to legacy lane_requirements', () => {
 });
 
 test('node_contract remains an audit passthrough after account binding', () => {
-  const input = { pin_reason: 'node contract account fixture', model: 'gpt-6-luna', provider: 'codex', effort: 'medium', task_class: 'implementation' };
+  const input = { model: 'gpt-6-luna', provider: 'codex', effort: 'medium', task_class: 'implementation' };
   const without = resolve(input);
   const withContract = resolve({ ...input, node_contract: {
     allowed_lanes: ['ica'], mode_d: true, must_stay_primary: true,

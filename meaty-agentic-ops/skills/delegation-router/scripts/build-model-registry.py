@@ -47,6 +47,30 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    """Safe YAML loader that refuses duplicate mapping keys instead of last-wins."""
+
+
+def _construct_unique_mapping(loader, node, deep=False):
+    loader.flatten_mapping(node)
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            mark = key_node.start_mark
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping", node.start_mark,
+                f"duplicate key {key!r}", mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping
+)
+
+
 def validate_registry(data: dict, source: str) -> list[str]:
     """Return deterministic, human-readable registry integrity errors."""
     errors: list[str] = []
@@ -55,6 +79,56 @@ def validate_registry(data: dict, source: str) -> list[str]:
     write_profiles = (
         ((data.get("routing_attributes") or {}).get("write_capability") or {})
     )
+
+    capability_providers = data.get("capability_providers", {})
+    if not isinstance(capability_providers, dict):
+        errors.append("capability_providers must be a mapping")
+    else:
+        for capability, binding in capability_providers.items():
+            if not isinstance(binding, dict) or not any(k in binding for k in ("task_class", "lanes", "harness_capability", "min_context")):
+                errors.append(f"capability_providers.{capability} needs a provider constraint")
+                continue
+            if binding.get("task_class") and binding["task_class"] not in data.get("task_class_defaults", {}):
+                errors.append(f"capability_providers.{capability} references unknown task class")
+            if "lanes" in binding and (not isinstance(binding["lanes"], list) or any(lane not in data.get("lanes", {}) for lane in binding["lanes"])):
+                errors.append(f"capability_providers.{capability} references unknown lanes")
+    envelope = data.get("envelope")
+    if envelope is not None:
+        if not isinstance(envelope, dict):
+            errors.append("envelope must be a mapping")
+        else:
+            for field in ("messiness_divisor", "health_max_age_hours"):
+                value = envelope.get(field)
+                if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+                    errors.append(f"envelope.{field} must be positive")
+            seen_cells = set()
+            cells = envelope.get("cells", [])
+            if not isinstance(cells, list):
+                errors.append("envelope.cells must be a list")
+                cells = []
+            for cell in cells:
+                if not isinstance(cell, dict) or any(not isinstance(cell.get(k), str) for k in ("model", "lane", "effort")):
+                    errors.append("envelope cell needs model/lane/effort strings")
+                    continue
+                key = tuple(cell.get(k) for k in ("model", "lane", "effort"))
+                if key in seen_cells:
+                    errors.append(f"duplicate envelope cell {key}")
+                seen_cells.add(key)
+                if cell.get("model") not in models or cell.get("lane") not in data.get("lanes", {}):
+                    errors.append(f"envelope cell {key} has an unknown model/lane")
+                if cell.get("source") not in ("prior", "measured") or not isinstance(cell.get("n"), int) or cell["n"] < 0 or not cell.get("date"):
+                    errors.append(f"envelope cell {key} needs source/n/date provenance")
+                if cell.get("source") == "measured" and cell.get("n", 0) < 20:
+                    errors.append(f"envelope cell {key}: measured requires n >= 20")
+                if not isinstance(cell.get("p80_horizon_minutes"), (int, float)) or cell["p80_horizon_minutes"] <= 0:
+                    errors.append(f"envelope cell {key} needs a positive p80 horizon")
+                if any(size not in ("xs", "s", "m") for size in cell.get("sizes", [])):
+                    errors.append(f"envelope cell {key} cannot automatically admit l/xl")
+            for task_class, holders in envelope.get("escalation_ladders", {}).items():
+                if task_class not in data.get("task_class_defaults", {}) or not holders or any(model not in models for model in holders):
+                    errors.append(f"envelope escalation ladder {task_class} has unknown class/models")
+                if any(model in (data.get("task_class_defaults", {}).get("advanced_sol", {}).get("holders", [])) for model in holders):
+                    errors.append(f"envelope escalation ladder {task_class} cannot infer advanced_sol")
 
     allowed_minimum_reasons = {"cost_policy", "quality_bar", "disclosure_absolute", "authority_absolute"}
     required_lane_attributes = {"compute_custody", "retention", "jurisdiction", "account_relationship", "metering", "payer"}
@@ -229,7 +303,11 @@ def main() -> int:
     with open(args.src, "rb") as fh:
         raw_yaml_bytes = fh.read()
 
-    data = yaml.safe_load(raw_yaml_bytes)
+    try:
+        data = yaml.load(raw_yaml_bytes, Loader=UniqueKeyLoader)
+    except yaml.YAMLError as exc:
+        sys.stderr.write(f"ERROR: {args.src} contains invalid YAML: {exc}\n")
+        return 1
 
     if not isinstance(data, dict):
         sys.stderr.write(f"ERROR: {args.src} did not parse to a mapping.\n")

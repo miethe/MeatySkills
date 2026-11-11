@@ -1,4 +1,3 @@
-// Target-Node: node_01M6H8TAQK9PPV2YCF0MRM55P2
 'use strict';
 const assert = require('assert');
 const fs = require('fs');
@@ -19,6 +18,7 @@ function route(lanes, input = {}) {
   fs.writeFileSync(receipt, JSON.stringify({schema: 'aos.lane-availability/1',
     generated_at: now, ttl_seconds: 900, lanes}));
   return resolve({task_class: 'implementation', _registryPath: registryPath,
+    preapproval_ref: 'test-approval', pin_expires: '2099-01-01',
     availability_path: receipt, ...input});
 }
 // AC1: fresh quota exclusions apply before lane selection and retain evidence.

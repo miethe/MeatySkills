@@ -58,7 +58,8 @@ function printHelp(stream) {
     [
       'Usage: node resolve-cli.js --model <id> [--provider <id>] [--task-class <class>]',
       '                            [--effort <level>] [--profile <name>] [--resume-active]',
-      '                            [--compact] [--registry-path <path>]',
+      '                            [--compact] [--registry-path <path>] [--size xs|s|m]',
+      '                            [--needs-file <json>] (capabilities, modifiers, sizing, pin approval)',
       '',
       'Prints the delegation-router RoutingRecord (JSON) for the given routing request and',
       'exits 0. Exits non-zero with a readable message on stderr when the request cannot be',
@@ -101,8 +102,20 @@ function parseArgs(argv) {
       case '--model':
         args.model = argv[++i];
         break;
+      case '--size':
+        args.size = argv[++i];
+        break;
+      case '--needs-file':
+        Object.assign(args, readNeedsFile(argv[++i]));
+        break;
       case '--provider':
         args.provider = argv[++i];
+        break;
+      case '--pin-reason':
+        args.pin_reason = argv[++i];
+        break;
+      case '--availability-file':
+        args.availability_path = argv[++i];
         break;
       case '--pin-reason':
         args.pin_reason = argv[++i];
@@ -162,6 +175,17 @@ function applyNodeSafetyFallback(record) {
   return record;
 }
 
+function readNeedsFile(filename) {
+  if (!filename) return {};
+  const needs = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  const allowed = ['size', 'effort_size', 'capabilities', 'modifiers', 'sizing', 'human_minutes_est',
+    'preapproval_ref', 'pin_reason', 'pin_expires', 'execution_contract', 'requires_write'];
+  if (!needs || typeof needs !== 'object' || Array.isArray(needs) || Object.keys(needs).some(key => !allowed.includes(key))) {
+    throw new Error('--needs-file must contain only abstract needs and pin approval metadata');
+  }
+  return needs;
+}
+
 function main() {
   const argv = process.argv.slice(2);
 
@@ -171,7 +195,7 @@ function main() {
     for (let i = 0; i < argv.length; i++) {
       const key = argv[i];
       if (key === '--json') { flags.json = true; continue; }
-      if (['--task-class', '--model', '--capacity-file', '--registry', '--identity', '--effort', '--pin-reason', '--availability-file'].includes(key)) {
+      if (['--task-class', '--model', '--capacity-file', '--registry', '--identity', '--effort', '--size', '--needs-file', '--pin-reason', '--availability-file'].includes(key)) {
         if (i + 1 >= argv.length) { process.stderr.write(`resolve-cli: ${key} requires a value\n`); process.exit(2); return; }
         flags[key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
         continue;
@@ -186,7 +210,8 @@ function main() {
       }
       if (!flags.taskClass) throw new Error('--task-class is required');
       const capacity = flags.capacityFile ? JSON.parse(fs.readFileSync(flags.capacityFile, 'utf8')) : {};
-      const record = resolve({ task_class: flags.taskClass, model: flags.model, identity_ref: flags.identity, effort: flags.effort, pin_reason: flags.pinReason, availability_path: flags.availabilityFile, capacity, _registryPath: flags.registry });
+      const needs = readNeedsFile(flags.needsFile);
+      const record = resolve({ ...needs, size: flags.size || needs.size, task_class: flags.taskClass, model: flags.model, identity_ref: flags.identity, effort: flags.effort, pin_reason: flags.pinReason, availability_path: flags.availabilityFile, capacity, _registryPath: flags.registry });
       process.stdout.write(JSON.stringify(record, null, 2) + '\n');
       process.exit(record.floor_breached ? 1 : 0); return;
     } catch (err) {
