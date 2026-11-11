@@ -1191,8 +1191,10 @@ function resolveV3(registry, input) {
   const configuredHolders = classSpec.holders || [];
   const configuredFloorIndex = configuredHolders.indexOf(floorModel);
   const explicitIndex = input.model ? configuredHolders.indexOf(input.model) : -1;
+  // Holder ordering establishes a floor only for models in that ordering. An explicit
+  // non-holder is instead subject to the class quality bar and lane eligibility.
   const explicitBelowFloor = Boolean(input.model && floorModel &&
-    (explicitIndex < 0 || (configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex)));
+    explicitIndex >= 0 && configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex);
   const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
