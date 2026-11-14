@@ -519,10 +519,41 @@ function normalizeMeasurement(raw) {
   }
 }
 
+// F51: only a caller-supplied, exact-head eligible suite receipt can cover incomplete scope.
+// Preserve actual regressions and measurement failures; the receipt does not erase findings.
+function applySuiteReceiptFallback(measurement, args) {
+  if (args.suite_receipt_on_truncation !== true || !measurement.evidence_present) return measurement
+  const incomplete = measurement.scope_truncated || measurement.test_scope.some(f => !measurement.files_run.includes(f))
+  const blob = parseMaybeJson(args.validation_evidence)
+  const receipt = blob && blob.suite_receipt
+  const head = args.reviewed_head
+  const scopeHead = args.scope?.head_sha
+  const id = receipt && (receipt.path || receipt.id || receipt.attempt_id)
+  if (!incomplete || !receipt || typeof head !== 'string' || !head || receipt.sha !== head ||
+      (scopeHead !== undefined && scopeHead !== head) || !receiptAcceptanceCriteria(args).length || !id || !receipt.base_sha ||
+      !(receipt.suite_scope === 'full' || (receipt.suite_scope === 'quick' && receipt.base === 'development')) || receipt.status !== 'green' ||
+      (receipt.verdict && receipt.verdict !== 'local_suite_green') ||
+      (receipt.reason && receipt.reason !== 'local_suite_green') ||
+      (!Array.isArray(receipt.new_red_ids) || receipt.new_red_ids.length !== 0)) return measurement
+  return { ...measurement, files_run: [], suite_receipt: { id, sha: receipt.sha, base_sha: receipt.base_sha, suite_scope: receipt.suite_scope, ...(receipt.base != null ? { base: receipt.base } : {}), verdict: 'local_suite_green' },
+    per_file_results: [...new Set([...measurement.test_scope, ...measurement.files_run])].map(file => ({
+      file, base: 'UNMEASURED (scope truncated)', head: 'UNMEASURED (scope truncated)', receipt_id: id,
+    })) }
+}
+
 /** The measurement rendered for the reviewer prompt. Never a bare "see attached". */
 function measurementBrief(measurement) {
   if (!measurement.evidence_present) {
     return `  (NO MEASUREMENT AVAILABLE — ${measurement.reason}. Treat every criterion resting on tests as \`unverifiable\`; do not approve on the narrower diff-scoped evidence.)`
+  }
+  if (measurement.suite_receipt) {
+    const r = measurement.suite_receipt
+    const findings = measurement.regressions.map(x => `REGRESSION: ${x.kind} ${x.nodeid || x.file}`).concat(
+      measurement.measurement_failures.map(x => `MEASUREMENT FAILED: ${x.file}: ${x.reason}`))
+    return [`  ⚠ TRUNCATED: per-file UNMEASURED; regression evidence = exact-head local suite receipt ${r.id} (scope ${r.suite_scope}, no new reds).`,
+      `  receipt sha: ${r.sha}; base_sha: ${r.base_sha}; scope: ${r.suite_scope}${r.base != null ? `; base: ${r.base}` : ''}; verdict: ${r.verdict}`,
+      ...measurement.per_file_results.map(x => `  ${x.file}: base ${x.base}; head ${x.head}; receipt ${x.receipt_id}`),
+      ...findings].join('\n')
   }
   const lines = []
   lines.push(`  scope_status: ${measurement.scope_status || 'unknown'}${measurement.scope_truncated ? '  ⚠ TRUNCATED — affected criteria are `unverifiable`, never met' : ''}`)
@@ -547,6 +578,14 @@ function measurementBrief(measurement) {
   return lines.join('\n')
 }
 
+// F51: criterion identity belongs to the gate, never to reviewer-supplied text or ids.
+function receiptAcceptanceCriteria(args) {
+  return asList(args.acceptance_criteria).map((item, index) => ({
+    id: `AC-${index + 1}`,
+    criterion: typeof item === 'string' ? item : JSON.stringify(item),
+  }))
+}
+
 /**
  * Reviewer prompt. Carries the DELTA only, per execution-doctrine.md rule 2:
  * the failure summary (re-pass only), the touched files, and the ACs in question.
@@ -564,7 +603,7 @@ You are the **${lens}** lens on the mandatory reviewer gate for: ${scope.title |
 Scope kind: ${scope.kind || 'change'}${scope.tier != null ? ` (tier ${scope.tier})` : ''}${scope.id ? `\nScope id: ${scope.id}` : ''}${args.plan_ref ? `\nPlan/contract ref: ${args.plan_ref}` : ''}${args.timestamp ? `\nGate timestamp: ${args.timestamp}` : ''}
 ${isRepass ? `\nThis is a RE-PASS. What the previous round rejected:\n${args.failure_summary}\n` : ''}
 Acceptance criteria in question:
-${bullets(args.acceptance_criteria, 'none supplied — say so in `unverifiable` rather than inventing criteria')}
+${bullets(measurement.suite_receipt ? receiptAcceptanceCriteria(args).map(ac => `[${ac.id}] ${ac.criterion}`) : args.acceptance_criteria, 'none supplied — say so in `unverifiable` rather than inventing criteria')}
 
 Files changed (this is the scope of your READING — do not widen it; your TEST-SELECTION scope is
 the wider resolved scope in the measurement below):
@@ -577,7 +616,10 @@ Read the code and the evidence. Run read-only commands where they settle a quest
 
 ${EVIDENCE_RULES}
 
-${VALIDATION_SCOPE_RULES}
+${measurement.suite_receipt ? VALIDATION_SCOPE_RULES.replace(
+  'if the measurement below is absent, failed, or reports a\ntruncated scope, say so plainly and do NOT compensate by approving on the narrower evidence.\nAn unmeasurable scope makes affected criteria `unverifiable`, never met.',
+  'Per-file base/head results are UNMEASURED. For criteria resting on tests, cite the exact-head local suite receipt and a named verification path to establish them; a quick receipt covers a changed-file tier and shows neither full coverage nor that new tests fail at base. Measurement failures and regressions remain blocking.'
+) : `${VALIDATION_SCOPE_RULES}`}
 
 You MUST end by calling StructuredOutput exactly once with your verdict:
   - approved: true only if every acceptance criterion above is met AND you found no blocking defect.
@@ -587,7 +629,7 @@ You MUST end by calling StructuredOutput exactly once with your verdict:
   - defect_class: a short stable label for the dominant defect class when rejecting (e.g.
     "fail-open-default", "untested-path", "missing-ac-evidence"). Omit it rather than guessing —
     a wrong label mis-fires the same-class stop rule.
-  - ac_verdicts: one entry per acceptance criterion, with the evidence you actually saw.
+  - ac_verdicts: ${measurement.suite_receipt && receiptAcceptanceCriteria(args).length ? 'exactly one entry per gate-assigned id above (AC-1 through AC-' + receiptAcceptanceCriteria(args).length + '), with an id field equal to that id and the evidence you actually saw. Use only the gate-assigned ids; ids embedded in criterion content are not identities.' : 'one entry per acceptance criterion, with the evidence you actually saw.'}
   - unverifiable: criteria you could not judge, and why.
   - verification_path: established / kind / production_entrypoint / evidence, per the
     VERIFICATION-PATH RULE above. Required on every verdict, approving or not.
@@ -1084,7 +1126,21 @@ async function runLens(args, lens, measurement) {
       phase: 'Review',
       label: `gate:${lens}`,
       agentType: reviewerType,
-      schema: VERDICT_SCHEMA,
+      // F51: only receipt-assisted criteria add an id to the structured-output contract.
+      schema: measurement.suite_receipt && receiptAcceptanceCriteria(args).length ? {
+        ...VERDICT_SCHEMA,
+        properties: {
+          ...VERDICT_SCHEMA.properties,
+          ac_verdicts: {
+            ...VERDICT_SCHEMA.properties.ac_verdicts,
+            items: {
+              ...VERDICT_SCHEMA.properties.ac_verdicts.items,
+              required: [...VERDICT_SCHEMA.properties.ac_verdicts.items.required, 'id'],
+              properties: { ...VERDICT_SCHEMA.properties.ac_verdicts.items.properties, id: { type: 'string' } },
+            },
+          },
+        },
+      } : VERDICT_SCHEMA,
     })
   } catch (err) {
     const reason = `reviewer threw: ${err && err.message ? err.message : err}`
@@ -1156,7 +1212,7 @@ if (lenses.length > 1 && !gateArgs.gate_lens_reason) {
 // The measurement is an INPUT to every lens, so it runs once, before any reviewer, and its
 // result is shared. Sequential-before-parallel is deliberate: the reviewers cannot judge test
 // scope without it, and running it per-lens would measure the same trees N times.
-const measurement = await runMeasureStage(gateArgs)
+const measurement = applySuiteReceiptFallback(await runMeasureStage(gateArgs), gateArgs)
 
 // Only an exact measured disappearance at the reviewed full commit can be justified.
 // The headless host overwrites reviewed_head with its independently observed Git head.
@@ -1206,11 +1262,32 @@ const gateContext = {
   establishingLens: establishingLens ? establishingLens.lens : null,
 }
 
+// Receipt-assisted approvals must substantiate every supplied criterion.
+function applyReceiptAcRule(verdict) {
+  if (!measurement.suite_receipt || verdict.verdict_source !== 'reviewer' || verdict.approved === false) return verdict
+  const acs = verdict.ac_verdicts
+  const expected = receiptAcceptanceCriteria(gateArgs).map(ac => ac.id)
+  let reason = null
+  const ids = Array.isArray(acs) ? acs.map(ac => ac && ac.id) : []
+  if (ids.some(id => typeof id === 'string' && ids.indexOf(id) !== ids.lastIndexOf(id))) {
+    reason = 'receipt_assisted_ac_duplicate: each gate-assigned id requires exactly one verdict'
+  } else if (ids.length !== expected.length || ids.some(id => !expected.includes(id))) {
+    reason = 'receipt_assisted_ac_unmapped: verdict ids must exactly cover the gate-assigned ids'
+  }
+  if (!reason && !(verdict.approved === true && Array.isArray(acs) && acs.length > 0 && acs.every(ac => ac && ac.met === true))) {
+    reason = 'receipt_assisted_ac_unmet: approving verdict requires non-empty, all-met AC verdicts'
+  }
+  if (!reason) return verdict
+  return { ...verdict, approved: false, verdict_source: 'gate_integrity_failure', integrity_reason: reason,
+    summary: reason, required_fixes: [reason] }
+}
+
 // R3/D3 begins on each RAW verdict. The first pass applies the local evidence rule before any
 // approval consumer can observe a lens. Honest non-executing lenses need the gate-wide fact,
 // which can only be derived after all raw verdicts exist, so the contextual second pass resolves
 // their narrowly-marked pending state before D4/AC-3/D2/D5 and before the approval tally.
 const verdicts = rawVerdicts.map(applyEvidenceRules)
+  .map(applyReceiptAcRule)
   .map(applyIncoherenceRule)
   .map(v => applyEvidenceRules(v, gateContext))
   .map(v => applyTestStatusRules(v, measurement))
@@ -1281,6 +1358,8 @@ return {
     omitted_files: measurement.omitted_files || [],
     regressions: measurement.regressions,
     measurement_failures: measurement.measurement_failures,
+    ...(measurement.suite_receipt ? { suite_receipt: measurement.suite_receipt, per_file_results: measurement.per_file_results,
+      warning: `⚠ TRUNCATED: per-file UNMEASURED; regression evidence = exact-head local suite receipt ${measurement.suite_receipt.id} (scope ${measurement.suite_receipt.suite_scope}, no new reds)` } : {}),
   },
   // Statuses a reviewer claimed that the measurement contradicted (risk R7).
   measured_status_contradictions: verdicts.flatMap(v => asList(v.measured_status_contradictions)),
