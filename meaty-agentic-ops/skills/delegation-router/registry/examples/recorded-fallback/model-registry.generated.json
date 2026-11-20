@@ -1,0 +1,137 @@
+{
+  "_generated_from": "model-registry.yaml",
+  "_generator": "scripts/build-model-registry.py",
+  "_yaml_sha256": "f01b3fcbf9a0526b94f8fa1f33176d2bb9a1e96dae227fa3f9d2050194469cdd",
+  "version": 3,
+  "routing_attributes": {
+    "write_capability": {
+      "codex_sandbox": {
+        "read_class": "read_only",
+        "write_class": "workspace_write"
+      }
+    }
+  },
+  "lane_order": [
+    "standard",
+    "native"
+  ],
+  "lanes": {
+    "standard": {
+      "provider": "codex",
+      "attributes": {
+        "compute_custody": "unknown",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "unknown",
+        "metering": "unknown",
+        "payer": "unknown"
+      },
+      "harness_capabilities": [
+        "execution.file_edit"
+      ]
+    },
+    "native": {
+      "provider": "claude",
+      "attributes": {
+        "compute_custody": "unknown",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "unknown",
+        "metering": "unknown",
+        "payer": "unknown"
+      },
+      "harness_capabilities": [
+        "claude_code_native",
+        "execution.file_edit"
+      ]
+    }
+  },
+  "routing_policy": {
+    "design_judgment": {
+      "chain": [
+        "gpt-6.2-sol",
+        "claude-opus-5-5",
+        "gpt-6.1-sol"
+      ],
+      "enabled": true
+    },
+    "raw_strength": {
+      "chain": [
+        "gpt-6.2-sol",
+        "claude-opus-5-5",
+        "gpt-6.1-sol"
+      ],
+      "enabled": true
+    }
+  },
+  "task_class_defaults": {
+    "design_judgment": {
+      "holders": [
+        "gpt-6.2-sol",
+        "claude-opus-5-5",
+        "gpt-6.1-sol"
+      ],
+      "effort": "medium",
+      "fallback": {
+        "floor_model": "gpt-6.1-sol",
+        "requires_unavailable": {
+          "gpt-6.1-sol": "gpt-6.2-sol"
+        }
+      }
+    },
+    "raw_strength": {
+      "holders": [
+        "gpt-6.2-sol",
+        "claude-opus-5-5",
+        "gpt-6.1-sol"
+      ],
+      "effort": "medium",
+      "fallback": {
+        "floor_model": "gpt-6.1-sol",
+        "requires_unavailable": {
+          "gpt-6.1-sol": "gpt-6.2-sol"
+        }
+      }
+    }
+  },
+  "models": {
+    "gpt-6.2-sol": {
+      "family": "openai",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "lane": "standard",
+          "model_id": "gpt-6.2-sol",
+          "enabled": true,
+          "write_capability": "codex_sandbox"
+        }
+      ]
+    },
+    "claude-opus-5-5": {
+      "family": "anthropic",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "claude",
+          "lane": "native",
+          "model_id": "claude-opus-5-5",
+          "enabled": true
+        }
+      ]
+    },
+    "gpt-6.1-sol": {
+      "family": "openai",
+      "status": "active",
+      "providers": [
+        {
+          "provider": "codex",
+          "lane": "standard",
+          "model_id": "gpt-6.1-sol",
+          "enabled": true,
+          "write_capability": "codex_sandbox"
+        }
+      ]
+    }
+  }
+}

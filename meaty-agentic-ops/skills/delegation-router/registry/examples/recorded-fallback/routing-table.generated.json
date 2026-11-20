@@ -1,0 +1,113 @@
+{
+  "registry_revision": "f01b3fcbf9a0526b94f8fa1f33176d2bb9a1e96dae227fa3f9d2050194469cdd",
+  "lane_order": [
+    "standard",
+    "native"
+  ],
+  "classes": {
+    "design_judgment": {
+      "holders": [
+        {
+          "model": "gpt-6.2-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "claude-opus-5-5",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "native",
+              "order": 1,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        }
+      ],
+      "minimum": null,
+      "requires_capabilities": [],
+      "floor_model": "gpt-6.1-sol"
+    },
+    "raw_strength": {
+      "holders": [
+        {
+          "model": "gpt-6.2-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "claude-opus-5-5",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "native",
+              "order": 1,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        }
+      ],
+      "minimum": null,
+      "requires_capabilities": [],
+      "floor_model": "gpt-6.1-sol"
+    }
+  }
+}

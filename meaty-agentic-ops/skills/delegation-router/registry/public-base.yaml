@@ -1,0 +1,8 @@
+version: 3
+routing_attributes:
+  health:
+    statuses: [available, degraded, unavailable, unknown]
+    selection_rule: "Health is a hard gate before advisory scores: status=unavailable or quota_limit=0 requires enabled=false. Missing health is unknown, never evidence of availability."
+  lane_eligibility:
+    required: [compute_custody, retention, jurisdiction, account_relationship]
+    unknown_rule: "unknown fails closed for disclosure_absolute and authority_absolute; it never authorizes a protected chain."

@@ -1116,6 +1116,8 @@ function resolveModel(registry, input) {
   const laneOrder = registry.lane_order || [];
   const capacity = input.capacity || {};
   const decisions = [];
+  const requiredUnavailable = (classSpec.fallback || {}).requires_unavailable || {};
+  const lanesFor = modelId => resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability);
   let chosenModel = null;
   let chosenIndex = -1;
   for (const modelId of holders) {
@@ -1130,7 +1132,18 @@ function resolveModel(registry, input) {
       decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
       continue;
     }
-    const viable = resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability).chosen !== null;
+    const prerequisite = requiredUnavailable[modelId];
+    if (typeof prerequisite === 'string') {
+      const candidates = lanesFor(prerequisite).candidates.filter(candidate => candidate.eligible);
+      const modelReceipt = (capacity.models || {})[prerequisite];
+      if (!recordedUnavailability(modelReceipt) &&
+          !(candidates.length && candidates.every(candidate => recordedUnavailability(candidate.availability)))) {
+        decisions.push({ model: modelId, verdict: 'awaiting_unavailability',
+          reason: `requires recorded unavailability for ${prerequisite}`, q: quality.q, bar: quality.bar });
+        continue;
+      }
+    }
+    const viable = lanesFor(modelId).chosen !== null;
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
     decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
@@ -1146,6 +1159,11 @@ function resolveModel(registry, input) {
   return { classSpec, taskClassKey, holders, decisions, chosenModel };
 }
 
+function recordedUnavailability(receipt) {
+  return receipt && ['refused', 'unavailable'].includes(receipt.state) &&
+    typeof receipt.reason === 'string' && receipt.reason.trim().length > 0;
+}
+
 function resolveLane(registry, modelId, classSpec, capacity = {}, observed = null) {
   const rows = modelRows(registry, modelId);
   const laneOrder = registry.lane_order || [];
@@ -1155,13 +1173,20 @@ function resolveLane(registry, modelId, classSpec, capacity = {}, observed = nul
     for (const { model, row } of matches) {
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
-      const availability = capacityFor(capacity, laneId, lane.identity_ref, observed, row);
+      const modelReceipt = (capacity.models || {})[modelId];
+      const availability = recordedUnavailability(modelReceipt) ? modelReceipt :
+        capacityFor(capacity, laneId, lane.identity_ref, observed, row);
       const originalEligibility = classSpec._originalSpec
         ? laneEligible({ ...lane, id: laneId }, classSpec._originalSpec) : { eligible: true, reason: '' };
       const needs = candidateNeeds(registry, modelId, row, lane, classSpec);
       eligibility.eligible = eligibility.eligible && originalEligibility.eligible && needs.eligible;
       if (!originalEligibility.eligible) eligibility.reason += `; original class: ${originalEligibility.reason}`;
       if (!needs.eligible) eligibility.reason += `; ${needs.reason}`;
+      const account = classSpec._routingAccount;
+      if (account && (account.explicit || lane.identity_ref) && lane.identity_ref !== account.identity) {
+        eligibility.eligible = false;
+        eligibility.reason += '; identity requires an explicit routing choice';
+      }
       const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
@@ -1183,6 +1208,13 @@ function resolveV3(registry, input) {
     throw new Error('Explicit model/provider/account pin requires pin_reason');
   }
   const prepared = prepareNeeds(registry, input, canonicalTaskClassKey);
+  const defaultIdentity = (prepared.spec.fallback || {}).default_identity;
+  if (defaultIdentity) {
+    prepared.spec._routingAccount = {
+      identity: input.identity_ref || defaultIdentity,
+      explicit: Boolean(input.identity_ref),
+    };
+  }
   input = { ...prepared.input, _needsSpec: prepared.spec, _observedAvailability: observedCapacity(prepared.input) };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;
@@ -1214,7 +1246,7 @@ function resolveV3(registry, input) {
     const models = examined.slice(selectedIndex);
     for (const candidateModel of models) {
       const decision = modelDecision.decisions.find(d => d.model === candidateModel);
-      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane'].includes(decision.verdict)) continue;
+      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane', 'awaiting_unavailability'].includes(decision.verdict)) continue;
       const lanes = allLaneDecisions[candidateModel].candidates;
       for (const candidate of lanes) {
         if (candidateModel === chosenModel && candidate.lane === selectedLane.lane) continue;
@@ -1253,6 +1285,9 @@ function resolveV3(registry, input) {
     escalation_ladder: selectedLane ? [{ model: chosenModel, lane: selectedLane.lane, plugin_id: selectedLane.provider,
       identity_ref: selectedLane.identity_ref }, ...fallback] : [],
   };
+  const modelReceipts = Object.entries((input.capacity || {}).models || {})
+    .filter(([id, receipt]) => (classSpec.holders || []).includes(id) && recordedUnavailability(receipt));
+  if (modelReceipts.length) record.model_unavailability = Object.fromEntries(modelReceipts);
   if (prepared.spec._needs.modifiers.includes('cross_family_review') && selectedLane) {
     const family = registry.models[chosenModel].family;
     const reviewInput = { ...input, modifiers: [], model: undefined, capabilities: prepared.spec._needs.capabilities,
