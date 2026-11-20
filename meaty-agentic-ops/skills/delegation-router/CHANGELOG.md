@@ -109,34 +109,6 @@ Regenerate lookup tables from the reconciled source; private overlays remain ext
 Tracks changes to the skill's SKILL.md, SPEC.md, README.md, and references/. For SPEC.md
 contract version history see `SPEC.md § 5`.
 
-## 2026-09-30 — GPT-6.1 Sol supersedes GPT-6 Sol (personal Codex lane)
-
-- Nick decision (verbatim, /chat): "I did use 6.1-sol in Codex directly to create the hand-off, so
-  accept now as approved ... officially supersedes gpt-6-sol in our registry". Registry: new active
-  `gpt-6.1-sol` row (enabled; scores/efforts inherited, not re-measured); `gpt-6-sol` becomes
-  legacy-selectable fallback; `raw_strength` chain is now `codex/gpt-6.1-sol, codex/gpt-6-sol,
-  claude/claude-opus-5-5`; `registry/providers/openai.yaml` declares `gpt-6.1-sol` (current) and marks
-  `gpt-6-sol` superseded. Unchanged: Luna workhorse, Astra escalation rules, ICA GPT-5.6 line.
-
-## 2026-09-24 — ICA beta keys and `-dzus` aliases retired; ccx only
-
-- The ICA beta keys (`CC1`–`CC8`, `BB1`) were deactivated 2026-09-22 and the beta-only
-  `gpt-5.6-{terra,luna}-dzus` aliases with them (agentic_meta_dev #1395,
-  internal work record). Registry: the two ICA Codex-shim entries are re-keyed
-  `gpt-5.6-terra-ica` / `gpt-5.6-luna-ica` with the bare ccx `model_id`s; `image_generation`
-  chain leg is now `ica/gpt-5.6-terra`; the header's beta-key sentence is replaced.
-- `resolver.js` routes ICA → `~/ica-codex.sh` by the declared `lane: ica_gateway_responses_shim`
-  instead of a `/-dzus$/` id regex (bare ccx ids would otherwise fall through to `ica-gpt.sh`).
-- `probe-ica-models.sh` defaults to the ccx gateway; `use-case-rankings.yaml` follows the rename.
-- Entries below that name `-dzus` ids or beta keys are history. Removed text is archived in
-  agentic_meta_dev `infra/dispatch/DEACTIVATED-beta-keys-2026-09-22.md`.
-
-## 2026-09-24 — Claude Opus 5.5 ICA ccx availability
-
-- Marked `claude-opus-5-5[1m]` enabled on the ICA ccx Claude-Code wrapper lane after the direct
-  smoke returned rc 0, canonical model `claude-opus-5-5`, and a 1M context window. Raw HTTP
-  bare-id behavior remains explicitly unmeasured.
-
 ## 2026-09-22 — resolver.js no longer bakes `--dangerously-skip-permissions` into any invocation_template
 
 `buildRegistryInvocation()` and `buildRegistryMustStayRecord()` hardcoded
@@ -500,28 +472,6 @@ CCDash `docs/project_plans/design-specs/routing-feedback-router-merge-handoff.md
   network/model-call static check; node-safety fallback with/without the shim; `--help`).
 - Feature contract: `docs/project_plans/feature_contracts/infrastructure/delegation-router-codex-consumption.md`
   (agentic_meta_dev).
-
-## 2026-07-21 — ICA GPT retest: gpt-5.5-gus added, gpt-5.4/5.1 regressed, servability drift-detector
-
-- **`gpt-5.5-gus` added** (`status: scaffolded`, `enabled: false`) — a NEW, genuinely-working ICA
-  reasoning GPT model. Validated (both keys, cache-busted, fallback OFF): tool calls + reasoning on
-  raw `/chat/completions` (`reasoning_effort` honored), `/responses` (`reasoning.effort` scales:
-  low→~24 / high→~99 reasoning tokens), and Anthropic `/messages` (plain + tool_use). Left disabled
-  because via `ica-claude.sh`/Claude Code it 400s — CC attaches `output_config` and the Azure backend
-  rejects it (`Unknown parameter: 'output_config'`). Enable only once a client can suppress that param.
-- **`gpt-5.4` + `gpt-5.1` regressed → `status: degraded`, `enabled: false`** — both non-servable on
-  every tested key/endpoint (`LLM Provider NOT provided` / 404). Superseded on the gateway by 5.5-gus.
-- **Unifying finding** (registry header + `ica-delegate/references/ica-models.md`): the ICA Azure-backed
-  GPT deployments reject the client's reasoning-control param (`reasoning_effort` on chat, `output_config`
-  on `/messages`); strip it and the working models complete, effort defaulting server-side. This
-  CONFIRMS the "strip reasoning_effort → it works" hypothesis — verified on `gpt-5.6-luna-dzus`
-  (CODEX key + chat + no effort). `gpt-5.6-terra-dzus` remains dead on all routes. dzus NOTEs refreshed.
-- **NEW: `scripts/probe-ica-models.sh`** — a report-only servability drift-detector. Fetches live
-  `/models`, runs a cache-busted (unique-nonce) real probe per model with a retry-once for transient
-  blips, and diffs vs this registry ([1m]-suffix normalized) to report new / regressed-enabled /
-  disabled-but-working / gone models. Never edits the registry (scoring + enable stay human). Run it
-  when the gateway roster changes; `--json` for tooling, `--key-block CODEX` to probe the OpenAI-line key.
-- Regenerated `model-registry.generated.json` (27 models).
 
 ## 2026-07-20 — ICA Sonnet 5 reasoning REVALIDATED working (model-registry.yaml + generated.json)
 
