@@ -1,7 +1,7 @@
 {
   "_generated_from": "model-registry.yaml",
   "_generator": "scripts/build-model-registry.py",
-  "_yaml_sha256": "f01b3fcbf9a0526b94f8fa1f33176d2bb9a1e96dae227fa3f9d2050194469cdd",
+  "_yaml_sha256": "04301fc368f52451466b9bf0cdad6914e06e6a1bff94ac069af585259d597131",
   "version": 3,
   "routing_attributes": {
     "write_capability": {
@@ -13,10 +13,25 @@
   },
   "lane_order": [
     "standard",
+    "alternate",
     "native"
   ],
   "lanes": {
     "standard": {
+      "provider": "codex",
+      "attributes": {
+        "compute_custody": "unknown",
+        "retention": "unknown",
+        "jurisdiction": "unknown",
+        "account_relationship": "unknown",
+        "metering": "unknown",
+        "payer": "unknown"
+      },
+      "harness_capabilities": [
+        "execution.file_edit"
+      ]
+    },
+    "alternate": {
       "provider": "codex",
       "attributes": {
         "compute_custody": "unknown",
@@ -50,16 +65,16 @@
     "design_judgment": {
       "chain": [
         "gpt-6.2-sol",
-        "claude-opus-5-5",
-        "gpt-6.1-sol"
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
       ],
       "enabled": true
     },
     "raw_strength": {
       "chain": [
         "gpt-6.2-sol",
-        "claude-opus-5-5",
-        "gpt-6.1-sol"
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
       ],
       "enabled": true
     }
@@ -68,12 +83,13 @@
     "design_judgment": {
       "holders": [
         "gpt-6.2-sol",
-        "claude-opus-5-5",
-        "gpt-6.1-sol"
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
       ],
       "effort": "medium",
       "fallback": {
         "floor_model": "gpt-6.1-sol",
+        "include_below_floor": true,
         "requires_unavailable": {
           "gpt-6.1-sol": "gpt-6.2-sol"
         }
@@ -82,12 +98,13 @@
     "raw_strength": {
       "holders": [
         "gpt-6.2-sol",
-        "claude-opus-5-5",
-        "gpt-6.1-sol"
+        "gpt-6.1-sol",
+        "claude-opus-5-5"
       ],
       "effort": "medium",
       "fallback": {
         "floor_model": "gpt-6.1-sol",
+        "include_below_floor": true,
         "requires_unavailable": {
           "gpt-6.1-sol": "gpt-6.2-sol"
         }
@@ -102,6 +119,13 @@
         {
           "provider": "codex",
           "lane": "standard",
+          "model_id": "gpt-6.2-sol",
+          "enabled": true,
+          "write_capability": "codex_sandbox"
+        },
+        {
+          "provider": "codex",
+          "lane": "alternate",
           "model_id": "gpt-6.2-sol",
           "enabled": true,
           "write_capability": "codex_sandbox"

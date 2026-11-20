@@ -15,12 +15,20 @@ for (const task_class of ['design_judgment', 'raw_strength']) {
   test(`${task_class}: selects the newer holder with probe state unmeasured`, () => {
     const record = run({});
     assert.equal(record.model, 'gpt-6.2-sol');
-    assert.deepEqual(record.fallback_chain.map(row => row.model), ['claude-opus-5-5']);
-    assert.equal(record.model_decision.holders.at(-1).verdict, 'awaiting_unavailability');
+    assert.deepEqual(record.fallback_chain.map(row => row.model), ['gpt-6.2-sol', 'claude-opus-5-5']);
+    assert.equal(record.model_decision.holders[1].verdict, 'awaiting_unavailability');
+  });
+
+  test(`${task_class}: primary usage limit automatically selects the secondary account and records why`, () => {
+    const capacity = { ...emptyObservation, lanes: { standard: { state: 'unavailable', reason: 'usage limit' } } };
+    const record = run({ capacity });
+    assert.equal(record.model, 'gpt-6.2-sol');
+    assert.equal(record.lane_decision.chosen, 'alternate');
+    assert.equal(record.availability_decisions['gpt-6.2-sol'][0].availability.reason, 'usage limit');
   });
 
   test(`${task_class}: a lane-wide usage limit retains the native route`, () => {
-    const capacity = { ...emptyObservation, lanes: { standard: { state: 'unavailable', reason: 'usage limit' } } };
+    const capacity = { ...emptyObservation, lanes: { standard: { state: 'unavailable', reason: 'usage limit' }, alternate: { state: 'unavailable', reason: 'usage limit' } } };
     const record = run({ capacity });
     assert.equal(record.model, 'claude-opus-5-5');
     assert.deepEqual(record.fallback_chain, []);
@@ -32,8 +40,8 @@ for (const task_class of ['design_judgment', 'raw_strength']) {
       const receipt = { state: 'unavailable', reason };
       const capacity = { ...emptyObservation, models: { 'gpt-6.2-sol': receipt } };
       const routeWithNative = run({ capacity });
-      assert.equal(routeWithNative.model, 'claude-opus-5-5');
-      assert.deepEqual(routeWithNative.fallback_chain.map(row => row.model), ['gpt-6.1-sol']);
+      assert.equal(routeWithNative.model, 'gpt-6.1-sol');
+      assert.deepEqual(routeWithNative.fallback_chain.map(row => row.model), ['claude-opus-5-5']);
 
       const record = run({ capacity: { ...capacity, lanes: { native: { state: 'unavailable', reason: 'serving error' } } } });
       assert.equal(record.model, 'gpt-6.1-sol');
@@ -46,12 +54,12 @@ for (const task_class of ['design_judgment', 'raw_strength']) {
   test(`${task_class}: missing evidence does not enable the older holder`, () => {
     const capacity = {
       ...emptyObservation,
-      lanes: { standard: { state: 'unavailable' }, native: { state: 'unavailable' } },
+      lanes: { standard: { state: 'unavailable' }, alternate: { state: 'unavailable' }, native: { state: 'unavailable' } },
       models: { 'gpt-6.2-sol': { state: 'unavailable', reason: ' ' } },
     };
     const record = run({ capacity });
     assert.equal(record.model_decision.chosen, null);
     assert.equal(record.floor_breached, true);
-    assert.equal(record.model_decision.holders.at(-1).verdict, 'awaiting_unavailability');
+    assert.equal(record.model_decision.holders[1].verdict, 'awaiting_unavailability');
   });
 }

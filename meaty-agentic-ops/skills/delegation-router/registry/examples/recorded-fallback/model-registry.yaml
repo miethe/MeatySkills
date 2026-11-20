@@ -3,7 +3,7 @@ version: 3
 routing_attributes:
   write_capability:
     codex_sandbox: {read_class: read_only, write_class: workspace_write}
-lane_order: [standard, native]
+lane_order: [standard, alternate, native]
 lanes:
   standard:
     provider: codex
@@ -15,13 +15,17 @@ lanes:
       metering: unknown
       payer: unknown
     harness_capabilities: [execution.file_edit]
+  alternate:
+    provider: codex
+    attributes: *attributes
+    harness_capabilities: [execution.file_edit]
   native:
     provider: claude
     attributes: *attributes
     harness_capabilities: [claude_code_native, execution.file_edit]
 routing_policy:
   design_judgment:
-    chain: &holders [gpt-6.2-sol, claude-opus-5-5, gpt-6.1-sol]
+    chain: &holders [gpt-6.2-sol, gpt-6.1-sol, claude-opus-5-5]
     enabled: true
   raw_strength:
     chain: *holders
@@ -32,6 +36,7 @@ task_class_defaults:
     effort: medium
     fallback:
       floor_model: gpt-6.1-sol
+      include_below_floor: true
       requires_unavailable:
         gpt-6.1-sol: gpt-6.2-sol
   raw_strength: *default
@@ -41,6 +46,7 @@ models:
     status: active
     providers:
       - {provider: codex, lane: standard, model_id: gpt-6.2-sol, enabled: true, write_capability: codex_sandbox}
+      - {provider: codex, lane: alternate, model_id: gpt-6.2-sol, enabled: true, write_capability: codex_sandbox}
   claude-opus-5-5:
     family: anthropic
     status: active

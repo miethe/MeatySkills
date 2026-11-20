@@ -1182,11 +1182,6 @@ function resolveLane(registry, modelId, classSpec, capacity = {}, observed = nul
       eligibility.eligible = eligibility.eligible && originalEligibility.eligible && needs.eligible;
       if (!originalEligibility.eligible) eligibility.reason += `; original class: ${originalEligibility.reason}`;
       if (!needs.eligible) eligibility.reason += `; ${needs.reason}`;
-      const account = classSpec._routingAccount;
-      if (account && (account.explicit || lane.identity_ref) && lane.identity_ref !== account.identity) {
-        eligibility.eligible = false;
-        eligibility.reason += '; identity requires an explicit routing choice';
-      }
       const excluded = !eligibility.eligible || ['refused', 'unavailable'].includes(availability.state);
       candidates.push({
         lane: laneId, order: laneOrder.indexOf(laneId), serves: true,
@@ -1208,13 +1203,6 @@ function resolveV3(registry, input) {
     throw new Error('Explicit model/provider/account pin requires pin_reason');
   }
   const prepared = prepareNeeds(registry, input, canonicalTaskClassKey);
-  const defaultIdentity = (prepared.spec.fallback || {}).default_identity;
-  if (defaultIdentity) {
-    prepared.spec._routingAccount = {
-      identity: input.identity_ref || defaultIdentity,
-      explicit: Boolean(input.identity_ref),
-    };
-  }
   input = { ...prepared.input, _needsSpec: prepared.spec, _observedAvailability: observedCapacity(prepared.input) };
   const modelDecision = resolveModel(registry, input);
   const classSpec = modelDecision.classSpec;

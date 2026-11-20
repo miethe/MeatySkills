@@ -171,11 +171,6 @@ def validate_registry(data: dict, source: str) -> list[str]:
                 errors.append(f"task_class_defaults.{task_class}.{key} must not contain '/': '{value_with_slash}'")
         fallback = spec.get("fallback") or {}
         holders = spec.get("holders") or []
-        default_identity = fallback.get("default_identity")
-        if default_identity is not None and not any(
-            row.get("identity_ref") == default_identity for row in (data.get("lanes") or {}).values()
-        ):
-            errors.append(f"task_class_defaults.{task_class}.fallback.default_identity references an unknown identity")
         requires_unavailable = fallback.get("requires_unavailable", {})
         if not isinstance(requires_unavailable, dict) or any(
             target not in holders or predecessor not in holders or holders.index(predecessor) >= holders.index(target)
