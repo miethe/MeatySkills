@@ -1,0 +1,130 @@
+{
+  "registry_revision": "04301fc368f52451466b9bf0cdad6914e06e6a1bff94ac069af585259d597131",
+  "lane_order": [
+    "standard",
+    "alternate",
+    "native"
+  ],
+  "classes": {
+    "design_judgment": {
+      "holders": [
+        {
+          "model": "gpt-6.2-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "alternate",
+              "order": 1,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "claude-opus-5-5",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "native",
+              "order": 2,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        }
+      ],
+      "minimum": null,
+      "requires_capabilities": [],
+      "floor_model": "gpt-6.1-sol"
+    },
+    "raw_strength": {
+      "holders": [
+        {
+          "model": "gpt-6.2-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            },
+            {
+              "lane": "alternate",
+              "order": 1,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "standard",
+              "order": 0,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        },
+        {
+          "model": "claude-opus-5-5",
+          "q": null,
+          "bar": null,
+          "lanes": [
+            {
+              "lane": "native",
+              "order": 2,
+              "serves": true,
+              "eligible": true,
+              "eligibility_reason": "no minimum declared",
+              "capability_ok": true
+            }
+          ]
+        }
+      ],
+      "minimum": null,
+      "requires_capabilities": [],
+      "floor_model": "gpt-6.1-sol"
+    }
+  }
+}

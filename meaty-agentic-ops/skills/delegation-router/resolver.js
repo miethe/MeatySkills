@@ -1116,6 +1116,8 @@ function resolveModel(registry, input) {
   const laneOrder = registry.lane_order || [];
   const capacity = input.capacity || {};
   const decisions = [];
+  const requiredUnavailable = (classSpec.fallback || {}).requires_unavailable || {};
+  const lanesFor = modelId => resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability);
   let chosenModel = null;
   let chosenIndex = -1;
   for (const modelId of holders) {
@@ -1130,7 +1132,18 @@ function resolveModel(registry, input) {
       decisions.push({ model: modelId, verdict: 'below_bar', reason: `quality score ${quality.q} is below bar ${quality.bar}`, q: quality.q, bar: quality.bar });
       continue;
     }
-    const viable = resolveLane(registry, modelId, classSpec, capacity, input._observedAvailability).chosen !== null;
+    const prerequisite = requiredUnavailable[modelId];
+    if (typeof prerequisite === 'string') {
+      const candidates = lanesFor(prerequisite).candidates.filter(candidate => candidate.eligible);
+      const modelReceipt = (capacity.models || {})[prerequisite];
+      if (!recordedUnavailability(modelReceipt) &&
+          !(candidates.length && candidates.every(candidate => recordedUnavailability(candidate.availability)))) {
+        decisions.push({ model: modelId, verdict: 'awaiting_unavailability',
+          reason: `requires recorded unavailability for ${prerequisite}`, q: quality.q, bar: quality.bar });
+        continue;
+      }
+    }
+    const viable = lanesFor(modelId).chosen !== null;
     if (viable && chosenModel === null) { chosenModel = modelId; chosenIndex = decisions.length; }
     decisions.push({ model: modelId, verdict: viable ? 'candidate' : (model ? 'no_eligible_lane' : 'disabled'), reason: viable ? 'has an eligible, available lane' : 'no eligible, available lane serves this model', q: quality.q, bar: quality.bar });
   }
@@ -1146,6 +1159,11 @@ function resolveModel(registry, input) {
   return { classSpec, taskClassKey, holders, decisions, chosenModel };
 }
 
+function recordedUnavailability(receipt) {
+  return receipt && ['refused', 'unavailable'].includes(receipt.state) &&
+    typeof receipt.reason === 'string' && receipt.reason.trim().length > 0;
+}
+
 function resolveLane(registry, modelId, classSpec, capacity = {}, observed = null) {
   const rows = modelRows(registry, modelId);
   const laneOrder = registry.lane_order || [];
@@ -1155,7 +1173,9 @@ function resolveLane(registry, modelId, classSpec, capacity = {}, observed = nul
     for (const { model, row } of matches) {
       const lane = registry.lanes[laneId];
       const eligibility = laneEligible({ ...lane, id: laneId }, classSpec);
-      const availability = capacityFor(capacity, laneId, lane.identity_ref, observed, row);
+      const modelReceipt = (capacity.models || {})[modelId];
+      const availability = recordedUnavailability(modelReceipt) ? modelReceipt :
+        capacityFor(capacity, laneId, lane.identity_ref, observed, row);
       const originalEligibility = classSpec._originalSpec
         ? laneEligible({ ...lane, id: laneId }, classSpec._originalSpec) : { eligible: true, reason: '' };
       const needs = candidateNeeds(registry, modelId, row, lane, classSpec);
@@ -1195,7 +1215,8 @@ function resolveV3(registry, input) {
   // non-holder is instead subject to the class quality bar and lane eligibility.
   const explicitBelowFloor = Boolean(input.model && floorModel &&
     explicitIndex >= 0 && configuredFloorIndex >= 0 && explicitIndex > configuredFloorIndex);
-  const examined = floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList;
+  const examined = classSpec.fallback && classSpec.fallback.include_below_floor ? holderList :
+    (floorModel && holderList.includes(floorModel) ? holderList.slice(0, holderList.indexOf(floorModel) + 1) : holderList);
   const selectedIndex = modelDecision.chosenModel ? examined.indexOf(modelDecision.chosenModel) : -1;
   const allLaneDecisions = {};
   for (const modelId of examined) allLaneDecisions[modelId] = resolveLane(registry, modelId, classSpec, input.capacity || {}, input._observedAvailability);
@@ -1213,7 +1234,7 @@ function resolveV3(registry, input) {
     const models = examined.slice(selectedIndex);
     for (const candidateModel of models) {
       const decision = modelDecision.decisions.find(d => d.model === candidateModel);
-      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane'].includes(decision.verdict)) continue;
+      if (!decision || ['below_bar', 'unmeasured_bar', 'disabled', 'no_eligible_lane', 'awaiting_unavailability'].includes(decision.verdict)) continue;
       const lanes = allLaneDecisions[candidateModel].candidates;
       for (const candidate of lanes) {
         if (candidateModel === chosenModel && candidate.lane === selectedLane.lane) continue;
@@ -1252,6 +1273,9 @@ function resolveV3(registry, input) {
     escalation_ladder: selectedLane ? [{ model: chosenModel, lane: selectedLane.lane, plugin_id: selectedLane.provider,
       identity_ref: selectedLane.identity_ref }, ...fallback] : [],
   };
+  const modelReceipts = Object.entries((input.capacity || {}).models || {})
+    .filter(([id, receipt]) => (classSpec.holders || []).includes(id) && recordedUnavailability(receipt));
+  if (modelReceipts.length) record.model_unavailability = Object.fromEntries(modelReceipts);
   if (prepared.spec._needs.modifiers.includes('cross_family_review') && selectedLane) {
     const family = registry.models[chosenModel].family;
     const reviewInput = { ...input, modifiers: [], model: undefined, capabilities: prepared.spec._needs.capabilities,

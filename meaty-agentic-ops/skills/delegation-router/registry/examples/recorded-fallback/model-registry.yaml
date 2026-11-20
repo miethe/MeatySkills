@@ -1,0 +1,59 @@
+# Example v3 profile using an unbound Codex CLI lane and a native fallback.
+version: 3
+routing_attributes:
+  write_capability:
+    codex_sandbox: {read_class: read_only, write_class: workspace_write}
+lane_order: [standard, alternate, native]
+lanes:
+  standard:
+    provider: codex
+    attributes: &attributes
+      compute_custody: unknown
+      retention: unknown
+      jurisdiction: unknown
+      account_relationship: unknown
+      metering: unknown
+      payer: unknown
+    harness_capabilities: [execution.file_edit]
+  alternate:
+    provider: codex
+    attributes: *attributes
+    harness_capabilities: [execution.file_edit]
+  native:
+    provider: claude
+    attributes: *attributes
+    harness_capabilities: [claude_code_native, execution.file_edit]
+routing_policy:
+  design_judgment:
+    chain: &holders [gpt-6.2-sol, gpt-6.1-sol, claude-opus-5-5]
+    enabled: true
+  raw_strength:
+    chain: *holders
+    enabled: true
+task_class_defaults:
+  design_judgment: &default
+    holders: *holders
+    effort: medium
+    fallback:
+      floor_model: gpt-6.1-sol
+      include_below_floor: true
+      requires_unavailable:
+        gpt-6.1-sol: gpt-6.2-sol
+  raw_strength: *default
+models:
+  gpt-6.2-sol:
+    family: openai
+    status: active
+    providers:
+      - {provider: codex, lane: standard, model_id: gpt-6.2-sol, enabled: true, write_capability: codex_sandbox}
+      - {provider: codex, lane: alternate, model_id: gpt-6.2-sol, enabled: true, write_capability: codex_sandbox}
+  claude-opus-5-5:
+    family: anthropic
+    status: active
+    providers:
+      - {provider: claude, lane: native, model_id: claude-opus-5-5, enabled: true}
+  gpt-6.1-sol:
+    family: openai
+    status: active
+    providers:
+      - {provider: codex, lane: standard, model_id: gpt-6.1-sol, enabled: true, write_capability: codex_sandbox}

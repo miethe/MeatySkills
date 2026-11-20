@@ -154,3 +154,33 @@ models:
   - tool_use
   lifecycle: current
   as_of: '2026-09-26'
+- id: gpt-6.2-sol
+  label: GPT 6.2 SOL
+  family: openai
+  generation: '6.2'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-11-17'
+- id: gpt-6.2-astra
+  label: GPT 6.2 ASTRA
+  family: openai
+  generation: '6.2'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-11-17'
+- id: gpt-6.1-terra
+  label: GPT 6.1 TERRA
+  family: openai
+  generation: '6.1'
+  context_windows: []
+  context_window_variants: []
+  capabilities:
+  - text_generation
+  lifecycle: current
+  as_of: '2026-10-26'

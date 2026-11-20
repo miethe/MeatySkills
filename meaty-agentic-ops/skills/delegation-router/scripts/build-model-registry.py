@@ -169,7 +169,15 @@ def validate_registry(data: dict, source: str) -> list[str]:
                     yield item
             for value_with_slash in slash_values(value):
                 errors.append(f"task_class_defaults.{task_class}.{key} must not contain '/': '{value_with_slash}'")
-        floor_model = (spec.get("fallback") or {}).get("floor_model")
+        fallback = spec.get("fallback") or {}
+        holders = spec.get("holders") or []
+        requires_unavailable = fallback.get("requires_unavailable", {})
+        if not isinstance(requires_unavailable, dict) or any(
+            target not in holders or predecessor not in holders or holders.index(predecessor) >= holders.index(target)
+            for target, predecessor in requires_unavailable.items()
+        ):
+            errors.append(f"task_class_defaults.{task_class}.fallback.requires_unavailable needs earlier holder references")
+        floor_model = fallback.get("floor_model")
         if floor_model is not None and "/" in str(floor_model):
             errors.append(f"task_class_defaults.{task_class}.fallback.floor_model must be a bare model id")
         minimum = spec.get("minimum") or {}
